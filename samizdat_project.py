@@ -226,7 +226,7 @@ contained_work.loc[(contained_work['X200'].str.contains('%z')==True) &
                                                                    ((contained_work['X300'].str.contains('%b')==True) |
                                                                     (contained_work['X300'].str.contains('%f')==True))], 'REV', 'współwydane bez wspólnego tytułu (zawiera 200%z)2']
 
-
+#wpisać zmiany do obiektów i wykorzystać te obiekty do nadpisania - kod będzie znacznie krótszy
 
                                                                    
 test = reduce(lambda left,right: pd.merge(left,right,on='id', how = 'outer'), [marc_parser_1_field(contained_work.loc[(contained_work['X200'].str.contains('%z')==True) & 
@@ -306,42 +306,4 @@ test['total_notes'] = test[test.columns[1:]].apply(
 
 
 
-test.exp
 
-test = pd.DataFrame({'chrom': ['chr1', 'chr2', 'chr3'],
-                     'exonStart': ['100,200,500', '500,700', '50,60,70,80'],
-                     'exonEnds': ['110,210,310', '600,800', '55,65,75,85'],
-                     'name': ['gen1', 'gen2', 'gen3']})
-test["exonStart"]=test["exonStart"].str.split(",")
-test["exonEnds"]=test["exonEnds"].str.split(",")
-
-test = test.explode('exonStart').reset_index(drop=True)
-
-
-def explode(df, lst_cols, fill_value=''):
-    # make sure `lst_cols` is a list
-    if lst_cols and not isinstance(lst_cols, list):
-        lst_cols = [lst_cols]
-    # all columns except `lst_cols`
-    idx_cols = df.columns.difference(lst_cols)
-
-    # calculate lengths of lists
-    lens = df[lst_cols[0]].str.len()
-
-    if (lens > 0).all():
-        # ALL lists in cells aren't empty
-        return pd.DataFrame({
-            col:np.repeat(df[col].values, df[lst_cols[0]].str.len())
-            for col in idx_cols
-        }).assign(**{col:np.concatenate(df[col].values) for col in lst_cols}) \
-          .loc[:, df.columns]
-    else:
-        # at least one list in cells is empty
-        return pd.DataFrame({
-            col:np.repeat(df[col].values, df[lst_cols[0]].str.len())
-            for col in idx_cols
-        }).assign(**{col:np.concatenate(df[col].values) for col in lst_cols}) \
-          .append(df.loc[lens==0, idx_cols]).fillna(fill_value) \
-          .loc[:, df.columns]
-
-test2 = explode(test, ['exonStart', 'exonEnds'])
