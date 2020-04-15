@@ -3,6 +3,7 @@ start_time = time.time()
 import requests
 from bs4 import BeautifulSoup
 import re
+import pandas as pd
 
 FormData = {'q' : '*',
             'so' : 've jménech osob'}
@@ -38,7 +39,5 @@ for i, url in enumerate(urls, 1):
         data.append([data_person, role, description])
 end_time = time.time()
 print(end_time - start_time)
-
-import pandas as pd
 
 df = pd.DataFrame(data, columns =['data_person', 'role', 'description'])
