@@ -218,6 +218,23 @@ for i, row in contained_work.loc[contained_work['typ'] == 'współwydane bez wsp
             contained_work['author'][i] = 'brak autora'
 
 # współwydane bez wspólnego tytułu (zawiera 200%z) - druga podgrupa
+            
+title_cw_fixed = contained_work.loc[(contained_work['X200'].str.contains('%z')==True) & 
+                   ((contained_work['X300'].str.contains('%b')==True) |
+                    (contained_work['X300'].str.contains('%f')==True))][['index', 'X200', 'X300']]
+title_cw_fixed1 = marc_parser_1_field(title_cw_fixed, 'index', 'X200', '%')[['index', '%a']]
+title_cw_fixed2 = marc_parser_1_field(title_cw_fixed, 'index', 'X300', '%')[['index', '%f', '%b']]
+title_cw_fixed = reduce(lambda left, right: pd.merge(left, right, on = 'index', how = 'outer'), [title_cw_fixed1, title_cw_fixed2])
+title_cw_fixed['author'] = np.where(title_cw_fixed.apply(lambda x: x['%a'] in x['%f'], axis = 1), title_cw_fixed['%b'], '')
+title_cw_fixed = title_cw_fixed.loc[title_cw_fixed['author'] != ''][['index', 'author']]
+
+
+df2 = title_cw_fixed.set_index('index')
+df1 = df2.combine_first(contained_work.set_index('index')).reset_index().reindex(columns=contained_work.columns)
+
+
+contained_work['author'] = np.where(title_cw_fixed['index'] == contained_work['index'], title_cw_fixed['author'], contained_work['author'])
+
 
 contained_work.loc[(contained_work['X200'].str.contains('%z')==True) & 
                    ((contained_work['X300'].str.contains('%b')==True) |
