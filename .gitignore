@@ -1,2 +1,3 @@
 /do ignorowania.txt
-_pycache__/
+__pycache__/
+*.py[cod]

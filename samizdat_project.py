@@ -2,9 +2,7 @@
 import pandas as pd
 from my_functions import marc_parser_1_field
 from my_functions import unique_elem_from_column_split
-from my_functions import unique_elem_from_column_regex
 from my_functions import cSplit
-from my_functions import marc_parser_1_field_simple
 import re
 from functools import reduce
 import numpy as np
@@ -12,6 +10,7 @@ import copy
 
 
 bn_books = pd.read_csv("C:/Users/Cezary/Desktop/bn_books.csv", sep=';')
+bn_books.iloc[142, 18] = '%fWspomnienia 1939-1945 : (fragmenty) %bPużak Kazimierz %ss. 58-130 %z1|%fPolitycy i żołnierze %bGarliński Józef %ss. 131-147 %z2|%aZawiera : "Proces szesnastu" w Moskwie : (wspomnienia osobiste) / K.      Bagiński. Wspomnienia 1939-1945 : (fragmenty) / K. Pużak. Politycy i      żołnierze / J. Garliński %bBagiński Kazimierz %f"Proces szesnastu" w      Moskwie %ss. 3-57 %z0'
 cz_books = pd.read_csv("C:/Users/Cezary/Desktop/cz_books.csv", sep=';')
 cz_articles = pd.read_csv("C:/Users/Cezary/Desktop/cz_articles.csv", sep=';')
 pbl_books = pd.read_csv("C:/Users/Cezary/Desktop/pbl_books.csv", sep=';')
@@ -225,101 +224,40 @@ title_cw_fixed = contained_work.loc[(contained_work['X200'].str.contains('%z')==
 title_cw_fixed1 = marc_parser_1_field(title_cw_fixed, 'index', 'X200', '%')[['index', '%a']]
 title_cw_fixed2 = marc_parser_1_field(title_cw_fixed, 'index', 'X300', '%')[['index', '%f', '%b']]
 title_cw_fixed = reduce(lambda left, right: pd.merge(left, right, on = 'index', how = 'outer'), [title_cw_fixed1, title_cw_fixed2])
-title_cw_fixed['author'] = np.where(title_cw_fixed.apply(lambda x: x['%a'] in x['%f'], axis = 1), title_cw_fixed['%b'], '')
-title_cw_fixed = title_cw_fixed.loc[title_cw_fixed['author'] != ''][['index', 'author']]
+# =============================================================================
+# zestawienie z 700 się nie uda, bo zawartości pól się nie pokrywają
+# X700 = cSplit(contained_work, 'index', 'X700', '|')[['index', 'X700']]
+# title_cw_fixed = reduce(lambda left, right: pd.merge(left, right, on = 'index', how = 'left'), [title_cw_fixed, X700])
+# =============================================================================
+X100 = cSplit(contained_work, 'index', 'X100', '|')[['index', 'X100']]
+X700 = cSplit(contained_work, 'index', 'X700', '|')[['index', 'X700']]
+title_cw_fixed = reduce(lambda left, right: pd.merge(left, right, on = 'index', how = 'left'), [title_cw_fixed, X100, X700])
+
+def check_person_title(row, tyt1, tyt2, pers1, pers2, pers3):
+    if row[tyt1] in row[tyt2] and row[pers1].split(' ')[0] in str(row[pers2]):
+        return row[pers2]
+    elif row[tyt1] in row[tyt2] and row[pers1].split(' ')[0] in str(row[pers3]):
+        return row[pers3]
+    else:
+        return np.nan
+
+title_cw_fixed['author'] = title_cw_fixed.apply(lambda x: check_person_title(x, '%a', '%f', '%b', 'X100', 'X700'), axis = 1)
+
+title_cw_fixed = title_cw_fixed.loc[title_cw_fixed['author'].notnull()][['index', '%f', 'author']]
+title_cw_fixed.columns = ['index', 'title', 'author']
+title_cw_fixed['typ'] = 'współwydane bez wspólnego tytułu (zawiera 200%z)2'
+title_cw_fixed = title_cw_fixed.drop_duplicates().set_index('index')
+contained_work = title_cw_fixed.combine_first(contained_work.set_index('index')).reset_index().reindex(columns=contained_work.columns)
+
+# współwydane ze wspólnym tytułem 1
+title_cw_fixed = contained_work.loc[(contained_work['X200'].str.contains('%z')==False) & 
+                                    ((contained_work['X300'].str.contains('%b')==True) |
+                                     (contained_work['X300'].str.contains('%f')==True))][['index', 'X100', 'X200', 'X300', 'X700']]
+
+bn_books.loc[bn_books['id'] == 2520]['X300'] = '%fWspomnienia 1939-1945 : (fragmenty) %bPużak Kazimierz %ss. 58-130 %z1|%fPolitycy i żołnierze %bGarliński Józef %ss. 131-147 %z2|%aZawiera : "Proces szesnastu" w Moskwie : (wspomnienia osobiste) / K.      Bagiński. Wspomnienia 1939-1945 : (fragmenty) / K. Pużak. Politycy i      żołnierze / J. Garliński %bBagiński Kazimierz %f"Proces szesnastu" w      Moskwie %ss. 3-57 %z0'
 
 
-df2 = title_cw_fixed.set_index('index')
-df1 = df2.combine_first(contained_work.set_index('index')).reset_index().reindex(columns=contained_work.columns)
 
-
-contained_work['author'] = np.where(title_cw_fixed['index'] == contained_work['index'], title_cw_fixed['author'], contained_work['author'])
-
-
-contained_work.loc[(contained_work['X200'].str.contains('%z')==True) & 
-                   ((contained_work['X300'].str.contains('%b')==True) |
-                    (contained_work['X300'].str.contains('%f')==True)), 
-                   ['title', 'flag', 'typ']] = [contained_work.loc[(contained_work['X200'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'REV', 'współwydane bez wspólnego tytułu (zawiera 200%z)2']
-
-#wpisać zmiany do obiektów i wykorzystać te obiekty do nadpisania - kod będzie znacznie krótszy
-
-                                                                   
-test = reduce(lambda left,right: pd.merge(left,right,on='id', how = 'outer'), [marc_parser_1_field(contained_work.loc[(contained_work['X200'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'id', 'X200', '%')[['id', '%a']],
-                                                                                  marc_parser_1_field(contained_work.loc[(contained_work['X300'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'id', 'X300', '%')[['id', '%f']]])['id'].drop_duplicates()
-
-
-test3 = contained_work.loc[contained_work['X300'].str.contains('\|')==True]
-
-
-test = reduce(lambda left,right: pd.merge(left,right,on='index', how = 'outer'), [marc_parser_1_field(contained_work.loc[(contained_work['X200'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X200', '%')[['index', '%a']],
-                                                                                  marc_parser_1_field(contained_work.loc[(contained_work['X300'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X300', '%')[['index', '%f']]]).groupby('index')[0].transform(lambda x: ','.join(x))
-                  
-                  
-                  
-test = marc_parser_1_field_simple(contained_work.loc[(contained_work['X300'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X300', '%')[['index', '%f']]                 
-                  
-                  
-                                                                   
-                                                                   
-                                                                   
-                                                                   
-df.groupby('Order ID')['Product'].transform(lambda x: ', '.join(x))                                                                   
-reduce(lambda left,right: pd.merge(left,right,on='index', how = 'outer'), [marc_parser_1_field(contained_work.loc[(contained_work['X200'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X200', '%')[['index', '%a']],
-                                                                                  marc_parser_1_field(contained_work.loc[(contained_work['X300'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X300', '%')[['index', '%f']]]).columns[1:]].apply(
-                                                                        lambda x: ','.join(x.dropna().astype(str)),
-                                                                        axis=1))                                                                  
-                                                                   
-                                                                   
-                                                                   
-                                                                   
-
-test = pd.concat([reduce(lambda left,right: pd.merge(left,right,on='index', how = 'outer'), [marc_parser_1_field(contained_work.loc[(contained_work['X200'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X200', '%')[['index', '%a']],
-                                                                                  marc_parser_1_field(contained_work.loc[(contained_work['X300'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X300', '%')[['index', '%f']]]), reduce(lambda left,right: pd.merge(left,right,on='index', how = 'outer'), [marc_parser_1_field(contained_work.loc[(contained_work['X200'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X200', '%')[['index', '%a']],
-                                                                                  marc_parser_1_field(contained_work.loc[(contained_work['X300'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X300', '%')[['index', '%f']]])[
-                                                                        reduce(lambda left,right: pd.merge(left,right,on='index', how = 'outer'), [marc_parser_1_field(contained_work.loc[(contained_work['X200'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X200', '%')[['index', '%a']],
-                                                                                  marc_parser_1_field(contained_work.loc[(contained_work['X300'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X300', '%')[['index', '%f']]]).columns[1:]].apply(
-                                                                        lambda x: ','.join(x.dropna().astype(str)),
-                                                                        axis=1)], axis=1)[['index', 0]].groupby('index')[0].transform(lambda x: ','.join(x))['index', 0].drop_duplicates()
-
-
-ttt = reduce(lambda left,right: pd.merge(left,right,on='index', how = 'outer'), [marc_parser_1_field(contained_work.loc[(contained_work['X200'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X200', '%')[['index', '%a']],
-                                                                                  marc_parser_1_field(contained_work.loc[(contained_work['X300'].str.contains('%z')==True) & 
-                                                                   ((contained_work['X300'].str.contains('%b')==True) |
-                                                                    (contained_work['X300'].str.contains('%f')==True))], 'index', 'X300', '%')[['index', '%f']]])
-test['total_notes'] = test[test.columns[1:]].apply(
-    lambda x: ','.join(x.dropna().astype(str)),
-    axis=1
-)
 
 
 
