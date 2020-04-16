@@ -3,6 +3,7 @@ import pandas as pd
 from my_functions import marc_parser_1_field
 from my_functions import unique_elem_from_column_split
 from my_functions import cSplit
+from my_functions import explode_df
 import re
 from functools import reduce
 import numpy as np
@@ -254,7 +255,43 @@ title_cw_fixed = contained_work.loc[(contained_work['X200'].str.contains('%z')==
                                     ((contained_work['X300'].str.contains('%b')==True) |
                                      (contained_work['X300'].str.contains('%f')==True))][['index', 'X100', 'X200', 'X300', 'X700']]
 
-bn_books.loc[bn_books['id'] == 2520]['X300'] = '%fWspomnienia 1939-1945 : (fragmenty) %bPużak Kazimierz %ss. 58-130 %z1|%fPolitycy i żołnierze %bGarliński Józef %ss. 131-147 %z2|%aZawiera : "Proces szesnastu" w Moskwie : (wspomnienia osobiste) / K.      Bagiński. Wspomnienia 1939-1945 : (fragmenty) / K. Pużak. Politycy i      żołnierze / J. Garliński %bBagiński Kazimierz %f"Proces szesnastu" w      Moskwie %ss. 3-57 %z0'
+# zła kolejność w X300, na początku powinno być %f, a potem %b - przebudować kolejność parserem?
+
+title_cw_fixed['X300'] = title_cw_fixed['X300'].replace(r'(?!^|\|)(\%f)', r'|\1', regex = True)
+title_cw_fixed['X300'] = title_cw_fixed['X300'].replace(r'(\|)(\%[^f])', r'\2', regex = True)
+
+
+title_cw_fixed = cSplit(title_cw_fixed, 'index', 'X300', '|')
+title_cw_fixed = cSplit(title_cw_fixed, 'index', 'X700', '|')
+title_cw_fixed = title_cw_fixed.loc[title_cw_fixed['X300'].notnull()]
+
+def check_person(row, pers1, pers2):
+    if str(row[pers1]).split(' ')[0][2:] in str(row[pers2]):
+        return row[pers1]
+    else:
+        return np.nan
+
+title_cw_fixed['author'] = title_cw_fixed.apply(lambda x: check_person(x, 'X700', 'X300'), axis = 1)
+test = title_cw_fixed.loc[(title_cw_fixed['author'].notnull()) |
+                          (title_cw_fixed['X700'].isnull())]
+
+title_cw_fixed['X700'][0].split(' ')[0][2:]
+
+for index, element in enumerate(elementy):
+    if element.count('(') == 0:
+        elementy[index] = re.sub(r'(?!^|\|)(\%f)', '|\1', element)
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
