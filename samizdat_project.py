@@ -3,7 +3,6 @@ import pandas as pd
 from my_functions import marc_parser_1_field
 from my_functions import unique_elem_from_column_split
 from my_functions import cSplit
-from my_functions import explode_df
 import re
 from functools import reduce
 import numpy as np
@@ -120,6 +119,10 @@ cw_date_period = year_of_publication_de_facto
 cw_location_reference = place_of_publication
 
 contained_work = copy.deepcopy(bn_books)
+#contained_work = pd.concat([contained_work,pd.DataFrame(columns = ['title', 'author', 'corporate_author', 'translation_of_work', 'isbn_of_source', 'flag', 'typ'])])
+
+
+
 contained_work = cSplit(contained_work, 'id', 'X200', '|')
 contained_work['index'] = contained_work.index + 1
 
@@ -131,6 +134,7 @@ contained_work.loc[(contained_work['X100'].isnull()) &
                    (contained_work['X330'].isnull()) &
                    (contained_work['X500'].isnull()), 
                    'typ'] = 'anonimowe/zbiorowe bez autora'
+
 # monografia, jeden autor
 contained_work.loc[(contained_work['X100'].notnull()) & 
                    (contained_work['X100'].str.contains('%x')==False) &
@@ -186,7 +190,9 @@ contained_work.loc[((contained_work['X100'].isnull()) |
                                                                               (contained_work['X330'].isnull()) &
                                                                               (contained_work['X500'].isnull()) &
                                                                               (contained_work['X700'].str.contains('%vau')==True)], 'REV', 'współwydane bez wspólnego tytułu (zawiera 200%z)']
- 
+
+test = contained_work.loc[contained_work['typ'] == 'współwydane bez wspólnego tytułu (zawiera 200%z)']
+  #do poprawki - wchodzi pierwszy if, a reszta to bałagan                                                                            
 for i, row in contained_work.loc[contained_work['typ'] == 'współwydane bez wspólnego tytułu (zawiera 200%z)'].iterrows():
     element = re.findall('(\%z\d+)', row['X200'])[0]
     if element == '%z0':
@@ -254,11 +260,12 @@ contained_work = title_cw_fixed.combine_first(contained_work.set_index('index'))
 title_cw_fixed = contained_work.loc[(contained_work['X200'].str.contains('%z')==False) & 
                                     ((contained_work['X300'].str.contains('%b')==True) |
                                      (contained_work['X300'].str.contains('%f')==True))][['index', 'X100', 'X200', 'X300', 'X700']]
+#poprawa kolejności X300
+fix_order = pd.read_excel("C:/Users/Cezary/Downloads/do_samizdatu1.xlsx").set_index('index')
+title_cw_fixed = fix_order.combine_first(title_cw_fixed.set_index('index')).reset_index().reindex(columns=title_cw_fixed.columns)
 
-# zła kolejność w X300, na początku powinno być %f, a potem %b - przebudować kolejność parserem?
-
-title_cw_fixed['X300'] = title_cw_fixed['X300'].replace(r'(?!^|\|)(\%f)', r'|\1', regex = True)
-title_cw_fixed['X300'] = title_cw_fixed['X300'].replace(r'(\|)(\%[^f])', r'\2', regex = True)
+#title_cw_fixed['X300'] = title_cw_fixed['X300'].replace(r'(?!^|\|)(\%b)', r'|\1', regex = True)
+#title_cw_fixed['X300'] = title_cw_fixed['X300'].replace(r'(\|)(\%[^f])', r'\2', regex = True)
 
 
 title_cw_fixed = cSplit(title_cw_fixed, 'index', 'X300', '|')
@@ -266,21 +273,23 @@ title_cw_fixed = cSplit(title_cw_fixed, 'index', 'X700', '|')
 title_cw_fixed = title_cw_fixed.loc[title_cw_fixed['X300'].notnull()]
 
 def check_person(row, pers1, pers2):
-    if str(row[pers1]).split(' ')[0][2:] in str(row[pers2]):
+    if '%b' in str(row[pers2]) and str(row[pers1]).split(' ')[0][2:] in str(row[pers2]):
         return row[pers1]
+    elif '%b' in str(row[pers2]) and pd.isnull(row[pers1]) and row['X100'] != '':
+        return row['X100']
+    elif '%b' in str(row[pers2]):
+        m = re.search('(?<=%b)(.*?)(?= %f|$)', str(row[pers2])).group(1)
+        return m
     else:
         return np.nan
 
 title_cw_fixed['author'] = title_cw_fixed.apply(lambda x: check_person(x, 'X700', 'X300'), axis = 1)
-test = title_cw_fixed.loc[(title_cw_fixed['author'].notnull()) |
+title_cw_fixed = title_cw_fixed.loc[(title_cw_fixed['author'].notnull()) |
                           (title_cw_fixed['X700'].isnull())]
+title_cw_fixed = title_cw_fixed.drop_duplicates()
 
-title_cw_fixed['X700'][0].split(' ')[0][2:]
 
-for index, element in enumerate(elementy):
-    if element.count('(') == 0:
-        elementy[index] = re.sub(r'(?!^|\|)(\%f)', '|\1', element)
-
+test = re.search('(?<=%b)(.*?)(?= %f)', '%bWierzbicki Piotr (1935- ) %fSpór z niańkami').group(1)
 
 
 
