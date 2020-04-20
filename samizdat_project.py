@@ -3,6 +3,7 @@ import pandas as pd
 from my_functions import marc_parser_1_field
 from my_functions import unique_elem_from_column_split
 from my_functions import cSplit
+from my_functions import replacenth
 import re
 from functools import reduce
 import numpy as np
@@ -15,6 +16,151 @@ cz_books = pd.read_csv("C:/Users/Cezary/Desktop/cz_books.csv", sep=';')
 cz_articles = pd.read_csv("C:/Users/Cezary/Desktop/cz_articles.csv", sep=';')
 pbl_books = pd.read_csv("C:/Users/Cezary/Desktop/pbl_books.csv", sep=';')
 pbl_articles = pd.read_csv("C:/Users/Cezary/Desktop/pbl_articles.csv", sep=';')
+
+
+# kartoteka intytucji
+# bn books
+#110
+institutions_110 = marc_parser_1_field(bn_books, 'id', 'X110', '%')[['id', '%1', '%2', '%6']]
+institutions_110.columns = [['id', 'Entity_Name', 'Related_Entity_Sub_Entity', 'Located_Location']]
+institutions_110['MRC'] = '110'
+institutions_110['subfield'] = '%1'
+institutions_110['Related_Entity_Main_Entity'] = np.nan
+sub_institutions_110 = marc_parser_1_field(bn_books, 'id', 'X110', '%')[['id', '%2', '%1', '%7']]
+sub_institutions_110 = sub_institutions_110.loc[sub_institutions_110['%2'] != ""]
+sub_institutions_110.columns = [['id', 'Entity_Name', 'Related_Entity_Main_Entity', 'Located_Location']]
+sub_institutions_110['MRC'] = '110'
+sub_institutions_110['subfield'] = '%2'
+sub_institutions_110['Related_Entity_Sub_Entity'] = np.nan
+bn_institutions110 = pd.concat([institutions_110, sub_institutions_110], axis = 0)
+#120
+institutions_120 = marc_parser_1_field(bn_books, 'id', 'X120', '%')[['id', '%1', '%2']]
+institutions_120.columns = [['id', 'Entity_Name', 'Related_Entity_Sub_Entity']]
+institutions_120['MRC'] = '120'
+institutions_120['subfield'] = '%1'
+institutions_120['Related_Entity_Main_Entity'] = np.nan
+institutions_120['Located_Location'] = np.nan
+sub_institutions_120 = marc_parser_1_field(bn_books, 'id', 'X120', '%')[['id', '%2', '%1']]
+sub_institutions_120 = sub_institutions_120.loc[sub_institutions_120['%2'] != ""]
+sub_institutions_120.columns = [['id', 'Entity_Name', 'Related_Entity_Main_Entity']]
+sub_institutions_120['MRC'] = '120'
+sub_institutions_120['subfield'] = '%2'
+sub_institutions_120['Related_Entity_Sub_Entity'] = np.nan
+sub_institutions_120['Located_Location'] = np.nan
+bn_institutions120 = pd.concat([institutions_120, sub_institutions_120], axis = 0)
+#210
+X210 = bn_books[['id', 'X210']].dropna()
+X210['rok_wydania'] = X210['X210'].str.extract(r'(?<=\%d)(.*?)(?=\%e|$)')
+X210['bez_roku'] = X210['X210'].str.replace(r'.\%d.*', "")
+X210['ile_wydawnictw'] = X210['bez_roku'].str.count(r'\%c')
+X210['ile_miejsc'] = X210['bez_roku'].str.count(r'\%a')
+X210['kolejnosc'] = X210['bez_roku'].str.findall(r'(?<=\%)(.)').str.join("")
+X210['lista'] = X210['bez_roku'].str.split(r' (?=\%)')
+
+def kolejnosc(row, kolumna_dane, kolumna_kolejnosc):
+    if row[kolumna_kolejnosc] == "acc":
+        order = [0,1,0,2]
+        row[kolumna_dane] = [row[kolumna_dane][i] for i in order]
+        return row[kolumna_dane]
+    elif row[kolumna_kolejnosc] == "aac":
+        row[kolumna_dane][0:2] = [', '.join(row[kolumna_dane][0:2])]
+        return row[kolumna_dane]
+    elif row[kolumna_kolejnosc] == "acacc":
+        order = [0, 1, 2, 3, 2, 4]
+        row[kolumna_dane] = [row[kolumna_dane][i] for i in order]
+        return row[kolumna_dane]
+    elif row[kolumna_kolejnosc] == "aacc":
+        row[kolumna_dane][0:2] = [', '.join(row[kolumna_dane][0:2])]
+        order = [0, 1, 0, 2]
+        row[kolumna_dane] = [row[kolumna_dane][i] for i in order]
+        return row[kolumna_dane]
+    else:
+        return row[kolumna_dane]
+    
+X210['dobre'] = X210.apply(lambda x: kolejnosc(x, 'lista', 'kolejnosc'), axis = 1)
+X210['dobre'] = X210['dobre'].apply(lambda x: [replacenth(i, '%a', '', 2) if i.count('%a') > 1 else i for i in x]).str.join(" ").str.replace(r'(?<!^)(\%a)', r'|\1', regex=True)
+X210 = cSplit(X210[['id', 'dobre']], 'id', 'dobre', '|')
+X210['dobre'] = X210['dobre'].str.strip().str.replace(' +', ' ')
+
+institutions_210 = marc_parser_1_field(X210, 'id', 'dobre', '%')[['id', '%c', '%a']]
+institutions_210.columns = [['id', 'Entity_Name', 'Located_Location']]
+institutions_210['MRC'] = '210'
+institutions_210['subfield'] = '%c'
+institutions_210['Related_Entity_Main_Entity'] = np.nan
+institutions_210['Related_Entity_Sub_Entity'] = np.nan
+sub_institutions_210 = marc_parser_1_field(bn_books, 'id', 'X210', '%')[['id', '%g', '%e']]
+sub_institutions_210 = sub_institutions_210.loc[sub_institutions_210['%g'] != ""]
+sub_institutions_210.columns = [['id', 'Entity_Name', 'Located_Location']]
+sub_institutions_210['MRC'] = '210'
+sub_institutions_210['subfield'] = '%g'
+sub_institutions_210['Related_Entity_Sub_Entity'] = np.nan
+sub_institutions_210['Related_Entity_Main_Entity'] = np.nan
+bn_institutions210 = pd.concat([institutions_210, sub_institutions_210], axis = 0)   
+#225
+institutions_225 = marc_parser_1_field(bn_books, 'id', 'X225', '%')[['id', '%f']]
+institutions_225 = institutions_225.loc[institutions_225['%f'] != ""]
+institutions_225.columns = [['id', 'Entity_Name']]
+institutions_225['MRC'] = '225'
+institutions_225['subfield'] = '%f'
+institutions_225['Related_Entity_Main_Entity'] = np.nan
+institutions_225['Related_Entity_Sub_Entity'] = np.nan
+institutions_225['Located_Location'] = np.nan
+#710
+institutions_710 = marc_parser_1_field(bn_books, 'id', 'X710', '%')[['id', '%1']]
+institutions_710.columns = [['id', 'Entity_Name']]
+institutions_710['MRC'] = '710'
+institutions_710['subfield'] = '%1'
+institutions_710['Related_Entity_Main_Entity'] = np.nan
+institutions_710['Related_Entity_Sub_Entity'] = np.nan
+institutions_710['Located_Location'] = np.nan
+#711
+institutions_711 = marc_parser_1_field(bn_books, 'id', 'X711', '%')[['id', '%1']]
+institutions_711.columns = [['id', 'Entity_Name']]
+institutions_711['MRC'] = '710'
+institutions_711['subfield'] = '%1'
+institutions_711['Related_Entity_Main_Entity'] = np.nan
+institutions_711['Related_Entity_Sub_Entity'] = np.nan
+institutions_711['Located_Location'] = np.nan
+
+bn_book_institutions = pd.concat([bn_institutions110, bn_institutions120, bn_institutions210, institutions_225, institutions_710, institutions_711], axis = 0)
+#cz
+#110
+cz_set = pd.concat([cz_books, cz_articles], axis=0, ignore_index = True)[['id', 'X110', 'X264', 'X610', 'X710']]
+institutions_110 = marc_parser_1_field(cz_set, 'id', 'X110', '$\$')
+file = cz_set
+field_id = 'id'
+field_data = 'X110'
+delimiter = '$\$'
+
+####
+#### uwzględnić w funkcji indicator!!, bo nie działa
+from itertools import chain
+def marc_parser_1_field(file, field_id, field_data, delimiter):
+    marc_field = file.loc[file[field_data].notnull(),[field_id, field_data]]
+    marc_field = pd.DataFrame(marc_field[field_data].str.split('|').tolist(), marc_field[field_id]).stack()
+    marc_field = marc_field.reset_index()[[0, field_id]]
+    marc_field.columns = [field_data, field_id]
+    subfield_list = file[field_data].str.findall(f'\{delimiter}.').dropna().tolist()
+    subfield_list = sorted(set(list(chain.from_iterable(subfield_list))))
+    empty_table = pd.DataFrame(index = range(0, len(marc_field)), columns = subfield_list)
+    marc_field = pd.concat([marc_field.reset_index(drop=True), empty_table], axis=1)
+    for marker in subfield_list:
+        marker = "".join([i if i.isalnum() else f'\\{i}' for i in marker])            
+        marc_field[field_data] = marc_field[field_data].str.replace(f'({marker})', r'|\1', 1)
+    for marker in subfield_list:
+        marker2 = "".join([i if i.isalnum() else f'\\{i}' for i in marker]) 
+        string = f'(^)(.*?\|\{marker2}|)(.*?)(\,{{0,1}})((\|\{delimiter})(.*)|$)'
+        marc_field[marker] = marc_field[field_data].str.replace(string, r'\3')
+        marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
+    return marc_field
+
+marker = '$$4'
+marker = "".join([i if i.isalnum() else f'\\{i}' for i in marker])
+
+"a".isalnum()
+"2".isalnum()
+"%".isalnum()
+"$".isalnum()
 
 # bn books
 # object

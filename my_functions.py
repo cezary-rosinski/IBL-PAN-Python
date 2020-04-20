@@ -17,9 +17,10 @@ def marc_parser_1_field(file, field_id, field_data, delimiter):
     empty_table = pd.DataFrame(index = range(0, len(marc_field)), columns = subfield_list)
     marc_field = pd.concat([marc_field.reset_index(drop=True), empty_table], axis=1)
     for marker in subfield_list:
+        marker = "".join([i if i.isalnum() else f'\\{i}' for i in marker]) 
         marc_field[field_data] = marc_field[field_data].str.replace(f'({marker})', r'|\1', 1)
     for marker in subfield_list:
-        string = f'(^)(.*?\|\{marker}|)(.*?)(\,{{0,1}})((\|\%)(.*)|$)'
+        string = f'(^)(.*?\|\{marker}|)(.*?)(\,{{0,1}})((\|\{delimiter})(.*)|$)'
         marc_field[marker] = marc_field[field_data].str.replace(string, r'\3')
         marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
     return marc_field
@@ -33,7 +34,7 @@ def marc_parser_1_field_simple(file, field_id, field_data, delimiter):
     for marker in subfield_list:
         marc_field[field_data] = marc_field[field_data].str.replace(f'({marker})', r'|\1', 1)
     for marker in subfield_list:
-        string = f'(^)(.*?\|\{marker}|)(.*?)(\,{{0,1}})((\|\%)(.*)|$)'
+        string = f'(^)(.*?\|\{marker}|)(.*?)(\,{{0,1}})((\|\{delimiter})(.*)|$)'
         marc_field[marker] = marc_field[field_data].str.replace(string, r'\3')
         marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
     return marc_field
@@ -127,3 +128,12 @@ def explode_df(df, lst_cols, fill_value=''):
         }).assign(**{col:np.concatenate(df[col].values) for col in lst_cols}) \
           .append(df.loc[lens==0, idx_cols]).fillna(fill_value) \
           .loc[:, df.columns]
+
+# replace nth occurence
+def replacenth(string, sub, wanted, n):
+    where = [m.start() for m in re.finditer(sub, string)][n-1]
+    before = string[:where]
+    after = string[where:]
+    after = after.replace(sub, wanted, 1)
+    newString = before + after
+    return newString         
