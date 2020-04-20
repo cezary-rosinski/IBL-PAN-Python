@@ -13,16 +13,31 @@ def marc_parser_1_field(file, field_id, field_data, delimiter):
     marc_field = marc_field.reset_index()[[0, field_id]]
     marc_field.columns = [field_data, field_id]
     subfield_list = file[field_data].str.findall(f'\{delimiter}.').dropna().tolist()
-    subfield_list = sorted(set(list(chain.from_iterable(subfield_list))))
-    empty_table = pd.DataFrame(index = range(0, len(marc_field)), columns = subfield_list)
-    marc_field = pd.concat([marc_field.reset_index(drop=True), empty_table], axis=1)
-    for marker in subfield_list:
-        marker = "".join([i if i.isalnum() else f'\\{i}' for i in marker]) 
-        marc_field[field_data] = marc_field[field_data].str.replace(f'({marker})', r'|\1', 1)
-    for marker in subfield_list:
-        string = f'(^)(.*?\|\{marker}|)(.*?)(\,{{0,1}})((\|\{delimiter})(.*)|$)'
-        marc_field[marker] = marc_field[field_data].str.replace(string, r'\3')
-        marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
+    if marc_field[field_data][0][0] == delimiter[0]: 
+        subfield_list = sorted(set(list(chain.from_iterable(subfield_list))))
+        empty_table = pd.DataFrame(index = range(0, len(marc_field)), columns = subfield_list)
+        marc_field = pd.concat([marc_field.reset_index(drop=True), empty_table], axis=1)
+        for marker in subfield_list:
+            marker = "".join([i if i.isalnum() else f'\\{i}' for i in marker])            
+            marc_field[field_data] = marc_field[field_data].str.replace(f'({marker})', r'|\1', 1)
+        for marker in subfield_list:
+            string = f'(^)(.*?\|\{marker}|)(.*?)(\,{{0,1}})((\|\{delimiter})(.*)|$)'
+            marc_field[marker] = marc_field[field_data].str.replace(string, r'\3')
+            marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
+    else:
+        subfield_list = list(set(list(chain.from_iterable(subfield_list))))
+        subfield_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+        empty_table = pd.DataFrame(index = range(0, len(marc_field)), columns = subfield_list)
+        marc_field['indicator'] = marc_field[field_data].str.replace(r'(^.*?)(\$.*)', r'\1')
+        marc_field = pd.concat([marc_field.reset_index(drop=True), empty_table], axis=1)
+        for marker in subfield_list:
+            marker = "".join([i if i.isalnum() else f'\\{i}' for i in marker])            
+            marc_field[field_data] = marc_field[field_data].str.replace(f'({marker})', r'|\1', 1)
+        for marker in subfield_list:
+            marker2 = "".join([i if i.isalnum() else f'\\{i}' for i in marker]) 
+            string = f'(^)(.*?\|{marker2}|)(.*?)(\,{{0,1}})((\|\{delimiter})(.*)|$)'
+            marc_field[marker] = marc_field[field_data].apply(lambda x: re.sub(string, r'\3', x) if marker in x else '')
+            marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
     return marc_field
 
 def marc_parser_1_field_simple(file, field_id, field_data, delimiter):

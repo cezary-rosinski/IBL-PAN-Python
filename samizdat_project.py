@@ -127,40 +127,10 @@ bn_book_institutions = pd.concat([bn_institutions110, bn_institutions120, bn_ins
 #110
 cz_set = pd.concat([cz_books, cz_articles], axis=0, ignore_index = True)[['id', 'X110', 'X264', 'X610', 'X710']]
 institutions_110 = marc_parser_1_field(cz_set, 'id', 'X110', '$\$')
-file = cz_set
-field_id = 'id'
-field_data = 'X110'
-delimiter = '$\$'
 
-####
-#### uwzględnić w funkcji indicator!!, bo nie działa
-from itertools import chain
-def marc_parser_1_field(file, field_id, field_data, delimiter):
-    marc_field = file.loc[file[field_data].notnull(),[field_id, field_data]]
-    marc_field = pd.DataFrame(marc_field[field_data].str.split('|').tolist(), marc_field[field_id]).stack()
-    marc_field = marc_field.reset_index()[[0, field_id]]
-    marc_field.columns = [field_data, field_id]
-    subfield_list = file[field_data].str.findall(f'\{delimiter}.').dropna().tolist()
-    subfield_list = sorted(set(list(chain.from_iterable(subfield_list))))
-    empty_table = pd.DataFrame(index = range(0, len(marc_field)), columns = subfield_list)
-    marc_field = pd.concat([marc_field.reset_index(drop=True), empty_table], axis=1)
-    for marker in subfield_list:
-        marker = "".join([i if i.isalnum() else f'\\{i}' for i in marker])            
-        marc_field[field_data] = marc_field[field_data].str.replace(f'({marker})', r'|\1', 1)
-    for marker in subfield_list:
-        marker2 = "".join([i if i.isalnum() else f'\\{i}' for i in marker]) 
-        string = f'(^)(.*?\|\{marker2}|)(.*?)(\,{{0,1}})((\|\{delimiter})(.*)|$)'
-        marc_field[marker] = marc_field[field_data].str.replace(string, r'\3')
-        marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
-    return marc_field
+#tutaj
 
-marker = '$$4'
-marker = "".join([i if i.isalnum() else f'\\{i}' for i in marker])
 
-"a".isalnum()
-"2".isalnum()
-"%".isalnum()
-"$".isalnum()
 
 # bn books
 # object
