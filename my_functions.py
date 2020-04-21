@@ -7,12 +7,12 @@ from itertools import combinations
 import numpy as np
 
 # parser kolumny marc
-def marc_parser_1_field(file, field_id, field_data, delimiter):
-    marc_field = file.loc[file[field_data].notnull(),[field_id, field_data]]
+def marc_parser_1_field(df, field_id, field_data, delimiter):
+    marc_field = df.loc[df[field_data].notnull(),[field_id, field_data]]
     marc_field = pd.DataFrame(marc_field[field_data].str.split('|').tolist(), marc_field[field_id]).stack()
     marc_field = marc_field.reset_index()[[0, field_id]]
     marc_field.columns = [field_data, field_id]
-    subfield_list = file[field_data].str.findall(f'\{delimiter}.').dropna().tolist()
+    subfield_list = df[field_data].str.findall(f'\{delimiter}.').dropna().tolist()
     if marc_field[field_data][0][0] == delimiter[0]: 
         subfield_list = sorted(set(list(chain.from_iterable(subfield_list))))
         empty_table = pd.DataFrame(index = range(0, len(marc_field)), columns = subfield_list)
@@ -40,9 +40,9 @@ def marc_parser_1_field(file, field_id, field_data, delimiter):
             marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
     return marc_field
 
-def marc_parser_1_field_simple(file, field_id, field_data, delimiter):
-    marc_field = file.loc[file[field_data].notnull(),[field_id, field_data]]
-    subfield_list = file[field_data].str.findall(f'\{delimiter}.').dropna().tolist()
+def marc_parser_1_field_simple(df, field_id, field_data, delimiter):
+    marc_field = df.loc[df[field_data].notnull(),[field_id, field_data]]
+    subfield_list = df[field_data].str.findall(f'\{delimiter}.').dropna().tolist()
     subfield_list = sorted(set(list(chain.from_iterable(subfield_list))))
     empty_table = pd.DataFrame(index = range(0, len(marc_field)), columns = subfield_list)
     marc_field = pd.concat([marc_field.reset_index(drop=True), empty_table], axis=1)
@@ -92,8 +92,8 @@ def cosine_sim_2_elem(lista):
 
 # lista unikatowych wartości w kolumnie - split
     
-def unique_elem_from_column_split(file, column, delimiter):
-    elements = file[column].apply(lambda x: x.split(delimiter)).tolist()
+def unique_elem_from_column_split(df, column, delimiter):
+    elements = df[column].apply(lambda x: x.split(delimiter)).tolist()
     elements = sorted(set(list(chain.from_iterable(elements))))
     elements = list(filter(None, elements))
     elements = [x.strip() for x in elements]
@@ -101,19 +101,19 @@ def unique_elem_from_column_split(file, column, delimiter):
     return elements
 
 #lista unikatowych wartości w kolumnie - regex
-def unique_elem_from_column_regex(file, column, regex):
-    lista_elementow = file[column].str.extract(f'({regex})').drop_duplicates().dropna().values.tolist()
+def unique_elem_from_column_regex(df, column, regex):
+    lista_elementow = df[column].str.extract(f'({regex})').drop_duplicates().dropna().values.tolist()
     lista_elementow = list(chain.from_iterable(lista_elementow))
     return lista_elementow
 
 #cSplit
-def cSplit(file, id_column, split_column, delimiter):
-    file.loc[file[split_column].isnull(), split_column] = ''
-    new_df = pd.DataFrame(file[split_column].str.split(delimiter).tolist(), index=file[id_column]).stack()
+def cSplit(df, id_column, split_column, delimiter):
+    df.loc[df[split_column].isnull(), split_column] = ''
+    new_df = pd.DataFrame(df[split_column].str.split(delimiter).tolist(), index=df[id_column]).stack()
     new_df = new_df.reset_index([0, id_column])
     new_df.columns = [id_column, split_column]
-    new_df = pd.merge(new_df, file.loc[:, file.columns != split_column],  how='left', left_on = id_column, right_on = id_column)
-    new_df = new_df[file.columns]
+    new_df = pd.merge(new_df, df.loc[:, df.columns != split_column],  how='left', left_on = id_column, right_on = id_column)
+    new_df = new_df[df.columns]
     new_df.loc[new_df[split_column] == '', split_column] = np.nan
     return new_df
 
@@ -151,4 +151,4 @@ def replacenth(string, sub, wanted, n):
     after = string[where:]
     after = after.replace(sub, wanted, 1)
     newString = before + after
-    return newString         
+    return newString 

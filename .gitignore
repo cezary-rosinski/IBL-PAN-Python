@@ -1,3 +1,4 @@
 /do ignorowania.txt
 __pycache__/
 *.py[cod]
+/client_secret.json
