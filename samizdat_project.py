@@ -9,7 +9,6 @@ from functools import reduce
 import numpy as np
 import copy
 
-
 bn_books = pd.read_csv("C:/Users/Cezary/Desktop/bn_books.csv", sep=';')
 bn_books.iloc[142, 18] = '%fWspomnienia 1939-1945 : (fragmenty) %bPużak Kazimierz %ss. 58-130 %z1|%fPolitycy i żołnierze %bGarliński Józef %ss. 131-147 %z2|%aZawiera : "Proces szesnastu" w Moskwie : (wspomnienia osobiste) / K.      Bagiński. Wspomnienia 1939-1945 : (fragmenty) / K. Pużak. Politycy i      żołnierze / J. Garliński %bBagiński Kazimierz %f"Proces szesnastu" w      Moskwie %ss. 3-57 %z0'
 cz_books = pd.read_csv("C:/Users/Cezary/Desktop/cz_books.csv", sep=';')
@@ -122,16 +121,91 @@ institutions_711['Related_Entity_Main_Entity'] = np.nan
 institutions_711['Related_Entity_Sub_Entity'] = np.nan
 institutions_711['Located_Location'] = np.nan
 
-bn_book_institutions = pd.concat([bn_institutions110, bn_institutions120, bn_institutions210, institutions_225, institutions_710, institutions_711], axis = 0)
+bn_book_institutions = pd.concat([bn_institutions110, bn_institutions120, bn_institutions210, institutions_225, institutions_710, institutions_711])
+bn_book_institutions['source'] = "bn_books"
+bn_book_institutions.columns = bn_book_institutions.columns.get_level_values(0)
 #cz
+cz_books['source'] = "cz_books"
+cz_articles['source'] = "cz_articles"
+cz_set = pd.concat([cz_books, cz_articles], axis=0, ignore_index = True)[['id', 'X110', 'X264', 'X610', 'X710', 'source']]
 #110
-cz_set = pd.concat([cz_books, cz_articles], axis=0, ignore_index = True)[['id', 'X110', 'X264', 'X610', 'X710']]
-institutions_110 = marc_parser_1_field(cz_set, 'id', 'X110', '$\$')
+institutions_110 = marc_parser_1_field(cz_set, 'id', 'X110', '$\$')[['id', '$$a']]
+institutions_110.columns = [['id', 'Entity_Name']]
+institutions_110['MRC'] = '110'
+institutions_110['subfield'] = '$$a'
+institutions_110['Related_Entity_Main_Entity'] = np.nan
+institutions_110['Related_Entity_Sub_Entity'] = np.nan
+institutions_110['Located_Location'] = np.nan
+#264
+institutions_264 = marc_parser_1_field(cz_set, 'id', 'X264', '$\$')[['id', '$$b', '$$a']]
+institutions_264.columns = [['id', 'Entity_Name', "Located_Location"]]
+institutions_264['MRC'] = '264'
+institutions_264['subfield'] = '$$b'
+institutions_264['Related_Entity_Main_Entity'] = np.nan
+institutions_264['Related_Entity_Sub_Entity'] = np.nan
+#610
+institutions_610 = marc_parser_1_field(cz_set, 'id', 'X610', '$\$')[['id', '$$a']]
+institutions_610.columns = [['id', 'Entity_Name']]
+institutions_610['MRC'] = '610'
+institutions_610['subfield'] = '$$a'
+institutions_610['Related_Entity_Main_Entity'] = np.nan
+institutions_610['Related_Entity_Sub_Entity'] = np.nan
+institutions_610['Located_Location'] = np.nan
+#710
+institutions_710 = marc_parser_1_field(cz_set, 'id', 'X710', '$\$')[['id', '$$a']]
+institutions_710.columns = [['id', 'Entity_Name']]
+institutions_710['MRC'] = '710'
+institutions_710['subfield'] = '$$a'
+institutions_710['Related_Entity_Main_Entity'] = np.nan
+institutions_710['Related_Entity_Sub_Entity'] = np.nan
+institutions_710['Located_Location'] = np.nan
+cz_institutions = pd.concat([institutions_110, institutions_264, institutions_610, institutions_710])
+cz_institutions.columns = cz_institutions.columns.get_level_values(0)
+cz_set.columns = cz_set.columns.get_level_values(0)
+cz_institutions = pd.merge(cz_institutions, cz_set[['id', 'source']],  how='left', left_on = 'id', right_on = 'id')
+#pbl
+# pbl books
+#publishing house
+pbl_books_publishing_house = pbl_books[['rekord_id', 'wydawnictwo', 'miejscowosc']].drop_duplicates()
+pbl_books_publishing_house.columns = [['id', 'Entity_Name', 'Located_Location']]
+pbl_books_publishing_house['MRC'] = np.nan
+pbl_books_publishing_house['subfield'] = 'publishing_house'
+pbl_books_publishing_house['Related_Entity_Main_Entity'] = np.nan
+pbl_books_publishing_house['Related_Entity_Sub_Entity'] = np.nan
+pbl_books_publishing_house['source'] = 'pbl_books'
+# pbl articles
+#subject headings
+pbl_articles_institutions = pbl_articles[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
+pbl_articles_institutions = pbl_articles_institutions[pbl_articles_institutions['HP_NAZWA'].isin(["Biblioteki","Filmowe instytucje, kluby, przedsiębiorstwa","Fundacje, fundusze kulturalne, stypendia","Grupy literackie i artystyczne","Instytucje kulturalne, państwowe, społeczne obce","Instytucje kulturalne, państwowe, społeczne polskie","Instytuty pozauczelniane, komitety i towarzystwa naukowe w Polsce","Instytuty pozauczelniane, komitety i towarzystwa naukowe za granicą","Muzea obce","Muzea polskie","Teatry obce","Teatry polskie historia","Teatry polskie współczesne","Uczelniane instytuty (wydziały, zakłady, ośrodki badawcze) obce","Uczelniane instytuty (wydziały, zakłady, ośrodki badawcze) polskie","Uniwersytety, szkoły wyższe i inne uczelnie obce","Uniwersytety, szkoły wyższe i inne uczelnie polskie","Wydawnictwa polskie do 1945 roku","Wydawnictwa polskie po 1945 roku","Związki, kluby, koła, stowarzyszenia twórcze obce","Związki, kluby, koła, stowarzyszenia twórcze polskie"])][['rekord_id', 'KH_NAZWA']]
+pbl_articles_institutions.columns = [['id', 'Entity_Name']]
+pbl_articles_institutions['MRC'] = np.nan
+pbl_articles_institutions['subfield'] = 'subject_heading'
+pbl_articles_institutions['Related_Entity_Main_Entity'] = np.nan
+pbl_articles_institutions['Related_Entity_Sub_Entity'] = np.nan
+pbl_articles_institutions['Located_Location'] = np.nan
+pbl_articles_institutions['source'] = 'pbl_articles'
+pbl_institutions = pd.concat([pbl_books_publishing_house, pbl_articles_institutions])
+pbl_institutions.columns = pbl_institutions.columns.get_level_values(0)
+#merge all institutions
+samizdat_institutions = pd.concat([bn_book_institutions, cz_institutions, pbl_institutions])
+samizdat_institutions['Grouped'] = samizdat_institutions[['source', 'MRC', 'subfield', 'id']].apply(lambda x: '|'.join(x.astype(str)), axis = 1)
+samizdat_institutions = samizdat_institutions[['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity', 'Located_Location', 'Grouped']].sort_values(['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity'])
+samizdat_institutions['simple_name_loc'] = samizdat_institutions[['Entity_Name', 'Located_Location']].apply(lambda x: '-'.join(x.dropna().astype(str).str.lower().str.replace('\W', '')), axis = 1)
+test = samizdat_institutions.groupby('simple_name_loc')[['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity', 'Located_Location', 'Grouped']].transform(lambda x: '|'.join(x))
+
+# rozwiązać ten error
+# IndexError: Column(s) ['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity', 'Located_Location', 'Grouped'] already selected
+
+
+
+samizdat_institutions = samizdat_institutions.groupby('simple_name_loc').transform(lambda x: '|'.join(x))
+samizdat_institutions = samizdat_institutions.drop_duplicates().sort_values(['simple_name_loc', 'Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity'])
+samizdat_institutions.to_excel('C:/Users/Cezary/Desktop/samizdat_instytucje.xlsx', index = False)
+
+df['Grouped'] = df.groupby('Order ID')['Product'].transform(lambda x: ', '.join(x))
+# drop duplicates
 
 #tutaj
-
-
-
 # bn books
 # object
 title = marc_parser_1_field(bn_books, 'id', 'X200', '%')[['id', '%a', '%e']]
