@@ -188,24 +188,19 @@ pbl_institutions = pd.concat([pbl_books_publishing_house, pbl_articles_instituti
 pbl_institutions.columns = pbl_institutions.columns.get_level_values(0)
 #merge all institutions
 samizdat_institutions = pd.concat([bn_book_institutions, cz_institutions, pbl_institutions])
-samizdat_institutions['Grouped'] = samizdat_institutions[['source', 'MRC', 'subfield', 'id']].apply(lambda x: '|'.join(x.astype(str)), axis = 1)
+samizdat_institutions['Grouped'] = samizdat_institutions[['source', 'MRC', 'subfield', 'id']].apply(lambda x: '-'.join(x.astype(str)), axis = 1)
 samizdat_institutions = samizdat_institutions[['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity', 'Located_Location', 'Grouped']].sort_values(['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity'])
-samizdat_institutions['simple_name_loc'] = samizdat_institutions[['Entity_Name', 'Located_Location']].apply(lambda x: '-'.join(x.dropna().astype(str).str.lower().str.replace('\W', '')), axis = 1)
-test = samizdat_institutions.groupby('simple_name_loc')[['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity', 'Located_Location', 'Grouped']].transform(lambda x: '|'.join(x))
+samizdat_institutions['simple_name_loc'] = samizdat_institutions[['Entity_Name', 'Located_Location']].apply(lambda x: '|'.join(x.dropna().astype(str).str.lower().str.replace('\W', '')), axis = 1)
 
-# rozwiązać ten error
-# IndexError: Column(s) ['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity', 'Located_Location', 'Grouped'] already selected
+for column in samizdat_institutions.iloc[:,:5]:
+    samizdat_institutions[column] = samizdat_institutions.groupby('simple_name_loc')[column].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
 
-
-
-samizdat_institutions = samizdat_institutions.groupby('simple_name_loc').transform(lambda x: '|'.join(x))
-samizdat_institutions = samizdat_institutions.drop_duplicates().sort_values(['simple_name_loc', 'Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity'])
+samizdat_institutions = samizdat_institutions.drop_duplicates().sort_values(['simple_name_loc', 'Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity']).reset_index(drop = True)
+samizdat_institutions['group_id'] = samizdat_institutions.index + 1
+samizdat_institutions = samizdat_institutions.replace('nan', '')
 samizdat_institutions.to_excel('C:/Users/Cezary/Desktop/samizdat_instytucje.xlsx', index = False)
 
-df['Grouped'] = df.groupby('Order ID')['Product'].transform(lambda x: ', '.join(x))
-# drop duplicates
 
-#tutaj
 # bn books
 # object
 title = marc_parser_1_field(bn_books, 'id', 'X200', '%')[['id', '%a', '%e']]
