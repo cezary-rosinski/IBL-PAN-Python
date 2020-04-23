@@ -48,6 +48,9 @@ def f(row):
 df['id'] = df.apply(lambda x: f(x), axis = 1)
 df['id'] = df.groupby('record')['id'].apply(lambda x: x.ffill().bfill())
 
+#wide dataframe
+df = df.pivot(index='id', columns='field_name', values='field_content')
+
 
 
 
