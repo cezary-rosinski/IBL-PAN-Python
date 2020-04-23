@@ -1,9 +1,10 @@
-import pandas as pd
 from itertools import chain
 import re
 import math
 from collections import Counter
 from itertools import combinations
+from Google import Create_Service
+import pandas as pd
 import numpy as np
 
 # parser kolumny marc
@@ -152,3 +153,17 @@ def replacenth(string, sub, wanted, n):
     after = after.replace(sub, wanted, 1)
     newString = before + after
     return newString 
+
+#read google sheet
+def from_gsheets_to_df(gsheetId, scope):
+    CLIENT_SECRET_FILE = 'client_secret.json'
+    API_SERVICE_NAME = 'sheets'
+    API_VERSION = 'v4'
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+    s = Create_Service(CLIENT_SECRET_FILE, API_SERVICE_NAME, API_VERSION, SCOPES)
+    gs = s.spreadsheets()
+    rows = gs.values().get(spreadsheetId=gsheetId,range=scope).execute()
+    header = rows.get('values', [])[0]   # Assumes first line is header!
+    values = rows.get('values', [])[1:]  # Everything else is data.
+    df = pd.DataFrame(values, columns = header)
+    return df
