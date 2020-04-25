@@ -1,4 +1,4 @@
-from my_functions import from_gsheets_to_df
+from my_functions import gsheet_to_df
 import xml.etree.ElementTree as et
 import requests
 import pandas as pd
@@ -13,12 +13,40 @@ def f(row, id_field):
         val = np.nan
     return val  
 
+def add_viaf(x):
+    return x + 'viaf.xml'
+
 ### code
 
 #google sheets
-df_names = from_gsheets_to_df('1QkZCzglN7w0AnEubuoQqHgQqib9Glild1x_3X8T_HyI', 'Sheet 1')
+df_names = gsheet_to_df('1QkZCzglN7w0AnEubuoQqHgQqib9Glild1x_3X8T_HyI', 'Sheet 1')
 df_names = df_names.loc[df_names['czy_czech'] != 'nie']
 names_list = [df_names['cz_name'].values.tolist(), df_names['viaf_id'].values.tolist()]
+
+### viaf list of names
+viafs = df_names.loc[df_names['viaf_id'].str.contains('viaf')]
+viaf_list = viafs['viaf_id'].drop_duplicates().values.tolist()
+viaf_list = list(map(add_viaf, viaf_list))[:100]
+
+viaf_names = []
+for index, viaf in enumerate(viaf_list):
+    print(str(index) + '/' + str(len(viaf_list)-1))
+    response = requests.get(viaf)
+    with open('viaf.xml', 'wb') as file:
+        file.write(response.content)
+    tree = et.parse('viaf.xml')
+    root = tree.getroot()
+    v_names = root.findall('.//{http://viaf.org/viaf/terms#}x400/{http://viaf.org/viaf/terms#}datafield/{http://viaf.org/viaf/terms#}subfield')
+    v_sources = root.findall('.//{http://viaf.org/viaf/terms#}x400/{http://viaf.org/viaf/terms#}sources/{http://viaf.org/viaf/terms#}sid')
+    for (name, library) in zip(v_names, v_sources):
+        if name.attrib['code'] == 'a':
+            viaf_names.append([viaf, name.text, library.text])
+        
+cz_names = pd.DataFrame(viaf_names, columns =['viaf_id', 'names', 'sources']).drop_duplicates()
+cz_names.to_csv('cz_names_viaf.csv', sep = ';', index = False)     
+
+
+
 
 #swedish database
 data_full = []

@@ -155,7 +155,7 @@ def replacenth(string, sub, wanted, n):
     return newString 
 
 #read google sheet
-def from_gsheets_to_df(gsheetId, scope):
+def gsheet_to_df(gsheetId, scope):
     CLIENT_SECRET_FILE = 'client_secret.json'
     API_SERVICE_NAME = 'sheets'
     API_VERSION = 'v4'
