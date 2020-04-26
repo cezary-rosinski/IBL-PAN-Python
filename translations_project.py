@@ -23,10 +23,10 @@ df_names = gsheet_to_df('1QkZCzglN7w0AnEubuoQqHgQqib9Glild1x_3X8T_HyI', 'Sheet 1
 df_names = df_names.loc[df_names['czy_czech'] != 'nie']
 names_list = [df_names['cz_name'].values.tolist(), df_names['viaf_id'].values.tolist()]
 
-### viaf list of names
+### viaf - appending list of names
 viafs = df_names.loc[df_names['viaf_id'].str.contains('viaf')]
 viaf_list = viafs['viaf_id'].drop_duplicates().values.tolist()
-viaf_list = list(map(add_viaf, viaf_list))[:100]
+viaf_list = list(map(add_viaf, viaf_list))
 
 viaf_names = []
 for index, viaf in enumerate(viaf_list):
