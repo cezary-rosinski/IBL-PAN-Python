@@ -125,7 +125,7 @@ def cSplit(df, id_column, split_column, delimiter):
 def df_explode(df, lst_cols, sep):
     df1 = pd.DataFrame()
     for column in lst_cols:
-        column = df[column].str.split(sep, expand=True).stack().str.strip().reset_index(level=1, drop=True)
+        column = df[column].str.split(sep, expand=True).stack().reset_index(level=1, drop=True)
         df1 = pd.concat([df1, column], axis = 1)
     df1.columns = lst_cols
     df.drop(df[lst_cols], axis = 1, inplace = True)

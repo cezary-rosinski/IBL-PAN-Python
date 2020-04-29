@@ -7,6 +7,7 @@ import numpy as np
 import copy
 from my_functions import df_explode
 from my_functions import xml_to_mrk
+from my_functions import cSplit
 
 ### def
 def f(row, id_field):
@@ -29,43 +30,50 @@ df_names = df_names.loc[df_names['czy_czech'] != 'nie']
 # names_list = [df_names['cz_name'].values.tolist(), df_names['viaf_id'].values.tolist()]
 
 ### viaf - appending list of names
-viafs = df_names.loc[df_names['viaf_id'].str.contains('viaf')]
-viaf_list = viafs['viaf_id'].drop_duplicates().values.tolist()
-viaf_list = list(map(add_viaf, viaf_list))
-
-viaf_names = []
-for index, viaf in enumerate(viaf_list):
-    print(str(index) + '/' + str(len(viaf_list)-1))
-    response = requests.get(viaf)
-    with open('viaf.xml', 'wb') as file:
-        file.write(response.content)
-    tree = et.parse('viaf.xml')
-    root = tree.getroot()
-    v_names = root.findall('.//{http://viaf.org/viaf/terms#}x400/{http://viaf.org/viaf/terms#}datafield')
-    v_sources = root.findall('.//{http://viaf.org/viaf/terms#}x400/{http://viaf.org/viaf/terms#}sources/{http://viaf.org/viaf/terms#}sid')
-    for (name, library) in zip(v_names, v_sources):
-        name = ' '.join([child.text for child in name.getchildren() if child.tag == '{http://viaf.org/viaf/terms#}subfield'])
-        viaf_names.append([viaf, name, library.text])
-        
-cz_names = pd.DataFrame(viaf_names, columns =['viaf_id', 'names', 'sources']).drop_duplicates()
-cz_names['viaf_id'] = cz_names['viaf_id'].str.replace('viaf.xml', '')
-cz_names.to_csv('cz_names_viaf.csv', sep = ';', index = False)     
-# cz_names = pd.read_csv("cz_names_viaf.csv", sep=';')
-
-for column in cz_names.iloc[:,1:]:
-    cz_names[column] = cz_names.groupby('viaf_id')[column].transform(lambda x: '~'.join(x.astype(str)))
-cz_names = cz_names.drop_duplicates()
-cz_names.to_excel('cz_names_viaf2.xlsx', index = False)
+# =============================================================================
+# viafs = df_names.loc[df_names['viaf_id'].str.contains('viaf')]
+# viaf_list = viafs['viaf_id'].drop_duplicates().values.tolist()
+# viaf_list = list(map(add_viaf, viaf_list))
+# 
+# viaf_names = []
+# for index, viaf in enumerate(viaf_list):
+#     print(str(index) + '/' + str(len(viaf_list)-1))
+#     response = requests.get(viaf)
+#     with open('viaf.xml', 'wb') as file:
+#         file.write(response.content)
+#     tree = et.parse('viaf.xml')
+#     root = tree.getroot()
+#     v_names = root.findall('.//{http://viaf.org/viaf/terms#}x400/{http://viaf.org/viaf/terms#}datafield')
+#     v_sources = root.findall('.//{http://viaf.org/viaf/terms#}x400/{http://viaf.org/viaf/terms#}sources')
+#     for (name, library) in zip(v_names, v_sources):
+#         name = ' '.join([child.text for child in name.getchildren() if child.tag == '{http://viaf.org/viaf/terms#}subfield' and child.attrib['code'].isalpha()])
+#         library = '~'.join([child.text for child in library.getchildren() if child.tag == '{http://viaf.org/viaf/terms#}sid'])
+#         viaf_names.append([viaf, name, library])
+#         
+# cz_names = pd.DataFrame(viaf_names, columns =['viaf_id', 'names', 'sources']).drop_duplicates()
+# cz_names['Index'] = cz_names.index + 1
+# cz_names = cSplit(cz_names, 'Index', 'sources', '~')[['viaf_id', 'names', 'sources']]
+# cz_names['viaf_id'] = cz_names['viaf_id'].str.replace('viaf.xml', '')
+# cz_names.to_csv('cz_names_viaf.csv', sep = ';', index = False)
+# 
+# for column in cz_names.iloc[:,1:]:
+#     cz_names[column] = cz_names.groupby('viaf_id')[column].transform(lambda x: '~'.join(x.astype(str)))
+# cz_names = cz_names.drop_duplicates()
+# cz_names.to_excel('cz_names_viaf2.xlsx', index = False)
+# =============================================================================
 
 
 #swedish database
 swe_names = copy.copy(df_names).replace(r'^\s*$', np.nan, regex=True)
 swe_names = swe_names.loc[swe_names['IDs'].str.contains("SELIBR") == True].reset_index(drop = True)
-swe_names = swe_names[['cz_name', 'viaf_id', 'IDs', 'name_variants', 'IDs_for_names']]
-swe_names = df_explode(swe_names, ['name_variants', 'IDs_for_names'], '~')
-swe_names = swe_names.loc[swe_names['IDs_for_names'].str.contains("SELIBR") == True].reset_index(drop = True)
+swe_names = swe_names[['cz_name', 'viaf_id', 'IDs']]
+
+cz_names_viaf = pd.read_csv("cz_names_viaf.csv", sep=';')
+
+swe_names = pd.merge(swe_names, cz_names_viaf,  how='left', left_on = 'viaf_id', right_on = 'viaf_id')
+swe_names = swe_names.loc[swe_names['sources'].str.contains("SELIBR") == True].reset_index(drop = True)
 swe1 = swe_names[['cz_name', 'viaf_id']].drop_duplicates()
-swe2 = swe_names[['name_variants', 'viaf_id']]
+swe2 = swe_names[['names', 'viaf_id']]
 swe2.columns = swe1.columns
 swe_names = pd.concat([swe1, swe2]).sort_values(['viaf_id', 'cz_name']).values.tolist()
 
