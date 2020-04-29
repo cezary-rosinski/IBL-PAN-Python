@@ -6,6 +6,9 @@ from itertools import combinations
 from Google import Create_Service
 import pandas as pd
 import numpy as np
+import pymarc
+import os
+import io
 
 # parser kolumny marc
 def marc_parser_1_field(df, field_id, field_data, delimiter):
@@ -119,31 +122,15 @@ def cSplit(df, id_column, split_column, delimiter):
     return new_df
 
 #explode data frame for equal length
-def explode_df(df, lst_cols, fill_value=''):
-    # make sure `lst_cols` is a list
-    if lst_cols and not isinstance(lst_cols, list):
-        lst_cols = [lst_cols]
-    # all columns except `lst_cols`
-    idx_cols = df.columns.difference(lst_cols)
-
-    # calculate lengths of lists
-    lens = df[lst_cols[0]].str.len()
-
-    if (lens > 0).all():
-        # ALL lists in cells aren't empty
-        return pd.DataFrame({
-            col:np.repeat(df[col].values, df[lst_cols[0]].str.len())
-            for col in idx_cols
-        }).assign(**{col:np.concatenate(df[col].values) for col in lst_cols}) \
-          .loc[:, df.columns]
-    else:
-        # at least one list in cells is empty
-        return pd.DataFrame({
-            col:np.repeat(df[col].values, df[lst_cols[0]].str.len())
-            for col in idx_cols
-        }).assign(**{col:np.concatenate(df[col].values) for col in lst_cols}) \
-          .append(df.loc[lens==0, idx_cols]).fillna(fill_value) \
-          .loc[:, df.columns]
+def df_explode(df, lst_cols, sep):
+    df1 = pd.DataFrame()
+    for column in lst_cols:
+        column = df[column].str.split(sep, expand=True).stack().str.strip().reset_index(level=1, drop=True)
+        df1 = pd.concat([df1, column], axis = 1)
+    df1.columns = lst_cols
+    df.drop(df[lst_cols], axis = 1, inplace = True)
+    df_final = df.join(df1).reset_index(drop=True)
+    return df_final
 
 # replace nth occurence
 def replacenth(string, sub, wanted, n):
@@ -167,3 +154,16 @@ def gsheet_to_df(gsheetId, scope):
     values = rows.get('values', [])[1:]  # Everything else is data.
     df = pd.DataFrame(values, columns = header)
     return df
+
+# marc conversion from xml to mrc and mrk
+def xml_to_mrc(file_path):
+    output = file_path.replace('.xml', '.mrc')
+    writer = pymarc.MARCWriter(open(output, 'wb'))
+    records = pymarc.map_xml(writer.write, file_path) 
+    writer.close()   
+
+def xml_to_mrk(file_path):
+    output = file_path.replace('.xml', '.mrk')
+    writer = pymarc.TextWriter(io.open(output, 'wt', encoding="utf-8"))
+    records = pymarc.map_xml(writer.write, file_path) 
+    writer.close() 
