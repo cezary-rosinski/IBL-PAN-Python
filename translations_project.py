@@ -8,6 +8,8 @@ import copy
 from my_functions import df_explode
 from my_functions import xml_to_mrk
 from my_functions import cSplit
+import pymarc
+import io
 
 ### def
 def f(row, id_field):
@@ -46,16 +48,20 @@ df_names = df_names.loc[df_names['czy_czech'] != 'nie']
 #     v_names = root.findall('.//{http://viaf.org/viaf/terms#}x400/{http://viaf.org/viaf/terms#}datafield')
 #     v_sources = root.findall('.//{http://viaf.org/viaf/terms#}x400/{http://viaf.org/viaf/terms#}sources')
 #     for (name, library) in zip(v_names, v_sources):
-#         name = ' '.join([child.text for child in name.getchildren() if child.tag == '{http://viaf.org/viaf/terms#}subfield' and child.attrib['code'].isalpha()])
+#         # with dates: name = ' '.join([child.text for child in name.getchildren() if child.tag == '{http://viaf.org/viaf/terms#}subfield' and child.attrib['code'].isalpha()])
+#         person_name = ' '.join([child.text for child in name.getchildren() if child.tag == '{http://viaf.org/viaf/terms#}subfield' and child.attrib['code'].isalpha() and child.attrib['code'] not in ['d', 'f']])
+#         date = ' '.join([child.text for child in name.getchildren() if child.tag == '{http://viaf.org/viaf/terms#}subfield' and child.attrib['code'] in ['d', 'f']])
 #         library = '~'.join([child.text for child in library.getchildren() if child.tag == '{http://viaf.org/viaf/terms#}sid'])
-#         viaf_names.append([viaf, name, library])
+#         viaf_names.append([viaf, person_name, date, library])
 #         
-# cz_names = pd.DataFrame(viaf_names, columns =['viaf_id', 'names', 'sources']).drop_duplicates()
+# cz_names = pd.DataFrame(viaf_names, columns =['viaf_id', 'names', 'dates', 'sources']).drop_duplicates()
 # cz_names['Index'] = cz_names.index + 1
-# cz_names = cSplit(cz_names, 'Index', 'sources', '~')[['viaf_id', 'names', 'sources']]
+# cz_names = cSplit(cz_names, 'Index', 'sources', '~')[['viaf_id', 'names', 'dates', 'sources']]
 # cz_names['viaf_id'] = cz_names['viaf_id'].str.replace('viaf.xml', '')
-# cz_names.to_csv('cz_names_viaf.csv', sep = ';', index = False)
-# 
+# cz_names.to_csv('cz_names_viaf_sep_dates.csv', sep = ';', index = False)
+# =============================================================================
+
+# =============================================================================
 # for column in cz_names.iloc[:,1:]:
 #     cz_names[column] = cz_names.groupby('viaf_id')[column].transform(lambda x: '~'.join(x.astype(str)))
 # cz_names = cz_names.drop_duplicates()
@@ -80,94 +86,89 @@ swe_names = pd.concat([swe1, swe2]).sort_values(['viaf_id', 'cz_name']).values.t
 # swedish database harvesting
 full_data = pd.DataFrame()
 errors = []
+swe_marc = pymarc.TextWriter(io.open('swe.mrk', 'wt', encoding = 'utf-8'))
 for name_index, (name, viaf) in enumerate(swe_names):
-    try:
-         print(str(name_index) + '/' + str(len(swe_names)-1))
-         url = f'http://libris.kb.se/xsearch?query=forf:({name.replace(" ", "%20")})&start=1&n=200&format=marcxml&format_level=full'
-         response = requests.get(url)
-         with open('test.xml', 'wb') as file:
-             file.write(response.content)
-         tree = et.parse('test.xml')
-         root = tree.getroot()
-         try:
-             number_of_records = int(root.attrib['records'])
-             if 0 < number_of_records <= 200:
-                 xml_to_mrk('test.xml')
-                 df = pd.read_table('test.mrk',skip_blank_lines=True, header = None)
-                 df.columns = ['original']
-                 df['field'] = df['original'].str.extract(r'(?<=\=)(...)')
-                 df['content'] = df['original'].str.extract(r'(?<=  )(.*$)')
-                 df['ldr'] = df.apply(lambda x: f(x, 'LDR'), axis = 1).ffill()
-                 df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
-                 df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
-                 df = df[['id', 'field', 'content']]
-                 df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
-                 df = df.drop_duplicates().reset_index(drop=True)
-                 df['name'] = name
-                 df['viaf'] = viaf
-                 df_people = df[['id', 'name', 'viaf']].drop_duplicates()
-                 df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
-                 df_wide = pd.merge(df_wide, df_people,  how='left', left_on = 'id', right_on = 'id')
-                 full_data = pd.concat(full_data, df_wide)
-             elif number_of_records > 200:
-                x = range(1, number_of_records + 1, 200)
-                for page_index, i in enumerate(x):
-                    if i == 1:
-                        xml_to_mrk('test.xml')
-                        df = pd.read_table('test.mrk',skip_blank_lines=True, header = None)
-                        df.columns = ['original']
-                        df['field'] = df['original'].str.extract(r'(?<=\=)(...)')
-                        df['content'] = df['original'].str.extract(r'(?<=  )(.*$)')
-                        df['ldr'] = df.apply(lambda x: f(x, 'LDR'), axis = 1).ffill()
-                        df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
-                        df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
-                        df = df[['id', 'field', 'content']]
-                        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
-                        df = df.drop_duplicates().reset_index(drop=True)
-                        df['name'] = name
-                        df['viaf'] = viaf
-                        df_people = df[['id', 'name', 'viaf']].drop_duplicates()
-                        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
-                        df_wide = pd.merge(df_wide, df_people,  how='left', left_on = 'id', right_on = 'id')
-                        full_data = pd.concat(full_data, df_wide)
-                    else:
-                        link = f'http://libris.kb.se/xsearch?query=forf:({name.replace(" ", "%20")})&start={i}&n=200&format=marcxml&format_level=full'
-                        response = requests.get(link)
-                        with open('test.xml', 'wb') as file:
-                            file.write(response.content)
-                        xml_to_mrk('test.xml')
-                        df = pd.read_table('test.mrk',skip_blank_lines=True, header = None)
-                        df.columns = ['original']
-                        df['field'] = df['original'].str.extract(r'(?<=\=)(...)')
-                        df['content'] = df['original'].str.extract(r'(?<=  )(.*$)')
-                        df['ldr'] = df.apply(lambda x: f(x, 'LDR'), axis = 1).ffill()
-                        df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
-                        df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
-                        df = df[['id', 'field', 'content']]
-                        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
-                        df = df.drop_duplicates().reset_index(drop=True)
-                        df['name'] = name
-                        df['viaf'] = viaf
-                        df_people = df[['id', 'name', 'viaf']].drop_duplicates()
-                        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
-                        df_wide = pd.merge(df_wide, df_people,  how='left', left_on = 'id', right_on = 'id')
-                        full_data = pd.concat(full_data, df_wide)
-             else:
-                 errors.append([name_index, name, viaf]) 
-         except:
-             errors.append([name_index, name, viaf])
-    except:
+    print(str(name_index) + '/' + str(len(swe_names)-1))
+    url = f'http://libris.kb.se/xsearch?query=forf:({name.replace(" ", "%20")})&start=1&n=200&format=marcxml&format_level=full'
+    response = requests.get(url)
+    with open('test.xml', 'wb') as file:
+        file.write(response.content)
+    tree = et.parse('test.xml')
+    root = tree.getroot()
+    number_of_records = int(root.attrib['records'])
+    if 0 < number_of_records <= 200:
+        xml_to_mrk('test.xml')
+        records = pymarc.map_xml(swe_marc.write, 'test.xml')         
+        df = pd.read_table('test.mrk',skip_blank_lines=True, header = None)
+        df.columns = ['original']
+        df['field'] = df['original'].str.extract(r'(?<=\=)(...)')
+        df['content'] = df['original'].str.extract(r'(?<=  )(.*$)')
+        df['ldr'] = df.apply(lambda x: f(x, 'LDR'), axis = 1).ffill()
+        df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
+        df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
+        df = df[['id', 'field', 'content']]
+        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
+        df = df.drop_duplicates().reset_index(drop=True)
+        df['name'] = name
+        df['viaf'] = viaf
+        df_people = df[['id', 'name', 'viaf']].drop_duplicates()
+        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        df_wide = pd.merge(df_wide, df_people,  how='left', left_on = 'id', right_on = 'id')
+        full_data = full_data.append(df_wide)
+    elif number_of_records > 200:
+        x = range(1, number_of_records + 1, 200)
+        for page_index, i in enumerate(x):
+            if i == 1:
+                xml_to_mrk('test.xml')
+                records = pymarc.map_xml(swe_marc.write, 'test.xml')
+                df = pd.read_table('test.mrk',skip_blank_lines=True, header = None)
+                df.columns = ['original']
+                df['field'] = df['original'].str.extract(r'(?<=\=)(...)')
+                df['content'] = df['original'].str.extract(r'(?<=  )(.*$)')
+                df['ldr'] = df.apply(lambda x: f(x, 'LDR'), axis = 1).ffill()
+                df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
+                df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
+                df = df[['id', 'field', 'content']]
+                df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
+                df = df.drop_duplicates().reset_index(drop=True)
+                df['name'] = name
+                df['viaf'] = viaf
+                df_people = df[['id', 'name', 'viaf']].drop_duplicates()
+                df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+                df_wide = pd.merge(df_wide, df_people,  how='left', left_on = 'id', right_on = 'id')
+                full_data = full_data.append(df_wide)
+            else:
+                link = f'http://libris.kb.se/xsearch?query=forf:({name.replace(" ", "%20")})&start={i}&n=200&format=marcxml&format_level=full'
+                response = requests.get(link)
+                with open('test.xml', 'wb') as file:
+                    file.write(response.content)
+                xml_to_mrk('test.xml')
+                records = pymarc.map_xml(swe_marc.write, 'test.xml')
+                df = pd.read_table('test.mrk',skip_blank_lines=True, header = None)
+                df.columns = ['original']
+                df['field'] = df['original'].str.extract(r'(?<=\=)(...)')
+                df['content'] = df['original'].str.extract(r'(?<=  )(.*$)')
+                df['ldr'] = df.apply(lambda x: f(x, 'LDR'), axis = 1).ffill()
+                df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
+                df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
+                df = df[['id', 'field', 'content']]
+                df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
+                df = df.drop_duplicates().reset_index(drop=True)
+                df['name'] = name
+                df['viaf'] = viaf
+                df_people = df[['id', 'name', 'viaf']].drop_duplicates()
+                df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+                df_wide = pd.merge(df_wide, df_people,  how='left', left_on = 'id', right_on = 'id')
+                full_data = full_data.append(df_wide)
+    else:
         errors.append([name_index, name, viaf])
-                        
-                 
-                 
-                 
-                 
-                
+swe_marc.close()
 
-
-
-
+full_data.to_excel('swe_data.xlsx', index = False)
+swe_errors = pd.DataFrame(errors, columns = ['index', 'name', 'viaf_id'])
+swe_errors.to_excel('swe_errors.xlsx', index = False)
+swe_names = pd.DataFrame(swe_names, columns = ['name', 'viaf_id'])
+swe_names.to_excel('swe_names.xlsx', index = False)
 
 
 
