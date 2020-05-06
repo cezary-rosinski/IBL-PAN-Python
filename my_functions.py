@@ -155,15 +155,160 @@ def gsheet_to_df(gsheetId, scope):
     df = pd.DataFrame(values, columns = header)
     return df
 
-# marc conversion from xml to mrc and mrk
-def xml_to_mrc(file_path):
-    output = file_path.replace('.xml', '.mrc')
-    writer = pymarc.MARCWriter(open(output, 'wb'))
-    records = pymarc.map_xml(writer.write, file_path) 
+# marc conversions
+def xml_to_mrc(path_in, path_out):
+    writer = pymarc.MARCWriter(open(path_out, 'wb'))
+    records = pymarc.map_xml(writer.write, path_in) 
     writer.close()   
 
-def xml_to_mrk(file_path):
-    output = file_path.replace('.xml', '.mrk')
-    writer = pymarc.TextWriter(io.open(output, 'wt', encoding="utf-8"))
-    records = pymarc.map_xml(writer.write, file_path) 
+def xml_to_mrk(path_in, path_out):
+    writer = pymarc.TextWriter(io.open(path_out, 'wt', encoding="utf-8"))
+    records = pymarc.map_xml(writer.write, path_in) 
     writer.close() 
+    
+def mrc_to_mrk(path_in, path_out):
+    reader = pymarc.MARCReader(open(path_in, 'rb'), to_unicode=True, force_utf8=True)
+    writer = pymarc.TextWriter(io.open(path_out, 'wt', encoding="utf-8"))
+    for record in reader:
+        writer.write(record)
+    writer.close()
+    
+def f(row, id_field):
+    if row['field'] == id_field and id_field == 'LDR':
+        val = row.name
+    elif row['field'] == id_field:
+        val = row['content']
+    else:
+        val = np.nan
+    return val
+
+def mrk_to_mrc(path_in, path_out, field_with_id):
+    outputfile = open(path_out, 'wb')
+    reader = io.open(path_in, 'rt', encoding = 'utf-8').read().splitlines()
+    mrk_list = []
+    for row in reader:
+        if 'LDR' not in row:
+            mrk_list[-1] += '\n' + row
+        else:
+            mrk_list.append(row)
+    
+    full_data = pd.DataFrame()      
+    for record in mrk_list:
+        record = record.split('=')
+        record = list(filter(None, record))
+        for i, row in enumerate(record):
+            record[i] = record[i].rstrip().split('  ', 1)
+        df = pd.DataFrame(record, columns = ['field', 'content'])
+        df['id'] = df.apply(lambda x: f(x, field_with_id), axis = 1)
+        df['id'] = df['id'].ffill().bfill()
+        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '~'.join(x.drop_duplicates().astype(str)))
+        df = df.drop_duplicates().reset_index(drop=True)
+        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        full_data = full_data.append(df_wide)
+        
+    for index, row in enumerate(full_data.iterrows()):
+        table_row = full_data.iloc[[index]].dropna(axis=1)
+        for column in table_row:
+            table_row[column] = table_row[column].str.split('~')
+        marc_fields = table_row.columns.tolist()
+        marc_fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+        record_id = table_row.index[0]
+        table_row = table_row.reindex(columns=marc_fields)
+        table_row = table_row.T.to_dict()[record_id]
+        leader = ''.join(table_row['LDR'])
+        del table_row['LDR']
+        table_row = list(table_row.items())
+        pymarc_record = pymarc.Record(to_unicode=True, force_utf8=True, leader=leader)
+        for i, field in enumerate(table_row):
+            if int(table_row[i][0]) < 10:
+                tag = table_row[i][0]
+                data = ''.join(table_row[i][1])
+                marc_field = pymarc.Field(tag=tag, data=data)
+                pymarc_record.add_ordered_field(marc_field)
+            else:
+                if len(table_row[i][1]) == 1:
+                    tag = table_row[i][0]
+                    record_in_list = re.split('\$(.)', ''.join(table_row[i][1]))
+                    indicators = list(record_in_list[0])
+                    subfields = record_in_list[1:]
+                    marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
+                    pymarc_record.add_ordered_field(marc_field)
+                else:
+                    for element in table_row[i][1]:
+                        tag = table_row[i][0]
+                        record_in_list = re.split('\$(.)', ''.join(element))
+                        indicators = list(record_in_list[0])
+                        subfields = record_in_list[1:]
+                        marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
+                        pymarc_record.add_ordered_field(marc_field)
+        outputfile.write(pymarc_record.as_marc())
+        
+    outputfile.close()
+    
+def df_to_mrc(df, path_out):
+    outputfile = open(path_out, 'wb')     
+    for index, row in enumerate(df.iterrows()):
+        table_row = df.iloc[[index]].dropna(axis=1)
+        for column in table_row:
+            table_row[column] = table_row[column].str.split('~')
+        marc_fields = table_row.columns.tolist()
+        marc_fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+        record_id = table_row.index[0]
+        table_row = table_row.reindex(columns=marc_fields)
+        table_row = table_row.T.to_dict()[record_id]
+        leader = ''.join(table_row['LDR'])
+        del table_row['LDR']
+        table_row = list(table_row.items())
+        pymarc_record = pymarc.Record(to_unicode=True, force_utf8=True, leader=leader)
+        for i, field in enumerate(table_row):
+            if int(table_row[i][0]) < 10:
+                tag = table_row[i][0]
+                data = ''.join(table_row[i][1])
+                marc_field = pymarc.Field(tag=tag, data=data)
+                pymarc_record.add_ordered_field(marc_field)
+            else:
+                if len(table_row[i][1]) == 1:
+                    tag = table_row[i][0]
+                    record_in_list = re.split('\$(.)', ''.join(table_row[i][1]))
+                    indicators = list(record_in_list[0])
+                    subfields = record_in_list[1:]
+                    marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
+                    pymarc_record.add_ordered_field(marc_field)
+                else:
+                    for element in table_row[i][1]:
+                        tag = table_row[i][0]
+                        record_in_list = re.split('\$(.)', ''.join(element))
+                        indicators = list(record_in_list[0])
+                        subfields = record_in_list[1:]
+                        marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
+                        pymarc_record.add_ordered_field(marc_field)
+        outputfile.write(pymarc_record.as_marc())
+        
+    outputfile.close()
+    
+def mrk_to_df(path_in, field_with_id):
+    reader = io.open(path_in, 'rt', encoding = 'utf-8').read().splitlines()
+    mrk_list = []
+    for row in reader:
+        if 'LDR' not in row:
+            mrk_list[-1] += '\n' + row
+        else:
+            mrk_list.append(row)
+    
+    full_data = pd.DataFrame()      
+    for record in mrk_list:
+        record = record.split('=')
+        record = list(filter(None, record))
+        for i, row in enumerate(record):
+            record[i] = record[i].rstrip().split('  ', 1)
+        df = pd.DataFrame(record, columns = ['field', 'content'])
+        df['id'] = df.apply(lambda x: f(x, field_with_id), axis = 1)
+        df['id'] = df['id'].ffill().bfill()
+        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '~'.join(x.drop_duplicates().astype(str)))
+        df = df.drop_duplicates().reset_index(drop=True)
+        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        full_data = full_data.append(df_wide)
+        fields_order = full_data.columns.tolist()
+        fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+        full_data = full_data.reindex(columns=fields_order)
+    return full_data
