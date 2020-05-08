@@ -16,3 +16,5 @@ __pycache__/
 /swe_data.xlsx
 /swe_errors.xlsx
 /swe_names.xlsx
+/pbl_subject_headings.csv
+/language_codes_marc.xlsx
