@@ -145,12 +145,12 @@ X005 = X005[['rekord_id', '005']]
 X008 = pbl_books[['rekord_id', 'ZA_UZYTK_WPIS_DATA','ZA_RO_ROK', 'tytul']].drop_duplicates()
 def date_to_string2(x):
     try:
-        val = x.date().strftime('%Y%m%d')
+        val = x.date().strftime('%y%m%d')
     except ValueError:
         val = '19980218'
     return val
 X008['ZA_UZYTK_WPIS_DATA'] = X008['ZA_UZYTK_WPIS_DATA'].apply(lambda x: date_to_string2(x))
-
+#czy to rozwiązanie jest okej?
 def title_lang(x):
     try:
         if pd.isnull(x):
@@ -164,15 +164,13 @@ def title_lang(x):
 X008['language'] = X008['tytul'].apply(lambda x: title_lang(x))
 X008 = pd.merge(X008, language_codes[['country code', 'language code']],  how='left', left_on = 'language', right_on = 'country code')
 X008 = X008.iloc[:, [0, 1, 2, 3, 6]]
+X008['language code'] = X008['language code'].apply(lambda x: '  -d' if pd.isnull(x) else x)
+X008['008'] = X008.apply(lambda x: f"{x['ZA_UZYTK_WPIS_DATA']}s{x['ZA_RO_ROK']}----                    {x['language code']}", axis = 1)
+X040 = '\\\\$aIBL$bpol'
 
 # to nie powinno być potrzebne, jeśli 008 będzie miało tę samą długość, jeśli będzie dłuższe, wywalić doble w excelu
-X008['language code'] = X008.groupby('rekord_id')['language code'].transform(lambda x: '|'.join(x.dropna().str.strip()))
-X008 = X008.drop_duplicates()
-
-
-
-
-
+#X008['language code'] = X008.groupby('rekord_id')['language code'].transform(lambda x: '|'.join(x.dropna().str.strip()))
+#X008 = X008.drop_duplicates()
 
 
 
