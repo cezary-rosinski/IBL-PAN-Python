@@ -151,9 +151,23 @@ def date_to_string2(x):
     return val
 X008['ZA_UZYTK_WPIS_DATA'] = X008['ZA_UZYTK_WPIS_DATA'].apply(lambda x: date_to_string2(x))
 #czy to rozwiązanie jest okej?
+def clear_tytul(row):
+    if pd.isnull(row['tytul']):
+        val = '[no title]'
+    elif row['tytul'][-1] == ']':
+        val = re.sub('(^.*?)([\.!?] {0,1})\[.*?$', r'\1\2', row['tytul']).strip()
+    elif row['tytul'][0] == '[':
+        val = re.sub('(^.*?\])(.*?$)', r'\2', row['tytul']).strip()
+    else:
+        val = row['tytul']
+    return val
+X008['tytul'] = X008.apply(lambda x: clear_tytul(x), axis=1)
+
 def title_lang(x):
     try:
         if pd.isnull(x):
+            val = ''
+        elif x == '[no title]':
             val = ''
         else:
             val = detect(re.sub('[^a-zA-ZÀ-ž\s]', ' ', x.lower()))
@@ -166,7 +180,105 @@ X008 = pd.merge(X008, language_codes[['country code', 'language code']],  how='l
 X008 = X008.iloc[:, [0, 1, 2, 3, 6]]
 X008['language code'] = X008['language code'].apply(lambda x: '  -d' if pd.isnull(x) else x)
 X008['008'] = X008.apply(lambda x: f"{x['ZA_UZYTK_WPIS_DATA']}s{x['ZA_RO_ROK']}----                    {x['language code']}", axis = 1)
+X008 = X008[['rekord_id', '008']]
 X040 = '\\\\$aIBL$bpol'
+X100 = pbl_books[['rekord_id', 'rodzaj_zapisu', 'tworca_nazwisko', 'tworca_imie', 'autor_nazwisko', 'autor_imie', '$a', '$d', '$0']].drop_duplicates()
+
+def tworca_nazwisko_100(row):
+    if row['rodzaj_zapisu'] == 'książka twórcy (podmiotowa)' and pd.notnull(row['tworca_nazwisko']) and ',' in row['tworca_nazwisko'] and row['tworca_imie'] == '*':
+        val = row['autor_nazwisko']
+    else:
+        val = row['tworca_nazwisko']
+    return val
+X100['tworca_nazwisko'] = X100.apply(lambda x: tworca_nazwisko_100(x), axis=1)
+
+def tworca_imie_100(row):
+    if row['rodzaj_zapisu'] == 'książka twórcy (podmiotowa)' and pd.notnull(row['tworca_nazwisko']) and row['tworca_nazwisko'] == row['autor_nazwisko'] and row['tworca_imie'] == '*':
+        val = row['autor_imie']
+    else:
+        val = row['tworca_imie']
+    return val
+X100['tworca_imie'] = X100.apply(lambda x: tworca_imie_100(x), axis=1)
+
+def x100(row):
+    if pd.isnull(row['tworca_nazwisko']) and row['rodzaj_zapisu'] == 'książka twórcy (podmiotowa)':
+        val = np.nan
+    else:
+        if row['rodzaj_zapisu'] == 'książka twórcy (podmiotowa)' and len(f"str({row['tworca_nazwisko']}), str({row['tworca_imie']})") == len(str(row['$a'])) and ''.join(re.findall('[A-ZÀ-Ž]', f"{row['tworca_nazwisko']}, {row['tworca_imie']}")) == ''.join(re.findall('[A-ZÀ-Ž]', row['$a'])):
+            val = f"1\\$a{row['$a']}$d{row['$d']}$4aut$0{row['$0']}"
+        else:
+            if row['rodzaj_zapisu'] == 'książka twórcy (podmiotowa)':
+                val = f"1\\$a{row['tworca_nazwisko']}, {row['tworca_imie']}$d{row['$d']}$4aut$0{row['$0']}"
+            else:
+                if pd.notnull(row['autor_nazwisko']):
+                    val = f"1 $a{row['autor_nazwisko']}, {row['autor_imie']}$4aut"
+                else:
+                    val = np.nan
+    return val
+X100['100'] = X100.apply(lambda x: x100(x), axis=1)     
+X100 = X100[['rekord_id', '100']].drop_duplicates()
+X100['100'] = X100['100'].str.replace('..nan', '')
+X100['100'] = X100.groupby('rekord_id')['100'].transform(lambda x: '|'.join(x.dropna().str.strip()))
+X100 = X100.drop_duplicates().reset_index(drop=True)
+X100 = pd.DataFrame(X100['100'].str.split('|', 1).tolist(), index=X100['rekord_id'])
+X100['rekord_id'] = X100.index
+X100 = X100.reset_index(drop=True).fillna(value=np.nan).replace(r'^\s*$', np.nan, regex=True)
+X100.columns = ['100', '700', 'rekord_id']
+X240 = pbl_books[['rekord_id', 'ZA_TYTUL_ORYGINALU']].drop_duplicates()
+X240.columns = ['rekord_id', '240']
+X240['240'] = '\\\\$a' + X240['240'].str.replace('^(.*?\])(.*$)',r'\1', regex=True).str.replace('^\[|\]$', '', regex=True)
+X245 = pbl_books[['rekord_id', 'autor_nazwisko', 'autor_imie', 'tytul', 'wspoltworcy', 'ZA_INSTYTUCJA']].drop_duplicates()    
+X245['tytul_ok'] = X245.apply(lambda x: '10$a' + clear_tytul(x), axis=1)  
+def autor_245(row):
+    if pd.notnull(row['autor_nazwisko']) and pd.notnull(row['autor_imie']):
+        val = f"$c{row['autor_imie']} {row['autor_nazwisko']}"
+    elif pd.notnull(row['autor_nazwisko']) and pd.isnull(row['autor_imie']):
+        val = f"$c{row['autor_nazwisko']}"
+    else:
+        val = '[no author]'
+    return val
+
+X245['autor'] = X245.apply(lambda x: autor_245(x), axis=1)
+X245 = X245[['rekord_id', 'tytul_ok', 'autor', 'wspoltworcy', 'ZA_INSTYTUCJA']]
+X245['tytul_ok'] = X245.groupby('rekord_id')['tytul_ok'].transform(lambda x: '|'.join(x.drop_duplicates().dropna().str.strip()))
+X245['autor'] = X245.groupby('rekord_id')['autor'].transform(lambda x: '|'.join(x.drop_duplicates().dropna().str.strip()))
+X245['autor'] = X245['autor'].str.replace('\|\$c', ', ', regex=True)
+X245['wspoltworcy'] = X245.groupby('rekord_id')['wspoltworcy'].transform(lambda x: '|'.join(x.drop_duplicates().dropna().str.strip()))
+X245['ZA_INSTYTUCJA'] = X245.groupby('rekord_id')['ZA_INSTYTUCJA'].transform(lambda x: '|'.join(x.drop_duplicates().dropna().str.strip()))
+X245['245'] = X245.apply(lambda x: f"{x['tytul_ok']} /{x['autor']} ; {x['wspoltworcy']} ; {x['ZA_INSTYTUCJA']}.", axis=1)
+X245['245'] = X245['245'].apply(lambda x: re.sub('( ;  ; )(\.)|( ;   ; )(\.)|( ; )(\.)|', r'\2', x)).apply(lambda x: re.sub('^\.$', '', x))
+X245 = X245[['rekord_id', '245']].drop_duplicates()
+
+
+
+# tutaj
+
+
+
+
+X100[['100', '700']] = pd.DataFrame(X100['100'].tolist())
+
+
+X100['700'] = X100['100'].str.split('|', 1)[1]
+X100['100'] = X100['100'].str.split('|', 1)[0]
+
+
+a = 'm a m a'
+a.split(' ', 1)
+        
+test = X100.loc[(X100['rodzaj_zapisu'] == 'książka twórcy (podmiotowa)') &
+                (X100['tworca_nazwisko'].notnull()) &
+                (X100['tworca_nazwisko'].str.contains(',')) &
+                (X100['tworca_imie'] == '*')]
+
+test = X100.loc[X100['100'].str.contains('\|')]
+
+a = np.nan
+pd.isnull(a)  
+str(a)      
+tekst = 'aAAAaaAABBcACCĄĆĘ'
+pattern = '[A-ZÀ-Ž]'
+wynik = ''.join(re.findall(pattern, tekst))
 
 # to nie powinno być potrzebne, jeśli 008 będzie miało tę samą długość, jeśli będzie dłuższe, wywalić doble w excelu
 #X008['language code'] = X008.groupby('rekord_id')['language code'].transform(lambda x: '|'.join(x.dropna().str.strip()))
