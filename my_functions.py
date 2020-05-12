@@ -111,15 +111,26 @@ def unique_elem_from_column_regex(df, column, regex):
     return lista_elementow
 
 #cSplit
-def cSplit(df, id_column, split_column, delimiter):
-    df.loc[df[split_column].isnull(), split_column] = ''
-    new_df = pd.DataFrame(df[split_column].str.split(delimiter).tolist(), index=df[id_column]).stack()
-    new_df = new_df.reset_index([0, id_column])
-    new_df.columns = [id_column, split_column]
-    new_df = pd.merge(new_df, df.loc[:, df.columns != split_column],  how='left', left_on = id_column, right_on = id_column)
-    new_df = new_df[df.columns]
-    new_df.loc[new_df[split_column] == '', split_column] = np.nan
-    return new_df
+def cSplit(df, id_column, split_column, delimiter, how = 'long', maxsplit = -1):
+    if how == 'long':
+        df.loc[df[split_column].isnull(), split_column] = ''
+        new_df = pd.DataFrame(df[split_column].str.split(delimiter).tolist(), index=df[id_column]).stack()
+        new_df = new_df.reset_index([0, id_column])
+        new_df.columns = [id_column, split_column]
+        new_df = pd.merge(new_df, df.loc[:, df.columns != split_column],  how='left', left_on = id_column, right_on = id_column)
+        new_df = new_df[df.columns]
+        new_df.loc[new_df[split_column] == '', split_column] = np.nan
+        return new_df
+    elif how == 'wide':
+        df.loc[df[split_column].isnull(), split_column] = ''
+        new_df = pd.DataFrame(df[split_column].str.split(delimiter, maxsplit).tolist(), index=df[id_column])
+        new_df[id_column] = new_df.index
+        new_df = new_df.reset_index(drop=True).fillna(value=np.nan).replace(r'^\s*$', np.nan, regex=True)
+        new_df = pd.merge(new_df, df.loc[:, df.columns != split_column],  how='left', left_on = id_column, right_on = id_column)
+        return new_df
+    else:
+        print("Error: Unhandled method")
+    
 
 #explode data frame for equal length
 def df_explode(df, lst_cols, sep):
