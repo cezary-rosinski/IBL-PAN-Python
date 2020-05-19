@@ -19,3 +19,6 @@ __pycache__/
 /pbl_subject_headings.csv
 /language_codes_marc.xlsx
 /libri_data.spydata
+/pbl_marc_books.xlsx
+/pbl_marc_books2.mrc
+/pbl_marc_books.mrk

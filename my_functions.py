@@ -256,12 +256,14 @@ def mrk_to_mrc(path_in, path_out, field_with_id):
         
     outputfile.close()
     
-def df_to_mrc(df, path_out):
+def df_to_mrc(df, delimiter, path_out):
+    df = df.replace(r'^\s*$', np.nan, regex=True)
     outputfile = open(path_out, 'wb')     
     for index, row in enumerate(df.iterrows()):
+        print(str(index) + '/' + str(len(df)))
         table_row = df.iloc[[index]].dropna(axis=1)
         for column in table_row:
-            table_row[column] = table_row[column].str.split('~')
+            table_row[column] = table_row[column].astype(str).str.split(delimiter)
         marc_fields = table_row.columns.tolist()
         marc_fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
         record_id = table_row.index[0]
@@ -294,7 +296,6 @@ def df_to_mrc(df, path_out):
                         marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
                         pymarc_record.add_ordered_field(marc_field)
         outputfile.write(pymarc_record.as_marc())
-        
     outputfile.close()
     
 def mrk_to_df(path_in, field_with_id):
