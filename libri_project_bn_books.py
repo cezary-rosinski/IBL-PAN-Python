@@ -17,7 +17,7 @@ gatunki_pbl['gatunek'] = gatunki_pbl['gatunek'].apply(lambda x: f"$a{x}")
 
 bn_books_marc_total = pd.DataFrame()
 years = range(2013,2020)
-year=2013
+# year=2013
 for i, year in enumerate(years):
     print(str(i) + '/' + str(len(years)))
     path = f"C:/Users/Cezary/Desktop/{year}_bn_ks_do_libri.xlsx"
@@ -102,8 +102,8 @@ for i, year in enumerate(years):
     #         bn_full_text_links.append('brak danych')
     # =============================================================================         
     
-    position_of_100 = bn_books.columns.get_loc("X001")
-    bn_books_marc = bn_books.iloc[:,position_of_100:]
+    position_of_001 = bn_books.columns.get_loc("X001")
+    bn_books_marc = bn_books.iloc[:,position_of_001:]
     bn_books_marc['X650'] = pbl_enrichment['650']
     bn_books_marc['X655'] = pbl_enrichment['655']
     

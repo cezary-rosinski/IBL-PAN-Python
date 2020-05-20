@@ -22,7 +22,7 @@ reader = io.open(path_in, 'rt', encoding = encoding).read().splitlines()
 mrk_list = []
 for row in reader:
     if row[:5] == '     ':
-        mrk_list[-1] + row[5:]
+        mrk_list[-1] += row[5:]
     else:
         mrk_list.append(row)
         
@@ -34,7 +34,7 @@ for i, row in enumerate(mrk_list):
         mrk_list2.append(new_field)
     else:
         mrk_list2.append(row)
-           
+            
 bar_list = []
 for row in mrk_list2:
     if 'LDR' not in row:
@@ -62,7 +62,34 @@ for index, record in enumerate(bar_list):
 fields_order = bar_df.columns.tolist()
 fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 bar_df = bar_df.reindex(columns=fields_order)
+bar_df.to_excel('bar_catalog.xlsx')
   
 
 # 5,5 h to execute the code  
 # bar_df.to_excel('bar_trial.xlsx')
+
+
+# =============================================================================
+# LDR dla bara
+# -----nab-a22-----4u-4500
+# 008 dla bara
+# %a121030 %bs %c1900 %d++++ %epl+ %f!!!! %g! %h+ %io+++ %j! %l0 %n0 %o0 %p+ %q! %r! %spol %t+ %u+
+# (^|.)(\%.)
+# 121030s1900++++pl+!!!!!+o+++!000+!!pol++
+# ([\+\!])
+# 121030s1900----pl-------o----000---pol--
+# 
+# 773
+# zmiana wskaźnika:
+# 7730 %i// %t˝ycie (Krak˘w ; Lw˘w). - %g1900, z. 2-3, s. 86-87
+# dać $9 z zawartością %g....
+# 
+# 100
+# w $d wywalić nawiasy
+# przed $d dać przecinek
+# wywalić kropkę z 100 (wyjątek Jr. lub Rosiński C.) - napisać warunek
+# 
+# BN
+# 100 d - usunąć nawiasy
+# 830 usunąć v
+# =============================================================================

@@ -25,6 +25,58 @@ def add_viaf(x):
     return x + 'viaf.xml'
 
 ### code
+    
+# table for personal authorities
+path_in = "C:/Users/Cezary/Downloads/CLOselection.txt"
+encoding = 'utf-8'
+reader = io.open(path_in, 'rt', encoding = encoding).read().splitlines()
+
+authority_list = []
+for i, row in enumerate(reader):
+    if 'ZZZ' in row:
+        zzz = row
+    elif 'LDR' not in row:
+        authority_list[-1] += '\n' + row
+    else:
+        if row[:9] == zzz[:9]:
+            row += '\n' + zzz
+            authority_list.append(row)
+        else:
+            authority_list.append(row)
+
+for i, record in enumerate(authority_list):
+    authority_list[i] = re.split('\n', authority_list[i])
+    
+authority_df = pd.DataFrame()    
+for index, record in enumerate(authority_list):
+    print(str(index) + '/' + str(len(authority_list)))
+    record = list(filter(None, record))
+    for i, field in enumerate(record):
+        
+        record[i] = re.split('(?<=^.{9}).|(?<=^.{13})|(?<=^.{18})', record[i].strip())
+    df = pd.DataFrame(record, columns = ['id', 'field', 'crap', 'content'])[['id', 'field', 'content']]
+    df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '~'.join(x.drop_duplicates().astype(str)))
+    df = df.drop_duplicates().reset_index(drop=True)
+    df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+    authority_df = authority_df.append(df_wide)
+      
+fields_order = authority_df.columns.tolist()
+fields_order.remove('LDR')
+fields_order.sort()
+fields_order = ['LDR'] + fields_order
+authority_df = authority_df.reindex(columns=fields_order)
+
+  
+    
+
+
+
+
+
+
+
+
+
 
 #google sheets
 df_names = gsheet_to_df('1QkZCzglN7w0AnEubuoQqHgQqib9Glild1x_3X8T_HyI', 'Sheet 1')
