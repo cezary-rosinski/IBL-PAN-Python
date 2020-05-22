@@ -11,13 +11,13 @@ import os
 import io
 
 # parser kolumny marc
-def marc_parser_1_field(df, field_id, field_data, delimiter):
+def marc_parser_1_field(df, field_id, field_data, subfield_code, delimiter='❦'):
     marc_field = df.loc[df[field_data].notnull(),[field_id, field_data]]
-    marc_field = pd.DataFrame(marc_field[field_data].str.split('|').tolist(), marc_field[field_id]).stack()
+    marc_field = pd.DataFrame(marc_field[field_data].str.split(delimiter).tolist(), marc_field[field_id]).stack()
     marc_field = marc_field.reset_index()[[0, field_id]]
     marc_field.columns = [field_data, field_id]
-    subfield_list = df[field_data].str.findall(f'\{delimiter}.').dropna().tolist()
-    if marc_field[field_data][0][0] == delimiter[0]: 
+    subfield_list = df[field_data].str.findall(f'\{subfield_code}.').dropna().tolist()
+    if marc_field[field_data][0][0] == subfield_code[0]: 
         subfield_list = sorted(set(list(chain.from_iterable(subfield_list))))
         empty_table = pd.DataFrame(index = range(0, len(marc_field)), columns = subfield_list)
         marc_field = pd.concat([marc_field.reset_index(drop=True), empty_table], axis=1)
@@ -25,7 +25,7 @@ def marc_parser_1_field(df, field_id, field_data, delimiter):
             marker = "".join([i if i.isalnum() else f'\\{i}' for i in marker])            
             marc_field[field_data] = marc_field[field_data].str.replace(f'({marker})', r'|\1', 1)
         for marker in subfield_list:
-            string = f'(^)(.*?\|\{marker}|)(.*?)(\,{{0,1}})((\|\{delimiter})(.*)|$)'
+            string = f'(^)(.*?\|\{marker}|)(.*?)(\,{{0,1}})((\|\{subfield_code})(.*)|$)'
             marc_field[marker] = marc_field[field_data].str.replace(string, r'\3')
             marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
     else:
@@ -39,21 +39,21 @@ def marc_parser_1_field(df, field_id, field_data, delimiter):
             marc_field[field_data] = marc_field[field_data].str.replace(f'({marker})', r'|\1', 1)
         for marker in subfield_list:
             marker2 = "".join([i if i.isalnum() else f'\\{i}' for i in marker]) 
-            string = f'(^)(.*?\|{marker2}|)(.*?)(\,{{0,1}})((\|\{delimiter})(.*)|$)'
+            string = f'(^)(.*?\|{marker2}|)(.*?)(\,{{0,1}})((\|\{subfield_code})(.*)|$)'
             marc_field[marker] = marc_field[field_data].apply(lambda x: re.sub(string, r'\3', x) if marker in x else '')
             marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
     return marc_field
 
-def marc_parser_1_field_simple(df, field_id, field_data, delimiter):
+def marc_parser_1_field_simple(df, field_id, field_data, subfield_code):
     marc_field = df.loc[df[field_data].notnull(),[field_id, field_data]]
-    subfield_list = df[field_data].str.findall(f'\{delimiter}.').dropna().tolist()
+    subfield_list = df[field_data].str.findall(f'\{subfield_code}.').dropna().tolist()
     subfield_list = sorted(set(list(chain.from_iterable(subfield_list))))
     empty_table = pd.DataFrame(index = range(0, len(marc_field)), columns = subfield_list)
     marc_field = pd.concat([marc_field.reset_index(drop=True), empty_table], axis=1)
     for marker in subfield_list:
         marc_field[field_data] = marc_field[field_data].str.replace(f'({marker})', r'|\1', 1)
     for marker in subfield_list:
-        string = f'(^)(.*?\|\{marker}|)(.*?)(\,{{0,1}})((\|\{delimiter})(.*)|$)'
+        string = f'(^)(.*?\|\{marker}|)(.*?)(\,{{0,1}})((\|\{subfield_code})(.*)|$)'
         marc_field[marker] = marc_field[field_data].str.replace(string, r'\3')
         marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
     return marc_field
@@ -212,7 +212,7 @@ def mrk_to_mrc(path_in, path_out, field_with_id):
         df = pd.DataFrame(record, columns = ['field', 'content'])
         df['id'] = df.apply(lambda x: f(x, field_with_id), axis = 1)
         df['id'] = df['id'].ffill().bfill()
-        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '~'.join(x.drop_duplicates().astype(str)))
+        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
         df = df.drop_duplicates().reset_index(drop=True)
         df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
         full_data = full_data.append(df_wide)
@@ -220,7 +220,7 @@ def mrk_to_mrc(path_in, path_out, field_with_id):
     for index, row in enumerate(full_data.iterrows()):
         table_row = full_data.iloc[[index]].dropna(axis=1)
         for column in table_row:
-            table_row[column] = table_row[column].str.split('~')
+            table_row[column] = table_row[column].str.split('❦')
         marc_fields = table_row.columns.tolist()
         marc_fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
         record_id = table_row.index[0]
@@ -303,7 +303,7 @@ def df_to_mrc(df, delimiter, path_out):
             mrc_errors.append(table_row)
     if len(mrc_errors) > 0:
         for element in mrc_errors:
-            errorfile.write(str(mrc_errors) + '\n')
+            errorfile.write(str(element) + '\n\n')
     errorfile.close()
     outputfile.close()
     
@@ -325,7 +325,7 @@ def mrk_to_df(path_in, field_with_id, encoding='utf-8'):
         df = pd.DataFrame(record, columns = ['field', 'content'])
         df['id'] = df.apply(lambda x: f(x, field_with_id), axis = 1)
         df['id'] = df['id'].ffill().bfill()
-        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '~'.join(x.drop_duplicates().astype(str)))
+        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
         df = df.drop_duplicates().reset_index(drop=True)
         df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
         full_data = full_data.append(df_wide)

@@ -121,6 +121,7 @@ for i, year in enumerate(years):
     bn_books_marc.columns = bn_new_column_names
     bn_books_marc['240'] = bn_books_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' in x else np.nan)
     bn_books_marc['246'] = bn_books_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' not in x else np.nan)
+    #bn_books_marc['995'] = '\\\\$aBibliografia Biblioteki Narodowej
     
     bn_books_marc_total = bn_books_marc_total.append(bn_books_marc)
 
@@ -140,4 +141,8 @@ print('Done')
 # zastosować mapowanie Vojty
 # przerobić na marca
 
-
+# =============================================================================
+# BN
+# 100 d - usunąć nawiasy
+# 830 usunąć v
+# =============================================================================

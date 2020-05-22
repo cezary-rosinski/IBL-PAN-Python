@@ -2,16 +2,44 @@ import pandas as pd
 import io
 import re
 import numpy as np
+from my_functions import cSplit
+from my_functions import df_to_mrc
 
 # def
 def f(row, id_field):
     if row['field'] == id_field and id_field == 'LDR':
         val = row.name
     elif row['field'] == id_field:
-        val = row['content']
+        val = row['content'].strip()
     else:
         val = np.nan
     return val
+
+def replacer(s, newstring, index, nofail=False):
+    # raise an error if index is outside of the string
+    if not nofail and index not in range(len(s)):
+        raise ValueError("index outside given string")
+
+    # if not erroring, but the index is still not in the correct range..
+    if index < 0:  # add it to the beginning
+        return newstring + s
+    if index > len(s):  # add it to the end
+        return s + newstring
+
+    # insert the new string between "slices" of the original
+    return s[:index] + newstring + s[index + 1:]
+
+def replace_with_backslash(x):
+    if pd.isnull(x):
+        x = np.nan
+    elif x[0] == ' ' and x[1] == ' ':
+        x = replacer(x, '\\', 0)
+        x = replacer(x, '\\', 1)
+    elif x[0] == ' ':
+        x = replacer(x, '\\', 0)    
+    elif x[1] == ' ':
+        x = replacer(x, '\\', 1)
+    return x
 
 # main
 
@@ -25,71 +53,106 @@ for row in reader:
         mrk_list[-1] += row[5:]
     else:
         mrk_list.append(row)
-        
-mrk_list2 = []
+               
+bar_list = []
 for i, row in enumerate(mrk_list):
     if 'LDR' in row:
         new_field = '001  bar' + '{:09d}'.format(i+1)
-        mrk_list2.append(row)
-        mrk_list2.append(new_field)
-    else:
-        mrk_list2.append(row)
-            
-bar_list = []
-for row in mrk_list2:
-    if 'LDR' not in row:
-        bar_list[-1] += '\n' + row
+        bar_list.append(row)
+        bar_list.append(new_field)
     else:
         bar_list.append(row)
+        
+df = pd.DataFrame(bar_list, columns = ['test'])
+df = df[df['test'] != '']
+df['field'] = df['test'].replace(r'(^...)(.+?$)', r'\1', regex = True)
+df['content'] = df['test'].replace(r'(^...)(.+?$)', r'\2', regex = True)
+df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
+df['help'] = df['help'].ffill()
+df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
+df['id'] = df.groupby('help')['id'].ffill().bfill()
+df = df[['id', 'field', 'content']]
+df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+df = df.drop_duplicates().reset_index(drop=True)
+bar_catalog = df.pivot(index = 'id', columns = 'field', values = 'content')
 
-for i, record in enumerate(bar_list):
-    bar_list[i] = re.split('\n', bar_list[i])
-    
-bar_df = pd.DataFrame()
-for index, record in enumerate(bar_list):
-    print(str(index) + '/' + str(len(bar_list)))
-    record = list(filter(None, record))
-    for i, field in enumerate(record):
-        record[i] = re.split('(?<=^...)', record[i].rstrip())
-    df = pd.DataFrame(record, columns = ['field', 'content'])
-    df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
-    df['id'] = df['id'].ffill().bfill()
-    df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '~'.join(x.drop_duplicates().astype(str)))
-    df = df.drop_duplicates().reset_index(drop=True)
-    df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
-    bar_df = bar_df.append(df_wide)
-    
-fields_order = bar_df.columns.tolist()
+# =============================================================================
+# bar_catalog.to_excel('bar_catalog_1st_stage.xlsx', index=False)
+# bar_catalog = pd.read_excel('bar_catalog_1st_stage.xlsx')
+# =============================================================================
+
+bar_catalog['001'] = bar_catalog['001'].str.strip()
+bar_catalog['008'] = bar_catalog['008'].str.strip().str.replace('(^|.)(\%.)', '', regex=True).str.replace('([\+\!])', '-', regex=True)
+bar_catalog['do 100'] = bar_catalog['100'].str.replace(r'(^.+?)(❦)(.+?$)', r'\3', regex=True)
+bar_catalog['100'] = bar_catalog['100'].str.replace(r'(^.+?)(❦)(.+?$)', r'\1', regex=True)
+bar_catalog['700'] = bar_catalog[['do 100', '700']].apply(lambda x: ''.join(x.dropna().astype(str)), axis=1)
+del bar_catalog['do 100']
+bar_catalog['100'] = bar_catalog['100'].str.replace(r'(?<=\%d)(\()(.+?)(\)\.{0,1})', r'\2', regex=True).str.replace('(?<=[a-zà-ž][a-zà-ž])\.$', '', regex=True)
+
+bar_catalog = cSplit(bar_catalog, '001', '600', '❦')
+bar_catalog['600'] = bar_catalog['600'].str.replace(r'(?<=\%d)(\()(.+?)(\)\.{0,1})', r'\2', regex=True).str.replace('(?<=[a-zà-ž][a-zà-ž])\.$', '', regex=True)
+bar_catalog['787'] = bar_catalog['600'].str.replace('(\%d.+?)(?=\%)', '', regex=True).str.replace(r'(?<=^)(..)', r'08', regex=True)
+bar_catalog['787'] = bar_catalog['787'].apply(lambda x: x if pd.notnull(x) and '%t' in x else np.nan)
+bar_catalog['600'] = bar_catalog['600'].str.replace('(\%t.+?)(?=\%|$)', '', regex=True).str.strip()
+bar_catalog['600'] = bar_catalog.groupby('001')['600'].transform(lambda x: '❦'.join(x.dropna()))
+bar_catalog['787'] = bar_catalog.groupby('001')['787'].transform(lambda x: '❦'.join(x.dropna()))
+bar_catalog = bar_catalog.drop_duplicates()
+bar_catalog['600'] = bar_catalog['600'].str.split('❦').apply(set).str.join('❦')
+
+bar_catalog = cSplit(bar_catalog, '001', '700', '❦')
+bar_catalog['700'] = bar_catalog['700'].str.replace(r'(?<=\%d)(\()(.+?)(\)\.{0,1})', r'\2', regex=True).str.replace('(?<=[a-zà-ž][a-zà-ž])\.$', '', regex=True)
+bar_catalog['700'] = bar_catalog.groupby('001')['700'].transform(lambda x: '❦'.join(x.dropna()))
+bar_catalog = bar_catalog.drop_duplicates()
+bar_catalog['700'] = bar_catalog['700'].str.split('❦').apply(set).str.join('❦')
+bar_catalog['LDR'] = '-----nab-a22-----4u-4500'
+
+bar_catalog = cSplit(bar_catalog, '001', '773', '❦')
+bar_catalog['do 773'] = bar_catalog['773'].str.extract(r'(?<=\%g)(.{4})')
+bar_catalog['do 773'] = bar_catalog['do 773'].apply(lambda x: '$9' + x if pd.notnull(x) else np.nan)
+bar_catalog['773'] = bar_catalog['773'].str.replace(r'(?<=^)(..)', r'0\\', regex=True)
+bar_catalog['773'] = bar_catalog[['773', 'do 773']].apply(lambda x: ''.join(x.dropna().astype(str)), axis=1)
+del bar_catalog['do 773']
+bar_catalog['773'] = bar_catalog.groupby('001')['773'].transform(lambda x: '❦'.join(x.dropna()))
+bar_catalog = bar_catalog.drop_duplicates()
+# bar_catalog['995'] = '\\\\$aBibliografia Bara
+
+bar_catalog = bar_catalog.replace(r'^\s*$', np.NaN, regex=True)
+for column in bar_catalog:       
+    bar_catalog[column] = bar_catalog[column].apply(lambda x: replace_with_backslash(x))
+bar_catalog = bar_catalog.replace(r'(?<=❦)(  )(?=\%)', r'\\\\', regex=True).replace(r'(?<=❦)( )([^ ])(?=\%)', r'\\\2', regex=True).replace(r'(?<=❦)([^ ])( )(?=\%)', r'\1\\', regex=True)
+bar_catalog = bar_catalog.replace(r'(\s{0,1}\%)(.)', r'$\2', regex=True)
+fields_order = bar_catalog.columns.tolist()
 fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-bar_df = bar_df.reindex(columns=fields_order)
-bar_df.to_excel('bar_catalog.xlsx')
-  
+bar_catalog = bar_catalog.reindex(columns=fields_order)
 
-# 5,5 h to execute the code  
-# bar_df.to_excel('bar_trial.xlsx')
+bar_catalog.to_excel('bar_catalog.xlsx', index=False)
 
+df_to_mrc(bar_catalog, '❦', 'bar_catalog.mrc')
 
 # =============================================================================
-# LDR dla bara
-# -----nab-a22-----4u-4500
-# 008 dla bara
-# %a121030 %bs %c1900 %d++++ %epl+ %f!!!! %g! %h+ %io+++ %j! %l0 %n0 %o0 %p+ %q! %r! %spol %t+ %u+
-# (^|.)(\%.)
-# 121030s1900++++pl+!!!!!+o+++!000+!!pol++
-# ([\+\!])
-# 121030s1900----pl-------o----000---pol--
+# kod zwrócił 100 błędów
+# w kolejnej iteracji przyjrzeć się tym rekordom
 # 
-# 773
-# zmiana wskaźnika:
-# 7730 %i// %t˝ycie (Krak˘w ; Lw˘w). - %g1900, z. 2-3, s. 86-87
-# dać $9 z zawartością %g....
+# reader = io.open('marc_errors_bar.txt', 'rt').read().splitlines()[0]
 # 
-# 100
-# w $d wywalić nawiasy
-# przed $d dać przecinek
-# wywalić kropkę z 100 (wyjątek Jr. lub Rosiński C.) - napisać warunek
-# 
-# BN
-# 100 d - usunąć nawiasy
-# 830 usunąć v
+# for i, elem in enumerate(reader):
+#     reader[i] = re.split('(?<=\)), (?=\()', reader[i])
+#     for j, field in enumerate(reader[i]):
+#         reader[i][j] = re.sub('(?<=\))\]+$', '', re.sub('^\[+', '', reader[i][j])).replace("', '", '|') 
+#         reader[i][j] = list(reader[i][j])
+#         reader[i][j][1] = '❦'.join(reader[i][j][1]) 
 # =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
