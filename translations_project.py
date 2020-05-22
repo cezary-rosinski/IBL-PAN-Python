@@ -8,18 +8,13 @@ import copy
 from my_functions import df_explode
 from my_functions import xml_to_mrk
 from my_functions import cSplit
+from my_functions import f
+from my_functions import marc_parser_1_field
 import pymarc
 import io
+from bs4 import BeautifulSoup
 
 ### def
-def f(row, id_field):
-    if row['field'] == id_field and id_field == 'LDR':
-        val = row.name
-    elif row['field'] == id_field:
-        val = row['content']
-    else:
-        val = np.nan
-    return val  
 
 def add_viaf(x):
     return x + 'viaf.xml'
@@ -31,40 +26,77 @@ path_in = "C:/Users/Cezary/Downloads/CLOselection.txt"
 encoding = 'utf-8'
 reader = io.open(path_in, 'rt', encoding = encoding).read().splitlines()
 
-authority_list = []
-for i, row in enumerate(reader):
-    if 'ZZZ' in row:
-        zzz = row
-    elif 'LDR' not in row:
-        authority_list[-1] += '\n' + row
-    else:
-        if row[:9] == zzz[:9]:
-            row += '\n' + zzz
-            authority_list.append(row)
-        else:
-            authority_list.append(row)
+reader = list(filter(None, reader))  
+df = pd.DataFrame(reader, columns = ['test'])
+df['id'] = df['test'].replace(r'^(.{9})(.+?$)', r'\1', regex=True)
+df['field'] = df['test'].replace(r'^(.{10})(.{3})(.+?$)', r'\2', regex=True)
+df['content'] = df['test'].replace(r'^(.{18})(.+?$)', r'\2', regex=True)
+df.loc[df['field'] == '   ', 'field'] = 'ZZZ'
+df = df[['id', 'field', 'content']]
+df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+df = df.drop_duplicates().reset_index(drop=True)
+df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
 
-for i, record in enumerate(authority_list):
-    authority_list[i] = re.split('\n', authority_list[i])
-    
-authority_df = pd.DataFrame()    
-for index, record in enumerate(authority_list):
-    print(str(index) + '/' + str(len(authority_list)))
-    record = list(filter(None, record))
-    for i, field in enumerate(record):
-        
-        record[i] = re.split('(?<=^.{9}).|(?<=^.{13})|(?<=^.{18})', record[i].strip())
-    df = pd.DataFrame(record, columns = ['id', 'field', 'crap', 'content'])[['id', 'field', 'content']]
-    df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '~'.join(x.drop_duplicates().astype(str)))
-    df = df.drop_duplicates().reset_index(drop=True)
-    df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
-    authority_df = authority_df.append(df_wide)
-      
-fields_order = authority_df.columns.tolist()
+fields_order = df_wide.columns.tolist()
 fields_order.remove('LDR')
 fields_order.sort()
 fields_order = ['LDR'] + fields_order
-authority_df = authority_df.reindex(columns=fields_order)
+df_wide = df_wide.reindex(columns=fields_order)
+
+X100 = marc_parser_1_field(df_wide, '001', '100', '\$\$')
+X100 = X100[(X100['$$7'] != '') |
+            (X100['$$d'] != '')]
+X100['index'] = X100.index + 1
+
+#testowy set
+X100 = X100.head(100)
+
+ns = '{http://viaf.org/viaf/terms#}'
+viaf_enrichment = []
+for index, row in X100.iterrows():
+    print(str(index) + '/' + str(len(X100)))
+    if row['$$7'] != '':
+        #url = "https://viaf.org/viaf/110389400/viaf.xml"
+        #url = "http://viaf.org/viaf/sourceID/NKC%7Cjk01010002/viaf.xml"
+        url = f"http://viaf.org/viaf/sourceID/NKC%7C{row['$$7']}/viaf.xml"
+        response = requests.get(url)
+        with open('viaf.xml', 'wb') as file:
+            file.write(response.content)
+        tree = et.parse('viaf.xml')
+        root = tree.getroot()
+        viaf_id = root.findall(f'.//{ns}viafID')[0].text
+        IDs = root.findall(f'.//{ns}mainHeadings/{ns}data/{ns}sources/{ns}sid')
+        IDs = '❦'.join([t.text for t in IDs])
+        nationality = root.findall(f'.//{ns}nationalityOfEntity/{ns}data/{ns}text')
+        nationality = '❦'.join([t.text for t in nationality])
+        occupation = root.findall(f'.//{ns}occupation/{ns}data/{ns}text')
+        occupation = '❦'.join([t.text for t in occupation])
+        language = root.findall(f'.//{ns}languageOfEntity/{ns}data/{ns}text')
+        language = '❦'.join([t.text for t in language])
+        names = root.findall(f'.//{ns}x400/{ns}datafield')
+        sources = root.findall(f'.//{ns}x400/{ns}sources')
+        name_source = []
+        for (name, source) in zip(names, sources):   
+            person_name = ' '.join([child.text for child in name.getchildren() if child.tag == f'{ns}subfield' and child.attrib['code'].isalpha()])
+            library = '~'.join([child.text for child in source.getchildren() if child.tag == f'{ns}sid'])
+            name_source.append([person_name, library])   
+        for i, elem in enumerate(name_source):
+            name_source[i] = '‽'.join(name_source[i])
+        name_source = '❦'.join(name_source)
+        
+        person = [row['index'], row['$$a'], viaf_id, IDs, nationality, occupation, language, name_source]
+        viaf_enrichment.append(person)
+    else:
+     
+# dodać else dla wyszukiwania po frazie (jak w R) i zrobić mechanizm cosine similarity, żeby oddało najbardziej odpowiednią wartość (jak w R)
+    
+test = pd.DataFrame(viaf_enrichment, columns=['index', 'cz_name', 'viaf_id', 'IDs', 'nationality', 'occupation', 'language', 'name_and_source'])
+
+
+
+test = df[df['id'] == '000003200']
+test = df.head(1000)
+
 
   
     
