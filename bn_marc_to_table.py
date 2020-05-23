@@ -12,8 +12,8 @@ def year(row, field):
         val = np.nan
     return val
     
-path = 'E:/Cezary/Documents/PBL/Migracja z BN/bn_all/'
-files = [f for f in glob.glob(path + '*.mrk*', recursive=True)]
+path = 'C:/Users/User/Documents/bn_all/'
+files = [f for f in glob.glob(path + '*.mrk8', recursive=True)]
 
 encoding = 'utf-8'
 marc_df = pd.DataFrame()
@@ -36,8 +36,6 @@ for i, file_path in enumerate(files):
         df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
         df = df.drop_duplicates().reset_index(drop=True)
         marc_df = marc_df.append(df)
-    
-marc_df.to_excel('BN_books_2013-2019_long.xlsx', index=False)
 
 marc_df_wide = marc_df.pivot(index = 'id', columns = 'field', values = 'content')
 marc_df_wide.to_excel('BN_books_2013-2019.xlsx', index=False)
