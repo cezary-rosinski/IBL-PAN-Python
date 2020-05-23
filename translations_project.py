@@ -13,6 +13,7 @@ from my_functions import marc_parser_1_field
 import pymarc
 import io
 from bs4 import BeautifulSoup
+from my_functions import cosine_sim_2_elem
 
 ### def
 
@@ -84,15 +85,63 @@ for index, row in X100.iterrows():
             name_source[i] = '‽'.join(name_source[i])
         name_source = '❦'.join(name_source)
         
-        person = [row['index'], row['$$a'], viaf_id, IDs, nationality, occupation, language, name_source]
+        person = [row['index'], row['$$a'], row['$$d'], viaf_id, IDs, nationality, occupation, language, name_source]
         viaf_enrichment.append(person)
     else:
-     
-# dodać else dla wyszukiwania po frazie (jak w R) i zrobić mechanizm cosine similarity, żeby oddało najbardziej odpowiednią wartość (jak w R)
+        try:
+            url = re.sub('\s+', '%20', f"http://viaf.org/viaf/search?query=local.personalNames%20all%20%22{row['$$a']} {row['$$d']}%22%20and%20local.sources%20any%20%22nkc%22&sortKeys=holdingscount&recordSchema=BriefVIAF")
+            response = requests.get(url)
+            response.encoding = 'UTF-8'
+            soup = BeautifulSoup(response.text, 'html.parser')
+            people_links = soup.findAll('a', attrs={'href': re.compile("viaf/\d+")})
+            viaf_people = []
+            for people in people_links:
+                person_name = re.sub('\s+', ' ', people.text).strip()
+                person_link = re.sub(r'(.+?)(\#.+$)', r'http://viaf.org\1viaf.xml', people['href'].strip())
+                viaf_people.append([person_name, person_link])
+            cosine = pd.DataFrame()
+            for elem in viaf_people:
+                df = cosine_sim_2_elem([f"{row['$$a']} {row['$$d']}", elem[0]])
+                df['viaf'] = elem[1]
+                cosine = cosine.append(df)
+            cosine = cosine[cosine['cosine_similarity'] == cosine['cosine_similarity'].max()]
+            for i, line in cosine.iterrows():
+                url = line['viaf']
+                response = requests.get(url)
+                with open('viaf.xml', 'wb') as file:
+                    file.write(response.content)
+                tree = et.parse('viaf.xml')
+                root = tree.getroot()
+                viaf_id = root.findall(f'.//{ns}viafID')[0].text
+                IDs = root.findall(f'.//{ns}mainHeadings/{ns}data/{ns}sources/{ns}sid')
+                IDs = '❦'.join([t.text for t in IDs])
+                nationality = root.findall(f'.//{ns}nationalityOfEntity/{ns}data/{ns}text')
+                nationality = '❦'.join([t.text for t in nationality])
+                occupation = root.findall(f'.//{ns}occupation/{ns}data/{ns}text')
+                occupation = '❦'.join([t.text for t in occupation])
+                language = root.findall(f'.//{ns}languageOfEntity/{ns}data/{ns}text')
+                language = '❦'.join([t.text for t in language])
+                names = root.findall(f'.//{ns}x400/{ns}datafield')
+                sources = root.findall(f'.//{ns}x400/{ns}sources')
+                name_source = []
+                for (name, source) in zip(names, sources):   
+                    person_name = ' '.join([child.text for child in name.getchildren() if child.tag == f'{ns}subfield' and child.attrib['code'].isalpha()])
+                    library = '~'.join([child.text for child in source.getchildren() if child.tag == f'{ns}sid'])
+                    name_source.append([person_name, library])   
+                for i, elem in enumerate(name_source):
+                    name_source[i] = '‽'.join(name_source[i])
+                name_source = '❦'.join(name_source)
+                
+                person = [row['index'], row['$$a'], row['$$d'], viaf_id, IDs, nationality, occupation, language, name_source]
+                viaf_enrichment.append(person)
+        except KeyError:
+            person = [row['index'], row['$$a'], row['$$d'], '', '', '', '', '', '']
+            viaf_enrichment.append(person)
+            
     
-test = pd.DataFrame(viaf_enrichment, columns=['index', 'cz_name', 'viaf_id', 'IDs', 'nationality', 'occupation', 'language', 'name_and_source'])
+viaf_df = pd.DataFrame(viaf_enrichment, columns=['index', 'cz_name', 'cz_dates', 'viaf_id', 'IDs', 'nationality', 'occupation', 'language', 'name_and_source'])
 
-
+# dodać jeszcze podstawowe nazewnictwo viaf, żeby łatwo można było porównać, czy jest takie samo nazewnictwo, jak w czeskim zbiorze
 
 test = df[df['id'] == '000003200']
 test = df.head(1000)
