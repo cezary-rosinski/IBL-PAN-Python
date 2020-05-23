@@ -35,10 +35,8 @@ for i, file_path in enumerate(files):
         df = df[['id', 'field', 'content']]
         df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
         df = df.drop_duplicates().reset_index(drop=True)
-        marc_df = marc_df.append(df)
+        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        marc_df = marc_df.append(df_wide)
 
-marc_df['content'] = marc_df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
-marc_df = marc_df.drop_duplicates().reset_index(drop=True)
-marc_df_wide = marc_df.pivot(index = 'id', columns = 'field', values = 'content')
-marc_df_wide.to_excel('BN_books_2013-2019.xlsx', index=False)
+marc_df.to_excel('BN_books_2013-2019.xlsx', index=False)
 
