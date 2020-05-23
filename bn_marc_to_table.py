@@ -37,6 +37,7 @@ for i, file_path in enumerate(files):
         df = df.drop_duplicates().reset_index(drop=True)
         marc_df = marc_df.append(df)
 
+marc_df = marc_df.drop_duplicates().reset_index(drop=True)
 marc_df_wide = marc_df.pivot(index = 'id', columns = 'field', values = 'content')
 marc_df_wide.to_excel('BN_books_2013-2019.xlsx', index=False)
 
