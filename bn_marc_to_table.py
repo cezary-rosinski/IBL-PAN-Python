@@ -38,9 +38,14 @@ for i, file_path in enumerate(files):
         df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
         marc_df = marc_df.append(df_wide)
 
-fields_order = marc_df.columns.tolist()
-fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-marc_df = marc_df.reindex(columns=fields_order)
+fields = marc_df.columns.tolist()
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
+
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+marc_df = marc_df.reindex(columns=fields)
+columns = [f'X{i}' if re.compile('\d{3}').findall(i) else i for i in marc_df.columns.tolist()]
+marc_df.columns = columns
 
 marc_df.to_csv('BN_books_2013-2019.csv', index=False)
 
