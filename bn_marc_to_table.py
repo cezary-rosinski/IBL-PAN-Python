@@ -41,5 +41,7 @@ for i, file_path in enumerate(files):
 fields_order = marc_df.columns.tolist()
 fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 marc_df = marc_df.reindex(columns=fields_order)
-marc_df.to_excel('BN_books_2013-2019.xlsx', index=False)
+
+marc_df.to_csv('BN_books_2013-2019.csv', index=False)
+
 
