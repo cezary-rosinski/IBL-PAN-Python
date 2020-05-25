@@ -23,7 +23,7 @@ def add_viaf(x):
 ### code
     
 # table for personal authorities
-path_in = "C:/Users/Cezary/Downloads/CLOselection.txt"
+path_in = "C:/Users/User/Downloads/CLOselection.txt"
 encoding = 'utf-8'
 reader = io.open(path_in, 'rt', encoding = encoding).read().splitlines()
 
@@ -48,9 +48,6 @@ X100 = marc_parser_1_field(df_wide, '001', '100', '\$\$')
 X100 = X100[(X100['$$7'] != '') |
             (X100['$$d'] != '')]
 X100['index'] = X100.index + 1
-
-#testowy set
-X100 = X100.head(100)
 
 ns = '{http://viaf.org/viaf/terms#}'
 viaf_enrichment = []
@@ -96,16 +93,18 @@ for index, row in X100.iterrows():
             people_links = soup.findAll('a', attrs={'href': re.compile("viaf/\d+")})
             viaf_people = []
             for people in people_links:
-                person_name = re.sub('\s+', ' ', people.text).strip()
+                person_name = re.sub('\s+', ' ', people.text).strip().split('\u200e ')
                 person_link = re.sub(r'(.+?)(\#.+$)', r'http://viaf.org\1viaf.xml', people['href'].strip())
                 viaf_people.append([person_name, person_link])
-            cosine = pd.DataFrame()
-            for elem in viaf_people:
-                df = cosine_sim_2_elem([f"{row['$$a']} {row['$$d']}", elem[0]])
-                df['viaf'] = elem[1]
-                cosine = cosine.append(df)
-            cosine = cosine[cosine['cosine_similarity'] == cosine['cosine_similarity'].max()]
-            for i, line in cosine.iterrows():
+            viaf_people = pd.DataFrame(viaf_people, columns=['viaf name', 'viaf'])
+            viaf_people = pd.DataFrame(viaf_people['viaf name'].tolist(), viaf_people['viaf']).stack()
+            viaf_people = viaf_people.reset_index()[[0, 'viaf']]
+            viaf_people.columns = ['viaf name', 'viaf']
+            viaf_people['cz name'] = f"{row['$$a']} {row['$$d']}"
+            for ind, vname in viaf_people.iterrows():
+                viaf_people.at[ind, 'cosine'] = cosine_sim_2_elem([vname['viaf name'], vname['cz name']]).iloc[:, -1].to_string(index=False).strip()
+            viaf_people = viaf_people[viaf_people['cosine'] == viaf_people['cosine'].max()]
+            for i, line in viaf_people.iterrows():
                 url = line['viaf']
                 response = requests.get(url)
                 with open('viaf.xml', 'wb') as file:
@@ -134,11 +133,10 @@ for index, row in X100.iterrows():
                 
                 person = [row['index'], row['$$a'], row['$$d'], viaf_id, IDs, nationality, occupation, language, name_source]
                 viaf_enrichment.append(person)
-        except KeyError:
+        except (KeyError, IndexError):
             person = [row['index'], row['$$a'], row['$$d'], '', '', '', '', '', '']
             viaf_enrichment.append(person)
-            
-    
+             
 viaf_df = pd.DataFrame(viaf_enrichment, columns=['index', 'cz_name', 'cz_dates', 'viaf_id', 'IDs', 'nationality', 'occupation', 'language', 'name_and_source'])
 
 # dodać jeszcze podstawowe nazewnictwo viaf, żeby łatwo można było porównać, czy jest takie samo nazewnictwo, jak w czeskim zbiorze
