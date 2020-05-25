@@ -49,4 +49,9 @@ marc_df.columns = columns
 
 marc_df.to_csv('BN_books_2013-2019.csv', index=False)
 
+marc_df['rok'] = marc_df['X008'].apply(lambda x: x[7:11])
 
+years = marc_df['rok'].unique().tolist()
+for rok in years:
+    part_df = marc_df[marc_df['rok'] == rok]
+    part_df.to_csv('bn_ks_' + rok + '.csv')
