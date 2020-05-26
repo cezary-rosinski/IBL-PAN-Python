@@ -27,3 +27,8 @@ __pycache__/
 /bar_catalog.mrc
 /bar_catalog.mrk
 /bar_catalog.xlsx
+/marc_errors.txt
+/pol.mrk
+/pol_data.xlsx
+/pol_errors.xlsx
+/pol_names.xlsx

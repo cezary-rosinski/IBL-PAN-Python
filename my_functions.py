@@ -124,9 +124,9 @@ def cSplit(df, id_column, split_column, delimiter, how = 'long', maxsplit = -1):
     elif how == 'wide':
         df.loc[df[split_column].isnull(), split_column] = ''
         new_df = pd.DataFrame(df[split_column].str.split(delimiter, maxsplit).tolist(), index=df[id_column])
-        new_df[id_column] = new_df.index
         new_df = new_df.reset_index(drop=True).fillna(value=np.nan).replace(r'^\s*$', np.nan, regex=True)
-        new_df = pd.merge(new_df, df.loc[:, df.columns != split_column],  how='left', left_on = id_column, right_on = id_column)
+        new_df.columns = [f"{split_column}_{str(column_name)}" for column_name in new_df.columns.values]
+        new_df = pd.concat([df.loc[:, df.columns != split_column], new_df], axis=1)
         return new_df
     else:
         print("Error: Unhandled method")

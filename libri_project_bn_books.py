@@ -32,7 +32,7 @@ for i, year in enumerate(years):
                      (bn_books['X080'].str.contains('\$a929') == False) &
                      (bn_books['X080'].str.contains('\$a821') == False) |
                      (bn_books['X080'].isnull()))][['id', 'dziedzina_PBL', 'gatunek', 'X080', 'X100', 'X245', 'X650', 'X655']]
-    X100_field = marc_parser_1_field(to_remove, 'id', 'X100', '$')
+    X100_field = marc_parser_1_field(to_remove, 'id', 'X100', '\$')
     X100_field['year'] = X100_field['$d'].apply(lambda x: re.findall('\d+', x)[0] if x!='' else np.nan)
     X100_field = X100_field[X100_field['year'].notnull()]
     X100_field = X100_field[X100_field['year'].astype(int) <= 1700]
@@ -54,7 +54,7 @@ for i, year in enumerate(years):
     gatunki2 = pandasql.sqldf(query)
     gatunki = pd.concat([gatunki1, gatunki2]).drop_duplicates()
     gatunki['gatunek'] = gatunki['gatunek'].apply(lambda x: ''.join([x[:2], x[2].upper(), x[2 + 1:]]).strip())
-    X655_field = marc_parser_1_field(gatunki, 'id', 'X655', '$')[['id', '$y']].drop_duplicates()
+    X655_field = marc_parser_1_field(gatunki, 'id', 'X655', '\$')[['id', '$y']].drop_duplicates()
     X655_field = X655_field[X655_field['$y'] != '']
     gatunki = pd.merge(gatunki, X655_field, how='left', on='id')
     gatunki['gatunek'] = gatunki['gatunek'].apply(lambda x: f"\\7{x.strip()}")
@@ -102,8 +102,8 @@ for i, year in enumerate(years):
     #         bn_full_text_links.append('brak danych')
     # =============================================================================         
     
-    position_of_001 = bn_books.columns.get_loc("X001")
-    bn_books_marc = bn_books.iloc[:,position_of_001:]
+    position_of_LDR = bn_books.columns.get_loc("LDR")
+    bn_books_marc = bn_books.iloc[:,position_of_LDR:]
     bn_books_marc['X650'] = pbl_enrichment['650']
     bn_books_marc['X655'] = pbl_enrichment['655']
     
@@ -121,7 +121,7 @@ for i, year in enumerate(years):
     bn_books_marc.columns = bn_new_column_names
     bn_books_marc['240'] = bn_books_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' in x else np.nan)
     bn_books_marc['246'] = bn_books_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' not in x else np.nan)
-    #bn_books_marc['995'] = '\\\\$aBibliografia Biblioteki Narodowej
+    bn_books_marc['995'] = '\\\\$aPBL 2013-2019: książki'
     
     bn_books_marc_total = bn_books_marc_total.append(bn_books_marc)
 
@@ -130,8 +130,9 @@ subfield_list= bn_books_marc_total.columns.tolist()
 subfield_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 bn_books_marc_total = bn_books_marc_total.reindex(columns=subfield_list)
 bn_books_marc_total = bn_books_marc_total.reset_index(drop=True)
+bn_books_marc_total['008'] = bn_books_marc_total['008'].str.replace('\\', ' ')
 
-mrc_errors = df_to_mrc(bn_books_marc_total, '|', 'libri_marc_bn_books.mrc')
+df_to_mrc(bn_books_marc_total, '❦', 'libri_marc_bn_books.mrc')
 
 print('Done')
 
@@ -146,3 +147,11 @@ print('Done')
 # 100 d - usunąć nawiasy
 # 830 usunąć v
 # =============================================================================
+
+
+
+
+
+
+
+
