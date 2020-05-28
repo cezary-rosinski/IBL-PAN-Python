@@ -14,17 +14,25 @@ import pymarc
 import io
 from bs4 import BeautifulSoup
 from my_functions import cosine_sim_2_elem
+import glob
 
 ### def
 
 def add_viaf(x):
     return x + 'viaf.xml'
 
+def author(row, field):
+    if row['field'] == field:
+        val = row['field']
+    else:
+        val = np.nan
+    return val
+
 ### code
     
 # =============================================================================
 # # table for personal authorities
-# path_in = "C:/Users/User/Downloads/CLOselection.txt"
+# path_in = "C:/Users/Cezary/Downloads/CLOselection.txt"
 # encoding = 'utf-8'
 # reader = io.open(path_in, 'rt', encoding = encoding).read().splitlines()
 # 
@@ -44,6 +52,8 @@ def add_viaf(x):
 # fields_order.sort()
 # fields_order = ['LDR'] + fields_order
 # df_wide = df_wide.reindex(columns=fields_order)
+# 
+# df_wide.to_excel('cz_authorities.xlsx')
 # 
 # X100 = marc_parser_1_field(df_wide, '001', '100', '\$\$')
 # X100 = X100[(X100['$$7'] != '') |
@@ -154,6 +164,8 @@ def add_viaf(x):
 df_names = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1')
 df_names = df_names.loc[df_names['czy_czech'] != 'nie']
 df_names.fillna(value=pd.np.nan, inplace=True)
+
+# add cz_dates to the next harvestings
 
 # Swedish database
 swe_names = df_names.copy()[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
@@ -268,7 +280,6 @@ pol_names = cSplit(pol_names, 'index', 'name_and_source', '‽', 'wide', 1).drop
 pol1 = pol_names[['index', 'cz_name', 'viaf_id']].drop_duplicates()
 pol2 = pol_names[['index', 'name_and_source_0', 'viaf_id']]
 pol2.columns = pol1.columns
-
 pol2['n_letters'] = pol2['cz_name'].apply(lambda x: len(''.join(re.findall('[a-zA-ZÀ-ž]', x))))
 pol2['n_uppers'] = pol2['cz_name'].apply(lambda x: len(''.join(re.findall('[A-ZÀ-Ž]', x))))
 pol2['has_digits'] = pol2['cz_name'].apply(lambda x: bool(re.findall('\d+', x)))
@@ -334,7 +345,66 @@ pol_errors.to_excel('pol_errors.xlsx', index = False)
 pol_names = pd.DataFrame(pol_names, columns = ['authority_index', 'name', 'viaf_id'])
 pol_names.to_excel('pol_names.xlsx', index = False)
         
-    
+# Czech database    
+cz_names = pd.read_excel('cz_authorities.xlsx')
+cz_names = marc_parser_1_field(cz_names, '001', '100', '\$\$')
+cz_names = cz_names[(cz_names['$$7'] != '') |
+                    (cz_names['$$d'] != '')]
+cz_names['index'] = cz_names.index + 1
+# dodać funkcję autorstwa w wyszukiwaniu
+cz_names = cz_names['100'].apply(lambda x: x.replace('|', '')).apply(lambda x: x.replace('$$', '$')).values.tolist()
+test = [re.escape(m) for m in cz_names]
+test = '|'.join(test)
+
+# Czech database harvesting
+path = 'E:/Cezary/Documents/IBL/Translations/'
+files = [f for f in glob.glob(path + '*.mrk', recursive=True)]
+
+encoding = 'utf-8'
+marc_df = pd.DataFrame()
+for i, file_path in enumerate(files):
+    print(str(i) + '/' + str(len(files)))
+    marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+    marc_list = list(filter(None, marc_list))  
+    df = pd.DataFrame(marc_list, columns = ['test'])
+    df['field'] = df['test'].replace(r'(^.)(...)(.+?$)', r'\2', regex = True)
+    df['content'] = df['test'].replace(r'(^.)(.....)(.+?$)', r'\3', regex = True)
+    df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
+    df['help'] = df['help'].ffill()
+    df_help = df.copy()[df['field'].isin(['100', '700'])]
+    df_help = df_help[df_help['content'].str.contains(test)]['help'].apply(lambda x: int(x)).values.tolist()
+    df = df[df['help'].isin(df_help)]
+    if len(df) > 0:
+        df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
+        df['id'] = df.groupby('help')['id'].ffill().bfill()
+        df = df[['id', 'field', 'content']]
+        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+        df = df.drop_duplicates().reset_index(drop=True)
+        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        marc_df = marc_df.append(df_wide)
+        
+fields = marc_df.columns.tolist()
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
+
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+marc_df = marc_df.reindex(columns=fields)
+columns = [f'X{i}' if re.compile('\d{3}').findall(i) else i for i in marc_df.columns.tolist()]
+marc_df.columns = columns
+
+marc_df.to_excel('cz_data.xlsx', index=False)
+
+
+
+
+
+
+
+
+
+
+
+
     
     
 

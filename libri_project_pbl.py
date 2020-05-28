@@ -542,7 +542,7 @@ X787 = X787.drop_duplicates()
 X787 = pd.merge(X787, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X856 = pbl_books_reviews[['ks_id', 'rec_id', 'rec']]
 X856.columns = ['rekord_id', 'rec_id', 'rec']
-X856['856'] = X856.apply(lambda x: f"42$uhttp://libri.ucl.cas.cz/pl{'{:09d}'.format(x['rec_id'])}$yreview: {x['rec']}$4N", axis=1)
+X856['856'] = X856.apply(lambda x: f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['rec_id'])}$yreview: {x['rec']}$4N", axis=1)
 X856 = X856[['rekord_id', '856']]
 X856['856'] = X856.groupby('rekord_id')['856'].transform(lambda x: '❦'.join(x))
 X856 = X856.drop_duplicates()
@@ -590,6 +590,7 @@ X008['country_code'] = X008['country_code'].apply(lambda x: X008_art(x))
 X008['language_code'] = X008['language_code'].apply(lambda x: X008_art(x))
 X008['008'] = X008.apply(lambda x: f"{x['ZA_UZYTK_WPIS_DATA']}s{x['rok']}----{x['country_code']}                 {x['language_code']}  ", axis = 1)
 X008 = X008[['rekord_id', '008']].drop_duplicates().reset_index(drop=True)
+X040 = '\\\\$aIBL$bpol'
 X100 = pbl_articles[['rekord_id', 'rodzaj_zapisu', 'tworca_nazwisko', 'tworca_imie', 'autor_nazwisko', 'autor_imie', '$a', '$d', '$0']].drop_duplicates() 
 X100['tworca_nazwisko'] = X100.apply(lambda x: tworca_nazwisko_100_art(x), axis=1)
 X100['tworca_imie'] = X100.apply(lambda x: tworca_imie_100_art(x), axis=1)
@@ -712,6 +713,7 @@ X100 = X100[['rekord_id', '100']]
 X773 = pbl_articles[['rekord_id', 'czasopismo', 'rok', 'numer', 'strony']].drop_duplicates()
 X773['rok'] = X773['rok'].apply(lambda x: '{:4.0f}'.format(x))  
 X773['773'] = X773.apply(lambda x: X773_art(x), axis=1)
+X773 = X773[['rekord_id', '773']]
 X787 = pbl_articles[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
 pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '787']
 X787 = pd.merge(X787, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
@@ -723,13 +725,13 @@ X787 = X787.drop_duplicates()
 X787 = pd.merge(X787, pbl_articles[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X856 = pbl_books_reviews[['rec_id', 'ks_id', 'ks']]
 X856.columns = ['rekord_id', 'ks_id', 'ks']
-X856['856'] = X856.apply(lambda x: f"42$uhttp://libri.ucl.cas.cz/pl{'{:09d}'.format(x['ks_id'])}$yreview of: {x['ks']}$4N", axis=1)
+X856['856'] = X856.apply(lambda x: f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['ks_id'])}$yreview of: {x['ks']}$4N", axis=1)
 X856 = X856[['rekord_id', '856']]
 X856['856'] = X856.groupby('rekord_id')['856'].transform(lambda x: '❦'.join(x))
 X856 = X856.drop_duplicates()
 X856 = pd.merge(X856, pbl_articles[['rekord_id']].drop_duplicates(),  how='right', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X995 = pbl_articles[['rekord_id']].drop_duplicates().reset_index(drop=True)
-X995['995'] = '\\$aPBL 1989-2003: książki i czasopisma'
+X995['995'] = '\\\\$aPBL 1989-2003: książki i czasopisma'
 dfs = [X001, X005, X008, X100, X240, X245, X520, X600, X610, X611, X630, X650, X651, X655, X700, X773, X787, X856, X995]
 pbl_marc_articles = reduce(lambda left,right: pd.merge(left,right,on='rekord_id'), dfs)
 pbl_marc_articles['LDR'] = LDR

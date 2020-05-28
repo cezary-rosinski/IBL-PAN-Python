@@ -32,3 +32,7 @@ __pycache__/
 /pol_data.xlsx
 /pol_errors.xlsx
 /pol_names.xlsx
+/cz_authorities.xlsx
+/cz_data.xlsx
+/pbl_marc_articles.mrc
+/pbl_marc_articles.xlsx
