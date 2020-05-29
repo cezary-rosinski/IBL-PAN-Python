@@ -13,6 +13,8 @@ for magazine in magazine_links:
     link = f"http://bazhum.muzhp.pl{magazine['href']}"
     title = magazine.text
     bazhum_magazines.append((title, link))
+    
+# bazhum_magazines = bazhum_magazines[157:]
 
 final_data = []    
 for i, magazine in enumerate(bazhum_magazines): 
@@ -23,13 +25,22 @@ for i, magazine in enumerate(bazhum_magazines):
     response.encoding = 'UTF-8'
     soup = BeautifulSoup(response.text, 'html.parser')
     
-    bazhum_specification = soup.findAll('div', attrs={'class': 'box_metryczka'})   
-    bazhum_specification = bazhum_specification[0].text.split('\n')
-    for i, elem in enumerate(bazhum_specification):
-        bazhum_specification[i] = bazhum_specification[i].strip()
+    bazhum_specification = soup.findAll('div', attrs={'class': 'box_metryczka'})
+    bazhum_specification = bazhum_specification[0].text.lstrip('\n')
+    bazhum_specification = re.sub('\n(?=\n)', '', bazhum_specification)
+    bazhum_specification = re.sub(' +\n', '', bazhum_specification).split('\n')
     bazhum_specification = list(filter(None, bazhum_specification))
-    bazhum_specification = [e for e in bazhum_specification if e != 'Udostępnij']
-    bazhum_specification = [i+' = '+j for i,j in zip(bazhum_specification[::2], bazhum_specification[1::2])]
+    test = []
+    for row in bazhum_specification:
+        if row.startswith('  '):
+            test[-1] += ' ❦ ' + row.strip()
+        else:
+            test.append(row)
+    for i, row in enumerate(test):
+        test[i] = test[i].replace('❦', '=', 1)
+        test[i] = test[i].replace(' ❦ ', ', ')
+
+    bazhum_specification = [e for e in test if e not in ['Udostępnij', 'Inne tytuły']]
     
     numbers = soup.findAll('ul', attrs={'class': 'lista'})[0].findAll('a')
     magazine_numbers = []
@@ -67,13 +78,40 @@ for i, magazine in enumerate(bazhum_magazines):
         final_data.append(volume)
 
 final_data = list(filter(None, final_data))        
-df = pd.concat([pd.DataFrame(d, columns=['tytul_czasopisma', 'ISSN', 'Wydawca', 'author', 'title', 'year', 'volume', 'number', 'journal', 'pages', 'full_text']) for d in final_data])
+df = pd.concat([pd.DataFrame(d, columns=['tytul_czasopisma', 'ISSN', 'wydawca', 'author', 'title', 'year', 'volume', 'number', 'journal', 'pages', 'full_text']) for d in final_data])
 for column in df:
     if column != 'full_text':
         df[column] = df[column].str.replace(r'(.+?)( = )(.+?$)', r'\3', regex=True)
         
-df.to_excel('bazhum_web_scraping.xlsx', index=False)
+df.to_excel('bazhum_web_scraping3.xlsx', index=False)
 
+errors = []
+for lista in final_data:
+    for lista2 in lista:
+        if len(lista2) == 10:
+           errors.append(lista2) 
+df = pd.DataFrame(errors, columns=['tytul_czasopisma', 'ISSN', 'author', 'title', 'year', 'volume', 'number', 'journal', 'pages', 'full_text'])
+for column in df:
+    if column != 'full_text':
+        df[column] = df[column].str.replace(r'(.+?)( = )(.+?$)', r'\3', regex=True)
+df.to_excel('bazhum_web_scraping2.xlsx', index=False)           
+
+proper = []
+for lista in final_data:
+    for lista2 in lista:
+        if len(lista2) == 11:
+           proper.append(lista2)           
+df = pd.DataFrame(proper, columns=['tytul_czasopisma', 'ISSN', 'wydawca', 'author', 'title', 'year', 'volume', 'number', 'journal', 'pages', 'full_text'])
+for column in df:
+    if column != 'full_text':
+        df[column] = df[column].str.replace(r'(.+?)( = )(.+?$)', r'\3', regex=True)
+df.to_excel('bazhum_web_scraping1.xlsx', index=False)
+
+other = []
+for lista in final_data:
+    for lista2 in lista:
+        if len(lista2) not in [10, 11]:
+           other.append(lista2)
 
 
 
