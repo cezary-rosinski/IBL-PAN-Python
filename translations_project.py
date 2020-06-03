@@ -165,18 +165,20 @@ df_names = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1'
 df_names = df_names.loc[df_names['czy_czech'] != 'nie']
 df_names.fillna(value=pd.np.nan, inplace=True)
 
-# add cz_dates to the next harvestings
-
 # Swedish database
-swe_names = df_names.copy()[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
+# with dates and without dates - OV decides
+swe_names = df_names.copy()
 swe_names = swe_names.loc[swe_names['IDs'].str.contains("SELIBR") == True].reset_index(drop = True)
+# swe_names['cz_name'] = swe_names.apply(lambda x: f"{x['cz_name']} {x['cz_dates']}", axis=1)
+swe_names = swe_names[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
 swe_names = cSplit(swe_names, 'index', 'name_and_source', '❦')
+swe1 = swe_names[['index', 'cz_name', 'viaf_id']].drop_duplicates()
 swe_names = swe_names.loc[swe_names['name_and_source'].str.contains("SELIBR") == True].reset_index(drop = True)   
 swe_names = cSplit(swe_names, 'index', 'name_and_source', '‽', 'wide', 1).drop_duplicates()
-swe1 = swe_names[['index', 'cz_name', 'viaf_id']].drop_duplicates()
 swe2 = swe_names[['index', 'name_and_source_0', 'viaf_id']]
 swe2.columns = swe1.columns
 swe_names = pd.concat([swe1, swe2]).sort_values(['viaf_id', 'cz_name']).values.tolist()
+
   
 # Swedish database harvesting
 full_data = pd.DataFrame()
@@ -202,7 +204,7 @@ for name_index, (index, name, viaf) in enumerate(swe_names):
         df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
         df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
         df = df[['id', 'field', 'content']]
-        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
+        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
         df = df.drop_duplicates().reset_index(drop=True)
         df['name'] = name
         df['viaf'] = viaf
@@ -225,7 +227,7 @@ for name_index, (index, name, viaf) in enumerate(swe_names):
                 df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
                 df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
                 df = df[['id', 'field', 'content']]
-                df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
+                df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
                 df = df.drop_duplicates().reset_index(drop=True)
                 df['name'] = name
                 df['viaf'] = viaf
@@ -249,7 +251,7 @@ for name_index, (index, name, viaf) in enumerate(swe_names):
                 df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
                 df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
                 df = df[['id', 'field', 'content']]
-                df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
+                df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
                 df = df.drop_duplicates().reset_index(drop=True)
                 df['name'] = name
                 df['viaf'] = viaf
@@ -265,19 +267,75 @@ swe_marc.close()
 fields_order = full_data.columns.tolist()
 fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 full_data = full_data.reindex(columns=fields_order)
-full_data.to_excel('swe_data.xlsx', index = False)
+# full_data.to_excel('swe_data.xlsx', index = False)
+full_data.to_excel('swe_data_no_dates.xlsx', index = False)
 swe_errors = pd.DataFrame(errors, columns = ['name_index', 'authority_index', 'name', 'viaf_id'])
 swe_errors.to_excel('swe_errors.xlsx', index = False)
 swe_names = pd.DataFrame(swe_names, columns = ['authority_index', 'name', 'viaf_id'])
 swe_names.to_excel('swe_names.xlsx', index = False)
 
+# Swedish harvesting Czech original
+
+full_data = pd.DataFrame()
+url = 'http://libris.kb.se/xsearch?query=(ORIG:cze)&format_level=full&format=marcxml&start=1&n=200'
+response = requests.get(url)
+with open('test.xml', 'wb') as file:
+    file.write(response.content)
+tree = et.parse('test.xml')
+root = tree.getroot()
+number_of_records = int(root.attrib['records'])
+x = range(1, number_of_records + 1, 200)
+for page_index, i in enumerate(x):
+    print(str(page_index) + '/' + str(len(x)-1))
+    if i == 1:
+        xml_to_mrk('test.xml', 'test.mrk')
+        df = pd.read_table('test.mrk',skip_blank_lines=True, header = None)
+        df.columns = ['original']
+        df['field'] = df['original'].str.extract(r'(?<=\=)(...)')
+        df['content'] = df['original'].str.extract(r'(?<=  )(.*$)')
+        df['ldr'] = df.apply(lambda x: f(x, 'LDR'), axis = 1).ffill()
+        df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
+        df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
+        df = df[['id', 'field', 'content']]
+        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+        df = df.drop_duplicates().reset_index(drop=True)
+        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        full_data = full_data.append(df_wide)
+    else:
+        link = f'http://libris.kb.se/xsearch?query=(ORIG:cze)&format_level=full&format=marcxml&start={i}&n=200'
+        response = requests.get(link)
+        with open('test.xml', 'wb') as file:
+            file.write(response.content)
+        xml_to_mrk('test.xml', 'test.mrk')
+        df = pd.read_table('test.mrk',skip_blank_lines=True, header = None)
+        df.columns = ['original']
+        df['field'] = df['original'].str.extract(r'(?<=\=)(...)')
+        df['content'] = df['original'].str.extract(r'(?<=  )(.*$)')
+        df['ldr'] = df.apply(lambda x: f(x, 'LDR'), axis = 1).ffill()
+        df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
+        df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
+        df = df[['id', 'field', 'content']]
+        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+        df = df.drop_duplicates().reset_index(drop=True)
+        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        full_data = full_data.append(df_wide)
+
+fields_order = full_data.columns.tolist()
+fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+full_data = full_data.reindex(columns=fields_order)
+full_data.to_excel('swe_data_cz_origin.xlsx', index = False)
+
 # Polish database
-pol_names = df_names.copy()[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
+# with dates and without dates - OV decides
+
+pol_names = df_names.copy()
 pol_names = pol_names.loc[pol_names['IDs'].str.contains("PLWABN") == True].reset_index(drop = True)
+# pol_names['cz_name'] = pol_names.apply(lambda x: f"{x['cz_name']} {x['cz_dates']}", axis=1)
+pol_names = pol_names[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
 pol_names = cSplit(pol_names, 'index', 'name_and_source', '❦')
+pol1 = pol_names[['index', 'cz_name', 'viaf_id']].drop_duplicates()
 pol_names = pol_names.loc[pol_names['name_and_source'].str.contains("PLWABN") == True].reset_index(drop = True)   
 pol_names = cSplit(pol_names, 'index', 'name_and_source', '‽', 'wide', 1).drop_duplicates()
-pol1 = pol_names[['index', 'cz_name', 'viaf_id']].drop_duplicates()
 pol2 = pol_names[['index', 'name_and_source_0', 'viaf_id']]
 pol2.columns = pol1.columns
 pol2['n_letters'] = pol2['cz_name'].apply(lambda x: len(''.join(re.findall('[a-zA-ZÀ-ž]', x))))
@@ -317,7 +375,7 @@ for name_index, (index, name, viaf) in enumerate(pol_names):
             df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
             df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
             df = df[['id', 'field', 'content']]
-            df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
+            df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
             df = df.drop_duplicates().reset_index(drop=True)
             df['name'] = name
             df['viaf'] = viaf
@@ -339,11 +397,51 @@ pol_marc.close()
 fields_order = full_data.columns.tolist()
 fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 full_data = full_data.reindex(columns=fields_order)
-full_data.to_excel('pol_data.xlsx', index = False)
+# full_data.to_excel('pol_data.xlsx', index = False)
+full_data.to_excel('pol_data_no_dates.xlsx', index = False)
 pol_errors = pd.DataFrame(errors, columns = ['name_index', 'authority_index', 'name', 'viaf_id'])
 pol_errors.to_excel('pol_errors.xlsx', index = False)
 pol_names = pd.DataFrame(pol_names, columns = ['authority_index', 'name', 'viaf_id'])
 pol_names.to_excel('pol_names.xlsx', index = False)
+
+# Polish harvesting Czech original
+
+ns = '{http://www.loc.gov/MARC21/slim}'
+full_data = pd.DataFrame()
+url = 'https://data.bn.org.pl/api/bibs.marcxml?limit=100&amp;marc=041h+cze'
+response = requests.get(url)
+with open('test.xml', 'wb') as file:
+    file.write(response.content)
+tree = et.parse('test.xml')
+root = tree.getroot()
+i = 1
+while len(root.findall(f'.//{ns}record')) > 0:
+    print(str(i))
+    xml_to_mrk('test.xml', 'test.mrk')      
+    df = pd.read_table('test.mrk',skip_blank_lines=True, header = None)
+    df.columns = ['original']
+    df['field'] = df['original'].str.extract(r'(?<=\=)(...)')
+    df['content'] = df['original'].str.extract(r'(?<=  )(.*$)')
+    df['ldr'] = df.apply(lambda x: f(x, 'LDR'), axis = 1).ffill()
+    df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
+    df['id'] = df.groupby('ldr')['id'].apply(lambda x: x.ffill().bfill())
+    df = df[['id', 'field', 'content']]
+    df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+    df = df.drop_duplicates().reset_index(drop=True)
+    df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+    full_data = full_data.append(df_wide)
+    url = root.find(f'.//nextPage').text
+    response = requests.get(url)
+    with open('test.xml', 'wb') as file:
+        file.write(response.content)
+    tree = et.parse('test.xml')
+    root = tree.getroot()
+    i += 1
+    
+fields_order = full_data.columns.tolist()
+fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+full_data = full_data.reindex(columns=fields_order)
+full_data.to_excel('pol_data_cz_origin.xlsx', index = False)
         
 # Czech database    
 cz_names = pd.read_excel('cz_authorities.xlsx')
@@ -353,11 +451,12 @@ cz_names = cz_names[(cz_names['$$7'] != '') |
 cz_names['index'] = cz_names.index + 1
 # dodać funkcję autorstwa w wyszukiwaniu
 cz_names = cz_names['100'].apply(lambda x: x.replace('|', '')).apply(lambda x: x.replace('$$', '$')).values.tolist()
-test = [re.escape(m) for m in cz_names]
-test = '|'.join(test)
+cz_names = [f'{e}$4aut' for e in cz_names]
+cz_names = [re.escape(m) for m in cz_names]
+cz_names = '|'.join(cz_names)
 
 # Czech database harvesting
-path = 'E:/Cezary/Documents/IBL/Translations/'
+path = 'F:/Cezary/Documents/IBL/Translations/'
 files = [f for f in glob.glob(path + '*.mrk', recursive=True)]
 
 encoding = 'utf-8'
@@ -372,7 +471,7 @@ for i, file_path in enumerate(files):
     df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
     df['help'] = df['help'].ffill()
     df_help = df.copy()[df['field'].isin(['100', '700'])]
-    df_help = df_help[df_help['content'].str.contains(test)]['help'].apply(lambda x: int(x)).values.tolist()
+    df_help = df_help[df_help['content'].str.contains(cz_names)]['help'].apply(lambda x: int(x)).values.tolist()
     df = df[df['help'].isin(df_help)]
     if len(df) > 0:
         df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
@@ -394,7 +493,8 @@ marc_df.columns = columns
 
 marc_df.to_excel('cz_data.xlsx', index=False)
 
-
+# Research section
+# Connect appearances for several authors from all datasets
 
 
 

@@ -12,6 +12,7 @@ import re
 from my_functions import cSplit
 from functools import reduce
 from my_functions import df_to_mrc
+from my_functions import cosine_sim_2_elem
 
 # def
 def date_to_string(x):
@@ -245,6 +246,7 @@ def X773_art(x):
     return val
 
 # read google sheets
+bazhum_links = gsheet_to_df('1I2Tj_HNbYcYcaw7W544h_NGQno3NVlptVsY3FZgCL-4', 'Sheet1')    
 language_magazine = gsheet_to_df('1EKKdPL8II1l7vYivDVJCYePuswlimt1tQHgvgsScJjs', 'Export Worksheet')
 full_text = gsheet_to_df('11_EA1S-4pcIoT3SxjcxYso1o842fV8_NuDmT9cXfsVY', 'Arkusz1')
 pbl_viaf_names_dates = gsheet_to_df('1S_KsVppXzisd4zlsZ70rJE3d40SF9XRUO75no360dnY', 'pbl_viaf')
@@ -752,4 +754,51 @@ df_to_mrc(pbl_marc_articles, '❦', 'pbl_marc_articles.mrc')
 # if z inputem?
 
 
+# bazhum enrichment
+pbl_zrodla = """select * 
+                from IBL_OWNER.pbl_zrodla zr"""
+pbl_zrodla = pd.read_sql(pbl_zrodla, con=connection).fillna(value = np.nan)    
+
+bazhum_czasopisma = bazhum_links.copy()[['tytul_czasopisma']].drop_duplicates().reset_index(drop=True)
+
+cosine = pd.DataFrame()
+for i, row in bazhum_czasopisma.iterrows():
+    print(str(i) + '/' + str(len(bazhum_czasopisma)))
+    matching = pd.DataFrame()
+    for i2, row2 in pbl_zrodla.iterrows():
+        df = cosine_sim_2_elem([row['tytul_czasopisma'], row2['ZR_TYTUL']])
+        df['ZR_ZRODLO_ID'] = row2['ZR_ZRODLO_ID']
+        matching = matching.append(df)
+    matching = matching[matching['cosine_similarity'] == matching['cosine_similarity'].max()]
+    cosine = cosine.append(matching)
+cosine.to_excel('pbl_bazhum_cosine.xlsx', index=False)    
+
+
+
+
+test = cosine[cosine['string1'] == 'Acta Cassubiana']
+test = test[test['cosine_similarity'] == test['cosine_similarity'].max()]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
 
