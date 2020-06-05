@@ -246,7 +246,6 @@ def X773_art(x):
     return val
 
 # read google sheets
-bazhum_links = gsheet_to_df('1I2Tj_HNbYcYcaw7W544h_NGQno3NVlptVsY3FZgCL-4', 'Sheet1')    
 language_magazine = gsheet_to_df('1EKKdPL8II1l7vYivDVJCYePuswlimt1tQHgvgsScJjs', 'Export Worksheet')
 full_text = gsheet_to_df('11_EA1S-4pcIoT3SxjcxYso1o842fV8_NuDmT9cXfsVY', 'Arkusz1')
 pbl_viaf_names_dates = gsheet_to_df('1S_KsVppXzisd4zlsZ70rJE3d40SF9XRUO75no360dnY', 'pbl_viaf')
@@ -755,29 +754,75 @@ df_to_mrc(pbl_marc_articles, '❦', 'pbl_marc_articles.mrc')
 
 
 # bazhum enrichment
-pbl_zrodla = """select * 
-                from IBL_OWNER.pbl_zrodla zr"""
-pbl_zrodla = pd.read_sql(pbl_zrodla, con=connection).fillna(value = np.nan)    
+# =============================================================================
+# pbl_magazine_year = pbl_articles[['czasopismo_id', 'czasopismo', 'rok']].drop_duplicates().sort_values(['czasopismo', 'rok'])
+# pbl_magazine_year['rok'] = pbl_magazine_year['rok'].apply(lambda x: '{:4.0f}'.format(x))
+# pbl_magazine_year['join'] = pbl_magazine_year.apply(lambda x: '❦'.join(x.astype(str)), axis=1)
+# bazhum_pbl_mapping = gsheet_to_df('16OkWDxvJML-SG_7WBF98XE9OtkPSvOUTjaNahVM4a3I', 'Arkusz2')
+# bazhum_pbl_mapping.fillna(value=pd.np.nan, inplace=True)
+# bazhum_pbl_mapping = bazhum_pbl_mapping[bazhum_pbl_mapping['PBL_czasopismo'].notnull()]
+# bazhum_links = gsheet_to_df('1abTBBgmVrAt6JltecOKPWgrRny32r3MaA_JY9QGQRXc', 'Sheet1')    
+# for column in bazhum_links:
+#     bazhum_links[column] = bazhum_links[column].str.strip().str.replace('^"', '', regex=True).str.replace('",$|,$', '', regex=True)
+# bazhum_links = pd.merge(bazhum_links, bazhum_pbl_mapping, how = 'left', left_on = 'tytul_czasopisma', right_on = 'BazHum_czasopismo').drop_duplicates()
+# bazhum_magazine_year = bazhum_links[['PBL_id', 'PBL_czasopismo', 'year']].drop_duplicates().sort_values(['PBL_czasopismo', 'year'])
+# bazhum_magazine_year['join'] = bazhum_magazine_year.apply(lambda x: '❦'.join(x.astype(str)), axis=1)
+# bazhum_magazine_year = bazhum_magazine_year[bazhum_magazine_year['join'].isin(pbl_magazine_year['join'])]
+# 
+# test = pbl_articles.copy()[['rekord_id', 'autor_nazwisko', 'autor_imie', 'tytul', 'czasopismo_id', 'czasopismo', 'rok', 'numer', 'strony']].drop_duplicates()
+# test = test[test['czasopismo_id'].isin(bazhum_pbl_mapping['PBL_id'])]
+# test['autor_nazwisko'] = test.groupby('rekord_id')['autor_nazwisko'].transform(lambda x: '❦'.join(x.dropna().astype(str)))
+# test['autor_imie'] = test.groupby('rekord_id')['autor_imie'].transform(lambda x: '❦'.join(x.dropna().astype(str)))
+# test = test.drop_duplicates()
+# 
+# def find_number(x):
+#     try:
+#         val = re.findall(r'\d+', str(x))[0]
+#     except:
+#         val = np.nan
+#     return val
+#         
+# test['number'] = test['numer'].apply(lambda x: find_number(x))
+# test['rok'] = test['rok'].astype(object)
+# test['rok'] = test['rok'].apply(lambda x: '{:4.0f}'.format(x))
+# test['join'] = test[['czasopismo_id', 'czasopismo', 'rok']].apply(lambda x: '❦'.join(x.astype(str)), axis=1)
+# test = test[test['join'].isin(bazhum_magazine_year['join'])]
+# 
+# bazhum_links['join'] = bazhum_links[['PBL_id', 'PBL_czasopismo', 'year']].apply(lambda x: '❦'.join(x.astype(str)), axis=1)
+# bazhum_links = bazhum_links[bazhum_links['join'].isin(bazhum_magazine_year['join'])]
+# 
+# test['simple_title'] = test['tytul'].apply(lambda x: re.sub('\W', '', str(x).lower()))
+# bazhum_links['simple_title'] = bazhum_links['title'].apply(lambda x: re.sub('\W', '', str(x).lower()))
+# 
+# test['join2'] = test.apply(lambda x: str(x['czasopismo_id']) + str(x['rok']) + str(x['number']) + str(x['strony']), axis=1)
+# bazhum_links['join2'] = bazhum_links.apply(lambda x: str(x['PBL_id']) + str(x['year']) + str(x['volume']) + str(x['pages']), axis=1)
+# 
+# # 1 option
+# test2 = pd.merge(test, bazhum_links,  how='inner', left_on = ['czasopismo_id', 'rok', 'number', 'strony'], right_on = ['PBL_id', 'year', 'volume', 'pages'])
+# len(test2[test2['id'].notnull()])
+# # 1791 vs. 1620
+# # 2 option
+# test3 = pd.merge(test, bazhum_links,  how='inner', left_on = ['czasopismo_id', 'simple_title'], right_on = ['PBL_id', 'simple_title'])
+# len(test3[test3['id'].notnull()])
+# len(test3[test3['id'].isnull()])
+# # 1588 vs 1796
+# # 3 option
+# test4 = pd.merge(test, bazhum_links,  how='inner', left_on = ['czasopismo_id', 'strony'], right_on = ['PBL_id', 'pages'])
+# 
+# testy = pd.concat([test2, test3, test4]).drop_duplicates()
+# testy.drop(['number_x', 'join_x', 'join2_x', 'simple_title_x', 'join_y', 'join2_y', 'simple_title_y', 'simple_title'], axis = 1, inplace=True)
+# testy = testy.drop_duplicates()
+# test = test[~test['rekord_id'].isin(testy['rekord_id'])]
+# testy = pd.concat([testy, test])
+# testy.drop(['number', 'join', 'join2', 'simple_title'], axis = 1, inplace=True)
+# testy = testy.sort_values(['czasopismo', 'rok', 'rekord_id'])
+# 
+# writer = pd.ExcelWriter('pbl_linki_bazhum.xlsx', engine='xlsxwriter')
+# testy.to_excel(writer, sheet_name='pbl_mapping', index=False)
+# bazhum_links.to_excel(writer, sheet_name='bazhum', index=False)
+# writer.save()
+# =============================================================================
 
-bazhum_czasopisma = bazhum_links.copy()[['tytul_czasopisma']].drop_duplicates().reset_index(drop=True)
-
-cosine = pd.DataFrame()
-for i, row in bazhum_czasopisma.iterrows():
-    print(str(i) + '/' + str(len(bazhum_czasopisma)))
-    matching = pd.DataFrame()
-    for i2, row2 in pbl_zrodla.iterrows():
-        df = cosine_sim_2_elem([row['tytul_czasopisma'], row2['ZR_TYTUL']])
-        df['ZR_ZRODLO_ID'] = row2['ZR_ZRODLO_ID']
-        matching = matching.append(df)
-    matching = matching[matching['cosine_similarity'] == matching['cosine_similarity'].max()]
-    cosine = cosine.append(matching)
-cosine.to_excel('pbl_bazhum_cosine.xlsx', index=False)    
-
-
-
-
-test = cosine[cosine['string1'] == 'Acta Cassubiana']
-test = test[test['cosine_similarity'] == test['cosine_similarity'].max()]
 
 
 

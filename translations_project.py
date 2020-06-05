@@ -15,6 +15,8 @@ import io
 from bs4 import BeautifulSoup
 from my_functions import cosine_sim_2_elem
 import glob
+import regex
+import unidecode
 
 ### def
 
@@ -492,6 +494,149 @@ columns = [f'X{i}' if re.compile('\d{3}').findall(i) else i for i in marc_df.col
 marc_df.columns = columns
 
 marc_df.to_excel('cz_data.xlsx', index=False)
+
+# Cleaning data
+swe_data = pd.read_excel('swe_data_no_dates.xlsx')
+pol_data = pd.read_excel('pol_data_no_dates.xlsx')
+
+# | zamienić po kolejnym harvestowaniu na ❦
+def right_author(x):
+    u_name = unidecode.unidecode(x['name'])
+    if pd.notnull(x['100']) and pd.isnull(x['700']):
+        try:
+            test_100 = re.findall(u_name, unidecode.unidecode(x['100']))[0]
+            if '$' not in test_100 and test_100.count(',') <= 1:
+                val = True
+            else:
+                val = False
+        except IndexError:
+            val = False
+    elif pd.isnull(x['100']) and pd.notnull(x['700']):
+        if '|' not in x['700'] and '$4' in x['700']:
+            pattern = f"(?>{u_name}.+?\$4)(.{{3}})(?=\$|$)"
+            try:
+                test_700 = regex.findall(pattern, unidecode.unidecode(x['700']))[0]
+                if test_700 in ['aut', 'oth']:
+                    val = True
+                else:
+                    val = False
+            except IndexError:
+                val = False
+        elif '|' not in x['700'] and '$4' not in x['700']:
+            try:
+                test_700 = re.findall(u_name, unidecode.unidecode(x['700']))[0]
+                if '$' not in test_700 and test_700.count(',') <= 1:
+                    val = True
+                else:
+                    val = False
+            except IndexError:
+                val = False
+        elif '|' in x['700']:
+            x700 = x['700'].split('|')
+            result = []
+            for elem in x700:
+                if '$4' in elem:
+                    pattern = f"(?>{u_name}.+?\$4)(.{{3}})(?=\$|$)"
+                    try:
+                        test_700 = regex.findall(pattern, unidecode.unidecode(elem))[0]
+                        if test_700 in ['aut', 'oth']:
+                            val = True
+                        else:
+                            val = False
+                    except IndexError:
+                        val = False
+                    result.append(val)
+                else:
+                    try:
+                        test_700 = re.findall(u_name, unidecode.unidecode(elem))[0]
+                        if '$' not in test_700 and test_700.count(',') <= 1:
+                            val = True
+                        else:
+                            val = False
+                    except IndexError:
+                        val = False
+                    result.append(val)
+            if True in result:
+                val = True
+            else:
+                val = False
+    elif pd.notnull(x['100']) and pd.notnull(x['700']):
+        try:
+            test_100 = re.findall(u_name, unidecode.unidecode(x['100']))[0]
+            if '$' not in test_100 and test_100.count(',') <= 1:
+                val1 = True
+            else:
+                val1 = False
+        except IndexError:
+            val1 = False
+        if '|' not in x['700'] and '$4' in x['700']:
+            pattern = f"(?>{u_name}.+?\$4)(.{{3}})(?=\$|$)"
+            try:
+                test_700 = regex.findall(pattern, unidecode.unidecode(x['700']))[0]
+                if test_700 in ['aut', 'oth']:
+                    val2 = True
+                else:
+                    val2 = False
+            except IndexError:
+                val2 = False
+        elif '|' not in x['700'] and '$4' not in x['700']:
+            try:
+                test_700 = re.findall(u_name, unidecode.unidecode(x['700']))[0]
+                if '$' not in test_700 and test_700.count(',') <= 1:
+                    val2 = True
+                else:
+                    val2 = False
+            except IndexError:
+                val2 = False
+        elif '|' in x['700']:
+            x700 = x['700'].split('|')
+            result = []
+            for elem in x700:
+                if '$4' in elem:
+                    pattern = f"(?>{u_name}.+?\$4)(.{{3}})(?=\$|$)"
+                    try:
+                        test_700 = regex.findall(pattern, unidecode.unidecode(elem))[0]
+                        if test_700 in ['aut', 'oth']:
+                            val2 = True
+                        else:
+                            val2 = False
+                    except IndexError:
+                        val2 = False
+                    result.append(val2)
+                else:
+                    try:
+                        test_700 = re.findall(u_name, unidecode.unidecode(elem))[0]
+                        if '$' not in test_700 and test_700.count(',') <= 1:
+                            val2 = True
+                        else:
+                            val2 = False
+                    except IndexError:
+                        val2 = False
+                    result.append(val2)
+            if True in result:
+                val2 = True
+            else:
+                val2 = False
+        if val1 == True or val2 == True:
+            val = True
+        else:
+            val = False
+    else:
+        val = False
+    return val
+
+swe_data['right_author'] = swe_data.apply(lambda x: right_author(x), axis=1)
+# swe_data = swe_data[swe_data['right_author'] == True]
+# del swe_data['right_author']
+swe_data.to_excel('swe_data_clean.xlsx', index=False)
+
+pol_data['right_author'] = pol_data.apply(lambda x: right_author(x), axis=1)
+# pol_data = pol_data[pol_data['right_author'] == True]
+# del pol_data['right_author']
+pol_data.to_excel('pol_data_clean.xlsx', index=False)
+
+
+
 
 # Research section
 # Connect appearances for several authors from all datasets
