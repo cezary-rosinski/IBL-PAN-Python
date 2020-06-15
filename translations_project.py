@@ -17,6 +17,7 @@ from my_functions import cosine_sim_2_elem
 import glob
 import regex
 import unidecode
+import pandasql
 
 ### def
 
@@ -166,6 +167,7 @@ def author(row, field):
 df_names = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1')
 df_names = df_names.loc[df_names['czy_czech'] != 'nie']
 df_names.fillna(value=pd.np.nan, inplace=True)
+df_names['index'] = df_names['index'].astype(int)
 
 # Swedish database
 # with dates and without dates - OV decides
@@ -451,7 +453,8 @@ cz_names = marc_parser_1_field(cz_names, '001', '100', '\$\$')
 cz_names = cz_names[(cz_names['$$7'] != '') |
                     (cz_names['$$d'] != '')]
 cz_names['index'] = cz_names.index + 1
-# dodać funkcję autorstwa w wyszukiwaniu
+cz_names = pd.merge(cz_names, df_names[['index', 'viaf_id']], on='index', how='left')
+cz_viaf = cz_names[['viaf_id']]
 cz_names = cz_names['100'].apply(lambda x: x.replace('|', '')).apply(lambda x: x.replace('$$', '$')).values.tolist()
 cz_names = [f'{e}$4aut' for e in cz_names]
 cz_names = [re.escape(m) for m in cz_names]
@@ -493,6 +496,24 @@ marc_df = marc_df.reindex(columns=fields)
 columns = [f'X{i}' if re.compile('\d{3}').findall(i) else i for i in marc_df.columns.tolist()]
 marc_df.columns = columns
 
+cz_names = cz_names.split('|')
+cz_names = [re.sub(r'\\(.)', r'\1', m) for m in cz_names]
+cz_names = pd.DataFrame(cz_names, columns=['cz_name'])
+cz_names = pd.concat([cz_names, cz_viaf], axis=1)
+cz_names['viaf_id'] = cz_names['viaf_id'].fillna('')
+
+X100 = marc_df[['X001', 'X100']]
+query = "select * from X100 a join cz_names b on a.X100 like '%'||b.cz_name||'%'"
+X100 = pandasql.sqldf(query)
+X100 = X100[['X001', 'cz_name', 'viaf_id']]
+
+X700 = marc_df[['X001', 'X700']]
+query = "select * from X700 a join cz_names b on a.X700 like '%'||b.cz_name||'%'"
+X700 = pandasql.sqldf(query)
+X700 = X700[['X001', 'cz_name', 'viaf_id']]
+
+X100700 = pd.concat([X100, X700]).drop_duplicates()
+marc_df = pd.merge(marc_df, X100700, on='X001', how='left')
 marc_df.to_excel('cz_data.xlsx', index=False)
 
 # Cleaning data
