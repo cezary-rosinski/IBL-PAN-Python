@@ -39,8 +39,14 @@ for index, year in enumerate(years):
         response = requests.get(link)
         response.encoding = 'UTF-8'
         soup = BeautifulSoup(response.text, 'html.parser')
-        movie_title = soup.select_one('#film h1').text.capitalize()
-        movie_type = soup.select_one('b').text
+        try:
+            movie_title = soup.select_one('#film h1').text.capitalize()
+        except AttributeError:
+            movie_title = np.nan
+        try:
+            movie_type = soup.select_one('b').text
+        except AttributeError:
+            movie_type = np.nan
         metryczka = soup.select_one('.tech').text
         try:
             country_of_production = re.findall('(?<=Produkcja:)(.+)', metryczka)[0].strip()
