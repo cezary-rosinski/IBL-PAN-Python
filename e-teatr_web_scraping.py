@@ -48,15 +48,17 @@ for index, year in enumerate(years):
         performances = [(p.text.strip(), f"http://www.e-teatr.pl/pl/realizacje/{p['href']}") for p in performances]
         for i, performance in enumerate(performances):
             link = performance[1]
-            link = 'http://www.e-teatr.pl/pl/realizacje/48447,szczegoly.html'
             response = requests.get(link)
             response.encoding = 'UTF-8'
             soup = BeautifulSoup(response.text, 'html.parser')
             body = soup.select_one('td').text.strip()
             body = body.split('\n')
             body = list(filter(None, body))
-            obsada_index = body.index("Obsada:")
-            body = body[:obsada_index]
+            try:
+                obsada_index = body.index("Obsada:")
+                body = body[:obsada_index]
+            except ValueError:
+                pass
             title_of_play = [re.findall('(?<=tytuł realizacji:)(.+)', t)[0].strip() for t in body if 'tytuł realizacji:' in t][0]
             try:
                 title_of_text = [re.findall('(?<=utwór:)(.+)', t)[0].strip() for t in body if 'utwór:' in t][0]
