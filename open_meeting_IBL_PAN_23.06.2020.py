@@ -4,14 +4,8 @@ import requests
 import pandas as pd
 import re
 import numpy as np
-import io
 from bs4 import BeautifulSoup
 from my_functions import cosine_sim_2_elem
-import glob
-import regex
-import unidecode
-import pandasql
-from langdetect import detect
 from langdetect import detect_langs
 from textblob import TextBlob 
 
@@ -88,9 +82,7 @@ viaf_df = pd.DataFrame(viaf_enrichment, columns=['wyszukiwana nazwa', 'viaf id',
 # Automatyczne wykrycie języka publikacji na podstawie tytułu
 
 def clear_title(x):
-    if pd.isnull(x):
-        val = '[no title]'
-    elif x[-1] == ']':
+    if x[-1] == ']':
         val = re.sub('(^.*?)([\.!?] {0,1})\[.*?$', r'\1\2', x).strip()
     elif x[0] == '[':
         val = re.sub('(^.*?\])(.*?$)', r'\2', x).strip()
@@ -100,24 +92,14 @@ def clear_title(x):
 
 def title_lang1(x):
     try:
-        if pd.isnull(x):
-            val = ''
-        elif x == '[no title]':
-            val = ''
-        else:
-            val = detect_langs(re.sub('[^a-zA-ZÀ-ž\s]', '', x.lower()))
+        val = detect_langs(re.sub('[^a-zA-ZÀ-ž\s]', '', x.lower()))
     except:
         val = ''
     return val
 
 def title_lang2(x):
     try:
-        if pd.isnull(x):
-            val = ''
-        elif x == '[no title]':
-            val = ''
-        else:
-            val = TextBlob(re.sub('[^a-zA-ZÀ-ž\s]', '', x.lower())).detect_language()
+        val = TextBlob(re.sub('[^a-zA-ZÀ-ž\s]', '', x.lower())).detect_language()
     except:
         val = ''
     return val

@@ -4,8 +4,6 @@ import requests
 import pandas as pd
 import re
 import numpy as np
-import copy
-from my_functions import df_explode
 from my_functions import xml_to_mrk
 from my_functions import cSplit
 from my_functions import f
@@ -18,6 +16,7 @@ import glob
 import regex
 import unidecode
 import pandasql
+import regex
 
 ### def
 
@@ -164,14 +163,22 @@ def author(row, field):
 # =============================================================================
 
 #google sheets
-df_names = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1')
-df_names = df_names.loc[df_names['czy_czech'] != 'nie']
+df_names = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1').drop_duplicates()
+df_names = df_names.loc[(~df_names['czy_czech'].isin(['nie', 'boardercase'])) &
+                        (df_names['viaf_id'] != '')]
 df_names.fillna(value=pd.np.nan, inplace=True)
 df_names['index'] = df_names['index'].astype(int)
+
+blacklist = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'blacklist')
+# test filtering
+test_names = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'test_list').values.tolist()
+test_names = [item for sublist in test_names for item in sublist]
+df_names = df_names[df_names['viaf_id'].isin(test_names)]
 
 # Swedish database
 # with dates and without dates - OV decides
 swe_names = df_names.copy()
+swe_names_cz = swe_names[['index', 'cz_name', 'viaf_id']]
 swe_names = swe_names.loc[swe_names['IDs'].str.contains("SELIBR") == True].reset_index(drop = True)
 # swe_names['cz_name'] = swe_names.apply(lambda x: f"{x['cz_name']} {x['cz_dates']}", axis=1)
 swe_names = swe_names[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
@@ -181,9 +188,8 @@ swe_names = swe_names.loc[swe_names['name_and_source'].str.contains("SELIBR") ==
 swe_names = cSplit(swe_names, 'index', 'name_and_source', '‽', 'wide', 1).drop_duplicates()
 swe2 = swe_names[['index', 'name_and_source_0', 'viaf_id']]
 swe2.columns = swe1.columns
-swe_names = pd.concat([swe1, swe2]).sort_values(['viaf_id', 'cz_name']).values.tolist()
-
-  
+swe_names = pd.concat([swe_names_cz, swe1, swe2]).sort_values(['viaf_id', 'cz_name']).drop_duplicates().values.tolist()     
+        
 # Swedish database harvesting
 full_data = pd.DataFrame()
 errors = []
@@ -215,6 +221,7 @@ for name_index, (index, name, viaf) in enumerate(swe_names):
         df['index'] = index
         df_people = df[['id', 'index', 'name', 'viaf']].drop_duplicates()
         df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        df_wide = df_wide[df_wide['LDR'].str.contains('^.{6}am', regex=True)]
         df_wide = pd.merge(df_wide, df_people,  how='left', left_on = 'id', right_on = 'id')
         full_data = full_data.append(df_wide)
     elif number_of_records > 200:
@@ -238,6 +245,7 @@ for name_index, (index, name, viaf) in enumerate(swe_names):
                 df['index'] = index
                 df_people = df[['id', 'index', 'name', 'viaf']].drop_duplicates()
                 df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+                df_wide = df_wide[df_wide['LDR'].str.contains('^.{6}am', regex=True)]
                 df_wide = pd.merge(df_wide, df_people,  how='left', left_on = 'id', right_on = 'id')
                 full_data = full_data.append(df_wide)
             else:
@@ -262,6 +270,7 @@ for name_index, (index, name, viaf) in enumerate(swe_names):
                 df['index'] = index
                 df_people = df[['id', 'index', 'name', 'viaf']].drop_duplicates()
                 df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+                df_wide = df_wide[df_wide['LDR'].str.contains('^.{6}am', regex=True)]
                 df_wide = pd.merge(df_wide, df_people,  how='left', left_on = 'id', right_on = 'id')
                 full_data = full_data.append(df_wide)
     else:
@@ -269,7 +278,7 @@ for name_index, (index, name, viaf) in enumerate(swe_names):
 swe_marc.close()
 
 fields_order = full_data.columns.tolist()
-fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', x)[0].isdigit() else 'a')), x))
 full_data = full_data.reindex(columns=fields_order)
 # full_data.to_excel('swe_data.xlsx', index = False)
 full_data.to_excel('swe_data_no_dates.xlsx', index = False)
@@ -304,6 +313,7 @@ for page_index, i in enumerate(x):
         df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
         df = df.drop_duplicates().reset_index(drop=True)
         df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        df_wide = df_wide[df_wide['LDR'].str.contains('^.{6}am', regex=True)]
         full_data = full_data.append(df_wide)
     else:
         link = f'http://libris.kb.se/xsearch?query=(ORIG:cze)&format_level=full&format=marcxml&start={i}&n=200'
@@ -322,10 +332,11 @@ for page_index, i in enumerate(x):
         df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
         df = df.drop_duplicates().reset_index(drop=True)
         df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        df_wide = df_wide[df_wide['LDR'].str.contains('^.{6}am', regex=True)]
         full_data = full_data.append(df_wide)
 
 fields_order = full_data.columns.tolist()
-fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', x)[0].isdigit() else 'a')), x))
 full_data = full_data.reindex(columns=fields_order)
 full_data.to_excel('swe_data_cz_origin.xlsx', index = False)
 
@@ -333,6 +344,7 @@ full_data.to_excel('swe_data_cz_origin.xlsx', index = False)
 # with dates and without dates - OV decides
 
 pol_names = df_names.copy()
+pol_names_cz = pol_names[['index', 'cz_name', 'viaf_id']]
 pol_names = pol_names.loc[pol_names['IDs'].str.contains("PLWABN") == True].reset_index(drop = True)
 # pol_names['cz_name'] = pol_names.apply(lambda x: f"{x['cz_name']} {x['cz_dates']}", axis=1)
 pol_names = pol_names[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
@@ -352,7 +364,7 @@ pol2['n_words'] = pol2['cz_name'].apply(lambda x: len(re.findall('([a-zA-ZÀ-ž]
 pol2 = pol2[(pol2['n_words'] != pol2['n_initials'] + 1) |
             (pol2['has_digits'] == True)]
 pol2 = pol2[['index', 'cz_name', 'viaf_id']]
-pol_names = pd.concat([pol1, pol2]).sort_values(['viaf_id', 'cz_name']).values.tolist()
+pol_names = pd.concat([pol_names_cz, pol1, pol2]).sort_values(['viaf_id', 'cz_name']).drop_duplicates().values.tolist()
 
 # Polish database harvesting
 ns = '{http://www.loc.gov/MARC21/slim}'
@@ -386,6 +398,7 @@ for name_index, (index, name, viaf) in enumerate(pol_names):
             df['index'] = index
             df_people = df[['id', 'index', 'name', 'viaf']].drop_duplicates()
             df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+            df_wide = df_wide[df_wide['LDR'].str.contains('^.{6}am', regex=True)]
             df_wide = pd.merge(df_wide, df_people,  how='left', left_on = 'id', right_on = 'id')
             full_data = full_data.append(df_wide)
             url = root.find(f'.//nextPage').text
@@ -399,7 +412,7 @@ for name_index, (index, name, viaf) in enumerate(pol_names):
 pol_marc.close()
 
 fields_order = full_data.columns.tolist()
-fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', x)[0].isdigit() else 'a')), x))
 full_data = full_data.reindex(columns=fields_order)
 # full_data.to_excel('pol_data.xlsx', index = False)
 full_data.to_excel('pol_data_no_dates.xlsx', index = False)
@@ -433,6 +446,7 @@ while len(root.findall(f'.//{ns}record')) > 0:
     df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
     df = df.drop_duplicates().reset_index(drop=True)
     df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+    df_wide = df_wide[df_wide['LDR'].str.contains('^.{6}am', regex=True)]
     full_data = full_data.append(df_wide)
     url = root.find(f'.//nextPage').text
     response = requests.get(url)
@@ -443,7 +457,7 @@ while len(root.findall(f'.//{ns}record')) > 0:
     i += 1
     
 fields_order = full_data.columns.tolist()
-fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', x)[0].isdigit() else 'a')), x))
 full_data = full_data.reindex(columns=fields_order)
 full_data.to_excel('pol_data_cz_origin.xlsx', index = False)
         
@@ -455,6 +469,10 @@ cz_names = cz_names[(cz_names['$$7'] != '') |
 cz_names['index'] = cz_names.index + 1
 cz_names = pd.merge(cz_names, df_names[['index', 'viaf_id']], on='index', how='left')
 cz_viaf = cz_names[['viaf_id']]
+# test filtering
+cz_names = cz_names[cz_names['viaf_id'].isin(test_names)]
+cz_names_table = cz_names[['index', '$$a', 'viaf_id']]
+cz_names_table.columns = ['index', 'name', 'viaf_id']
 cz_names = cz_names['100'].apply(lambda x: x.replace('|', '')).apply(lambda x: x.replace('$$', '$')).values.tolist()
 cz_names = [f'{e}$4aut' for e in cz_names]
 cz_names = [re.escape(m) for m in cz_names]
@@ -485,35 +503,32 @@ for i, file_path in enumerate(files):
         df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
         df = df.drop_duplicates().reset_index(drop=True)
         df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        df_wide = df_wide[df_wide['LDR'].str.contains('^.{6}am', regex=True)]
         marc_df = marc_df.append(df_wide)
-        
+
 fields = marc_df.columns.tolist()
 fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
 marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
 
-fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-marc_df = marc_df.reindex(columns=fields)
-columns = [f'X{i}' if re.compile('\d{3}').findall(i) else i for i in marc_df.columns.tolist()]
-marc_df.columns = columns
+cz_names = cz_names_table.copy()
 
-cz_names = cz_names.split('|')
-cz_names = [re.sub(r'\\(.)', r'\1', m) for m in cz_names]
-cz_names = pd.DataFrame(cz_names, columns=['cz_name'])
-cz_names = pd.concat([cz_names, cz_viaf], axis=1)
-cz_names['viaf_id'] = cz_names['viaf_id'].fillna('')
-
-X100 = marc_df[['X001', 'X100']]
-query = "select * from X100 a join cz_names b on a.X100 like '%'||b.cz_name||'%'"
+X100 = marc_df[['001', '100']]
+query = "select * from X100 a join cz_names b on a.'100' like '%'||b.name||'%'"
 X100 = pandasql.sqldf(query)
-X100 = X100[['X001', 'cz_name', 'viaf_id']]
+X100 = X100[['001', 'index', 'name', 'viaf_id']]
 
-X700 = marc_df[['X001', 'X700']]
-query = "select * from X700 a join cz_names b on a.X700 like '%'||b.cz_name||'%'"
+X700 = marc_df[['001', '700']]
+query = "select * from X700 a join cz_names b on a.'700' like '%'||b.name||'%'"
 X700 = pandasql.sqldf(query)
-X700 = X700[['X001', 'cz_name', 'viaf_id']]
+X700 = X700[['001', 'index', 'name', 'viaf_id']]
 
 X100700 = pd.concat([X100, X700]).drop_duplicates()
-marc_df = pd.merge(marc_df, X100700, on='X001', how='left')
+marc_df = pd.merge(marc_df, X100700, on='001', how='left')
+
+fields_order = marc_df.columns.tolist()
+
+fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', x)[0].isdigit() else 'a')), x))
+marc_df = marc_df.reindex(columns=fields_order)
 marc_df.to_excel('cz_data.xlsx', index=False)
 
 # Cleaning data
@@ -522,10 +537,10 @@ pol_data = pd.read_excel('pol_data_no_dates.xlsx')
 
 # | zamienić po kolejnym harvestowaniu na ❦
 def right_author(x):
-    u_name = unidecode.unidecode(x['name'])
+    u_name = unidecode.unidecode(x['name']).lower()
     if pd.notnull(x['100']) and pd.isnull(x['700']):
         try:
-            test_100 = re.findall(u_name, unidecode.unidecode(x['100']))[0]
+            test_100 = re.findall(u_name, unidecode.unidecode(x['100'].lower()))[0]
             if '$' not in test_100 and test_100.count(',') <= 1:
                 val = True
             else:
@@ -533,33 +548,36 @@ def right_author(x):
         except IndexError:
             val = False
     elif pd.isnull(x['100']) and pd.notnull(x['700']):
-        if '|' not in x['700'] and '$4' in x['700']:
-            pattern = f"(?>{u_name}.+?\$4)(.{{3}})(?=\$|$)"
+        if '❦' not in x['700'] and '$4' in x['700']:
+            pattern = f"(?>{u_name}\$4)(.{{3}})(?=\$|$)"
             try:
-                test_700 = regex.findall(pattern, unidecode.unidecode(x['700']))[0]
+                test_700 = regex.findall(pattern, unidecode.unidecode(x['700'].lower()))[0]
                 if test_700 in ['aut', 'oth']:
                     val = True
                 else:
                     val = False
             except IndexError:
                 val = False
-        elif '|' not in x['700'] and '$4' not in x['700']:
+        elif '❦' not in x['700'] and '$4' not in x['700']:
             try:
-                test_700 = re.findall(u_name, unidecode.unidecode(x['700']))[0]
-                if '$' not in test_700 and test_700.count(',') <= 1:
+                re.findall(u_name, unidecode.unidecode(x['700'].lower()))[0]
+                if '$e' not in x['700']:
                     val = True
                 else:
                     val = False
             except IndexError:
                 val = False
-        elif '|' in x['700']:
-            x700 = x['700'].split('|')
+        elif '❦' in x['700']:
+            x700 = x['700'].split('❦')
             result = []
             for elem in x700:
                 if '$4' in elem:
-                    pattern = f"(?>{u_name}.+?\$4)(.{{3}})(?=\$|$)"
+                    u_name = unidecode.unidecode(swe_data.iloc[50,3].lower())
+                    elem = swe_data.iloc[50, swe_data.columns.get_loc('700')].split('❦')[0]
+                    
+                    pattern = f"(?>{u_name}\$4)(.{{3}})(?=\$|$)"
                     try:
-                        test_700 = regex.findall(pattern, unidecode.unidecode(elem))[0]
+                        test_700 = regex.findall(pattern, unidecode.unidecode(elem.lower()))[0]
                         if test_700 in ['aut', 'oth']:
                             val = True
                         else:
@@ -569,8 +587,8 @@ def right_author(x):
                     result.append(val)
                 else:
                     try:
-                        test_700 = re.findall(u_name, unidecode.unidecode(elem))[0]
-                        if '$' not in test_700 and test_700.count(',') <= 1:
+                        re.findall(u_name, unidecode.unidecode(elem.lower()))[0]
+                        if '$e' not in elem:
                             val = True
                         else:
                             val = False
@@ -583,40 +601,40 @@ def right_author(x):
                 val = False
     elif pd.notnull(x['100']) and pd.notnull(x['700']):
         try:
-            test_100 = re.findall(u_name, unidecode.unidecode(x['100']))[0]
+            test_100 = re.findall(u_name, unidecode.unidecode(x['100'].lower()))[0]
             if '$' not in test_100 and test_100.count(',') <= 1:
                 val1 = True
             else:
                 val1 = False
         except IndexError:
             val1 = False
-        if '|' not in x['700'] and '$4' in x['700']:
-            pattern = f"(?>{u_name}.+?\$4)(.{{3}})(?=\$|$)"
+        if '❦' not in x['700'] and '$4' in x['700']:
+            pattern = f"(?>{u_name}\$4)(.{{3}})(?=\$|$)"
             try:
-                test_700 = regex.findall(pattern, unidecode.unidecode(x['700']))[0]
+                test_700 = regex.findall(pattern, unidecode.unidecode(x['700'].lower()))[0]
                 if test_700 in ['aut', 'oth']:
                     val2 = True
                 else:
                     val2 = False
             except IndexError:
                 val2 = False
-        elif '|' not in x['700'] and '$4' not in x['700']:
+        elif '❦' not in x['700'] and '$4' not in x['700']:
             try:
-                test_700 = re.findall(u_name, unidecode.unidecode(x['700']))[0]
-                if '$' not in test_700 and test_700.count(',') <= 1:
+                re.findall(u_name, unidecode.unidecode(x['700'].lower()))[0]
+                if '$e' not in x['700']:
                     val2 = True
                 else:
                     val2 = False
             except IndexError:
                 val2 = False
-        elif '|' in x['700']:
-            x700 = x['700'].split('|')
+        elif '❦' in x['700']:
+            x700 = x['700'].split('❦')
             result = []
             for elem in x700:
                 if '$4' in elem:
-                    pattern = f"(?>{u_name}.+?\$4)(.{{3}})(?=\$|$)"
+                    pattern = f"(?>{u_name}\$4)(.{{3}})(?=\$|$)"
                     try:
-                        test_700 = regex.findall(pattern, unidecode.unidecode(elem))[0]
+                        test_700 = regex.findall(pattern, unidecode.unidecode(elem.lower()))[0]
                         if test_700 in ['aut', 'oth']:
                             val2 = True
                         else:
@@ -626,8 +644,8 @@ def right_author(x):
                     result.append(val2)
                 else:
                     try:
-                        test_700 = re.findall(u_name, unidecode.unidecode(elem))[0]
-                        if '$' not in test_700 and test_700.count(',') <= 1:
+                        re.findall(u_name, unidecode.unidecode(elem.lower()))[0]
+                        if '$e' not in elem:
                             val2 = True
                         else:
                             val2 = False
