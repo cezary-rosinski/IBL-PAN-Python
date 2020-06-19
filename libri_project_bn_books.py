@@ -10,17 +10,17 @@ from my_functions import df_to_mrc
 import io
 
 
-bn_cz_mapping = pd.read_excel('C:/Users/Cezary/Desktop/bn_cz_mapping.xlsx')
+bn_cz_mapping = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bn_cz_mapping.xlsx')
 gatunki_pbl = pd.DataFrame({'gatunek': ["aforyzm", "album", "antologia", "autobiografia", "dziennik", "esej", "felieton", "inne", "kazanie", "list", "miniatura prozą", "opowiadanie", "poemat", "powieść", "proza", "proza poetycka", "reportaż", "rozmyślanie religijne", "rysunek, obraz", "scenariusz", "szkic", "tekst biblijny", "tekst dramatyczny", "dramat", "wiersze", "wspomnienia", "wypowiedź", "pamiętniki", "poezja", "literatura podróżnicza", "satyra", "piosenka"]})
 gatunki_pbl['gatunek'] = gatunki_pbl['gatunek'].apply(lambda x: f"$a{x}")
 
 
 bn_books_marc_total = pd.DataFrame()
 years = range(2013,2020)
-# year=2013
+year=2018
 for i, year in enumerate(years):
     print(str(i) + '/' + str(len(years)))
-    path = f"C:/Users/Cezary/Desktop/{year}_bn_ks_do_libri.xlsx"
+    path = f"F:/Cezary/Documents/IBL/Pliki python/{year}_bn_ks_do_libri.xlsx"
     bn_books = pd.read_excel(path)
     if bn_books['X005'].dtype == np.float64:
         bn_books['X005'] = bn_books['X005'].astype(np.int64)
@@ -41,11 +41,11 @@ for i, year in enumerate(years):
     bn_books = bn_books[~bn_books['id'].isin(to_remove['id'])]
     pbl_enrichment = bn_books[['id', 'dziedzina_PBL', 'rodzaj_ksiazki', 'DZ_NAZWA', 'X650', 'X655']]
     pbl_enrichment['DZ_NAZWA'] = pbl_enrichment['DZ_NAZWA'].str.replace(' - .*?$', '', regex=True)
-    pbl_enrichment = cSplit(pbl_enrichment, 'id', 'X655', '|')
+    pbl_enrichment = cSplit(pbl_enrichment, 'id', 'X655', '❦')
     pbl_enrichment['jest x'] = pbl_enrichment['X655'].str.contains('\$x')
     pbl_enrichment['nowe650'] = pbl_enrichment.apply(lambda x: x['X655'] if x['jest x'] == True else np.nan, axis=1)
     pbl_enrichment['X655'] = pbl_enrichment.apply(lambda x: x['X655'] if x['jest x'] == False else np.nan, axis=1)
-    pbl_enrichment['X650'] = pbl_enrichment[['X650', 'nowe650']].apply(lambda x: '|'.join(x.dropna().astype(str)), axis=1)
+    pbl_enrichment['X650'] = pbl_enrichment[['X650', 'nowe650']].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis=1)
     pbl_enrichment = pbl_enrichment.drop(['jest x', 'nowe650'], axis=1)
 
     query = "select * from pbl_enrichment a join gatunki_pbl b on lower(a.X655) like '%'||b.gatunek||'%'"
@@ -59,24 +59,26 @@ for i, year in enumerate(years):
     gatunki = pd.merge(gatunki, X655_field, how='left', on='id')
     gatunki['gatunek'] = gatunki['gatunek'].apply(lambda x: f"\\7{x.strip()}")
     gatunki['gatunek+data'] = gatunki.apply(lambda x: f"{x['gatunek']}$y{x['$y']}" if pd.notnull(x['$y']) else np.nan, axis=1)
-    gatunki['nowe655'] = gatunki[['X655', 'gatunek', 'gatunek+data']].apply(lambda x: '|'.join(x.dropna().astype(str)), axis=1)
-    gatunki['nowe655'] = gatunki.groupby('id')['nowe655'].transform(lambda x: '|'.join(x))
+    gatunki['nowe655'] = gatunki[['X655', 'gatunek', 'gatunek+data']].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis=1)
+    gatunki['nowe655'] = gatunki.groupby('id')['nowe655'].transform(lambda x: '❦'.join(x))
     gatunki = gatunki[['id', 'nowe655']].drop_duplicates()
-    gatunki['nowe655'] = gatunki['nowe655'].str.split('|').apply(set).str.join('|')
+    gatunki['nowe655'] = gatunki['nowe655'].str.split('❦').apply(set).str.join('❦')
     
     pbl_enrichment = pd.merge(pbl_enrichment, gatunki, how ='left', on='id')
     pbl_enrichment['nowe650'] = pbl_enrichment.apply(lambda x: x['X655'] if pd.isnull(x['nowe655']) else np.nan, axis=1)
     pbl_enrichment['DZ_NAZWA'] = pbl_enrichment['DZ_NAZWA'].apply(lambda x: f"\\7$a{x}" if 'do ustalenia' not in x else np.nan)
     pbl_enrichment['X650'] = pbl_enrichment['X650'].replace(r'^\s*$', np.nan, regex=True)
-    pbl_enrichment['650'] = pbl_enrichment[['X650', 'nowe650', 'DZ_NAZWA']].apply(lambda x: '|'.join(x.dropna().astype(str)), axis=1)
+    pbl_enrichment['650'] = pbl_enrichment[['X650', 'nowe650', 'DZ_NAZWA']].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis=1)
     pbl_enrichment['655'] = pbl_enrichment['nowe655'].replace(np.nan, '', regex=True)
-    pbl_enrichment['655'] = pbl_enrichment.apply(lambda x: f"{x['655']}|\\7$aOpracowanie" if x['rodzaj_ksiazki'] == 'przedmiotowa' else f"{x['655']}|\\7$Dzieło literackie", axis=1)
-    pbl_enrichment = pbl_enrichment[['id', '650', '655']].replace(r'^\|', '', regex=True)
-    pbl_enrichment['650'] = pbl_enrichment.groupby('id')['650'].transform(lambda x: '|'.join(x.dropna().astype(str)))
-    pbl_enrichment['655'] = pbl_enrichment.groupby('id')['655'].transform(lambda x: '|'.join(x.dropna().astype(str)))
+    pbl_enrichment['655'] = pbl_enrichment.apply(lambda x: f"{x['655']}❦\\7$aOpracowanie" if x['rodzaj_ksiazki'] == 'przedmiotowa' else f"{x['655']}❦\\7$aDzieło literackie", axis=1)
+    pbl_enrichment = pbl_enrichment[['id', '650', '655']].replace(r'^\❦', '', regex=True)
+    pbl_enrichment['650'] = pbl_enrichment.groupby('id')['650'].transform(lambda x: '❦'.join(x.dropna().astype(str)))
+    pbl_enrichment['655'] = pbl_enrichment.groupby('id')['655'].transform(lambda x: '❦'.join(x.dropna().astype(str)))
     pbl_enrichment = pbl_enrichment.drop_duplicates().reset_index(drop=True)
-    pbl_enrichment['650'] = pbl_enrichment['650'].str.split('|').apply(set).str.join('|')
-    pbl_enrichment['655'] = pbl_enrichment['655'].str.split('|').apply(set).str.join('|')
+    pbl_enrichment['650'] = pbl_enrichment['650'].str.split('❦').apply(set).str.join('❦')
+    pbl_enrichment['655'] = pbl_enrichment['655'].str.split('❦').apply(set).str.join('❦')
+    
+
     
     # wzbogacić o linki na podstawie 852 i wpisać je do 856, uprzednio czyszcząc 856
     # usunąć 856
@@ -104,15 +106,17 @@ for i, year in enumerate(years):
     
     position_of_LDR = bn_books.columns.get_loc("LDR")
     bn_books_marc = bn_books.iloc[:,position_of_LDR:]
-    bn_books_marc['X650'] = pbl_enrichment['650']
-    bn_books_marc['X655'] = pbl_enrichment['655']
+    
+    bn_books_marc = bn_books_marc.set_index('X009', drop=False)
+    pbl_enrichment = pbl_enrichment.set_index('id').rename(columns={'650':'X650', '655':'X655'})
+    bn_books_marc = pbl_enrichment.combine_first(bn_books_marc)
     
     fields_to_remove = bn_cz_mapping[bn_cz_mapping['cz'] == 'del']['bn'].to_list()
     bn_books_marc = bn_books_marc.loc[:, ~bn_books_marc.columns.isin(fields_to_remove)]
     
     merge_500s = [col for col in bn_books_marc.columns if 'X5' in col]
     
-    bn_books_marc['500'] = bn_books_marc[merge_500s].apply(lambda x: '|'.join(x.dropna().astype(str)), axis = 1)
+    bn_books_marc['500'] = bn_books_marc[merge_500s].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis = 1)
     bn_books_marc = bn_books_marc.loc[:, ~bn_books_marc.columns.isin(merge_500s)]
     bn_books_marc.rename(columns={'X260':'X264'}, inplace=True)
     bn_books_marc.drop(['X852', 'X856'], axis = 1, inplace=True) 
@@ -125,12 +129,14 @@ for i, year in enumerate(years):
     
     bn_books_marc_total = bn_books_marc_total.append(bn_books_marc)
 
-bn_books_marc_total = bn_books_marc_total.replace(r'^\|', '', regex=True).replace(r'\|$', '', regex=True)
+bn_books_marc_total = bn_books_marc_total.replace(r'^\❦', '', regex=True).replace(r'\❦$', '', regex=True)
 subfield_list= bn_books_marc_total.columns.tolist()
 subfield_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 bn_books_marc_total = bn_books_marc_total.reindex(columns=subfield_list)
 bn_books_marc_total = bn_books_marc_total.reset_index(drop=True)
 bn_books_marc_total['008'] = bn_books_marc_total['008'].str.replace('\\', ' ')
+if bn_books_marc_total['009'].dtype == np.float64:
+        bn_books_marc_total['009'] = bn_books_marc_total['009'].astype(np.int64)
 
 df_to_mrc(bn_books_marc_total, '❦', 'libri_marc_bn_books.mrc')
 
