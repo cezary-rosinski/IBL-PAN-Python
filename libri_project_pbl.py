@@ -108,14 +108,14 @@ def autor_245(row):
     elif pd.notnull(row['autor_nazwisko']) and pd.isnull(row['autor_imie']):
         val = f"$c{row['autor_nazwisko']}"
     else:
-        val = '[no author]'
+        val = '$c[no author]'
     return val
 
 def wydawnictwo(row):
     if pd.isnull(row['wydawnictwo']) and pd.isnull(row['miejscowosc']):
-        val = '1\\$aS.l. : $bs.n.'
+        val = '\\1$aS.l. : $bs.n.'
     else:
-        val = f"1\\$a{row['miejscowosc']} : $b{row['wydawnictwo']}"
+        val = f"\\1$a{row['miejscowosc']} : $b{row['wydawnictwo']}"
     return val
 
 def opis_fiz(x):
@@ -243,6 +243,17 @@ def X773_art(x):
         val = f"0\\$t{x['czasopismo']}$gR. {x['rok']}, {x['strony']}$9{x['rok']}"
     else:
         val = f"0\\$t{x['czasopismo']}$gR. {x['rok']}, {x['numer']}, {x['strony']}$9{x['rok']}"
+    return val
+
+def right_subject_heading(x):
+    if pd.isnull(x['KH_NAZWA_x']) and pd.notnull(x['KH_NAZWA_y']):
+        val = x['KH_NAZWA_y']
+    elif pd.notnull(x['KH_NAZWA_x']) and pd.isnull(x['KH_NAZWA_y']):
+        val = x['KH_NAZWA_x']
+    elif pd.notnull(x['KH_NAZWA_x']) and pd.notnull(x['KH_NAZWA_y']):
+        val = f"{x['KH_NAZWA_x']}❦{x['KN_NAZWA_y']}"
+    else:
+        val = np.nan
     return val
 
 # read google sheets
@@ -571,6 +582,40 @@ pbl_articles = pd.merge(pbl_articles, pbl_persons_index,  how='left', left_on = 
 pbl_articles = pd.merge(pbl_articles, pbl_subject_headings,  how='left', left_on = 'rekord_id', right_on = 'HZ_ZA_ZAPIS_ID') 
 pbl_articles = pd.merge(pbl_articles, pbl_viaf_names_dates,  how='left', left_on = 'tworca_id', right_on = 'pbl_id') 
 pbl_articles = pd.merge(pbl_articles, pbl_marc_roles,  how='left', left_on = 'funkcja_osoby', right_on = 'PBL_NAZWA').sort_values('rekord_id').reset_index(drop=True)
+
+query = """select z.za_zapis_id "zapis ir", z2.za_zapis_id "zapis iza", hp_nazwa, khp.kh_nazwa
+        from pbl_zapisy z
+        join pbl_zapisy z2 on z.za_zapis_id=z2.za_za_zapis_id
+        full join IBL_OWNER.pbl_hasla_przekr_zapisow hpz on hpz.hz_za_zapis_id=z.za_zapis_id
+        full join IBL_OWNER.pbl_hasla_przekrojowe hp on hpz.hz_hp_haslo_id=hp.hp_haslo_id
+        full join IBL_OWNER.pbl_klucze_hasla_przekr khp on khp.kh_hp_haslo_id=hp.hp_haslo_id
+        join IBL_OWNER.pbl_hasla_zapisow_klucze hzk on hzk.hzkh_hz_hp_haslo_id=hp.hp_haslo_id and hzk.hzkh_hz_za_zapis_id=z.za_zapis_id and hzk.hzkh_kh_klucz_id=khp.kh_klucz_id
+        where z.za_type = 'IR'"""
+event_sh = pd.read_sql(query, con=connection).fillna(value = np.nan).drop_duplicates()
+query = """select z2.za_zapis_id "zapis ir", z.za_zapis_id "zapis iza", hp_nazwa, khp.kh_nazwa
+        from pbl_zapisy z2
+        join pbl_zapisy z on z2.za_zapis_id=z.za_za_zapis_id
+        full join IBL_OWNER.pbl_hasla_przekr_zapisow hpz on hpz.hz_za_zapis_id=z.za_zapis_id
+        full join IBL_OWNER.pbl_hasla_przekrojowe hp on hpz.hz_hp_haslo_id=hp.hp_haslo_id
+        full join IBL_OWNER.pbl_klucze_hasla_przekr khp on khp.kh_hp_haslo_id=hp.hp_haslo_id
+        join IBL_OWNER.pbl_hasla_zapisow_klucze hzk on hzk.hzkh_hz_hp_haslo_id=hp.hp_haslo_id and hzk.hzkh_hz_za_zapis_id=z.za_zapis_id and hzk.hzkh_kh_klucz_id=khp.kh_klucz_id
+        where z2.za_type = 'IR'"""
+iza_event_sh = pd.read_sql(query,con=connection).fillna(value=np.nan).drop_duplicates()
+query = """select z2.za_zapis_id "zapis ir", z.za_zapis_id "zapis iza", hp_nazwa, to_char(null) "KH_NAZWA"
+        from pbl_zapisy z2
+        join pbl_zapisy z on z2.za_zapis_id=z.za_za_zapis_id
+        full join IBL_OWNER.pbl_hasla_przekr_zapisow hpz on hpz.hz_za_zapis_id=z.za_zapis_id
+        full join IBL_OWNER.pbl_hasla_przekrojowe hp on hpz.hz_hp_haslo_id=hp.hp_haslo_id
+        where z2.za_type = 'IR'"""
+iza_event_sh_left = pd.read_sql(query,con=connection).fillna(value=np.nan).drop_duplicates()
+iza_event_sh = iza_event_sh_left[~iza_event_sh_left['zapis iza'].isin(iza_event_sh['zapis iza'])]
+iza_event_sh = pd.merge(event_sh, iza_event_sh[['zapis ir', 'zapis iza', 'HP_NAZWA']], how='inner', on=['zapis ir', 'zapis iza', 'HP_NAZWA']).drop('zapis ir', axis=1)
+iza_event_sh.columns = ['rekord_id', 'HP_NAZWA', 'KH_NAZWA']
+
+pbl_articles = pbl_articles.reset_index(drop=True)
+pbl_articles = pd.merge(pbl_articles, iza_event_sh, how='left', on=['rekord_id', 'HP_NAZWA'])
+pbl_articles['KH_NAZWA'] = pbl_articles.apply(lambda x: right_subject_heading(x), axis=1)
+pbl_articles = pbl_articles.drop(['KH_NAZWA_x', 'KH_NAZWA_y'], axis=1).drop_duplicates().reset_index(drop=True)
 
 # PBL articles fields
 

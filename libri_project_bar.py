@@ -81,6 +81,27 @@ bar_catalog = df.pivot(index = 'id', columns = 'field', values = 'content')
 # bar_catalog = pd.read_excel('bar_catalog_1st_stage.xlsx')
 # =============================================================================
 
+test = bar_catalog.head(1000)
+
+problemy = []
+for i, row in bar_catalog.iterrows():
+    for elem in row:
+        if pd.notnull(elem) and '~' in elem:
+            try:
+                val = re.findall('\~..', elem)[0]
+                problemy.append(val)
+            except IndexError:
+                pass
+problemy = list(set(problemy))
+
+problemy2 = []
+for i, row in test.iterrows():
+    for elem in row:
+        if pd.notnull(elem) and '~' in elem:
+            problemy2.append(elem)
+
+
+
 bar_catalog['001'] = bar_catalog['001'].str.strip()
 bar_catalog['008'] = bar_catalog['008'].str.strip().str.replace('(^|.)(\%.)', '', regex=True).str.replace('([\+\!])', '-', regex=True)
 bar_catalog['do 100'] = bar_catalog['100'].str.replace(r'(^.+?)(❦)(.+?$)', r'\3', regex=True)
@@ -114,7 +135,7 @@ bar_catalog['773'] = bar_catalog[['773', 'do 773']].apply(lambda x: ''.join(x.dr
 del bar_catalog['do 773']
 bar_catalog['773'] = bar_catalog.groupby('001')['773'].transform(lambda x: '❦'.join(x.dropna()))
 bar_catalog = bar_catalog.drop_duplicates()
-# bar_catalog['995'] = '\\\\$aBibliografia Bara
+bar_catalog['995'] = '\\\\$aBibliografia Bara'
 
 bar_catalog = bar_catalog.replace(r'^\s*$', np.NaN, regex=True)
 for column in bar_catalog:       
