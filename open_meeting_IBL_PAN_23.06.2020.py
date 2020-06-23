@@ -61,6 +61,8 @@ for index, row in pbl_names.iterrows():
             date_of_birth = '❦'.join([t.text for t in date_of_birth])
             date_of_death = root.findall(f'.//{ns}deathDate')
             date_of_death = '❦'.join([t.text for t in date_of_death])
+            gender = root.findall(f'.//{ns}gender')
+            gender = '❦'.join([t.text for t in gender])
             names = root.findall(f'.//{ns}x400/{ns}datafield')
             sources = root.findall(f'.//{ns}x400/{ns}sources')
             name_source = []
@@ -72,12 +74,24 @@ for index, row in pbl_names.iterrows():
                 name_source[i] = '‽'.join(name_source[i])
             name_source = '❦'.join(name_source)
             
-            person = [row['search'], viaf_id, date_of_birth, date_of_death, IDs, nationality, occupation, language, name_source]
+            person = [row['search'], viaf_id, date_of_birth, date_of_death, gender, IDs, nationality, occupation, language, name_source]
             viaf_enrichment.append(person)
     except IndexError:
         viaf_errors.append(row['search'])
             
-viaf_df = pd.DataFrame(viaf_enrichment, columns=['wyszukiwana nazwa', 'viaf id', 'data urodzenia', 'data śmierci', 'IDs', 'narodowość', 'zawód', 'język', 'inne formy nazewnictwa']).drop_duplicates()
+viaf_df = pd.DataFrame(viaf_enrichment, columns=['wyszukiwana nazwa', 'viaf id', 'data urodzenia', 'data śmierci', 'Płeć', 'IDs', 'narodowość', 'zawód', 'język', 'inne formy nazewnictwa']).drop_duplicates()
+def plec(x):
+    if x == 'a':
+        val = 'Kobieta'
+    elif x == 'b':
+        val = 'Mężczyzna'
+    elif x == 'u':
+        val = "Płeć nieznana"
+    else:
+        val = np. nan
+    return val
+viaf_df['Płeć'] = viaf_df['Płeć'].apply(lambda x: plec(x))
+viaf_df.to_excel('viaf_demo.xlsx', index=False)
 
 # Automatyczne wykrycie języka publikacji na podstawie tytułu
 
