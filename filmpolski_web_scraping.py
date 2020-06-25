@@ -23,7 +23,10 @@ def wszystko(x):
 def ranges(i):
     for a, b in itertools.groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
         b = list(b)
-        yield f"{b[0][1]}-{b[-1][1]}"
+        if len(b) == 1 and b[0][1] == b[-1][1]:
+            yield f"{b[0][1]}"
+        else:
+            yield f"{b[0][1]}-{b[-1][1]}"
 # main
 
 years = range(2005,2013)
@@ -43,8 +46,6 @@ for index, year in enumerate(years):
     for ind, movie in enumerate(movies):
         print('    ' + str(ind) + '/' + str(len(movies)))
         link = movie[1]
-        
-        link = 'http://filmpolski.pl/fp/index.php?film=1216115'
         response = requests.get(link)
         response.encoding = 'UTF-8'
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -143,16 +144,15 @@ for index, year in enumerate(years):
                 response.encoding = 'UTF-8'
                 soup = BeautifulSoup(response.text, 'html.parser')
                 episodes = [re.findall('\d+', elem.text)[-1] for elem in soup.select('.podzbior h1')]
-                episodes_years = [elem.text for elem in soup.select('.podzbior .film_tech2')]
+                episodes_years = [elem.text for elem in soup.select('.podzbior .film_tech2') if re.findall('\d{4}', elem.text) and len(elem.text) == 4]
                 episodes = list(zip(episodes, episodes_years))  
                 for elem in episodes:
                     episodes_list.append(elem)
-            
             df_episodes = pd.DataFrame(episodes_list, columns=['episode', 'year'])
             df_episodes['episode'] = df_episodes.groupby('year').transform(lambda x: ', '.join(x))
             df_episodes = df_episodes.drop_duplicates()
             for i, row in df_episodes.iterrows():
-                df_episodes.at[i, 'episode'] = '❦'.join(list(ranges([int(i) for i in row['episode'].split(', ')])))
+                df_episodes.at[i, 'episode'] = ', '.join(list(ranges([int(i) for i in row['episode'].split(', ')])))
             df_episodes['total'] = df_episodes.apply(lambda x: f"{x['year']}: odcinki {x['episode']}", axis=1)
             episodes = '; '.join(df_episodes['total'].to_list())
         except (TypeError, IndexError, ValueError):
