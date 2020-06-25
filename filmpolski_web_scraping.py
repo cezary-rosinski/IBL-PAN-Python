@@ -7,6 +7,7 @@ import numpy as np
 import itertools
 
 # def
+
 def get_text(x):
     return x.text
 
@@ -42,6 +43,8 @@ for index, year in enumerate(years):
     for ind, movie in enumerate(movies):
         print('    ' + str(ind) + '/' + str(len(movies)))
         link = movie[1]
+        
+        link = 'http://filmpolski.pl/fp/index.php?film=1216115'
         response = requests.get(link)
         response.encoding = 'UTF-8'
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -128,7 +131,7 @@ for index, year in enumerate(years):
             ostatnia = soup.select_one('.ostatnia')['href'] 
             episodes_list = []       
             episodes = [re.findall('\d+', elem.text)[-1] for elem in soup.select('.podzbior h1')]
-            episodes_years = [elem.text for elem in soup.select('.podzbior .film_tech2')]
+            episodes_years = [elem.text for elem in soup.select('.podzbior .film_tech2') if re.findall('\d{4}', elem.text) and len(elem.text) == 4]
             episodes = list(zip(episodes, episodes_years))
             for elem in episodes:
                 episodes_list.append(elem)
