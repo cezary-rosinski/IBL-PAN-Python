@@ -20,6 +20,7 @@ gatunki_pbl['gatunek'] = gatunki_pbl['gatunek'].apply(lambda x: f"$a{x}")
 # usunąć 856
 # będzie trzeba przeszukiwać, czy tytuł w jsonie "title" jest taki, jak w 245
 # =============================================================================
+
 years = range(2013,2020)
 bn_full_text = pd.DataFrame()   
 for index, year in enumerate(years):
@@ -37,17 +38,20 @@ for index, year in enumerate(years):
         api_url = f"https://polona.pl/api/entities/?format=json&from=0&highlight=1&public=1&query={link}"
         json_data = requests.get(api_url)
         json_data = json.loads(json_data.text)
-        try:
-            full_text_url = json_data['hits'][0]['resources'][0]['url']
-            json_title = json_data['hits'][0]['title']
-            bn_full_text_links.append((bn_id, json_title, full_text_url))
+        try:                     
+            full_text = [''.join([elem['url'] for elem in hit['resources'] if 'archive' in elem['url']]) for hit in json_data['hits']]
+            json_title = [hit['title'] for hit in json_data['hits']]
+            json_record = list(zip(json_title, full_text))
+            json_record = [elem for elem in json_record if len(elem[1])>0]
+            json_record = [(bn_id, e, f) for e, f in json_record]
+            bn_full_text_links += json_record
         except:
             pass  
     links_bn = pd.DataFrame(bn_full_text_links, columns=['id', 'json_title', 'full_text_url'])
     links_bn = pd.merge(links_bn, X245, how='left', on='id')
     links_bn['match'] = links_bn[['json_title', '$a']].apply(lambda x: x['json_title'] in x['$a'], axis=1)
     links_bn = links_bn[links_bn['match']==True].drop(columns=['json_title', '$a', 'match'])
-    bn_full_text.append(links_bn)
+    bn_full_text = bn_full_text.append(links_bn)
 
 bn_full_text.to_excel('bn_full_text.xlsx', index=False)
     
