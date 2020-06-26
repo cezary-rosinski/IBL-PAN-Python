@@ -9,8 +9,6 @@ import requests
 from my_functions import df_to_mrc
 import io
 
-years = range(2013,2020)
-
 bn_cz_mapping = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bn_cz_mapping.xlsx')
 gatunki_pbl = pd.DataFrame({'gatunek': ["aforyzm", "album", "antologia", "autobiografia", "dziennik", "esej", "felieton", "inne", "kazanie", "list", "miniatura prozą", "opowiadanie", "poemat", "powieść", "proza", "proza poetycka", "reportaż", "rozmyślanie religijne", "rysunek, obraz", "scenariusz", "szkic", "tekst biblijny", "tekst dramatyczny", "dramat", "wiersze", "wspomnienia", "wypowiedź", "pamiętniki", "poezja", "literatura podróżnicza", "satyra", "piosenka"]})
 gatunki_pbl['gatunek'] = gatunki_pbl['gatunek'].apply(lambda x: f"$a{x}")
@@ -22,7 +20,7 @@ gatunki_pbl['gatunek'] = gatunki_pbl['gatunek'].apply(lambda x: f"$a{x}")
 # usunąć 856
 # będzie trzeba przeszukiwać, czy tytuł w jsonie "title" jest taki, jak w 245
 # =============================================================================
-
+years = range(2013,2020)
 bn_full_text = pd.DataFrame()   
 for index, year in enumerate(years):
     print(str(index) + '/' + str(len(years)))
@@ -42,7 +40,7 @@ for index, year in enumerate(years):
         try:
             full_text_url = json_data['hits'][0]['resources'][0]['url']
             json_title = json_data['hits'][0]['title']
-            bn_full_text_links.append(bn_id, json_title, full_text_url)
+            bn_full_text_links.append((bn_id, json_title, full_text_url))
         except:
             pass  
     links_bn = pd.DataFrame(bn_full_text_links, columns=['id', 'json_title', 'full_text_url'])
