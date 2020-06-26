@@ -10,13 +10,54 @@ from my_functions import df_to_mrc
 import io
 
 
+years = range(2013,2020)
+
 bn_cz_mapping = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bn_cz_mapping.xlsx')
 gatunki_pbl = pd.DataFrame({'gatunek': ["aforyzm", "album", "antologia", "autobiografia", "dziennik", "esej", "felieton", "inne", "kazanie", "list", "miniatura prozą", "opowiadanie", "poemat", "powieść", "proza", "proza poetycka", "reportaż", "rozmyślanie religijne", "rysunek, obraz", "scenariusz", "szkic", "tekst biblijny", "tekst dramatyczny", "dramat", "wiersze", "wspomnienia", "wypowiedź", "pamiętniki", "poezja", "literatura podróżnicza", "satyra", "piosenka"]})
 gatunki_pbl['gatunek'] = gatunki_pbl['gatunek'].apply(lambda x: f"$a{x}")
 
+# polona full text url
+
+# =============================================================================
+# wzbogacić o linki na podstawie 852 i wpisać je do 856, uprzednio czyszcząc 856
+# usunąć 856
+# będzie trzeba przeszukiwać, czy tytuł w jsonie "title" jest taki, jak w 245
+# =============================================================================
+
+bn_full_text = pd.DataFrame()   
+for i, year in enumerate(years):
+    print(str(i) + '/' + str(len(years)))
+    path = f"C:/Users/User/Desktop/BN_books/{year}_bn_ks_do_libri.xlsx"
+    #path = f"F:/Cezary/Documents/IBL/Pliki python/{year}_bn_ks_do_libri.xlsx"
+    bn_books = pd.read_excel(path)
+    X245 = marc_parser_1_field(bn_books, 'id', 'X245', '\$')[['id', '$a']]
+    links_bn = marc_parser_1_field(bn_books, 'id', 'X852', '\$')[['id', '$h']]
+    links_bn['link_code'] = links_bn['$h'].apply(lambda x: re.findall('\d[\d\.]+', x)).apply(lambda x: ''.join([i for i in x if i != '.']))
+    links_bn = links_bn[links_bn['link_code'] != ''][['id', 'link_code']].values.tolist()
+    bn_full_text_links = []
+    for i, (bn_id, link) in enumerate(links_bn):
+        print('    ' + str(i) + '/' + str(len(links_bn)))
+        api_url = f"https://polona.pl/api/entities/?format=json&from=0&highlight=1&public=1&query={link}"
+        json_data = requests.get(api_url)
+        json_data = json.loads(json_data.text)
+        try:
+            full_text_url = json_data['hits'][0]['resources'][0]['url']
+            json_title = json_data['hits'][0]['title']
+            bn_full_text_links.append(bn_id, json_title, full_text_url)
+        except:
+            pass  
+    links_bn = pd.DataFrame(bn_full_text_links, columns=['id', 'json_title', 'full_text_url'])
+    links_bn = pd.merge(links_bn, X245, how='left', on='id')
+    links_bn['match'] = links_bn[['json_title', '$a']].apply(lambda x: x['json_title'] in x['$a'], axis=1)
+    links_bn = links_bn[links_bn['match']==True].drop(columns=['json_title', '$a', 'match'])
+    bn_full_text.append(links_bn)
+
+bn_full_text.to_excel('bn_full_text.xlsx', index=False)
+    
+
 
 bn_books_marc_total = pd.DataFrame()
-years = range(2013,2020)
+
 year=2018
 for i, year in enumerate(years):
     print(str(i) + '/' + str(len(years)))
@@ -80,29 +121,12 @@ for i, year in enumerate(years):
     
 
     
-    # wzbogacić o linki na podstawie 852 i wpisać je do 856, uprzednio czyszcząc 856
-    # usunąć 856
-    # będzie trzeba przeszukiwać, czy tytuł w jsonie "title" jest taki, jak w 245
+
+        
+
+
     
-    # =============================================================================
-    # # full text na później
-    # links_bn = marc_parser_1_field(bn_books, 'id', 'X852', '$')[['id', '$h']]
-    # links_bn['link_code'] = links_bn['$h'].apply(lambda x: re.findall('\d[\d\.]+', x)).apply(lambda x: ''.join([i for i in x if i != '.']))
-    # links_bn = links_bn[links_bn['link_code'] != '']
-    # link_code = links_bn['link_code'].to_list()
-    # 
-    # bn_full_text_links = []
-    # for i, link in enumerate(link_code):
-    #     print(str(i) + '/' + str(len(link_code)))
-    #     api_url = f"https://polona.pl/api/entities/?format=json&from=0&highlight=1&public=1&query={link}"
-    #     json_data = requests.get(api_url)
-    #     json_data = json.loads(json_data.text)
-    #     try:
-    #         bn_url = json_data['hits'][0]['resources'][0]['url']
-    #         bn_full_text_links.append(bn_url)
-    #     except:
-    #         bn_full_text_links.append('brak danych')
-    # =============================================================================         
+
     
     position_of_LDR = bn_books.columns.get_loc("LDR")
     bn_books_marc = bn_books.iloc[:,position_of_LDR:]
