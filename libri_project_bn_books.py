@@ -9,7 +9,6 @@ import requests
 from my_functions import df_to_mrc
 import io
 
-
 years = range(2013,2020)
 
 bn_cz_mapping = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bn_cz_mapping.xlsx')
@@ -25,8 +24,8 @@ gatunki_pbl['gatunek'] = gatunki_pbl['gatunek'].apply(lambda x: f"$a{x}")
 # =============================================================================
 
 bn_full_text = pd.DataFrame()   
-for i, year in enumerate(years):
-    print(str(i) + '/' + str(len(years)))
+for index, year in enumerate(years):
+    print(str(index) + '/' + str(len(years)))
     path = f"C:/Users/User/Desktop/BN_books/{year}_bn_ks_do_libri.xlsx"
     #path = f"F:/Cezary/Documents/IBL/Pliki python/{year}_bn_ks_do_libri.xlsx"
     bn_books = pd.read_excel(path)
