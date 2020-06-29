@@ -13,6 +13,7 @@ from my_functions import cSplit
 from functools import reduce
 from my_functions import df_to_mrc
 from my_functions import cosine_sim_2_elem
+import pandasql
 
 # def
 def date_to_string(x):
@@ -291,6 +292,93 @@ pbl_books_query = """select z.za_zapis_id "rekord_id", z.za_type "typ", rz.rz_ro
                     full outer join IBL_OWNER.pbl_funkcje_osob fo on fo.fo_symbol=uo.uo_fo_symbol
                     where (z.za_status_imp is null OR z.za_status_imp like 'IOK')
                     and z.za_type like 'KS'"""
+                    
+                    
+pbl_relations_query = """select z1.za_zapis_id "zapis_id", z1.za_type "zapis_typ", rz1.rz_nazwa "zapis_rodzaj", case when a1.am_nazwisko||' '||a1.am_imie like ' ' then '[no author]' else a1.am_nazwisko||' '||a1.am_imie end "zapis_autor", nvl(z1.za_tytul, '[no title]') "zapis_tyt", zrr1.zrr_tytul "zapis_czas_tyt", 
+zrr1.zrr_miejsce_wydania "zapis_czas_miejsc", z1.za_zrodlo_rok "zapis_rok", z1.za_zrodlo_nr "zapis_nr", z1.za_zrodlo_str "zapis_str", w1.wy_nazwa "zapis_wyd_nazw", w1.wy_miasto "zapis_wyd_miejsc", 
+z1.za_ro_rok,
+z2.za_zapis_id "zapis_odwolanie_id", z2.za_type "zapis_odwolanie_typ", rz2.rz_nazwa "zapis_odwolanie_rodzaj", case when a2.am_nazwisko||' '||a2.am_imie like ' ' then '[no author]' else a2.am_nazwisko||' '||a2.am_imie end "zapis_odwolanie_autor", nvl(z2.za_tytul, '[no title]') "zapis_odwolanie_tyt", zrr2.zrr_tytul "zapis_odwolanie_czas_tyt", 
+zrr2.zrr_miejsce_wydania "zapis_odwolanie_czas_miejsc", z2.za_zrodlo_rok "zapis_odwolanie_rok", z2.za_zrodlo_nr "zapis_odwolanie_nr", z2.za_zrodlo_str "zapis_odwolanie_str", 
+w2.wy_nazwa "zapis_odwolanie_wyd_nazw", w2.wy_miasto "zapis_odwolanie_wyd_miejsc", z2.za_ro_rok
+                    from pbl_zapisy z1
+                    join pbl_zapisy z2 on z1.za_za_zapis_id=z2.za_zapis_id
+                    join IBL_OWNER.pbl_rodzaje_zapisow rz1 on rz1.rz_rodzaj_id=z1.za_rz_rodzaj1_id
+                    join IBL_OWNER.pbl_rodzaje_zapisow rz2 on rz2.rz_rodzaj_id=z2.za_rz_rodzaj1_id
+                    full outer join IBL_OWNER.pbl_zapisy_autorzy za1 on za1.zaam_za_zapis_id=z1.za_zapis_id
+                    full outer join IBL_OWNER.pbl_autorzy a1 on za1.zaam_am_autor_id=a1.am_autor_id
+                    full outer join IBL_OWNER.pbl_zrodla zr1 on zr1.zr_zrodlo_id=z1.za_zr_zrodlo_id
+                    full outer join IBL_OWNER.pbl_zrodla_roczniki zrr1 on zrr1.zrr_zr_zrodlo_id=zr1.zr_zrodlo_id and zrr1.zrr_rocznik=z1.za_zrodlo_rok 
+                    full outer join IBL_OWNER.pbl_zrodla zr2 on zr2.zr_zrodlo_id=z2.za_zr_zrodlo_id
+                    full outer join IBL_OWNER.pbl_zrodla_roczniki zrr2 on zrr2.zrr_zr_zrodlo_id=zr1.zr_zrodlo_id and zrr2.zrr_rocznik=z1.za_zrodlo_rok 
+                    full outer join IBL_OWNER.pbl_zapisy_autorzy za2 on za2.zaam_za_zapis_id=z2.za_zapis_id
+                    full outer join IBL_OWNER.pbl_autorzy a2 on za2.zaam_am_autor_id=a2.am_autor_id
+                    full outer join IBL_OWNER.pbl_zapisy_wydawnictwa zw1 on zw1.zawy_za_zapis_id=z1.za_zapis_id 
+                    full outer join IBL_OWNER.pbl_wydawnictwa w1 on zw1.zawy_wy_wydawnictwo_id=w1.wy_wydawnictwo_id
+                    full outer join IBL_OWNER.pbl_zapisy_wydawnictwa zw2 on zw2.zawy_za_zapis_id=z2.za_zapis_id 
+                    full outer join IBL_OWNER.pbl_wydawnictwa w2 on zw2.zawy_wy_wydawnictwo_id=w2.wy_wydawnictwo_id
+                    where z1.za_type in ('IZA', 'PU', 'KS')
+                    and z2.za_type in ('IZA', 'PU', 'KS')
+                    order by "zapis_odwolanie_id" asc, "zapis_id" asc"""
+pbl_relations = pd.read_sql(pbl_relations_query, con=connection).fillna(value = np.nan)
+pbl_relations['relations'] = pbl_relations['zapis_rodzaj'] + '|' + pbl_relations['zapis_odwolanie_rodzaj']
+    
+pbl_relations_list = gsheet_to_df('1doNhR3BrWz5HbGldX9lNEl8yxpoQkUWynTS7aOKX-dw', 'Export Worksheet')               
+pbl_relations_list = pbl_relations_list[pbl_relations_list['dobre/złe'] == 'ok'][['rodzaj zapisu', 'rodzaj odwolania']]
+pbl_relations_list['relations'] = pbl_relations_list['rodzaj zapisu'] + '|' + pbl_relations_list['rodzaj odwolania']
+pbl_relations_list = pbl_relations_list['relations'].tolist()
+
+pbl_relations = pbl_relations[pbl_relations['relations'].isin(pbl_relations_list)].drop(columns=['relations'])
+
+pbl_relations_list = list(set([e.split('|')[0] for e in pbl_relations_list]))
+
+pbl_rel_art_art = pbl_relations[(pbl_relations['zapis_typ'].isin(['IZA', 'PU'])) &
+                                (pbl_relations['zapis_odwolanie_typ'].isin(['IZA', 'PU']))]
+pbl_rel_art_art['zapis_rok'] = pbl_rel_art_art['zapis_rok'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
+pbl_rel_art_art['zapis_czas_miejsc'] = pbl_rel_art_art[['zapis_czas_miejsc', 'zapis_rok']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+pbl_rel_art_art['zapis_odwolanie_rok'] = pbl_rel_art_art['zapis_odwolanie_rok'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
+pbl_rel_art_art['zapis_odwolanie_czas_miejsc'] = pbl_rel_art_art[['zapis_odwolanie_czas_miejsc', 'zapis_rok']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+
+
+test = pbl_rel_art_art.head(100)
+
+
+pbl_rel_art_ks = pbl_relations[(pbl_relations['zapis_typ'].isin(['IZA', 'PU'])) &
+                                (pbl_relations['zapis_odwolanie_typ'] == 'KS')]
+pbl_rel_ks_art = pbl_relations[(pbl_relations['zapis_typ'] == 'KS') &
+                                (pbl_relations['zapis_odwolanie_typ'].isin(['IZA', 'PU']))]
+pbl_rel_ks_ks = pbl_relations[(pbl_relations['zapis_typ'] == 'KS') &
+                                (pbl_relations['zapis_odwolanie_typ'] == 'KS')]
+query = """select zapis_id, zapis_autor||', '||zapis_czas_tyt||', '||zapis_czas_miejsc||', '||zapis_rok||', '||zapis_nr||', '||zapis_str "zapis", 
+        zapis_odwolanie_id, zapis_odwolanie_autor||', '||zapis_odwolanie_czas_tyt||', '||zapis_odwolanie_czas_miejsc||', '||zapis_odwolanie_rok||', '||zapis_odwolanie_nr||', '||zapis_odwolanie_str "zapis odwołanie"
+        from pbl_rel_art_art"""
+pbl_rel_art_art = pandasql.sqldf(query).fillna(value = np.nan)
+
+query = "select * from pbl_enrichment a join gatunki_pbl b on lower(a.X655) like '%'||b.gatunek||'%'"
+gatunki1 = pandasql.sqldf(query)
+
+# autor, tytuł, czasopismo, miejsce rok, nr, str
+# autor, tytuł, wywawnictwo, miejsce rok
+
+
+test = pbl_rel_art_art[pbl_rel_art_art['zapis_odwolanie_id']==2706]   
+                    
+                                
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
 pbl_books_reviews_query = """select z.za_zapis_id "rec_id", a.am_nazwisko "rec_a_naz", a.am_imie "rec_a_im", z.za_tytul "rec_tyt", zrr.zrr_tytul "rec_czas_tyt", zrr.zrr_miejsce_wydania "rec_czas_miejsc", z.za_zrodlo_rok "rec_rok", z.za_zrodlo_nr "rec_nr", z.za_zrodlo_str "rec_str", z2.za_zapis_id "ks_id", a2.am_nazwisko "ks_a_naz", a2.am_imie "ks_a_im", z2.za_tytul "ks_tyt", w.wy_nazwa "ks_wyd_nazw", w.wy_miasto "ks_wyd_miejsc", z2.za_ro_rok
                     from pbl_zapisy z
                     join pbl_zapisy z2 on z.za_za_zapis_id=z2.za_zapis_id
