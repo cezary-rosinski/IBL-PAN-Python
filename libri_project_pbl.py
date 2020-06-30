@@ -257,6 +257,23 @@ def right_subject_heading(x):
         val = np.nan
     return val
 
+def relation_to_book(x):
+    if x['zapis_rodzaj'] in ['artykuł o utworze', 'artykuł w haśle rzeczowym', 'omówienie (artykułu, książki)', 'streszczenie (artykułu, książki)']:
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yarticle: {x['zapis']}$4N"
+    elif x['zapis_rodzaj'] == 'ikonografia':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yiconography: {x['zapis']}$4N"
+    elif x['zapis_rodzaj'] == 'książka o utworze':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$ybook: {x['zapis']}$4N"
+    elif x['zapis_rodzaj'] == 'recenzja':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yreview: {x['zapis']}$4N"
+    elif x['zapis_rodzaj'] == 'nawiązanie':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yreference: {x['zapis']}$4N"
+    elif x['zapis_rodzaj'] == 'polemika':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$ypolemics: {x['zapis']}$4N"
+    elif x['zapis_rodzaj'] == 'sprostowanie':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$ycorrection: {x['zapis']}$4N"
+    return val
+
 # read google sheets
 language_magazine = gsheet_to_df('1EKKdPL8II1l7vYivDVJCYePuswlimt1tQHgvgsScJjs', 'Export Worksheet')
 full_text = gsheet_to_df('11_EA1S-4pcIoT3SxjcxYso1o842fV8_NuDmT9cXfsVY', 'Arkusz1')
@@ -291,15 +308,11 @@ pbl_books_query = """select z.za_zapis_id "rekord_id", z.za_type "typ", rz.rz_ro
                     full outer join IBL_OWNER.pbl_osoby os on uo.uo_os_osoba_id=os.os_osoba_id
                     full outer join IBL_OWNER.pbl_funkcje_osob fo on fo.fo_symbol=uo.uo_fo_symbol
                     where (z.za_status_imp is null OR z.za_status_imp like 'IOK')
-                    and z.za_type like 'KS'"""
-                    
-                    
+                    and z.za_type like 'KS'"""                
 pbl_relations_query = """select z1.za_zapis_id "zapis_id", z1.za_type "zapis_typ", rz1.rz_nazwa "zapis_rodzaj", case when a1.am_nazwisko||' '||a1.am_imie like ' ' then '[no author]' else a1.am_nazwisko||' '||a1.am_imie end "zapis_autor", nvl(z1.za_tytul, '[no title]') "zapis_tyt", zrr1.zrr_tytul "zapis_czas_tyt", 
-zrr1.zrr_miejsce_wydania "zapis_czas_miejsc", z1.za_zrodlo_rok "zapis_rok", z1.za_zrodlo_nr "zapis_nr", z1.za_zrodlo_str "zapis_str", w1.wy_nazwa "zapis_wyd_nazw", w1.wy_miasto "zapis_wyd_miejsc", 
-z1.za_ro_rok,
-z2.za_zapis_id "zapis_odwolanie_id", z2.za_type "zapis_odwolanie_typ", rz2.rz_nazwa "zapis_odwolanie_rodzaj", case when a2.am_nazwisko||' '||a2.am_imie like ' ' then '[no author]' else a2.am_nazwisko||' '||a2.am_imie end "zapis_odwolanie_autor", nvl(z2.za_tytul, '[no title]') "zapis_odwolanie_tyt", zrr2.zrr_tytul "zapis_odwolanie_czas_tyt", 
-zrr2.zrr_miejsce_wydania "zapis_odwolanie_czas_miejsc", z2.za_zrodlo_rok "zapis_odwolanie_rok", z2.za_zrodlo_nr "zapis_odwolanie_nr", z2.za_zrodlo_str "zapis_odwolanie_str", 
-w2.wy_nazwa "zapis_odwolanie_wyd_nazw", w2.wy_miasto "zapis_odwolanie_wyd_miejsc", z2.za_ro_rok
+zrr1.zrr_miejsce_wydania "zapis_czas_miejsc", z1.za_zrodlo_rok "zapis_rok", z1.za_zrodlo_nr "zapis_nr", z1.za_zrodlo_str "zapis_str", w1.wy_nazwa "zapis_wyd_nazw", w1.wy_miasto "zapis_wyd_miejsc", z1.za_ro_rok "zapis_rocznik",
+z2.za_zapis_id "zapis_odwolanie_id", z2.za_type "zapis_odwolanie_typ", rz2.rz_nazwa "zapis_odwolanie_rodzaj", case when rz2.rz_nazwa like 'utwór' and t2.tw_nazwisko||' '||t2.tw_imie not like ' ' then t2.tw_nazwisko||' '||t2.tw_imie when a2.am_nazwisko||' '||a2.am_imie like ' ' then '[no author]' else a2.am_nazwisko||' '||a2.am_imie end "zapis_odwolanie_autor", nvl(z2.za_tytul, '[no title]') "zapis_odwolanie_tyt", zrr2.zrr_tytul "zapis_odwolanie_czas_tyt", zrr2.zrr_miejsce_wydania "zapis_odwolanie_czas_miejsc", z2.za_zrodlo_rok "zapis_odwolanie_rok", z2.za_zrodlo_nr "zapis_odwolanie_nr", z2.za_zrodlo_str "zapis_odwolanie_str", 
+w2.wy_nazwa "zapis_odwolanie_wyd_nazw", w2.wy_miasto "zapis_odwolanie_wyd_miejsc", z2.za_ro_rok "zapis_odwolanie_rocznik"
                     from pbl_zapisy z1
                     join pbl_zapisy z2 on z1.za_za_zapis_id=z2.za_zapis_id
                     join IBL_OWNER.pbl_rodzaje_zapisow rz1 on rz1.rz_rodzaj_id=z1.za_rz_rodzaj1_id
@@ -310,6 +323,8 @@ w2.wy_nazwa "zapis_odwolanie_wyd_nazw", w2.wy_miasto "zapis_odwolanie_wyd_miejsc
                     full outer join IBL_OWNER.pbl_zrodla_roczniki zrr1 on zrr1.zrr_zr_zrodlo_id=zr1.zr_zrodlo_id and zrr1.zrr_rocznik=z1.za_zrodlo_rok 
                     full outer join IBL_OWNER.pbl_zrodla zr2 on zr2.zr_zrodlo_id=z2.za_zr_zrodlo_id
                     full outer join IBL_OWNER.pbl_zrodla_roczniki zrr2 on zrr2.zrr_zr_zrodlo_id=zr1.zr_zrodlo_id and zrr2.zrr_rocznik=z1.za_zrodlo_rok 
+                    full outer join IBL_OWNER.pbl_zapisy_tworcy zt2 on zt2.zatw_za_zapis_id=z2.za_zapis_id
+                    full outer join IBL_OWNER.pbl_tworcy t2 on zt2.zatw_tw_tworca_id=t2.tw_tworca_id
                     full outer join IBL_OWNER.pbl_zapisy_autorzy za2 on za2.zaam_za_zapis_id=z2.za_zapis_id
                     full outer join IBL_OWNER.pbl_autorzy a2 on za2.zaam_am_autor_id=a2.am_autor_id
                     full outer join IBL_OWNER.pbl_zapisy_wydawnictwa zw1 on zw1.zawy_za_zapis_id=z1.za_zapis_id 
@@ -320,79 +335,68 @@ w2.wy_nazwa "zapis_odwolanie_wyd_nazw", w2.wy_miasto "zapis_odwolanie_wyd_miejsc
                     and z2.za_type in ('IZA', 'PU', 'KS')
                     order by "zapis_odwolanie_id" asc, "zapis_id" asc"""
 pbl_relations = pd.read_sql(pbl_relations_query, con=connection).fillna(value = np.nan)
-pbl_relations['relations'] = pbl_relations['zapis_rodzaj'] + '|' + pbl_relations['zapis_odwolanie_rodzaj']
-    
+pbl_relations['relations'] = pbl_relations['zapis_rodzaj'] + '|' + pbl_relations['zapis_odwolanie_rodzaj'] 
 pbl_relations_list = gsheet_to_df('1doNhR3BrWz5HbGldX9lNEl8yxpoQkUWynTS7aOKX-dw', 'Export Worksheet')               
 pbl_relations_list = pbl_relations_list[pbl_relations_list['dobre/złe'] == 'ok'][['rodzaj zapisu', 'rodzaj odwolania']]
 pbl_relations_list['relations'] = pbl_relations_list['rodzaj zapisu'] + '|' + pbl_relations_list['rodzaj odwolania']
 pbl_relations_list = pbl_relations_list['relations'].tolist()
-
 pbl_relations = pbl_relations[pbl_relations['relations'].isin(pbl_relations_list)].drop(columns=['relations'])
 
-pbl_relations_list = list(set([e.split('|')[0] for e in pbl_relations_list]))
+pbl_relations_ok = pd.DataFrame()
 
-pbl_rel_art_art = pbl_relations[(pbl_relations['zapis_typ'].isin(['IZA', 'PU'])) &
-                                (pbl_relations['zapis_odwolanie_typ'].isin(['IZA', 'PU']))]
-pbl_rel_art_art['zapis_rok'] = pbl_rel_art_art['zapis_rok'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
-pbl_rel_art_art['zapis_czas_miejsc'] = pbl_rel_art_art[['zapis_czas_miejsc', 'zapis_rok']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
-pbl_rel_art_art['zapis_odwolanie_rok'] = pbl_rel_art_art['zapis_odwolanie_rok'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
-pbl_rel_art_art['zapis_odwolanie_czas_miejsc'] = pbl_rel_art_art[['zapis_odwolanie_czas_miejsc', 'zapis_rok']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+df = pbl_relations.copy(deep=True)[(pbl_relations['zapis_typ'].isin(['IZA', 'PU'])) &
+                                   (pbl_relations['zapis_odwolanie_typ'].isin(['IZA', 'PU']))]
+df['zapis_rok'] = df['zapis_rok'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
+df['zapis_czas_miejsc'] = df[['zapis_czas_miejsc', 'zapis_rok']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+df['zapis_odwolanie_rok'] = df['zapis_odwolanie_rok'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
+df['zapis_odwolanie_czas_miejsc'] = df[['zapis_odwolanie_czas_miejsc', 'zapis_rok']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+df['zapis'] = df[['zapis_autor', 'zapis_tyt', 'zapis_czas_tyt', 'zapis_czas_miejsc', 'zapis_nr', 'zapis_str']].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+df['zapis_odwolanie'] = df[['zapis_odwolanie_autor', 'zapis_odwolanie_tyt', 'zapis_odwolanie_czas_tyt', 'zapis_odwolanie_czas_miejsc', 'zapis_odwolanie_nr', 'zapis_odwolanie_str']].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+df = df[['zapis_id', 'zapis_typ', 'zapis_rodzaj', 'zapis', 'zapis_odwolanie_id', 'zapis_odwolanie_typ', 'zapis_odwolanie_rodzaj', 'zapis_odwolanie']]
+pbl_relations_ok = pbl_relations_ok.append(df)
 
+df = pbl_relations.copy(deep=True)[(pbl_relations['zapis_typ'].isin(['IZA', 'PU'])) &
+                                   (pbl_relations['zapis_odwolanie_typ'] == 'KS')]
+df['zapis_rok'] = df['zapis_rok'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
+df['zapis_czas_miejsc'] = df[['zapis_czas_miejsc', 'zapis_rok']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+df['zapis_odwolanie_rocznik'] = df['zapis_odwolanie_rocznik'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
+df['zapis_odwolanie_wyd_miejsc'] = df[['zapis_odwolanie_wyd_miejsc', 'zapis_odwolanie_rocznik']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+df['zapis_odwolanie_tyt'] = df['zapis_odwolanie_tyt'].apply(lambda x: clear_title(x))
+df['zapis'] = df[['zapis_autor', 'zapis_tyt', 'zapis_czas_tyt', 'zapis_czas_miejsc', 'zapis_nr', 'zapis_str']].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+df['zapis_odwolanie'] = df[['zapis_odwolanie_autor', 'zapis_odwolanie_tyt', 'zapis_odwolanie_wyd_nazw', 'zapis_odwolanie_wyd_miejsc']].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+df = df[['zapis_id', 'zapis_typ', 'zapis_rodzaj', 'zapis', 'zapis_odwolanie_id', 'zapis_odwolanie_typ', 'zapis_odwolanie_rodzaj', 'zapis_odwolanie']]
+pbl_relations_ok = pbl_relations_ok.append(df)
 
-test = pbl_rel_art_art.head(100)
+df = pbl_relations.copy(deep=True)[(pbl_relations['zapis_typ'] == 'KS') &
+                                   (pbl_relations['zapis_odwolanie_typ'].isin(['IZA', 'PU']))]
+df['zapis_tyt'] = df['zapis_tyt'].apply(lambda x: clear_title(x))
+df['zapis_rocznik'] = df['zapis_rocznik'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
+df['zapis_wyd_miejsc'] = df[['zapis_wyd_miejsc', 'zapis_rocznik']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+df['zapis_odwolanie_rok'] = df['zapis_odwolanie_rok'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
+df['zapis_odwolanie_czas_miejsc'] = df[['zapis_odwolanie_czas_miejsc', 'zapis_odwolanie_rok']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+df['zapis'] = df[['zapis_autor', 'zapis_tyt', 'zapis_czas_tyt', 'zapis_czas_miejsc', 'zapis_nr', 'zapis_str']].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+df['zapis_odwolanie'] = df[['zapis_odwolanie_autor', 'zapis_odwolanie_tyt', 'zapis_odwolanie_wyd_nazw', 'zapis_odwolanie_wyd_miejsc']].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+df = df[['zapis_id', 'zapis_typ', 'zapis_rodzaj', 'zapis', 'zapis_odwolanie_id', 'zapis_odwolanie_typ', 'zapis_odwolanie_rodzaj', 'zapis_odwolanie']]
+pbl_relations_ok = pbl_relations_ok.append(df)
 
+df = pbl_relations.copy(deep=True)[(pbl_relations['zapis_typ'] == 'KS') &
+                                   (pbl_relations['zapis_odwolanie_typ'] == 'KS')]
+df['zapis_tyt'] = df['zapis_tyt'].apply(lambda x: clear_title(x))
+df['zapis_rocznik'] = df['zapis_rocznik'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
+df['zapis_wyd_miejsc'] = df[['zapis_wyd_miejsc', 'zapis_rocznik']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+df['zapis_odwolanie_tyt'] = df['zapis_odwolanie_tyt'].apply(lambda x: clear_title(x))
+df['zapis_odwolanie_rocznik'] = df['zapis_odwolanie_rocznik'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
+df['zapis_odwolanie_wyd_miejsc'] = df[['zapis_odwolanie_wyd_miejsc', 'zapis_odwolanie_rocznik']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+df['zapis'] = df[['zapis_autor', 'zapis_tyt', 'zapis_czas_tyt', 'zapis_czas_miejsc', 'zapis_nr', 'zapis_str']].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+df['zapis_odwolanie'] = df[['zapis_odwolanie_autor', 'zapis_odwolanie_tyt', 'zapis_odwolanie_wyd_nazw']].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+df = df[['zapis_id', 'zapis_typ', 'zapis_rodzaj', 'zapis', 'zapis_odwolanie_id', 'zapis_odwolanie_typ', 'zapis_odwolanie_rodzaj', 'zapis_odwolanie']]
+pbl_relations_ok = pbl_relations_ok.append(df)
+pbl_relations_ok['type of relation'] = 'is'
+pbl_relations = pbl_relations_ok.copy(deep=True)[['zapis_odwolanie_id', 'zapis_odwolanie_typ', 'zapis_odwolanie_rodzaj', 'zapis_odwolanie', 'zapis_id', 'zapis_typ', 'zapis_rodzaj', 'zapis']]
+pbl_relations['type of relation'] = 'has'
+pbl_relations.columns = pbl_relations_ok.columns
+pbl_relations_ok = pd.concat([pbl_relations_ok, pbl_relations])
 
-pbl_rel_art_ks = pbl_relations[(pbl_relations['zapis_typ'].isin(['IZA', 'PU'])) &
-                                (pbl_relations['zapis_odwolanie_typ'] == 'KS')]
-pbl_rel_ks_art = pbl_relations[(pbl_relations['zapis_typ'] == 'KS') &
-                                (pbl_relations['zapis_odwolanie_typ'].isin(['IZA', 'PU']))]
-pbl_rel_ks_ks = pbl_relations[(pbl_relations['zapis_typ'] == 'KS') &
-                                (pbl_relations['zapis_odwolanie_typ'] == 'KS')]
-query = """select zapis_id, zapis_autor||', '||zapis_czas_tyt||', '||zapis_czas_miejsc||', '||zapis_rok||', '||zapis_nr||', '||zapis_str "zapis", 
-        zapis_odwolanie_id, zapis_odwolanie_autor||', '||zapis_odwolanie_czas_tyt||', '||zapis_odwolanie_czas_miejsc||', '||zapis_odwolanie_rok||', '||zapis_odwolanie_nr||', '||zapis_odwolanie_str "zapis odwołanie"
-        from pbl_rel_art_art"""
-pbl_rel_art_art = pandasql.sqldf(query).fillna(value = np.nan)
-
-query = "select * from pbl_enrichment a join gatunki_pbl b on lower(a.X655) like '%'||b.gatunek||'%'"
-gatunki1 = pandasql.sqldf(query)
-
-# autor, tytuł, czasopismo, miejsce rok, nr, str
-# autor, tytuł, wywawnictwo, miejsce rok
-
-
-test = pbl_rel_art_art[pbl_rel_art_art['zapis_odwolanie_id']==2706]   
-                    
-                                
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-                    
-pbl_books_reviews_query = """select z.za_zapis_id "rec_id", a.am_nazwisko "rec_a_naz", a.am_imie "rec_a_im", z.za_tytul "rec_tyt", zrr.zrr_tytul "rec_czas_tyt", zrr.zrr_miejsce_wydania "rec_czas_miejsc", z.za_zrodlo_rok "rec_rok", z.za_zrodlo_nr "rec_nr", z.za_zrodlo_str "rec_str", z2.za_zapis_id "ks_id", a2.am_nazwisko "ks_a_naz", a2.am_imie "ks_a_im", z2.za_tytul "ks_tyt", w.wy_nazwa "ks_wyd_nazw", w.wy_miasto "ks_wyd_miejsc", z2.za_ro_rok
-                    from pbl_zapisy z
-                    join pbl_zapisy z2 on z.za_za_zapis_id=z2.za_zapis_id
-                    full outer join IBL_OWNER.pbl_zapisy_autorzy za on za.zaam_za_zapis_id=z.za_zapis_id
-                    full outer join IBL_OWNER.pbl_autorzy a on za.zaam_am_autor_id=a.am_autor_id
-                    full outer join IBL_OWNER.pbl_zrodla zr on zr.zr_zrodlo_id=z.za_zr_zrodlo_id
-                    full outer join IBL_OWNER.pbl_zrodla_roczniki zrr on zrr.zrr_zr_zrodlo_id=zr.zr_zrodlo_id and zrr.zrr_rocznik=z.za_zrodlo_rok 
-                    full outer join IBL_OWNER.pbl_zapisy_autorzy za2 on za2.zaam_za_zapis_id=z2.za_zapis_id
-                    full outer join IBL_OWNER.pbl_autorzy a2 on za2.zaam_am_autor_id=a2.am_autor_id
-                    full outer join IBL_OWNER.pbl_zapisy_wydawnictwa zw on zw.zawy_za_zapis_id=z2.za_zapis_id 
-                    full outer join IBL_OWNER.pbl_wydawnictwa w on zw.zawy_wy_wydawnictwo_id=w.wy_wydawnictwo_id
-                    where z.za_rz_rodzaj1_id = 18
-                    and z2.za_type like 'KS'
-                    order by "ks_id" asc, "rec_id" asc""" 
 pbl_articles_query = """select z.za_zapis_id "rekord_id", z.za_type "typ", rz.rz_rodzaj_id "rodzaj_zapisu_id", rz.rz_nazwa "rodzaj_zapisu", dz.dz_dzial_id "dzial_id", dz.dz_nazwa "dzial", to_char(tw.tw_tworca_id) "tworca_id", tw.tw_nazwisko "tworca_nazwisko", tw.tw_imie "tworca_imie", to_char(a.am_autor_id) "autor_id", a.am_nazwisko "autor_nazwisko", a.am_imie "autor_imie", z.za_tytul "tytul", z.za_opis_wspoltworcow "wspoltworcy", fo.fo_nazwa "funkcja_osoby", to_char(os.os_osoba_id) "wspoltworca_id", os.os_nazwisko "wspoltworca_nazwisko", os.os_imie "wspoltworca_imie", z.za_adnotacje "adnotacja", z.za_adnotacje2 "adnotacja2", z.za_adnotacje3 "adnotacja3", to_char(zr.zr_zrodlo_id) "czasopismo_id", zr.zr_tytul "czasopismo", z.za_zrodlo_rok "rok", z.za_zrodlo_nr "numer", z.za_zrodlo_str "strony",z.za_tytul_oryginalu,z.za_te_teatr_id,z.ZA_UZYTK_WPIS_DATA,z.ZA_UZYTK_MOD_DATA,z.ZA_TYPE
                     from pbl_zapisy z
                     full outer join IBL_OWNER.pbl_zapisy_tworcy zt on zt.zatw_za_zapis_id=z.za_zapis_id
@@ -428,21 +432,6 @@ pbl_sh2 = pbl_sh2.loc[pbl_sh2['_merge'] == 'left_only'][['HZ_ZA_ZAPIS_ID', 'HP_N
 pbl_sh2 = pbl_sh2.rename(columns = {'KH_NAZWA_x': 'KH_NAZWA'})
 pbl_subject_headings = pd.concat([pbl_sh1,pbl_sh2]).drop_duplicates(keep=False)
 del [pbl_sh1, pbl_sh2]
-
-pbl_books_reviews = pd.read_sql(pbl_books_reviews_query, con=connection).fillna(value = np.nan)
-pbl_books_reviews['ks_tyt'] = pbl_books_reviews['ks_tyt'].apply(lambda x: clear_title(x))
-pbl_books_reviews.loc[pbl_books_reviews['rec_a_naz'].isna(), 'rec_a_naz'] = '[no author]'
-pbl_books_reviews.loc[pbl_books_reviews['rec_tyt'].isna(), 'rec_tyt'] = '[no title]'
-pbl_books_reviews.loc[pbl_books_reviews['ks_a_naz'].isna(), 'ks_a_naz'] = '[no author]'
-pbl_books_reviews['rec_autor'] = pbl_books_reviews[pbl_books_reviews.columns[1:3]].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
-pbl_books_reviews = copy.copy(pbl_books_reviews)
-pbl_books_reviews['rec_rok'] = pbl_books_reviews['rec_rok'].apply(lambda x: np.nan if math.isnan(x) else '{:4.0f}'.format(x))
-pbl_books_reviews['rec_czas_miejsc'] = pbl_books_reviews[pbl_books_reviews.columns[5:7]].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
-pbl_books_reviews['rec'] = pbl_books_reviews.iloc[:, [-1,3,4,5,7,8]].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
-pbl_books_reviews['ks_autor'] = pbl_books_reviews[['ks_a_naz', 'ks_a_im']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
-pbl_books_reviews['ks_wyd_miejsc'] = pbl_books_reviews[['ks_wyd_miejsc', 'ZA_RO_ROK']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
-pbl_books_reviews['ks'] = pbl_books_reviews[['ks_autor', 'ks_tyt', 'ks_wyd_nazw', 'ks_wyd_miejsc']].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
-pbl_books_reviews = pbl_books_reviews[['rec_id', 'rec', 'ks_id', 'ks']]
 
 # PBL books
 
@@ -640,12 +629,25 @@ X787['787'] = X787['787'].apply(lambda x: f"\\\\$a{x}")
 X787['787'] = X787.groupby('rekord_id')['787'].transform(lambda x: '❦'.join(x))
 X787 = X787.drop_duplicates()
 X787 = pd.merge(X787, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
-X856 = pbl_books_reviews[['ks_id', 'rec_id', 'rec']]
-X856.columns = ['rekord_id', 'rec_id', 'rec']
-X856['856'] = X856.apply(lambda x: f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['rec_id'])}$yreview: {x['rec']}$4N", axis=1)
-X856 = X856[['rekord_id', '856']]
-X856['856'] = X856.groupby('rekord_id')['856'].transform(lambda x: '❦'.join(x))
-X856 = X856.drop_duplicates()
+
+# jak najlepiej oddać obuczłonowe relacje: x jest polemiką do y, y ma polemikę x; x jest recenzją y, y ma recenzję x???
+
+X856a = pbl_relations_ok[pbl_relations_ok['zapis_typ'] == 'KS'][['zapis_id', 'zapis_odwolanie_id', 'zapis_rodzaj', 'zapis_odwolanie', 'type of relation']]
+
+def relation_from_book(x):
+    if x['type of relation'] == 'is':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yreference to: {x['zapis_odwolanie']}$4N"
+    elif x['type of relation'] == 'has':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yreferenced by: {x['zapis_odwolanie']}$4N"
+    return val
+X856a['856'] = X856a.apply(lambda x: relation_from_book(x), axis=1)
+X856a = X856a[['zapis_id', '856']]
+X856a.columns = ['rekord_id', '856']  
+X856b = pbl_relations_ok[pbl_relations_ok['zapis_odwolanie_typ'] == 'KS'][['zapis_odwolanie_id', 'zapis_id', 'zapis_rodzaj', 'zapis']]
+X856b['856'] = X856b.apply(lambda x: relation_to_book(x), axis=1)
+X856b = X856b[['zapis_odwolanie_id', '856']]
+X856b.columns = ['rekord_id', '856']   
+X856 = pd.concat([X856a, X856b]).drop_duplicates()     
 X856 = pd.merge(X856, pbl_books[['rekord_id']].drop_duplicates(),  how='right', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X995 = pbl_books[['rekord_id', 'ZA_RO_ROK']].drop_duplicates().reset_index(drop=True)
 X995['995'] = X995['ZA_RO_ROK'].apply(lambda x: book_collection(x))
@@ -857,6 +859,21 @@ X787['787'] = X787['787'].apply(lambda x: f"\\\\$a{x}")
 X787['787'] = X787.groupby('rekord_id')['787'].transform(lambda x: '❦'.join(x))
 X787 = X787.drop_duplicates()
 X787 = pd.merge(X787, pbl_articles[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
+
+
+
+X856a = pbl_relations_ok[pbl_relations_ok['zapis_typ'].isin(['IZA', 'PU'])][['zapis_id', 'zapis_odwolanie_id', 'zapis_rodzaj', 'zapis_odwolanie']]
+X856a['856'] = X856a.apply(lambda x: f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$ybook about: {x['zapis_odwolanie']}$4N", axis=1)
+X856a = X856a[['zapis_id', '856']]
+X856a.columns = ['rekord_id', '856']  
+X856b = pbl_relations_ok[pbl_relations_ok['zapis_odwolanie_typ'] == 'KS'][['zapis_odwolanie_id', 'zapis_id', 'zapis_rodzaj', 'zapis']]
+X856b['856'] = X856b.apply(lambda x: relation_to_book(x), axis=1)
+X856b = X856b[['zapis_odwolanie_id', '856']]
+X856b.columns = ['rekord_id', '856']   
+X856 = pd.concat([X856a, X856b]).drop_duplicates()     
+
+test = X856a.head(100)
+
 X856 = pbl_books_reviews[['rec_id', 'ks_id', 'ks']]
 X856.columns = ['rekord_id', 'ks_id', 'ks']
 X856['856'] = X856.apply(lambda x: f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['ks_id'])}$yreview of: {x['ks']}$4N", axis=1)
