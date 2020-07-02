@@ -257,21 +257,34 @@ def right_subject_heading(x):
         val = np.nan
     return val
 
-def relation_to_book(x):
-    if x['zapis_rodzaj'] in ['artykuł o utworze', 'artykuł w haśle rzeczowym', 'omówienie (artykułu, książki)', 'streszczenie (artykułu, książki)']:
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yarticle: {x['zapis']}$4N"
+def relation_to(x):
+    if x['zapis_rodzaj'] == 'sprostowanie':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yacorrection of: {x['zapis_odwolanie']}$4N"
     elif x['zapis_rodzaj'] == 'ikonografia':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yiconography: {x['zapis']}$4N"
-    elif x['zapis_rodzaj'] == 'książka o utworze':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$ybook: {x['zapis']}$4N"
-    elif x['zapis_rodzaj'] == 'recenzja':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yreview: {x['zapis']}$4N"
-    elif x['zapis_rodzaj'] == 'nawiązanie':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yreference: {x['zapis']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yaimage of: {x['zapis_odwolanie']}$4N"
     elif x['zapis_rodzaj'] == 'polemika':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$ypolemics: {x['zapis']}$4N"
-    elif x['zapis_rodzaj'] == 'sprostowanie':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$ycorrection: {x['zapis']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yapolemic to: {x['zapis_odwolanie']}$4N"
+    elif x['zapis_rodzaj'] in ['artykuł o utworze', 'artykuł w haśle rzeczowym', 'nawiązanie', 'książka o utworze', 'książka w haśle rzeczowym', 'omówienie (artykułu, książki)']:
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yareference to: {x['zapis_odwolanie']}$4N"
+    elif x['zapis_rodzaj'] == 'recenzja':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yareview of: {x['zapis_odwolanie']}$4N"
+    elif x['zapis_rodzaj'] == 'streszczenie (artykułu, książki)':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yasummary of: {x['zapis_odwolanie']}$4N"
+    return val
+
+def relation_from(x):
+    if x['zapis_rodzaj'] == 'sprostowanie':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yacorrected by: {x['zapis']}$4N"
+    elif x['zapis_rodzaj'] == 'ikonografia':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yaimaged by: {x['zapis']}$4N"
+    elif x['zapis_rodzaj'] == 'polemika':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yapolemicized by: {x['zapis']}$4N"
+    elif x['zapis_rodzaj'] in ['artykuł o utworze', 'artykuł w haśle rzeczowym', 'nawiązanie', 'książka o utworze', 'książka w haśle rzeczowym', 'omówienie (artykułu, książki)']:
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yareferenced by: {x['zapis']}$4N"
+    elif x['zapis_rodzaj'] == 'recenzja':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yareviewed by: {x['zapis']}$4N"
+    elif x['zapis_rodzaj'] == 'streszczenie (artykułu, książki)':
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yasummarized by: {x['zapis']}$4N"
     return val
 
 # read google sheets
@@ -391,11 +404,14 @@ df['zapis'] = df[['zapis_autor', 'zapis_tyt', 'zapis_czas_tyt', 'zapis_czas_miej
 df['zapis_odwolanie'] = df[['zapis_odwolanie_autor', 'zapis_odwolanie_tyt', 'zapis_odwolanie_wyd_nazw']].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
 df = df[['zapis_id', 'zapis_typ', 'zapis_rodzaj', 'zapis', 'zapis_odwolanie_id', 'zapis_odwolanie_typ', 'zapis_odwolanie_rodzaj', 'zapis_odwolanie']]
 pbl_relations_ok = pbl_relations_ok.append(df)
-pbl_relations_ok['type of relation'] = 'is'
-pbl_relations = pbl_relations_ok.copy(deep=True)[['zapis_odwolanie_id', 'zapis_odwolanie_typ', 'zapis_odwolanie_rodzaj', 'zapis_odwolanie', 'zapis_id', 'zapis_typ', 'zapis_rodzaj', 'zapis']]
-pbl_relations['type of relation'] = 'has'
-pbl_relations.columns = pbl_relations_ok.columns
-pbl_relations_ok = pd.concat([pbl_relations_ok, pbl_relations])
+       
+pbl_relations_ok['relation to'] = pbl_relations_ok.apply(lambda x: relation_to(x), axis=1)
+pbl_relations_ok['relation from'] = pbl_relations_ok.apply(lambda x: relation_from(x), axis=1)
+pbl_relations_to = pbl_relations_ok.copy(deep=True)[['zapis_id', 'zapis_typ', 'relation to']]
+pbl_relations_to.columns = ['rekord_id', 'zapis_typ', '856']
+pbl_relations_from = pbl_relations_ok.copy(deep=True)[['zapis_odwolanie_id', 'zapis_odwolanie_typ', 'relation from']]
+pbl_relations_from.columns = ['rekord_id', 'zapis_typ', '856']
+pbl_relations = pd.concat([pbl_relations_to, pbl_relations_from]).reset_index(drop=True)
 
 pbl_articles_query = """select z.za_zapis_id "rekord_id", z.za_type "typ", rz.rz_rodzaj_id "rodzaj_zapisu_id", rz.rz_nazwa "rodzaj_zapisu", dz.dz_dzial_id "dzial_id", dz.dz_nazwa "dzial", to_char(tw.tw_tworca_id) "tworca_id", tw.tw_nazwisko "tworca_nazwisko", tw.tw_imie "tworca_imie", to_char(a.am_autor_id) "autor_id", a.am_nazwisko "autor_nazwisko", a.am_imie "autor_imie", z.za_tytul "tytul", z.za_opis_wspoltworcow "wspoltworcy", fo.fo_nazwa "funkcja_osoby", to_char(os.os_osoba_id) "wspoltworca_id", os.os_nazwisko "wspoltworca_nazwisko", os.os_imie "wspoltworca_imie", z.za_adnotacje "adnotacja", z.za_adnotacje2 "adnotacja2", z.za_adnotacje3 "adnotacja3", to_char(zr.zr_zrodlo_id) "czasopismo_id", zr.zr_tytul "czasopismo", z.za_zrodlo_rok "rok", z.za_zrodlo_nr "numer", z.za_zrodlo_str "strony",z.za_tytul_oryginalu,z.za_te_teatr_id,z.ZA_UZYTK_WPIS_DATA,z.ZA_UZYTK_MOD_DATA,z.ZA_TYPE
                     from pbl_zapisy z
@@ -629,25 +645,7 @@ X787['787'] = X787['787'].apply(lambda x: f"\\\\$a{x}")
 X787['787'] = X787.groupby('rekord_id')['787'].transform(lambda x: '❦'.join(x))
 X787 = X787.drop_duplicates()
 X787 = pd.merge(X787, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
-
-# jak najlepiej oddać obuczłonowe relacje: x jest polemiką do y, y ma polemikę x; x jest recenzją y, y ma recenzję x???
-
-X856a = pbl_relations_ok[pbl_relations_ok['zapis_typ'] == 'KS'][['zapis_id', 'zapis_odwolanie_id', 'zapis_rodzaj', 'zapis_odwolanie', 'type of relation']]
-
-def relation_from_book(x):
-    if x['type of relation'] == 'is':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yreference to: {x['zapis_odwolanie']}$4N"
-    elif x['type of relation'] == 'has':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yreferenced by: {x['zapis_odwolanie']}$4N"
-    return val
-X856a['856'] = X856a.apply(lambda x: relation_from_book(x), axis=1)
-X856a = X856a[['zapis_id', '856']]
-X856a.columns = ['rekord_id', '856']  
-X856b = pbl_relations_ok[pbl_relations_ok['zapis_odwolanie_typ'] == 'KS'][['zapis_odwolanie_id', 'zapis_id', 'zapis_rodzaj', 'zapis']]
-X856b['856'] = X856b.apply(lambda x: relation_to_book(x), axis=1)
-X856b = X856b[['zapis_odwolanie_id', '856']]
-X856b.columns = ['rekord_id', '856']   
-X856 = pd.concat([X856a, X856b]).drop_duplicates()     
+X856 = pbl_relations[pbl_relations['zapis_typ'] == 'KS'][['rekord_id', '856']]
 X856 = pd.merge(X856, pbl_books[['rekord_id']].drop_duplicates(),  how='right', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X995 = pbl_books[['rekord_id', 'ZA_RO_ROK']].drop_duplicates().reset_index(drop=True)
 X995['995'] = X995['ZA_RO_ROK'].apply(lambda x: book_collection(x))
@@ -859,27 +857,7 @@ X787['787'] = X787['787'].apply(lambda x: f"\\\\$a{x}")
 X787['787'] = X787.groupby('rekord_id')['787'].transform(lambda x: '❦'.join(x))
 X787 = X787.drop_duplicates()
 X787 = pd.merge(X787, pbl_articles[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
-
-
-
-X856a = pbl_relations_ok[pbl_relations_ok['zapis_typ'].isin(['IZA', 'PU'])][['zapis_id', 'zapis_odwolanie_id', 'zapis_rodzaj', 'zapis_odwolanie']]
-X856a['856'] = X856a.apply(lambda x: f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$ybook about: {x['zapis_odwolanie']}$4N", axis=1)
-X856a = X856a[['zapis_id', '856']]
-X856a.columns = ['rekord_id', '856']  
-X856b = pbl_relations_ok[pbl_relations_ok['zapis_odwolanie_typ'] == 'KS'][['zapis_odwolanie_id', 'zapis_id', 'zapis_rodzaj', 'zapis']]
-X856b['856'] = X856b.apply(lambda x: relation_to_book(x), axis=1)
-X856b = X856b[['zapis_odwolanie_id', '856']]
-X856b.columns = ['rekord_id', '856']   
-X856 = pd.concat([X856a, X856b]).drop_duplicates()     
-
-test = X856a.head(100)
-
-X856 = pbl_books_reviews[['rec_id', 'ks_id', 'ks']]
-X856.columns = ['rekord_id', 'ks_id', 'ks']
-X856['856'] = X856.apply(lambda x: f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['ks_id'])}$yreview of: {x['ks']}$4N", axis=1)
-X856 = X856[['rekord_id', '856']]
-X856['856'] = X856.groupby('rekord_id')['856'].transform(lambda x: '❦'.join(x))
-X856 = X856.drop_duplicates()
+X856 = pbl_relations[pbl_relations['zapis_typ'].isin(['IZA', 'PU'])][['rekord_id', '856']]
 X856 = pd.merge(X856, pbl_articles[['rekord_id']].drop_duplicates(),  how='right', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X995 = pbl_articles[['rekord_id']].drop_duplicates().reset_index(drop=True)
 X995['995'] = '\\\\$aPBL 1989-2003: książki i czasopisma'

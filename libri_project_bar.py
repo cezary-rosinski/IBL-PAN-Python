@@ -4,6 +4,13 @@ import re
 import numpy as np
 from my_functions import cSplit
 from my_functions import df_to_mrc
+import regex
+import requests
+from bs4 import BeautifulSoup
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import NoSuchElementException
+from my_functions import gsheet_to_df
 
 # def
 def f(row, id_field):
@@ -43,63 +50,145 @@ def replace_with_backslash(x):
 
 # main
 
-path_in = "C:/Users/Cezary/Downloads/bar-zrzut-20200310.TXT"
-encoding = 'cp852'
-reader = io.open(path_in, 'rt', encoding = encoding).read().splitlines()
-
-mrk_list = []
-for row in reader:
-    if row[:5] == '     ':
-        mrk_list[-1] += row[5:]
-    else:
-        mrk_list.append(row)
-               
-bar_list = []
-for i, row in enumerate(mrk_list):
-    if 'LDR' in row:
-        new_field = '001  bar' + '{:09d}'.format(i+1)
-        bar_list.append(row)
-        bar_list.append(new_field)
-    else:
-        bar_list.append(row)
-        
-df = pd.DataFrame(bar_list, columns = ['test'])
-df = df[df['test'] != '']
-df['field'] = df['test'].replace(r'(^...)(.+?$)', r'\1', regex = True)
-df['content'] = df['test'].replace(r'(^...)(.+?$)', r'\2', regex = True)
-df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
-df['help'] = df['help'].ffill()
-df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
-df['id'] = df.groupby('help')['id'].ffill().bfill()
-df = df[['id', 'field', 'content']]
-df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
-df = df.drop_duplicates().reset_index(drop=True)
-bar_catalog = df.pivot(index = 'id', columns = 'field', values = 'content')
+# =============================================================================
+# path_in = "C:/Users/Cezary/Downloads/bar-zrzut-20200310.TXT"
+# encoding = 'cp852'
+# reader = io.open(path_in, 'rt', encoding = encoding).read().splitlines()
+# 
+# mrk_list = []
+# for row in reader:
+#     if row[:5] == '     ':
+#         mrk_list[-1] += row[5:]
+#     else:
+#         mrk_list.append(row)
+#                
+# bar_list = []
+# for i, row in enumerate(mrk_list):
+#     if 'LDR' in row:
+#         new_field = '001  bar' + '{:09d}'.format(i+1)
+#         bar_list.append(row)
+#         bar_list.append(new_field)
+#     else:
+#         bar_list.append(row)
+#         
+# df = pd.DataFrame(bar_list, columns = ['test'])
+# df = df[df['test'] != '']
+# df['field'] = df['test'].replace(r'(^...)(.+?$)', r'\1', regex = True)
+# df['content'] = df['test'].replace(r'(^...)(.+?$)', r'\2', regex = True)
+# df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
+# df['help'] = df['help'].ffill()
+# df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
+# df['id'] = df.groupby('help')['id'].ffill().bfill()
+# df = df[['id', 'field', 'content']]
+# df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+# df = df.drop_duplicates().reset_index(drop=True)
+# bar_catalog = df.pivot(index = 'id', columns = 'field', values = 'content')
+# =============================================================================
 
 # =============================================================================
 # bar_catalog.to_excel('bar_catalog_1st_stage.xlsx', index=False)
-# bar_catalog = pd.read_excel('bar_catalog_1st_stage.xlsx')
+# bar_catalog = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bar_catalog_1st_stage.xlsx')
 # =============================================================================
 
-test = bar_catalog.head(1000)
 
-problemy = []
-for i, row in bar_catalog.iterrows():
-    for elem in row:
-        if pd.notnull(elem) and '~' in elem:
-            try:
-                val = re.findall('\~..', elem)[0]
-                problemy.append(val)
-            except IndexError:
-                pass
-problemy = list(set(problemy))
+# =============================================================================
+# problemy = []
+# for i, row in bar_catalog.iterrows():
+#     for ind, elem in row.items():
+#         if pd.notnull(elem) and '~' in elem:
+#             try:
+#                 val = re.findall('\~..', elem)[0]
+#                 problemy.append([val, ind, elem])
+#             except IndexError:
+#                 pass
+#             
+# tyldy = []
+# przyklady = []
+# for elem in problemy:
+#     if elem[0] not in tyldy and elem[1] in ['100', '245', '600', '773'] and len(elem[2]) >= 21:
+#         tyldy.append(elem[0])
+#         przyklady.append(elem)
+# 
+# df = pd.DataFrame(przyklady, columns=['error', 'marc_field', 'example'])
+# df['index'] = df.index+1
+# df = cSplit(df, 'index', 'example', '❦')    
+# df['has_tilde'] = df.apply(lambda x: True if x['error'] in x['example'] else False, axis=1)        
+# df = df[df['has_tilde']==True].reset_index(drop=True)
+# df['search'] = df['example'].str.replace('^..\%.', '', regex=True).str.replace('\%.', '', regex=True)
+# df['search'] = df.apply(lambda x: re.sub('(.+)( \/ )(.+)', r'\1', x['search']) if x['marc_field'] == '245' else x['search'], axis=1)
+# df['search'] = df['search'].apply(lambda x: regex.sub('(^[^\pL0-9]+)([\pL0-9]+)', r'\2', x, 1))
+# 
+# 
+# browser = webdriver.Chrome()
+# 
+# for i, row in df.iterrows():
+#     print(str(i) + '/' + str(len(df)))
+#     if row['marc_field'] == '100':
+#         try:
+#             browser.get("http://bar.ibl.waw.pl/cgi-bin//makwww.exe?BM=01&IZ=Autor")
+#             box = browser.find_element_by_css_selector('.text1')
+#             box.send_keys(row['search'], Keys.ENTER)
+#             first_hit = browser.find_element_by_css_selector('hr+ .submit4')
+#             first_hit.click()
+#             first_record = browser.find_element_by_css_selector('hr+ .submit5')
+#             first_record.click()
+#             response = requests.get(browser.current_url + '&MC=MARC')
+#             soup = BeautifulSoup(response.text, 'html.parser')
+#             content = re.findall('100.+?(?= 245)', soup.text)[0]
+#             df.at[i, 'proper form'] = content
+#         except:
+#             df.at[i, 'proper form'] = 'brak danych'      
+#     elif row['marc_field'] == '245':
+#         try:
+#             browser.get("http://bar.ibl.waw.pl/cgi-bin//makwww.exe?BM=01&IZ=Tytu%B3")
+#             box = browser.find_element_by_css_selector('.text1')
+#             box.send_keys(row['search'], Keys.ENTER)
+#             first_hit = browser.find_element_by_css_selector('hr+ .submit4')
+#             first_hit.click()
+#             first_record = browser.find_element_by_css_selector('hr+ .submit5')
+#             first_record.click()
+#             response = requests.get(browser.current_url + '&MC=MARC')
+#             soup = BeautifulSoup(response.text, 'html.parser')
+#             content = re.findall('245.+?(?= 246|490|600|655)', soup.text)[0]
+#             df.at[i, 'proper form'] = content
+#         except:
+#             df.at[i, 'proper form'] = 'brak danych'   
+#     elif row['marc_field'] == '600':
+#         try:
+#             browser.get("http://bar.ibl.waw.pl/cgi-bin//makwww.exe?BM=01&IZ=Temat")
+#             box = browser.find_element_by_css_selector('.text1')
+#             box.send_keys(row['search'], Keys.ENTER)
+#             first_hit = browser.find_element_by_css_selector('hr+ .submit4')
+#             first_hit.click()
+#             first_record = browser.find_element_by_css_selector('hr+ .submit5')
+#             first_record.click()
+#             response = requests.get(browser.current_url + '&MC=MARC')
+#             soup = BeautifulSoup(response.text, 'html.parser')
+#             content = re.findall('600.+?(?= 773)', soup.text)[0]
+#             df.at[i, 'proper form'] = content
+#         except:
+#             df.at[i, 'proper form'] = 'brak danych'   
+#     elif row['marc_field'] == '773':
+#         try:
+#             browser.get("http://bar.ibl.waw.pl/cgi-bin//makwww.exe?BM=01&IZ=Czasopismo")
+#             box = browser.find_element_by_css_selector('.text1')
+#             box.send_keys(row['search'], Keys.ENTER)
+#             first_hit = browser.find_element_by_css_selector('hr+ .submit4')
+#             first_hit.click()
+#             first_record = browser.find_element_by_css_selector('hr+ .submit5')
+#             first_record.click()
+#             response = requests.get(browser.current_url + '&MC=MARC')
+#             soup = BeautifulSoup(response.text, 'html.parser')
+#             content = re.findall('773.+', soup.text)[0]
+#             df.at[i, 'proper form'] = content
+#         except:
+#             df.at[i, 'proper form'] = 'brak danych'  
+#             
+# df.to_excel('bar_kodowanie.xlsx', index=False)          
+# =============================================================================
 
-problemy2 = []
-for i, row in test.iterrows():
-    for elem in row:
-        if pd.notnull(elem) and '~' in elem:
-            problemy2.append(elem)
-
+bar_catalog = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bar_catalog_1st_stage.xlsx')
+bar_encoding = gsheet_to_df('1idplMbMhqIG-PhQSIJINcFJxKWMqR38MzlXowSNSh80', 'Sheet1')[['error', 'encoding']]
 
 
 bar_catalog['001'] = bar_catalog['001'].str.strip()
