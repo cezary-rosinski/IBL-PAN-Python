@@ -24,6 +24,15 @@ def description_of_contributors(x):
         val = np.nan
     return val
 
+def wszystko(x):
+    everything = []
+    for header, cell in zip(headers, x):
+        if pd.notnull(cell):
+            pair = f"{header}: {cell}"
+            everything.append(pair)
+    everything = '\n'.join(everything)
+    return everything
+
 # main
 
 years = range(2005,2013)
@@ -92,6 +101,9 @@ for index, year in enumerate(years):
 eteatr_plays = pd.DataFrame(plays_description, columns=['rok', 'tytuł sztuki', 'utwór', 'autor utworu', 'miejce premiery', 'data premiery', 'tłumacz', 'adaptator', 'reżyser'])
        
 eteatr_plays['opis współtwórców'] = eteatr_plays.apply(lambda x: description_of_contributors(x), axis=1)
+eteatr_plays = eteatr_plays.replace(r'^\s*$', np.NaN, regex=True)
+headers = eteatr_plays.columns.tolist()
+eteatr_plays['wszystko'] = eteatr_plays.apply(lambda x: wszystko(x), axis=1)
 
 eteatr_plays.to_excel('e-teatr_2005-2012.xlsx', index=False)
         
