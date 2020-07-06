@@ -193,6 +193,10 @@ bar_encoding = gsheet_to_df('1idplMbMhqIG-PhQSIJINcFJxKWMqR38MzlXowSNSh80', 'She
 bar_encoding['length'] = bar_encoding['error'].apply(lambda x: len(x))
 bar_encoding = bar_encoding.sort_values(['length', 'error'], ascending=(False, False))[['error', 'encoding']].values.tolist()
 bar_encoding = [(re.escape(m), n if n is not None else '') for m, n in bar_encoding]
+bar_encoding2 = gsheet_to_df('1idplMbMhqIG-PhQSIJINcFJxKWMqR38MzlXowSNSh80', 'Arkusz1')[['error', 'encoding']].drop_duplicates()
+bar_encoding2['length'] = bar_encoding2['error'].apply(lambda x: len(x))
+bar_encoding2 = bar_encoding2.sort_values(['length', 'error'], ascending=(False, False))[['error', 'encoding']].values.tolist()
+bar_encoding2 = [(re.escape(m), n if n is not None else '') for m, n in bar_encoding2]
 
 bar_catalog['001'] = bar_catalog['001'].str.strip()
 bar_catalog['008'] = bar_catalog['008'].str.strip().str.replace('(^|.)(\%.)', '', regex=True).str.replace('([\+\!])', '-', regex=True)
@@ -242,6 +246,12 @@ for i, column in enumerate(bar_catalog):
     print(str(i) + '/' + str(len(bar_catalog.columns)))
     for ind, elem in enumerate(bar_encoding):
         print('    ' + str(ind) + '/' + str(len(bar_encoding)))
+        bar_catalog[column] = bar_catalog[column].str.replace(elem[0], elem[1], regex=True)
+        
+for i, column in enumerate(bar_catalog):
+    print(str(i) + '/' + str(len(bar_catalog.columns)))
+    for ind, elem in enumerate(bar_encoding2):
+        print('    ' + str(ind) + '/' + str(len(bar_encoding2)))
         bar_catalog[column] = bar_catalog[column].str.replace(elem[0], elem[1], regex=True)
         
 bar_catalog.to_excel('bar_catalog.xlsx', index=False)
