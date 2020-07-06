@@ -91,102 +91,104 @@ def replace_with_backslash(x):
 # =============================================================================
 
 
-problemy = []
-for i, row in bar_catalog.iterrows():
-    for ind, elem in row.items():
-        if pd.notnull(elem) and '~' in elem:
-            try:
-                val = re.findall("~..", elem)[0]
-                problemy.append([val, ind, elem])
-            except IndexError:
-                pass
-
-problemy_unique = list(set([e[0] for e in problemy]))
-test = [e, f, g for e, f, g in problemy if e == '~R']
-            
-tyldy = []
-przyklady = []
-for elem in problemy:
-    if elem[0] not in tyldy and elem[1]:
-        tyldy.append(elem[0])
-        przyklady.append(elem)
-
-df = pd.DataFrame(problemy, columns=['error', 'marc_field', 'example'])
-df['index'] = df.index+1
-df = cSplit(df, 'index', 'example', '❦')    
-df['has_tilde'] = df.apply(lambda x: True if x['error'] in x['example'] else False, axis=1)        
-df = df[df['has_tilde']==True].reset_index(drop=True)
-df['search'] = df['example'].str.replace('^..\%.', '', regex=True).str.replace('\%.', '', regex=True)
-df['search'] = df.apply(lambda x: re.sub('(.+)( \/ )(.+)', r'\1', x['search']) if x['marc_field'] == '245' else x['search'], axis=1)
-df['search'] = df['search'].apply(lambda x: regex.sub('(^[^\pL0-9]+)([\pL0-9]+)', r'\2', x, 1))
-
-
-browser = webdriver.Chrome()
-
-for i, row in df.iterrows():
-    print(str(i) + '/' + str(len(df)))
-    if row['marc_field'] == '100':
-        try:
-            browser.get("http://bar.ibl.waw.pl/cgi-bin//makwww.exe?BM=01&IZ=Autor")
-            box = browser.find_element_by_css_selector('.text1')
-            box.send_keys(row['search'], Keys.ENTER)
-            first_hit = browser.find_element_by_css_selector('hr+ .submit4')
-            first_hit.click()
-            first_record = browser.find_element_by_css_selector('hr+ .submit5')
-            first_record.click()
-            response = requests.get(browser.current_url + '&MC=MARC')
-            soup = BeautifulSoup(response.text, 'html.parser')
-            content = re.findall('100.+?(?= 245)', soup.text)[0]
-            df.at[i, 'proper form'] = content
-        except:
-            df.at[i, 'proper form'] = 'brak danych'      
-    elif row['marc_field'] == '245':
-        try:
-            browser.get("http://bar.ibl.waw.pl/cgi-bin//makwww.exe?BM=01&IZ=Tytu%B3")
-            box = browser.find_element_by_css_selector('.text1')
-            box.send_keys(row['search'], Keys.ENTER)
-            first_hit = browser.find_element_by_css_selector('hr+ .submit4')
-            first_hit.click()
-            first_record = browser.find_element_by_css_selector('hr+ .submit5')
-            first_record.click()
-            response = requests.get(browser.current_url + '&MC=MARC')
-            soup = BeautifulSoup(response.text, 'html.parser')
-            content = re.findall('245.+?(?= 246|490|600|655)', soup.text)[0]
-            df.at[i, 'proper form'] = content
-        except:
-            df.at[i, 'proper form'] = 'brak danych'   
-    elif row['marc_field'] == '600':
-        try:
-            browser.get("http://bar.ibl.waw.pl/cgi-bin//makwww.exe?BM=01&IZ=Temat")
-            box = browser.find_element_by_css_selector('.text1')
-            box.send_keys(row['search'], Keys.ENTER)
-            first_hit = browser.find_element_by_css_selector('hr+ .submit4')
-            first_hit.click()
-            first_record = browser.find_element_by_css_selector('hr+ .submit5')
-            first_record.click()
-            response = requests.get(browser.current_url + '&MC=MARC')
-            soup = BeautifulSoup(response.text, 'html.parser')
-            content = re.findall('600.+?(?= 773)', soup.text)[0]
-            df.at[i, 'proper form'] = content
-        except:
-            df.at[i, 'proper form'] = 'brak danych'   
-    elif row['marc_field'] == '773':
-        try:
-            browser.get("http://bar.ibl.waw.pl/cgi-bin//makwww.exe?BM=01&IZ=Czasopismo")
-            box = browser.find_element_by_css_selector('.text1')
-            box.send_keys(row['search'], Keys.ENTER)
-            first_hit = browser.find_element_by_css_selector('hr+ .submit4')
-            first_hit.click()
-            first_record = browser.find_element_by_css_selector('hr+ .submit5')
-            first_record.click()
-            response = requests.get(browser.current_url + '&MC=MARC')
-            soup = BeautifulSoup(response.text, 'html.parser')
-            content = re.findall('773.+', soup.text)[0]
-            df.at[i, 'proper form'] = content
-        except:
-            df.at[i, 'proper form'] = 'brak danych'  
-            
-df.to_excel('bar_kodowanie.xlsx', index=False)          
+# =============================================================================
+# problemy = []
+# for i, row in bar_catalog.iterrows():
+#     for ind, elem in row.items():
+#         if pd.notnull(elem) and '~' in elem:
+#             try:
+#                 val = re.findall("\~", elem)[0]
+#                 problemy.append([val, ind, elem])
+#             except IndexError:
+#                 pass
+# 
+# problemy_unique = list(set([e[0] for e in problemy]))
+# test = [e, f, g for e, f, g in problemy if e == '~R']
+#             
+# tyldy = []
+# przyklady = []
+# for elem in problemy:
+#     if elem[0] not in tyldy and elem[1]:
+#         tyldy.append(elem[0])
+#         przyklady.append(elem)
+# 
+# df = pd.DataFrame(problemy, columns=['error', 'marc_field', 'example'])
+# df['index'] = df.index+1
+# df = cSplit(df, 'index', 'example', '❦')    
+# df['has_tilde'] = df.apply(lambda x: True if x['error'] in x['example'] else False, axis=1)        
+# df = df[df['has_tilde']==True].reset_index(drop=True)
+# df['search'] = df['example'].str.replace('^..\%.', '', regex=True).str.replace('\%.', '', regex=True)
+# df['search'] = df.apply(lambda x: re.sub('(.+)( \/ )(.+)', r'\1', x['search']) if x['marc_field'] == '245' else x['search'], axis=1)
+# df['search'] = df['search'].apply(lambda x: regex.sub('(^[^\pL0-9]+)([\pL0-9]+)', r'\2', x, 1))
+# 
+# 
+# browser = webdriver.Chrome()
+# 
+# for i, row in df.iterrows():
+#     print(str(i) + '/' + str(len(df)))
+#     if row['marc_field'] == '100':
+#         try:
+#             browser.get("http://bar.ibl.waw.pl/cgi-bin//makwww.exe?BM=01&IZ=Autor")
+#             box = browser.find_element_by_css_selector('.text1')
+#             box.send_keys(row['search'], Keys.ENTER)
+#             first_hit = browser.find_element_by_css_selector('hr+ .submit4')
+#             first_hit.click()
+#             first_record = browser.find_element_by_css_selector('hr+ .submit5')
+#             first_record.click()
+#             response = requests.get(browser.current_url + '&MC=MARC')
+#             soup = BeautifulSoup(response.text, 'html.parser')
+#             content = re.findall('100.+?(?= 245)', soup.text)[0]
+#             df.at[i, 'proper form'] = content
+#         except:
+#             df.at[i, 'proper form'] = 'brak danych'      
+#     elif row['marc_field'] == '245':
+#         try:
+#             browser.get("http://bar.ibl.waw.pl/cgi-bin//makwww.exe?BM=01&IZ=Tytu%B3")
+#             box = browser.find_element_by_css_selector('.text1')
+#             box.send_keys(row['search'], Keys.ENTER)
+#             first_hit = browser.find_element_by_css_selector('hr+ .submit4')
+#             first_hit.click()
+#             first_record = browser.find_element_by_css_selector('hr+ .submit5')
+#             first_record.click()
+#             response = requests.get(browser.current_url + '&MC=MARC')
+#             soup = BeautifulSoup(response.text, 'html.parser')
+#             content = re.findall('245.+?(?= 246|490|600|655)', soup.text)[0]
+#             df.at[i, 'proper form'] = content
+#         except:
+#             df.at[i, 'proper form'] = 'brak danych'   
+#     elif row['marc_field'] == '600':
+#         try:
+#             browser.get("http://bar.ibl.waw.pl/cgi-bin//makwww.exe?BM=01&IZ=Temat")
+#             box = browser.find_element_by_css_selector('.text1')
+#             box.send_keys(row['search'], Keys.ENTER)
+#             first_hit = browser.find_element_by_css_selector('hr+ .submit4')
+#             first_hit.click()
+#             first_record = browser.find_element_by_css_selector('hr+ .submit5')
+#             first_record.click()
+#             response = requests.get(browser.current_url + '&MC=MARC')
+#             soup = BeautifulSoup(response.text, 'html.parser')
+#             content = re.findall('600.+?(?= 773)', soup.text)[0]
+#             df.at[i, 'proper form'] = content
+#         except:
+#             df.at[i, 'proper form'] = 'brak danych'   
+#     elif row['marc_field'] == '773':
+#         try:
+#             browser.get("http://bar.ibl.waw.pl/cgi-bin//makwww.exe?BM=01&IZ=Czasopismo")
+#             box = browser.find_element_by_css_selector('.text1')
+#             box.send_keys(row['search'], Keys.ENTER)
+#             first_hit = browser.find_element_by_css_selector('hr+ .submit4')
+#             first_hit.click()
+#             first_record = browser.find_element_by_css_selector('hr+ .submit5')
+#             first_record.click()
+#             response = requests.get(browser.current_url + '&MC=MARC')
+#             soup = BeautifulSoup(response.text, 'html.parser')
+#             content = re.findall('773.+', soup.text)[0]
+#             df.at[i, 'proper form'] = content
+#         except:
+#             df.at[i, 'proper form'] = 'brak danych'  
+#             
+# df.to_excel('bar_kodowanie.xlsx', index=False)          
+# =============================================================================
 
 bar_catalog = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bar_catalog_1st_stage.xlsx')
 bar_encoding = gsheet_to_df('1idplMbMhqIG-PhQSIJINcFJxKWMqR38MzlXowSNSh80', 'Sheet1')[['error', 'encoding']].drop_duplicates()

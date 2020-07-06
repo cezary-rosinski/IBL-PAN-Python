@@ -22,44 +22,45 @@ gatunki_pbl['gatunek'] = gatunki_pbl['gatunek'].apply(lambda x: f"$a{x}")
 # =============================================================================
 
 years = range(2013,2020)
-bn_full_text = pd.DataFrame()   
-for index, year in enumerate(years):
-    print(str(index) + '/' + str(len(years)))
-    path = f"C:/Users/User/Desktop/BN_books/{year}_bn_ks_do_libri.xlsx"
-    #path = f"F:/Cezary/Documents/IBL/Pliki python/{year}_bn_ks_do_libri.xlsx"
-    bn_books = pd.read_excel(path)
-    X245 = marc_parser_1_field(bn_books, 'id', 'X245', '\$')[['id', '$a']]
-    links_bn = marc_parser_1_field(bn_books, 'id', 'X852', '\$')[['id', '$h']]
-    links_bn['link_code'] = links_bn['$h'].apply(lambda x: re.findall('\d[\d\.]+', x)).apply(lambda x: ''.join([i for i in x if i != '.']))
-    links_bn = links_bn[links_bn['link_code'] != ''][['id', 'link_code']].values.tolist()
-    bn_full_text_links = []
-    for i, (bn_id, link) in enumerate(links_bn):
-        print('    ' + str(i) + '/' + str(len(links_bn)))
-        api_url = f"https://polona.pl/api/entities/?format=json&from=0&highlight=1&public=1&query={link}"
-        json_data = requests.get(api_url)
-        json_data = json.loads(json_data.text)
-        try:                     
-            full_text = [''.join([elem['url'] for elem in hit['resources'] if 'archive' in elem['url']]) for hit in json_data['hits']]
-            json_title = [hit['title'] for hit in json_data['hits']]
-            json_record = list(zip(json_title, full_text))
-            json_record = [elem for elem in json_record if len(elem[1])>0]
-            json_record = [(bn_id, e, f) for e, f in json_record]
-            bn_full_text_links += json_record
-        except:
-            pass  
-    links_bn = pd.DataFrame(bn_full_text_links, columns=['id', 'json_title', 'full_text_url'])
-    links_bn = pd.merge(links_bn, X245, how='left', on='id')
-    links_bn['match'] = links_bn[['json_title', '$a']].apply(lambda x: x['json_title'] in x['$a'], axis=1)
-    links_bn = links_bn[links_bn['match']==True].drop(columns=['json_title', '$a', 'match'])
-    bn_full_text = bn_full_text.append(links_bn)
-
-bn_full_text.to_excel('bn_full_text.xlsx', index=False)
+# =============================================================================
+# bn_full_text = pd.DataFrame()   
+# for index, year in enumerate(years):
+#     print(str(index) + '/' + str(len(years)))
+#     path = f"C:/Users/User/Desktop/BN_books/{year}_bn_ks_do_libri.xlsx"
+#     #path = f"F:/Cezary/Documents/IBL/Pliki python/{year}_bn_ks_do_libri.xlsx"
+#     bn_books = pd.read_excel(path)
+#     X245 = marc_parser_1_field(bn_books, 'id', 'X245', '\$')[['id', '$a']]
+#     links_bn = marc_parser_1_field(bn_books, 'id', 'X852', '\$')[['id', '$h']]
+#     links_bn['link_code'] = links_bn['$h'].apply(lambda x: re.findall('\d[\d\.]+', x)).apply(lambda x: ''.join([i for i in x if i != '.']))
+#     links_bn = links_bn[links_bn['link_code'] != ''][['id', 'link_code']].values.tolist()
+#     bn_full_text_links = []
+#     for i, (bn_id, link) in enumerate(links_bn):
+#         print('    ' + str(i) + '/' + str(len(links_bn)))
+#         api_url = f"https://polona.pl/api/entities/?format=json&from=0&highlight=1&public=1&query={link}"
+#         json_data = requests.get(api_url)
+#         json_data = json.loads(json_data.text)
+#         try:                     
+#             full_text = [''.join([elem['url'] for elem in hit['resources'] if 'archive' in elem['url']]) for hit in json_data['hits']]
+#             json_title = [hit['title'] for hit in json_data['hits']]
+#             json_record = list(zip(json_title, full_text))
+#             json_record = [elem for elem in json_record if len(elem[1])>0]
+#             json_record = [(bn_id, e, f) for e, f in json_record]
+#             bn_full_text_links += json_record
+#         except:
+#             pass  
+#     links_bn = pd.DataFrame(bn_full_text_links, columns=['id', 'json_title', 'full_text_url'])
+#     links_bn = pd.merge(links_bn, X245, how='left', on='id')
+#     links_bn['match'] = links_bn[['json_title', '$a']].apply(lambda x: x['json_title'] in x['$a'], axis=1)
+#     links_bn = links_bn[links_bn['match']==True].drop(columns=['json_title', '$a', 'match'])
+#     bn_full_text = bn_full_text.append(links_bn)
+# 
+# bn_full_text.to_excel('bn_full_text.xlsx', index=False)
+# =============================================================================
     
 
 
 bn_books_marc_total = pd.DataFrame()
 
-year=2018
 for i, year in enumerate(years):
     print(str(i) + '/' + str(len(years)))
     path = f"F:/Cezary/Documents/IBL/Pliki python/{year}_bn_ks_do_libri.xlsx"
@@ -119,15 +120,6 @@ for i, year in enumerate(years):
     pbl_enrichment = pbl_enrichment.drop_duplicates().reset_index(drop=True)
     pbl_enrichment['650'] = pbl_enrichment['650'].str.split('❦').apply(set).str.join('❦')
     pbl_enrichment['655'] = pbl_enrichment['655'].str.split('❦').apply(set).str.join('❦')
-    
-
-    
-
-        
-
-
-    
-
     
     position_of_LDR = bn_books.columns.get_loc("LDR")
     bn_books_marc = bn_books.iloc[:,position_of_LDR:]
