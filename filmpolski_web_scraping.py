@@ -157,10 +157,10 @@ for index, year in enumerate(years):
             episodes = '; '.join(df_episodes['total'].to_list())
         except (TypeError, IndexError, ValueError):
             episodes = np.nan
-        movies_description.append([year, movie_title, movie_type, country_of_production, year_of_production, duration, episodes, director, scenario, production_company, hero, description, varia])
+        movies_description.append([year, movie_title, movie[1], movie_type, country_of_production, year_of_production, duration, episodes, director, scenario, production_company, hero, description, varia])
 
 movies_description = [[np.nan if e == '' else e for e in elem] for elem in movies_description]
-filmpolski_movies = pd.DataFrame(movies_description, columns=['rok', 'tytuł filmu', 'typ filmu', 'kraj produkcji', 'rok produkcji', 'czas trwania', 'odcinki', 'reżyser', 'scenariusz', 'produkcja', 'bohater', 'opis', 'pierwowzor'])
+filmpolski_movies = pd.DataFrame(movies_description, columns=['rok', 'tytuł filmu', 'link', 'typ filmu', 'kraj produkcji', 'rok produkcji', 'czas trwania', 'odcinki', 'reżyser', 'scenariusz', 'produkcja', 'bohater', 'opis', 'pierwowzor'])
 
 headers = filmpolski_movies.columns.tolist()
 
