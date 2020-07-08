@@ -13,7 +13,7 @@ def year(row, field):
         val = np.nan
     return val
 
-# CZ
+# mrc to mrk
 path = 'E:/Cezary/Documents/IBL/Translations/'
 files = [f for f in glob.glob(path + '*.mrc', recursive=True)]
 for i, file_path in enumerate(files):
