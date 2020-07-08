@@ -59,7 +59,7 @@ X600 = X600[['id', 'name']]
 X600['name'] = X600['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
 X600 = pd.merge(X600, pbl_viaf, how='inner', left_on='name', right_on='BN_name')[['id', 'name', 'pbl_id']]
 X600 = pd.merge(X600, tworca_i_dzial, how='left', on='pbl_id')[['id', 'osoba_pbl_dzial_id_name']]
-X600['osoba_bn_autor'] = X600.groupby('id')['osoba_pbl_dzial_id_name'].transform(lambda x: '❦'.join(x.astype(str)))
+X600['osoba_bn_temat'] = X600.groupby('id')['osoba_pbl_dzial_id_name'].transform(lambda x: '❦'.join(x.astype(str)))
 X600 = X600.drop(columns='osoba_pbl_dzial_id_name').drop_duplicates()
 
 bn_articles = [bn_articles, X100, X600]
@@ -78,17 +78,45 @@ def dziedzina_PBL(x):
         else:
             val = 'bez_ukd_PBL'
     except TypeError:
-        val = np.nan
+        val = 'bez_ukd_PBL'
     return val
 
 bn_articles['dziedzina_PBL'] = bn_articles['X080'].apply(lambda x: dziedzina_PBL(x))
 
+bez_ukd_ale_PBL = bn_articles.copy()[['id', 'X080', 'X245', 'X600', 'X610', 'X630', 'X648', 'X650', 'X651', 'X655', 'X658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL']]
+
+bez_ukd_ale_PBL = bez_ukd_ale_PBL[(bez_ukd_ale_PBL['dziedzina_PBL'] == 'bez_ukd_PBL') &
+                                  (bez_ukd_ale_PBL['X080'].isnull()) &
+                                  (bez_ukd_ale_PBL['osoba_bn_autor'].isnull()) &
+                                  (bez_ukd_ale_PBL['osoba_bn_temat'].isnull())]
+literary_words = 'literat|literac|pisar|bajk|dramat|epigramat|esej|felieton|film|komedi|nowel|opowiadani|pamiętnik|poemiks|poezj|powieść|proza|reportaż|satyr|wspomnieni|Scenariusze zajęć|Podręczniki dla gimnazjów|teatr|Nagrod|aforyzm|baśń|baśnie|polonijn|dialogi|fantastyka naukowa|legend|pieśń|poemat|przypowieś|honoris causa|filologi|kino polskie|pieśni|interpretacj'
+bez_ukd_ale_PBL['bez_ukd_ale_PBL'] = bez_ukd_ale_PBL['X245'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X600'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X610'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X630'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X648'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X650'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X651'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X655'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X658'].str.contains(literary_words, flags=re.IGNORECASE)
+bez_ukd_ale_PBL = bez_ukd_ale_PBL[bez_ukd_ale_PBL['bez_ukd_ale_PBL'] == True][['id', 'bez_ukd_ale_PBL']]
+bn_articles = pd.merge(bn_articles, bez_ukd_ale_PBL, how='left', on='id')
+
+memories_words = 'pamiętniki i wspomnienia|literatura podróżnicza|pamiętniki|reportaż|relacja z podróży'
+memories = bn_articles.copy()[['id', 'X245', 'X600', 'X610', 'X630', 'X648', 'X650', 'X651', 'X655', 'X658']]
+memories['wspomnienia'] = memories['X245'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X600'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X600'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X610'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X630'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X648'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X650'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X655'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X658'].str.contains(memories_words, flags=re.IGNORECASE)
+memories = memories[memories['wspomnienia'] == True][['id', 'wspomnienia']]
+bn_articles = pd.merge(bn_articles, memories, how='left', on='id')
+
+
+listy_2011 = gsheet_to_df('1s22ClRxlrPHaAXi_n_JJH3mX6vKYzKjsKbpJpQztx_8', 'lista_ksiazek')
+listy_2010 = gsheet_to_df('1Vjeg0JsYI-8v9B-x_yyujIhmw7UR7Lk7poexrHNdVzM', 'lista_ksiazek')
+listy_2009 = gsheet_to_df('1Gc4gQSm9b4NDTQysiauzW9Jac6yP0oNuFbB8utO4kS4', 'lista_ksiazek')
+listy_2005 = gsheet_to_df('1HkWkX61sQWktSXf0v0uPV8j2DwuTocesyCJuKTdisIU', 'lista_ksiazek')
+listy_2006 = gsheet_to_df('1zeMx_Idsum8JmlM6G7Eufx9LxloHoAHv8V-My71VZf4', 'lista_ksiazek')
+listy_2007 = gsheet_to_df('19iL7YoD8ug-rLnpzS6FD46aS2J1BRf4qL5VxllywCGE', 'lista_ksiazek')
+listy_2008 = gsheet_to_df('1RshTeWdXBE7OzOEfoGpL9Ljb_GXDlGDePNjV1HKmuOo', 'lista_ksiazek')
+listy_2004 = gsheet_to_df('1RmDia97s4B8F74sS7Wbpnv_A9zMfr4xTvcD9leukAfM', 'lista_książek')
+listy_2004['typ_ksiazki'], listy_2004['link'], listy_2004['link_1'], listy_2004['status'], listy_2004['blad_w_imporcie_tytulu'] = [np.nan, np.nan, np.nan, np.nan, np.nan]
+listy_2004 = listy_2004[listy_2005.columns]
 
 
 
 
 
-
+test = bn_articles.copy().head(1000)
 
 
 
