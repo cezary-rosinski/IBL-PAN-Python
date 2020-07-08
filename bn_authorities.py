@@ -45,4 +45,6 @@ for i, file_path in enumerate(files):
         ile_osobowych += len_osobowe
         ile_osobowych_z_viaf += len_osobowe_viaf
         
-print('Done.')
+print(f'Liczba haseł wzorcowych: {ile_wzorcowych}.')
+print(f'Liczba wzorcowych haseł osobowych: {ile_osobowych}.')
+print(f'Liczba oviafowanych wzorcowych haseł osobowych: {ile_osobowych_z_viaf}.')
