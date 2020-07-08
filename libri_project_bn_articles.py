@@ -17,7 +17,8 @@ from my_functions import f
 
 bn_magazines = gsheet_to_df('10-QUomq_H8v06H-yUhjO60hm45Wbo9DanJTemTgSUrA', 'Sheet1')['ZRODLA_BN'].tolist()
 
-path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/'
+# path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/'
+path = 'C:/Users/User/Documents/bn_all/'
 files = [f for f in glob.glob(path + '*.mrk8', recursive=True)]
 
 encoding = 'utf-8'
@@ -27,7 +28,6 @@ for i, file_path in enumerate(files):
     marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
     marc_list = list(filter(None, marc_list))  
     df = pd.DataFrame(marc_list, columns = ['test'])
-    df = df.head(1000)
     df['field'] = df['test'].replace(r'(^.)(...)(.+?$)', r'\2', regex = True)
     df['content'] = df['test'].replace(r'(^.)(.....)(.+?$)', r'\3', regex = True)
     df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
