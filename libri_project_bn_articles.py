@@ -27,17 +27,20 @@ for i, file_path in enumerate(files):
     marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
     marc_list = list(filter(None, marc_list))  
     df = pd.DataFrame(marc_list, columns = ['test'])
+    df = df.head(1000)
     df['field'] = df['test'].replace(r'(^.)(...)(.+?$)', r'\2', regex = True)
     df['content'] = df['test'].replace(r'(^.)(.....)(.+?$)', r'\3', regex = True)
     df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
     df['help'] = df['help'].ffill()
-    df = df.copy().head(1000)
     df['magazine'] = df.apply(lambda x: f(x, '773'), axis=1)
     df['magazine'] = df.groupby('help')['magazine'].ffill().bfill()
     df = df[df['magazine'].notnull()]
-    df['index'] = df.index + 1
-    df['magazine'] = marc_parser_1_field(df, 'index', 'magazine', '\$')['$t'].str.replace('\.$', '')
-    df = df[df['magazine'].isin(bn_magazines)].drop(columns=['magazine', 'index'])
+    try:
+        df['index'] = df.index + 1
+        df['magazine'] = marc_parser_1_field(df, 'index', 'magazine', '\$')['$t'].str.replace('\.$', '')
+        df = df[df['magazine'].isin(bn_magazines)].drop(columns=['magazine', 'index'])
+    except AttributeError:
+        pass
     if len(df) > 0:
         df['id'] = df.apply(lambda x: f(x, '009'), axis = 1)
         df['id'] = df.groupby('help')['id'].ffill().bfill()
