@@ -15,67 +15,61 @@ from functools import reduce
 import glob
 from my_functions import f
 
-bn_magazines = gsheet_to_df('10-QUomq_H8v06H-yUhjO60hm45Wbo9DanJTemTgSUrA', 'Sheet1')['ZRODLA_BN'].tolist()
-
-# path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/'
-path = 'C:/Users/User/Documents/bn_all/'
-files = [f for f in glob.glob(path + '*.mrk8', recursive=True)]
-
-encoding = 'utf-8'
-marc_df = pd.DataFrame()
-for i, file_path in enumerate(files):
-    print(str(i) + '/' + str(len(files)))
-    marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
-    marc_list = list(filter(None, marc_list))  
-    df = pd.DataFrame(marc_list, columns = ['test'])
-    df['field'] = df['test'].replace(r'(^.)(...)(.+?$)', r'\2', regex = True)
-    df['content'] = df['test'].replace(r'(^.)(.....)(.+?$)', r'\3', regex = True)
-    df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
-    df['help'] = df['help'].ffill()
-    df['magazine'] = df.apply(lambda x: f(x, '773'), axis=1)
-    df['magazine'] = df.groupby('help')['magazine'].ffill().bfill()
-    df = df[df['magazine'].notnull()]
-    try:
-        df['index'] = df.index + 1
-        df['magazine'] = marc_parser_1_field(df, 'index', 'magazine', '\$')['$t'].str.replace('\.$', '')
-        df = df[df['magazine'].isin(bn_magazines)].drop(columns=['magazine', 'index'])
-    except AttributeError:
-        pass
-    if len(df) > 0:
-        df['id'] = df.apply(lambda x: f(x, '009'), axis = 1)
-        df['id'] = df.groupby('help')['id'].ffill().bfill()
-        df = df[['id', 'field', 'content']]
-        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
-        df = df.drop_duplicates().reset_index(drop=True)
-        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
-        marc_df = marc_df.append(df_wide)
- 
-fields = marc_df.columns.tolist()
-fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
-marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
-
-fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-marc_df = marc_df.reindex(columns=fields)       
-marc_df.to_excel('bn_articles.xlsx', index=False)
+# =============================================================================
+# bn_magazines = gsheet_to_df('10-QUomq_H8v06H-yUhjO60hm45Wbo9DanJTemTgSUrA', 'Sheet1')['ZRODLA_BN'].tolist()
+# 
+# # path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/'
+# path = 'C:/Users/User/Documents/bn_all/'
+# files = [f for f in glob.glob(path + '*.mrk8', recursive=True)]
+# 
+# encoding = 'utf-8'
+# marc_df = pd.DataFrame()
+# for i, file_path in enumerate(files):
+#     print(str(i) + '/' + str(len(files)))
+#     marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+#     marc_list = list(filter(None, marc_list))  
+#     df = pd.DataFrame(marc_list, columns = ['test'])
+#     df['field'] = df['test'].replace(r'(^.)(...)(.+?$)', r'\2', regex = True)
+#     df['content'] = df['test'].replace(r'(^.)(.....)(.+?$)', r'\3', regex = True)
+#     df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
+#     df['help'] = df['help'].ffill()
+#     df['magazine'] = df.apply(lambda x: f(x, '773'), axis=1)
+#     df['magazine'] = df.groupby('help')['magazine'].ffill().bfill()
+#     df = df[df['magazine'].notnull()]
+#     try:
+#         df['index'] = df.index + 1
+#         df['magazine'] = marc_parser_1_field(df, 'index', 'magazine', '\$')['$t'].str.replace('\.$', '')
+#         df = df[df['magazine'].isin(bn_magazines)].drop(columns=['magazine', 'index'])
+#     except AttributeError:
+#         pass
+#     if len(df) > 0:
+#         df['id'] = df.apply(lambda x: f(x, '009'), axis = 1)
+#         df['id'] = df.groupby('help')['id'].ffill().bfill()
+#         df = df[['id', 'field', 'content']]
+#         df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+#         df = df.drop_duplicates().reset_index(drop=True)
+#         df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+#         marc_df = marc_df.append(df_wide)
+#  
+# fields = marc_df.columns.tolist()
+# fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+# marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
+# 
+# fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+# marc_df = marc_df.reindex(columns=fields)       
+# marc_df.to_excel('bn_articles.xlsx', index=False)
+# =============================================================================
         
-        
-
-
-
 # SQL connection
 
 dsn_tns = cx_Oracle.makedsn('pbl.ibl.poznan.pl', '1521', service_name='xe')
 connection = cx_Oracle.connect(user='IBL_SELECT', password='CR333444', dsn=dsn_tns, encoding='windows-1250')
 
-bn_articles1 = pd.read_excel("F:/Cezary/Documents/IBL/Migracja z BN/bn_articles_1.xlsx")
-bn_articles2 = pd.read_excel("F:/Cezary/Documents/IBL/Migracja z BN/bn_articles_2.xlsx")
+bn_articles = pd.read_excel('bn_articles.xlsx')   
+bn_articles = bn_articles[bn_articles['773'].notnull()].reset_index(drop=True) 
 
-bn_articles = pd.concat([bn_articles1, bn_articles2])
-position_of_LDR = bn_articles.columns.get_loc("LDR")
-bn_articles = bn_articles.iloc[:,position_of_LDR:].drop_duplicates()
-bn_articles['id'] = bn_articles['X009']
+bn_articles['id'] = bn_articles['009']
 
-# osoba bn autor, osoba bn temat, dziedzina pbl, bez ukd ale PBL, słowa literackie, rodzaj książki, tworca id, tworca nazwisko, tworca imie, dz nazwa, rz_nazwa
 pbl_viaf_links = ['1cEz73dGN2r2-TTc702yne9tKfH9PQ6UyAJ2zBSV6Jb0', '1_Bhwzo0xu4yTn8tF0ZNAZq9iIAqIxfcrjeLVCm_mggM', '1L-7Zv9EyLr5FeCIY_s90rT5Hz6DjAScCx6NxfuHvoEQ']
 pbl_viaf = pd.DataFrame()
 for elem in pbl_viaf_links:
@@ -93,7 +87,7 @@ tworca_i_dzial = """select tw.tw_tworca_id "pbl_id", dz.dz_dzial_id||'|'||dz.dz_
 tworca_i_dzial = pd.read_sql(tworca_i_dzial, con=connection).fillna(value = np.nan)
 tworca_i_dzial['pbl_id'] = tworca_i_dzial['pbl_id'].apply(lambda x: '{:4.0f}'.format(x))
 
-X100 = marc_parser_1_field(bn_articles, 'id', 'X100', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
+X100 = marc_parser_1_field(bn_articles, 'id', '100', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
 X100['name'] = X100[['$a', '$d', '$c']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
 X100 = X100[['id', 'name']]
 X100['name'] = X100['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
@@ -102,7 +96,7 @@ X100 = pd.merge(X100, tworca_i_dzial, how='left', on='pbl_id')[['id', 'osoba_pbl
 X100['osoba_bn_autor'] = X100.groupby('id')['osoba_pbl_dzial_id_name'].transform(lambda x: '❦'.join(x.astype(str)))
 X100 = X100.drop(columns='osoba_pbl_dzial_id_name').drop_duplicates()
 
-X600 = marc_parser_1_field(bn_articles, 'id', 'X600', '\$', delimiter='|')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
+X600 = marc_parser_1_field(bn_articles, 'id', '600', '\$', delimiter='|')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
 X600['name'] = X600[['$a', '$d', '$c']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
 X600 = X600[['id', 'name']]
 X600['name'] = X600['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
@@ -130,24 +124,43 @@ def dziedzina_PBL(x):
         val = 'bez_ukd_PBL'
     return val
 
-bn_articles['dziedzina_PBL'] = bn_articles['X080'].apply(lambda x: dziedzina_PBL(x))
+bn_articles['dziedzina_PBL'] = bn_articles['080'].apply(lambda x: dziedzina_PBL(x))
 
-bez_ukd_ale_PBL = bn_articles.copy()[['id', 'X080', 'X245', 'X600', 'X610', 'X630', 'X648', 'X650', 'X651', 'X655', 'X658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL']]
+bez_ukd_ale_PBL = bn_articles.copy()[['id', '080', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL']]
 
 bez_ukd_ale_PBL = bez_ukd_ale_PBL[(bez_ukd_ale_PBL['dziedzina_PBL'] == 'bez_ukd_PBL') &
-                                  (bez_ukd_ale_PBL['X080'].isnull()) &
+                                  (bez_ukd_ale_PBL['080'].isnull()) &
                                   (bez_ukd_ale_PBL['osoba_bn_autor'].isnull()) &
                                   (bez_ukd_ale_PBL['osoba_bn_temat'].isnull())]
 literary_words = 'literat|literac|pisar|bajk|dramat|epigramat|esej|felieton|film|komedi|nowel|opowiadani|pamiętnik|poemiks|poezj|powieść|proza|reportaż|satyr|wspomnieni|Scenariusze zajęć|Podręczniki dla gimnazjów|teatr|Nagrod|aforyzm|baśń|baśnie|polonijn|dialogi|fantastyka naukowa|legend|pieśń|poemat|przypowieś|honoris causa|filologi|kino polskie|pieśni|interpretacj'
-bez_ukd_ale_PBL['bez_ukd_ale_PBL'] = bez_ukd_ale_PBL['X245'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X600'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X610'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X630'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X648'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X650'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X651'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X655'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['X658'].str.contains(literary_words, flags=re.IGNORECASE)
+bez_ukd_ale_PBL['bez_ukd_ale_PBL'] = bez_ukd_ale_PBL['245'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['600'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['610'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['630'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['648'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['650'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['651'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['655'].str.contains(literary_words, flags=re.IGNORECASE) | bez_ukd_ale_PBL['658'].str.contains(literary_words, flags=re.IGNORECASE)
 bez_ukd_ale_PBL = bez_ukd_ale_PBL[bez_ukd_ale_PBL['bez_ukd_ale_PBL'] == True][['id', 'bez_ukd_ale_PBL']]
 bn_articles = pd.merge(bn_articles, bez_ukd_ale_PBL, how='left', on='id')
 
 memories_words = 'pamiętniki i wspomnienia|literatura podróżnicza|pamiętniki|reportaż|relacja z podróży'
-memories = bn_articles.copy()[['id', 'X245', 'X600', 'X610', 'X630', 'X648', 'X650', 'X651', 'X655', 'X658']]
-memories['wspomnienia'] = memories['X245'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X600'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X600'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X610'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X630'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X648'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X650'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X655'].str.contains(memories_words, flags=re.IGNORECASE) | memories['X658'].str.contains(memories_words, flags=re.IGNORECASE)
+memories = bn_articles.copy()[['id', '245', '600', '610', '630', '648', '650', '651', '655', '658']]
+memories['wspomnienia'] = memories['245'].str.contains(memories_words, flags=re.IGNORECASE) | memories['600'].str.contains(memories_words, flags=re.IGNORECASE) | memories['600'].str.contains(memories_words, flags=re.IGNORECASE) | memories['610'].str.contains(memories_words, flags=re.IGNORECASE) | memories['630'].str.contains(memories_words, flags=re.IGNORECASE) | memories['648'].str.contains(memories_words, flags=re.IGNORECASE) | memories['650'].str.contains(memories_words, flags=re.IGNORECASE) | memories['655'].str.contains(memories_words, flags=re.IGNORECASE) | memories['658'].str.contains(memories_words, flags=re.IGNORECASE)
 memories = memories[memories['wspomnienia'] == True][['id', 'wspomnienia']]
 bn_articles = pd.merge(bn_articles, memories, how='left', on='id')
+
+bible_words = "biblia|analiza i interpretacja|edycja krytyczna|materiały konferencyjne"
+bible = bn_articles.copy()[['id', '245', '650', '655']]
+bible['biblia'] = bible['245'].str.contains(bible_words, flags=re.IGNORECASE) | bible['650'].str.contains(bible_words, flags=re.IGNORECASE) | bible['650'].str.contains(bible_words, flags=re.IGNORECASE)
+bible = bible[bible['biblia'] == True][['id', 'biblia']]
+bn_articles = pd.merge(bn_articles, memories, how='left', on='id')
+
+type_of_record_old = 
+
+
+
+
+
+
+
+
+
+
+
 
 
 listy_2011 = gsheet_to_df('1s22ClRxlrPHaAXi_n_JJH3mX6vKYzKjsKbpJpQztx_8', 'lista_ksiazek')
@@ -166,6 +179,9 @@ listy_2004 = listy_2004[listy_2005.columns]
 
 
 test = bn_articles.copy().head(1000)
+
+
+
 
 
 
