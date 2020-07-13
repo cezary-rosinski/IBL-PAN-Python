@@ -147,12 +147,77 @@ bible_words = "biblia|analiza i interpretacja|edycja krytyczna|materiały konfer
 bible = bn_articles.copy()[['id', '245', '650', '655']]
 bible['biblia'] = bible['245'].str.contains(bible_words, flags=re.IGNORECASE) | bible['650'].str.contains(bible_words, flags=re.IGNORECASE) | bible['650'].str.contains(bible_words, flags=re.IGNORECASE)
 bible = bible[bible['biblia'] == True][['id', 'biblia']]
-bn_articles = pd.merge(bn_articles, memories, how='left', on='id')
+bn_articles = pd.merge(bn_articles, bible, how='left', on='id')
 
-type_of_record_old = 
+test = bn_articles.copy()
+test = test[(test['osoba_bn_autor'].isnull()) & 
+            (test['osoba_bn_temat'].isnull()) & 
+            (test['dziedzina_PBL'] == 'bez_ukd_PBL') & 
+            (test['bez_ukd_ale_PBL'].isnull()) & 
+            (test['wspomnienia'].isnull()) & 
+            (test['biblia'].isnull())]
+test = test[['id', '080', '773', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL', 'bez_ukd_ale_PBL', 'wspomnienia', 'biblia']]
+
+dobre = bn_articles.copy()
+dobre = dobre[~dobre['id'].isin(test['id'])]
+dobre = dobre[['id', '080', '773', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL', 'bez_ukd_ale_PBL', 'wspomnienia', 'biblia']]
+
+
+type_of_record_old = bn_articles.copy()
+type_of_record_old['czy_ma_ukd'] = type_of_record_old['080'].apply(lambda x: 'tak' if pd.notnull(x) else 'nie')
+def position_of_dash(x):
+    try:
+        if bool(re.search('(\\\\\$a|:)(821\.)', x)):
+            val = x.index('-')
+        else: 
+            val = np.nan
+    except (TypeError, ValueError):
+        val = np.nan
+    return val
+    
+type_of_record_old['dash_position'] = type_of_record_old['080'].apply(lambda x: position_of_dash(x))
 
 
 
+test = type_of_record_old[['080', 'dash_position']]
+
+
+bn_ok <- chunk4
+stare_rodzajowanie <- bn_ok %>%
+  mutate(czy_ma_ukd = ifelse(X080=="","nie","tak"),
+         position_dash = ifelse(grepl("(\\\\\\\\\\$a|:)(821\\.)",X080),str_locate(X080,"\\-")[,1], NA),
+         position_dash = ifelse(is.na(position_dash),"",as.integer(position_dash)),
+         position_091 = str_locate(X080,"\\(091\\)")[,1],
+         position_091 = ifelse(is.na(position_091),"",as.integer(position_091)),
+         rodzaj_ksiazki = ifelse(grepl("Antologi",X655),"antologia",
+                                 ifelse(position_091!=""&position_dash!="",
+                          ifelse(as.integer(position_091)<as.integer(position_dash), "przedmiotowa", "podmiotowa"),
+                          ifelse(position_dash!="","podmiotowa","przedmiotowa"))),
+         rodzaj_ksiazki = ifelse(czy_ma_ukd=="nie","",as.character(rodzaj_ksiazki)))
+gatunki_podmiotowe <- stare_rodzajowanie %>%
+  filter(rodzaj_ksiazki=="podmiotowa") %>%
+  select(X655) %>%
+  unique() %>%
+  cSplit(.,"X655",sep = "|",direction = "long") %>%
+  unique() %>%
+  filter(str_detect(X655,"\\$y[\\d-]+ w\\."))
+gatunki_podmiotowe <- str_replace_all(str_replace_all(paste(gatunki_podmiotowe$X655,collapse = "|"),"(.{2})(\\$a)","\\2"),"\\$","\\\\$")
+stare_rodzajowanie$czy_podmiotowy <- grepl(gatunki_podmiotowe,stare_rodzajowanie$X655)|grepl(gatunki_podmiotowe,stare_rodzajowanie$X650)
+stare_rodzajowanie <- stare_rodzajowanie %>%
+  mutate(rodzaj_ksiazki = ifelse(str_count(X245, " / ")+1>2,"antologia",
+                                 ifelse(str_count(X245, " / ")+1==2,"współwydanie",
+                                        ifelse(rodzaj_ksiazki==""&czy_podmiotowy==TRUE&!grepl("xhistoria|xtematyka|xbiografia",X650)&!grepl("xhistoria|xtematyka|xbiografia",X655),"podmiotowa",
+                                               ifelse(X100!=""&grepl("aPamiętnik|aLiteratura podróżnicza",X655)&!grepl("xhistoria|xtematyka|xbiografia",X650)&!grepl("xhistoria|xtematyka|xbiografia",X655),"podmiotowa",
+                                                      ifelse(X100!=""&grepl("aReportaż",X655)&grepl("\\$y",X655)&!grepl("xhistoria|xtematyka|xbiografia",X650)&!grepl("xhistoria|xtematyka|xbiografia",X655),"podmiotowa",
+                                                             ifelse(X100!=""&(X655=="\\7$aReportaż polski$2DBN"|X655=="\\7$aReportaż$2DBN")&!grepl("xhistoria|xtematyka|xbiografia",X650)&!grepl("xhistoria|xtematyka|xbiografia",X655),"podmiotowa",
+                                                                    ifelse(rodzaj_ksiazki==""&czy_podmiotowy==FALSE,"przedmiotowa",as.character(rodzaj_ksiazki)))))))),
+         rodzaj_ksiazki = ifelse(rodzaj_ksiazki=="","przedmiotowa",as.character(rodzaj_ksiazki)),
+         rodzaj_ksiazki = ifelse(grepl("Lektury Wszech Czasów : streszczenie, analiza, interpretacja|Lektury Wszech Czasów - Literat|Biblioteczka Opracowań",X490)|grepl("Lektury Wszech Czasów : streszczenie, analiza, interpretacja|Lektury Wszech Czasów - Literat|Biblioteczka Opracowań",X830),"przedmiotowa",as.character(rodzaj_ksiazki)),
+         ilu_tworcow = str_count(X100,"\\$a"),
+         rodzaj_ksiazki = ifelse(ilu_tworcow>4&rodzaj_ksiazki=="podmiotowa","antologia",as.character(rodzaj_ksiazki)),
+         rodzaj_ksiazki = ifelse(grepl("Legendy",X655),"antologia",as.character(rodzaj_ksiazki))) %>%
+  filter(grepl("katalog wystawy",X655,ignore.case = TRUE)&rodzaj_ksiazki=="przedmiotowa") %>% 
+  select(id)
 
 
 

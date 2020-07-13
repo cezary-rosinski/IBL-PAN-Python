@@ -318,10 +318,10 @@ def mrk_to_df(path_in, field_with_id, encoding='utf-8'):
             mrk_list[-1] += '\n' + row
         else:
             mrk_list.append(row)
-    
-    full_data = pd.DataFrame()      
-    for record in mrk_list:
-        record = record.split('=')
+    full_data_list = []     
+    for index, record in enumerate(mrk_list):
+        print(str(index) + '/' + str(len(mrk_list)))
+        record = re.split('^=|\n=', record)
         record = list(filter(None, record))
         for i, row in enumerate(record):
             record[i] = record[i].rstrip().split('  ', 1)
@@ -330,9 +330,10 @@ def mrk_to_df(path_in, field_with_id, encoding='utf-8'):
         df['id'] = df['id'].ffill().bfill()
         df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
         df = df.drop_duplicates().reset_index(drop=True)
-        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
-        full_data = full_data.append(df_wide)
-        fields_order = full_data.columns.tolist()
-        fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-        full_data = full_data.reindex(columns=fields_order)
-    return full_data
+        record_dict = df.pivot(index = 'id', columns = 'field', values = 'content').to_dict('records')
+        full_data_list += record_dict
+    full_df = pd.DataFrame.from_records(full_data_list)
+    fields_order = full_df.columns.tolist()
+    fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+    full_df = full_df.reindex(columns=fields_order)
+    return full_df
