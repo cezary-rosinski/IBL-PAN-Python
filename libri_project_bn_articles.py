@@ -15,6 +15,8 @@ from functools import reduce
 import glob
 from my_functions import f
 
+bn_magazines = gsheet_to_df('10-QUomq_H8v06H-yUhjO60hm45Wbo9DanJTemTgSUrA', 'Sheet1')
+
 # =============================================================================
 # bn_magazines = gsheet_to_df('10-QUomq_H8v06H-yUhjO60hm45Wbo9DanJTemTgSUrA', 'Sheet1')['ZRODLA_BN'].tolist()
 # 
