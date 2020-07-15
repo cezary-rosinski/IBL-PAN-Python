@@ -70,12 +70,6 @@ from my_functions import f
 dsn_tns = cx_Oracle.makedsn('pbl.ibl.poznan.pl', '1521', service_name='xe')
 connection = cx_Oracle.connect(user='IBL_SELECT', password='CR333444', dsn=dsn_tns, encoding='windows-1250')
 
-entire_magazines = gsheet_to_df('10-QUomq_H8v06H-yUhjO60hm45Wbo9DanJTemTgSUrA', 'Sheet1')[['ZRODLA_BN', 'typ2']]
-entire_magazines = entire_magazines[(entire_magazines['typ2'].str.contains('fil|lit')) &
-                                    (~entire_magazines['typ2'].str.contains('filozof|polit'))].reset_index(drop=True)
-entire_magazines['index'] = entire_magazines.index + 1
-entire_magazines = cSplit(entire_magazines, 'index', 'ZRODLA_BN', ' \| ')['ZRODLA_BN'].tolist()
-
 bn_articles = pd.read_excel('bn_articles.xlsx')   
 bn_articles = bn_articles[bn_articles['773'].notnull()].reset_index(drop=True) 
 bn_articles['id'] = bn_articles['009']
@@ -167,63 +161,19 @@ zle = zle[['id', '080', '773', '245', '600', '610', '630', '648', '650', '651', 
 dobre = bn_articles.copy()
 dobre = dobre[~dobre['id'].isin(zle['id'])]
 dobre = dobre[['id', '080', '773', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL', 'literary_word_keys', 'wspomnienia', 'biblia']]
+dobre['decision'] = 'OK'
+dobre = dobre[['id', 'decision']]
+
+bn_articles = pd.merge(bn_articles, dobre, 'left', 'id')
+
+bn_articles.to_excel('bn_magazines_to_statistics.xlsx', index=False)
+
+test = bn_articles.copy()
+test.dtypes
+bn_articles['year'] = bn_articles['008'].apply(lambda x: x[7:11].astype)
 
 
-
-# Nikodem
-
-# =============================================================================
-# ids = [17858, 5827, 13557, 14877, 2346, 829, 10098, 18157, 40, 992, 1091, 15059, 371, 6782, 7677, 1422, 14857, 1161, 2907, 6764, 9758, 9497, 9357, 12177, 16618, 757, 7057, 17637, 11899, 382, 163, 6756, 1025, 7197, 5867, 16037, 9877, 8207, 457, 16337, 10817, 3267, 12877, 16417, 9377, 2312, 18900, 299, 6783, 660, 355, 16840, 574, 11898, 16537, 5927, 10758, 12958, 12939, 269, 17697, 18899, 796, 7758, 2221, 15026, 10598, 6925, 1362, 5887, 14617, 15018, 16318, 12357, 1903, 6091, 6776, 5447, 1581, 11857, 566, 7937, 1385, 3388, 858, 16617, 234, 61, 1582, 1411, 10637, 435, 6738, 8137, 10217, 477, 9777, 8205, 16477, 902, 11000, 13677, 11017, 1401, 5387, 1321, 3932, 4487, 70, 5067, 11577, 15158, 8259, 274, 192, 45, 17803, 15078, 3947, 3547, 814, 1546, 11719, 18098, 6767, 611, 3467, 15017, 851, 3289, 3187, 4107, 5293, 17740, 10777, 1245, 12977, 18878, 388, 18800, 17837, 96, 10999, 6291, 12938, 3927, 18917, 18818, 17957, 6889, 6825, 14881, 16658, 276, 2947, 14880, 2328, 850, 14980, 5847, 13538, 8437, 14882, 6167, 602, 14777, 290, 10537, 81, 16538, 2304, 146, 11997, 17797, 3875, 766, 17417, 2687, 6411, 845, 229, 10657, 2326, 17839, 14779, 4787, 1909, 16997, 69, 1608, 15178, 10898, 8559, 806, 15317, 17938, 5767, 1921, 12658, 1062, 231, 1614, 1163, 347, 12117, 9097, 5048, 67, 354, 437, 15117, 2348, 3987, 14817, 6905, 16177, 16117, 4647, 306, 1341, 1550, 353, 4687, 953, 17698, 2121, 10137, 3068, 13637, 1625, 6047, 6827, 14237, 4888, 861, 15177, 15939, 398, 13177, 758, 15057, 6018, 2655, 15157, 345, 4967, 14057, 5967, 6994, 10677, 2329, 1323, 16717, 14017, 16078, 10097, 4207, 101, 8199, 439, 4147, 6989, 11139, 4327, 8224, 186, 16678, 182, 15357, 12617, 17819, 1902, 2767, 8397, 1545, 536, 114, 5292, 761, 16817, 6962, 2334, 2353, 17804, 10717, 785, 1281, 12957, 8200, 16317, 6961, 2658, 12197, 14757, 2887, 1566, 16838, 3387, 6734, 1906, 4788, 1164, 1366, 2142, 12657, 351, 289, 561, 63, 15098, 366, 2307, 14918, 9757, 3934, 7597, 818, 7297, 3872, 433, 220, 57, 16437, 17377, 1910, 800, 15337, 113, 5288, 6008, 14058, 8698, 1605, 52, 3147, 6342, 209, 2666, 5187, 6651, 65, 6067, 12479, 10978, 6927, 856, 210, 657, 570, 330, 4247, 365, 14897, 735, 11117, 286, 12577, 16319, 786, 4007, 462, 6591, 1626, 12157, 11098, 4927, 4447, 1381, 3948, 436, 1406, 16397, 1194, 469, 14497, 1384, 1027, 14117, 576, 1541, 5909, 6633, 18957, 3874, 489, 162, 1108, 638, 10597, 636, 17744, 10980, 298, 1065, 15579, 6828, 13357, 16599, 18717, 328, 425, 11077, 9698, 1223, 15037, 15623, 442, 668, 5527, 7017, 1240, 514, 15019, 3327, 6571, 97, 1116, 117, 11217, 10020, 792, 111, 5888, 17838, 8457, 10737, 10979, 680, 315, 1226, 15977, 801, 743, 1564, 10437, 17801, 6976, 12638, 17759, 6779, 11601, 12837, 753, 375, 13037, 6020, 723, 5207, 14297, 17657, 3907, 8201, 18477, 15677, 14277, 3347, 4789, 8213, 6778, 5227, 12297, 1039, 4747, 11097, 721, 1121, 859, 15621, 6692, 1237, 1607, 282, 1147, 7157, 14778, 10897, 6897, 15897, 74, 16418, 66, 103, 1606, 508, 195, 10917, 683, 10997, 18017, 428, 10837, 1244, 17798, 434, 13877, 185, 15498, 8206, 1565, 1383, 11040, 3894, 15217, 1081, 285, 1409, 8217, 12018, 421, 1109]
-# 
-# query = """select z.za_zapis_id, zr.zr_zrodlo_id, z.za_ro_rok
-# from pbl_zapisy z
-# join IBL_OWNER.pbl_zrodla zr on zr.zr_zrodlo_id=z.za_zr_zrodlo_id"""
-# 
-# pbl_query = pd.read_sql(query, connection)
-# 
-# pbl_query = pbl_query[pbl_query['ZR_ZRODLO_ID'].isin(ids)]
-# 
-# czasopisma = pbl_query['ZR_ZRODLO_ID'].value_counts().to_frame()
-# czasopisma2 = pbl_query.copy()[['ZR_ZRODLO_ID', "ZA_RO_ROK"]].drop_duplicates()
-# czasopisma2['ZA_RO_ROK'] = czasopisma2.groupby('ZR_ZRODLO_ID')['ZA_RO_ROK'].transform(lambda x: ', '.join(x.dropna().astype(str)))
-# czasopisma2 = czasopisma2.drop_duplicates()
-# czasopisma2['ZA_RO_ROK'] = czasopisma2['ZA_RO_ROK'].str.split(', ').apply(set).str.join(', ')
-# 
-# test_mag = marc_parser_1_field(bn_articles, 'id', '773', '\$')[['id', '$t']]
-# test = bn_articles[['id', '008']]
-# test['008'] = test['008'].apply(lambda x: x[7:11])
-# test_mag['$t'] = test_mag['$t'].str.replace('\.$', '')
-# test_mag.columns = ['id', 'magazine']
-# test_mag = pd.merge(test_mag, test, how='left', on='id')
-# 
-# lata_bn = test_mag.copy()[['magazine', '008']]
-# lata_bn['008'] = lata_bn.groupby('magazine')['008'].transform(lambda x: ', '.join(x))
-# lata_bn = lata_bn.drop_duplicates()
-# lata_bn['008'] = lata_bn['008'].str.split(', ').apply(set).str.join(', ')
-# 
-# 
-# test_mag = test_mag['magazine'].value_counts().to_frame()
-# test_mag['title'] = test_mag.index
-# test_mag = test_mag.reset_index(drop=True)
-# 
-# 
-# ok_mag = dobre.copy()[['id', '773']]
-# ok_mag = marc_parser_1_field(ok_mag, 'id', '773', '\$')[['$t']]
-# ok_mag['$t'] = ok_mag['$t'].str.replace('\.$', '')
-# ok_mag.columns = ['magazine']
-# ok_mag = ok_mag['magazine'].value_counts().to_frame()
-# ok_mag['title'] = ok_mag.index
-# ok_mag = ok_mag.reset_index(drop=True)
-# 
-# test = pd.merge(test_mag, ok_mag, how='left', on='title')
-# test.columns = ['all', 'magazine', 'ok']
-# test = test[['magazine', 'all', 'ok']]
-# test['%'] = test['ok'] / test['all'] * 100
-# test = test.sort_values('%', ascending=False)
-# 
-# test.to_excel('test.xlsx', index=False)
-# =============================================================================
-
+bn_articles = bn_articles[bn_articles['decision'] == 'OK']
 
 
 
