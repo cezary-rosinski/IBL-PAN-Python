@@ -16,6 +16,7 @@ import glob
 from my_functions import f
 from my_functions import cosine_sim_2_elem
 from my_functions import get_cosine_result
+import itertools
 
 def chunks(l, n):
     for i in range(0, len(l), n):
@@ -60,11 +61,15 @@ pbl_magazines = pd.read_sql(pbl_query, connection)
     
 pbl_lista = pbl_magazines['ZR_TYTUL'].to_list()    
 bn_lista = bn_magazines['bn_magazine'].to_list()   
-import itertools
+
 combinations = list(itertools.product(pbl_lista, bn_lista))
 
 df = pd.DataFrame(combinations, columns=['pbl_magazine', 'bn_magazine'])
 df['similarity'] = df.apply(lambda x: get_cosine_result(x['pbl_magazine'], x['bn_magazine']), axis=1)
+df = df[df['similarity'] > 0.4].sort_values(['pbl_magazine', 'similarity'], ascending=[True, False])
+
+df.to_excel('mapowanie_czasopism_PBL_BN.xlsx', index=False)
+
 
 
 test = combinations[:100000]
