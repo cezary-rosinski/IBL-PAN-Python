@@ -15,55 +15,51 @@ from functools import reduce
 import glob
 from my_functions import f
 
-# =============================================================================
-# bn_magazines = gsheet_to_df('10-QUomq_H8v06H-yUhjO60hm45Wbo9DanJTemTgSUrA', 'Sheet1')[['ZRODLA_BN']]
-# bn_magazines['index'] = bn_magazines.index + 1
-# bn_magazines = cSplit(bn_magazines, 'index', 'ZRODLA_BN', ' \| ')['ZRODLA_BN'].tolist()
-# 
-# # path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/'
-# path = 'C:/Users/User/Documents/bn_all/'
-# files = [f for f in glob.glob(path + '*.mrk8', recursive=True)]
-# 
-# encoding = 'utf-8'
-# marc_df = pd.DataFrame()
-# for i, file_path in enumerate(files):
-#     print(str(i) + '/' + str(len(files)))
-#     marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
-#     marc_list = list(filter(None, marc_list))  
-#     df = pd.DataFrame(marc_list, columns = ['test'])
-#     df['field'] = df['test'].replace(r'(^.)(...)(.+?$)', r'\2', regex = True)
-#     df['content'] = df['test'].replace(r'(^.)(.....)(.+?$)', r'\3', regex = True)
-#     df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
-#     df['help'] = df['help'].ffill()
-#     df['magazine'] = df.apply(lambda x: f(x, '773'), axis=1)
-#     df['magazine'] = df.groupby('help')['magazine'].ffill().bfill()
-#     df = df[df['magazine'].notnull()]
-#     try:
-#         df['index'] = df.index + 1
-#         df_field = marc_parser_1_field(df, 'index', 'magazine', '\$')[['index', '$t']]
-#         df_field['$t'] = df_field['$t'].str.replace('\.$', '')
-#         df_field.columns = ['index', 'title']
-#         df = pd.merge(df, df_field, how='left', on='index')
-#         df = df[df['title'].isin(bn_magazines)].drop(columns=['magazine', 'index', 'title'])
-#     except AttributeError:
-#         pass
-#     if len(df) > 0:
-#         df['id'] = df.apply(lambda x: f(x, '009'), axis = 1)
-#         df['id'] = df.groupby('help')['id'].ffill().bfill()
-#         df = df[['id', 'field', 'content']]
-#         df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
-#         df = df.drop_duplicates().reset_index(drop=True)
-#         df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
-#         marc_df = marc_df.append(df_wide)
-#  
-# fields = marc_df.columns.tolist()
-# fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
-# marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
-# 
-# fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-# marc_df = marc_df.reindex(columns=fields)       
-# marc_df.to_excel('bn_articles.xlsx', index=False)
-# =============================================================================
+bn_magazines = gsheet_to_df('1V6BreA4_cEb3FRvv53E5ri2Yl1u3Z2x-yQxxBbAzCeo', 'Sheet1')
+bn_magazines = bn_magazines[bn_magazines['decyzja'] == 'tak']['bn_magazine'].tolist()
+
+# path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/'
+path = 'C:/Users/User/Documents/bn_all/'
+files = [f for f in glob.glob(path + '*.mrk8', recursive=True)]
+
+encoding = 'utf-8'
+marc_df = pd.DataFrame()
+for i, file_path in enumerate(files):
+    print(str(i) + '/' + str(len(files)))
+    marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+    marc_list = list(filter(None, marc_list))  
+    df = pd.DataFrame(marc_list, columns = ['test'])
+    df['field'] = df['test'].replace(r'(^.)(...)(.+?$)', r'\2', regex = True)
+    df['content'] = df['test'].replace(r'(^.)(.....)(.+?$)', r'\3', regex = True)
+    df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
+    df['help'] = df['help'].ffill()
+    df['magazine'] = df.apply(lambda x: f(x, '773'), axis=1)
+    df['magazine'] = df.groupby('help')['magazine'].ffill().bfill()
+    df = df[df['magazine'].notnull()]
+    try:
+        df['index'] = df.index + 1
+        df_field = marc_parser_1_field(df, 'index', 'magazine', '\$')[['index', '$t']]
+        df_field.columns = ['index', 'title']
+        df = pd.merge(df, df_field, how='left', on='index')
+        df = df[df['title'].isin(bn_magazines)].drop(columns=['magazine', 'index', 'title'])
+    except AttributeError:
+        pass
+    if len(df) > 0:
+        df['id'] = df.apply(lambda x: f(x, '009'), axis = 1)
+        df['id'] = df.groupby('help')['id'].ffill().bfill()
+        df = df[['id', 'field', 'content']]
+        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+        df = df.drop_duplicates().reset_index(drop=True)
+        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        marc_df = marc_df.append(df_wide)
+ 
+fields = marc_df.columns.tolist()
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
+
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+marc_df = marc_df.reindex(columns=fields)       
+marc_df.to_excel('bn_articles.xlsx', index=False)
         
 # SQL connection
 
