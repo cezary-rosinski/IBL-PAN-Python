@@ -57,7 +57,10 @@ pbl_query = """select zr.zr_zrodlo_id, zr.zr_tytul
             from IBL_OWNER.pbl_zrodla zr"""
 
 pbl_magazines = pd.read_sql(pbl_query, connection)
-  
+# =============================================================================
+# pbl_magazines_ok = gsheet_to_df('1V6BreA4_cEb3FRvv53E5ri2Yl1u3Z2x-yQxxBbAzCeo', 'Arkusz1')
+# pbl_magazines = pbl_magazines[~pbl_magazines['ZR_TYTUL'].isin(pbl_magazines_ok['pbl_magazine'])]
+# =============================================================================
     
 pbl_lista = pbl_magazines['ZR_TYTUL'].to_list()    
 bn_lista = bn_magazines['bn_magazine'].to_list()   
@@ -66,7 +69,7 @@ combinations = list(itertools.product(pbl_lista, bn_lista))
 
 df = pd.DataFrame(combinations, columns=['pbl_magazine', 'bn_magazine'])
 df['similarity'] = df.apply(lambda x: get_cosine_result(x['pbl_magazine'], x['bn_magazine']), axis=1)
-df = df[df['similarity'] > 0.4].sort_values(['pbl_magazine', 'similarity'], ascending=[True, False])
+df = df[df['similarity'] > 0.35].sort_values(['pbl_magazine', 'similarity'], ascending=[True, False])
 
 df.to_excel('mapowanie_czasopism_PBL_BN.xlsx', index=False)
 
