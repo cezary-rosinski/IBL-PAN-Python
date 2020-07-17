@@ -141,9 +141,9 @@ def seria(x):
     return val
 
 def seria2(row):
-    if pd.isnull(row[1]) and pd.notnull(row[0]):
-        val = '0\\$a' + row[0].strip()
-    elif pd.notnull(row[0]) and pd.notnull(row[1]):
+    if pd.isnull(row['490_1']) and pd.notnull(row['490_0']):
+        val = '0\\$a' + row['490_0'].strip()
+    elif pd.notnull(row['490_0']) and pd.notnull(row['490_1']):
         val = f"0\\$a{row[0]} ; $v{row[1]}".strip()
     else:
         val = np.nan
@@ -526,7 +526,7 @@ X490['490'] = X490['490'].apply(lambda x: re.sub('(\) )([a-zA-ZÀ-ž])', r'\1(\2
 X490 = cSplit(X490, 'rekord_id', '490', '#')
 X490['490'] = X490['490'].apply(lambda x: seria(x))
 X490 = cSplit(X490, 'rekord_id', '490', '❦', 'wide', 1)
-X490[1] = X490[1].str.replace(r'❦', '; ')
+X490['490_1'] = X490['490_1'].str.replace(r'❦', '; ')
 X490['490'] = X490.apply(lambda x: seria2(x), axis = 1)
 X490 = X490[['rekord_id', '490']]
 X490['490'] = X490.groupby('rekord_id')['490'].transform(lambda x: '❦'.join(x.dropna().str.strip()))
@@ -644,6 +644,8 @@ X787['787'] = X787.groupby('rekord_id')['787'].transform(lambda x: '❦'.join(x)
 X787 = X787.drop_duplicates()
 X787 = pd.merge(X787, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X856 = pbl_relations[pbl_relations['zapis_typ'] == 'KS'][['rekord_id', '856']]
+X856['856'] = X856.groupby('rekord_id')['856'].transform(lambda x: '❦'.join(x))
+X856 = X856.drop_duplicates()
 X856 = pd.merge(X856, pbl_books[['rekord_id']].drop_duplicates(),  how='right', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X995 = pbl_books[['rekord_id', 'ZA_RO_ROK']].drop_duplicates().reset_index(drop=True)
 X995['995'] = X995['ZA_RO_ROK'].apply(lambda x: book_collection(x))
@@ -661,6 +663,8 @@ pbl_marc_books.to_excel('pbl_marc_books.xlsx', index=False)
 # pbl_marc_books = pd.read_excel('pbl_marc_books.xlsx')
 
 df_to_mrc(pbl_marc_books, '❦', 'pbl_marc_books.mrc')
+
+test = pbl_marc_books.copy().head(10)
 
 # PBL articles
 
@@ -857,6 +861,8 @@ X787['787'] = X787.groupby('rekord_id')['787'].transform(lambda x: '❦'.join(x)
 X787 = X787.drop_duplicates()
 X787 = pd.merge(X787, pbl_articles[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X856 = pbl_relations[pbl_relations['zapis_typ'].isin(['IZA', 'PU'])][['rekord_id', '856']]
+X856['856'] = X856.groupby('rekord_id')['856'].transform(lambda x: '❦'.join(x))
+X856 = X856.drop_duplicates()
 X856 = pd.merge(X856, pbl_articles[['rekord_id']].drop_duplicates(),  how='right', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X995 = pbl_articles[['rekord_id']].drop_duplicates().reset_index(drop=True)
 X995['995'] = '\\\\$aPBL 1989-2003: książki i czasopisma'
