@@ -1,3 +1,4 @@
+# do treści tytułu dać też zawartość pola tomy, jeśli nie jest puste
 import cx_Oracle
 import pandas as pd
 from my_functions import gsheet_to_df
