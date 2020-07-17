@@ -263,7 +263,7 @@ def df_to_mrc(df, delimiter, path_out):
     mrc_errors = []
     df = df.replace(r'^\s*$', np.nan, regex=True)
     outputfile = open(path_out, 'wb')
-    errorfile = open('marc_errors.txt', 'wt')
+    errorfile = io.open('marc_errors.txt', 'wt', encoding='UTF-8')
     for index, row in enumerate(df.iterrows()):
         try: 
             print(str(index) + '/' + str(len(df)))
@@ -310,7 +310,7 @@ def df_to_mrc(df, delimiter, path_out):
     errorfile.close()
     outputfile.close()
     
-def mrk_to_df(path_in, field_with_id, encoding='utf-8'):
+def mrk_to_df(path_in, field_with_id, encoding='UTF-8'):
     reader = io.open(path_in, 'rt', encoding = encoding).read().splitlines()
     mrk_list = []
     for row in reader:

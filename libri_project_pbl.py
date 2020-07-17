@@ -1,4 +1,3 @@
-# do treści tytułu dać też zawartość pola tomy, jeśli nie jest puste
 import cx_Oracle
 import pandas as pd
 from my_functions import gsheet_to_df
@@ -308,7 +307,7 @@ connection = cx_Oracle.connect(user='IBL_SELECT', password='CR333444', dsn=dsn_t
 
 # PBL queries
 
-pbl_books_query = """select z.za_zapis_id "rekord_id", z.za_type "typ", rz.rz_rodzaj_id "rodzaj_zapisu_id", rz.rz_nazwa "rodzaj_zapisu", dz.dz_dzial_id "dzial_id", dz.dz_nazwa "dzial", to_char(tw.tw_tworca_id) "tworca_id", tw.tw_nazwisko "tworca_nazwisko", tw.tw_imie "tworca_imie", to_char(a.am_autor_id) "autor_id", a.am_nazwisko "autor_nazwisko", a.am_imie "autor_imie", z.za_tytul "tytul", z.za_opis_wspoltworcow "wspoltworcy", fo.fo_nazwa "funkcja_osoby", to_char(os.os_osoba_id) "wspoltworca_id", os.os_nazwisko "wspoltworca_nazwisko", os.os_imie "wspoltworca_imie", z.za_adnotacje "adnotacja", z.za_adnotacje2 "adnotacja2", z.za_adnotacje3 "adnotacja3", w.wy_nazwa "wydawnictwo", w.wy_miasto "miejscowosc", z.za_rok_wydania "rok_wydania", z.za_opis_fizyczny_ksiazki "opis_fizyczny", z.za_uzytk_wpisal, z.za_ro_rok, z.za_tytul_oryginalu, z.za_wydanie, z.za_instytucja, z.za_seria_wydawnicza, z.za_te_teatr_id,z.ZA_UZYTK_WPIS_DATA,z.ZA_UZYTK_MOD_DATA
+pbl_books_query = """select z.za_zapis_id "rekord_id", z.za_type "typ", rz.rz_rodzaj_id "rodzaj_zapisu_id", rz.rz_nazwa "rodzaj_zapisu", dz.dz_dzial_id "dzial_id", dz.dz_nazwa "dzial", to_char(tw.tw_tworca_id) "tworca_id", tw.tw_nazwisko "tworca_nazwisko", tw.tw_imie "tworca_imie", to_char(a.am_autor_id) "autor_id", a.am_nazwisko "autor_nazwisko", a.am_imie "autor_imie", z.za_tytul "tytul", z.za_opis_wspoltworcow "wspoltworcy", fo.fo_nazwa "funkcja_osoby", to_char(os.os_osoba_id) "wspoltworca_id", os.os_nazwisko "wspoltworca_nazwisko", os.os_imie "wspoltworca_imie", z.za_adnotacje "adnotacja", z.za_adnotacje2 "adnotacja2", z.za_adnotacje3 "adnotacja3", w.wy_nazwa "wydawnictwo", w.wy_miasto "miejscowosc", z.za_rok_wydania "rok_wydania", z.za_opis_fizyczny_ksiazki "opis_fizyczny", z.za_uzytk_wpisal, z.za_ro_rok, z.za_tytul_oryginalu, z.za_wydanie, z.za_instytucja, z.za_seria_wydawnicza, z.za_tomy, z.za_te_teatr_id,z.ZA_UZYTK_WPIS_DATA,z.ZA_UZYTK_MOD_DATA
                     from pbl_zapisy z
                     full outer join IBL_OWNER.pbl_zapisy_tworcy zt on zt.zatw_za_zapis_id=z.za_zapis_id
                     full outer join IBL_OWNER.pbl_tworcy tw on zt.zatw_tw_tworca_id=tw.tw_tworca_id
@@ -323,8 +322,7 @@ pbl_books_query = """select z.za_zapis_id "rekord_id", z.za_type "typ", rz.rz_ro
                     full outer join IBL_OWNER.pbl_funkcje_osob fo on fo.fo_symbol=uo.uo_fo_symbol
                     where (z.za_status_imp is null OR z.za_status_imp like 'IOK')
                     and z.za_type like 'KS'"""                
-pbl_relations_query = """select z1.za_zapis_id "zapis_id", z1.za_type "zapis_typ", rz1.rz_nazwa "zapis_rodzaj", case when a1.am_nazwisko||' '||a1.am_imie like ' ' then '[no author]' else a1.am_nazwisko||' '||a1.am_imie end "zapis_autor", nvl(z1.za_tytul, '[no title]') "zapis_tyt", zrr1.zrr_tytul "zapis_czas_tyt", 
-zrr1.zrr_miejsce_wydania "zapis_czas_miejsc", z1.za_zrodlo_rok "zapis_rok", z1.za_zrodlo_nr "zapis_nr", z1.za_zrodlo_str "zapis_str", w1.wy_nazwa "zapis_wyd_nazw", w1.wy_miasto "zapis_wyd_miejsc", z1.za_ro_rok "zapis_rocznik",
+pbl_relations_query = """select z1.za_zapis_id "zapis_id", z1.za_type "zapis_typ", rz1.rz_nazwa "zapis_rodzaj", case when a1.am_nazwisko||' '||a1.am_imie like ' ' then '[no author]' else a1.am_nazwisko||' '||a1.am_imie end "zapis_autor", nvl(z1.za_tytul, '[no title]') "zapis_tyt", zrr1.zrr_tytul "zapis_czas_tyt", zrr1.zrr_miejsce_wydania "zapis_czas_miejsc", z1.za_zrodlo_rok "zapis_rok", z1.za_zrodlo_nr "zapis_nr", z1.za_zrodlo_str "zapis_str", w1.wy_nazwa "zapis_wyd_nazw", w1.wy_miasto "zapis_wyd_miejsc", z1.za_ro_rok "zapis_rocznik",
 z2.za_zapis_id "zapis_odwolanie_id", z2.za_type "zapis_odwolanie_typ", rz2.rz_nazwa "zapis_odwolanie_rodzaj", case when rz2.rz_nazwa like 'utwór' and t2.tw_nazwisko||' '||t2.tw_imie not like ' ' then t2.tw_nazwisko||' '||t2.tw_imie when a2.am_nazwisko||' '||a2.am_imie like ' ' then '[no author]' else a2.am_nazwisko||' '||a2.am_imie end "zapis_odwolanie_autor", nvl(z2.za_tytul, '[no title]') "zapis_odwolanie_tyt", zrr2.zrr_tytul "zapis_odwolanie_czas_tyt", zrr2.zrr_miejsce_wydania "zapis_odwolanie_czas_miejsc", z2.za_zrodlo_rok "zapis_odwolanie_rok", z2.za_zrodlo_nr "zapis_odwolanie_nr", z2.za_zrodlo_str "zapis_odwolanie_str", 
 w2.wy_nazwa "zapis_odwolanie_wyd_nazw", w2.wy_miasto "zapis_odwolanie_wyd_miejsc", z2.za_ro_rok "zapis_odwolanie_rocznik"
                     from pbl_zapisy z1
@@ -459,8 +457,6 @@ pbl_books = pd.merge(pbl_books, pbl_marc_roles,  how='left', left_on = 'funkcja_
 
 # PBL books fields
 
-#najpierw stworzenie tabeli, a potem iterowanie po wierszach, żeby tworzyć rekordy MARC
-
 LDR = '-----nam---------4u-----'
 X001 = pbl_books[['rekord_id']].drop_duplicates()
 X001['001'] = pbl_books['rekord_id'].apply(lambda x: 'pl' + '{:09d}'.format(x))
@@ -496,8 +492,8 @@ X100.columns = ['100', '700', 'rekord_id']
 X240 = pbl_books[['rekord_id', 'ZA_TYTUL_ORYGINALU']].drop_duplicates()
 X240.columns = ['rekord_id', '240']
 X240['240'] = '\\\\$a' + X240['240'].str.replace('^(.*?\])(.*$)',r'\1', regex=True).str.replace('^\[|\]$', '', regex=True)
-X245 = pbl_books[['rekord_id', 'autor_nazwisko', 'autor_imie', 'tytul', 'wspoltworcy', 'ZA_INSTYTUCJA']].drop_duplicates()    
-X245['tytul_ok'] = X245.apply(lambda x: '10$a' + clear_tytul(x), axis=1)  
+X245 = pbl_books[['rekord_id', 'autor_nazwisko', 'autor_imie', 'tytul', 'wspoltworcy', 'ZA_INSTYTUCJA', 'ZA_TOMY']].drop_duplicates()    
+X245['tytul_ok'] = X245.apply(lambda x: '10$a' + clear_tytul(x) + '$n' + x['ZA_TOMY'] if pd.notnull(x['ZA_TOMY']) else '10$a' + clear_tytul(x), axis=1)  
 X245['autor'] = X245.apply(lambda x: autor_245(x), axis=1)
 X245 = X245[['rekord_id', 'tytul_ok', 'autor', 'wspoltworcy', 'ZA_INSTYTUCJA']]
 X245['tytul_ok'] = X245.groupby('rekord_id')['tytul_ok'].transform(lambda x: '❦'.join(x.drop_duplicates().dropna().str.strip()))
@@ -508,6 +504,7 @@ X245['ZA_INSTYTUCJA'] = X245.groupby('rekord_id')['ZA_INSTYTUCJA'].transform(lam
 X245['245'] = X245.apply(lambda x: f"{x['tytul_ok']} /{x['autor']} ; {x['wspoltworcy']} ; {x['ZA_INSTYTUCJA']}.", axis=1)
 X245['245'] = X245['245'].apply(lambda x: re.sub('( ;  ; )(\.)|( ;   ; )(\.)|( ; )(\.)|', r'\2', x)).apply(lambda x: re.sub('^\.$', '', x))
 X245 = X245[['rekord_id', '245']].drop_duplicates()
+X245['245'] = X245['245'].str.replace('( ; )+', ' ; ')
 X250 = pbl_books[['rekord_id', 'ZA_WYDANIE']].drop_duplicates()
 X250.columns = ['rekord_id', '250']
 X250['250'] = X250['250'].apply(lambda x: '\\\\$a' + x if pd.notnull(x) else np.nan)
@@ -752,6 +749,7 @@ X245['wspoltworcy'] = X245.groupby('rekord_id')['wspoltworcy'].transform(lambda 
 X245['245'] = X245.apply(lambda x: f"{x['tytul_ok']} /{x['autor']} ; {x['wspoltworcy']}.", axis=1)
 X245['245'] = X245['245'].apply(lambda x: re.sub('( ;  ; )(\.)|( ;   ; )(\.)|( ; )(\.)|', r'\2', x)).apply(lambda x: re.sub('^\.$', '', x))
 X245 = X245[['rekord_id', '245']].drop_duplicates()
+X245['245'] = X245['245'].str.replace('( ; )+', ' ; ')
 X520 = pbl_articles[['rekord_id', 'adnotacja', 'adnotacja2', 'adnotacja3']].drop_duplicates()
 X520['adnotacja'] = X520[X520.columns[1:]].apply(lambda x: ' '.join(x.dropna().astype(str).str.strip()), axis=1).str.replace(' +', ' ')
 X520 = X520[['rekord_id', 'adnotacja']]
