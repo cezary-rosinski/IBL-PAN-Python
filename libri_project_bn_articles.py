@@ -59,7 +59,7 @@ marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
 
 fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 marc_df = marc_df.reindex(columns=fields)       
-marc_df.to_excel('bn_articles.xlsx', index=False)
+marc_df.to_csv('bn_articles.csv', index=False)
         
 # SQL connection
 
