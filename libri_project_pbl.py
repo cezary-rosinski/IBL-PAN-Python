@@ -448,223 +448,223 @@ pbl_sh2 = pbl_sh2.rename(columns = {'KH_NAZWA_x': 'KH_NAZWA'})
 pbl_subject_headings = pd.concat([pbl_sh1,pbl_sh2]).drop_duplicates(keep=False)
 del [pbl_sh1, pbl_sh2]
 
-# PBL books
-
-pbl_books = pd.merge(pbl_books, pbl_persons_index,  how='left', left_on = 'rekord_id', right_on = 'ODI_ZA_ZAPIS_ID') 
-pbl_books = pd.merge(pbl_books, pbl_subject_headings,  how='left', left_on = 'rekord_id', right_on = 'HZ_ZA_ZAPIS_ID') 
-pbl_books = pd.merge(pbl_books, pbl_viaf_names_dates,  how='left', left_on = 'tworca_id', right_on = 'pbl_id') 
-pbl_books = pd.merge(pbl_books, pbl_marc_roles,  how='left', left_on = 'funkcja_osoby', right_on = 'PBL_NAZWA').sort_values('rekord_id').reset_index(drop=True)
-
-# PBL books fields
-
-LDR = '-----nam---------4u-----'
-X001 = pbl_books[['rekord_id']].drop_duplicates()
-X001['001'] = pbl_books['rekord_id'].apply(lambda x: 'pl' + '{:09d}'.format(x))
-X005 = pbl_books[['rekord_id', 'ZA_UZYTK_MOD_DATA', 'ZA_UZYTK_WPIS_DATA']].drop_duplicates()
-X005.columns = ['rekord_id', '005', 'ZA_UZYTK_WPIS_DATA']
-X005['005'] = X005['005'].apply(lambda x: date_to_string(x))
-X005['ZA_UZYTK_WPIS_DATA'] = X005['ZA_UZYTK_WPIS_DATA'].apply(lambda x: date_to_string(x))
-X005['005'] = X005.apply(lambda x: proper_date(x), axis=1)
-X005 = X005[['rekord_id', '005']]
-X008 = pbl_books[['rekord_id', 'ZA_UZYTK_WPIS_DATA','ZA_RO_ROK', 'tytul']].drop_duplicates()
-X008['ZA_UZYTK_WPIS_DATA'] = X008['ZA_UZYTK_WPIS_DATA'].apply(lambda x: date_to_string2(x))
-#czy to rozwiązanie jest okej?
-X008['tytul'] = X008.apply(lambda x: clear_tytul(x), axis=1)    
-X008['language'] = X008['tytul'].apply(lambda x: title_lang(x))
-X008 = pd.merge(X008, language_codes[['country code', 'language code']],  how='left', left_on = 'language', right_on = 'country code')
-X008 = X008.iloc[:, [0, 1, 2, 3, 6]]
-X008['language code'] = X008['language code'].apply(lambda x: '  -d' if pd.isnull(x) else x)
-X008['008'] = X008.apply(lambda x: f"{x['ZA_UZYTK_WPIS_DATA']}s{x['ZA_RO_ROK']}----                    {x['language code']}", axis = 1)
-X008 = X008[['rekord_id', '008']]
-X040 = '\\\\$aIBL$bpol'
-X100 = pbl_books[['rekord_id', 'rodzaj_zapisu', 'tworca_nazwisko', 'tworca_imie', 'autor_nazwisko', 'autor_imie', '$a', '$d', '$0']].drop_duplicates()
-X100['tworca_nazwisko'] = X100.apply(lambda x: tworca_nazwisko_100(x), axis=1)
-X100['tworca_imie'] = X100.apply(lambda x: tworca_imie_100(x), axis=1)
-X100['100'] = X100.apply(lambda x: x100(x), axis=1)     
-X100 = X100[['rekord_id', '100']].drop_duplicates()
-X100['100'] = X100['100'].str.replace('..nan', '')
-X100['100'] = X100.groupby('rekord_id')['100'].transform(lambda x: '❦'.join(x.dropna().str.strip()))
-X100 = X100.drop_duplicates().reset_index(drop=True)
-X100 = pd.DataFrame(X100['100'].str.split('❦', 1).tolist(), index=X100['rekord_id'])
-X100['rekord_id'] = X100.index
-X100 = X100.reset_index(drop=True).fillna(value=np.nan).replace(r'^\s*$', np.nan, regex=True)
-X100.columns = ['100', '700', 'rekord_id']
-X240 = pbl_books[['rekord_id', 'ZA_TYTUL_ORYGINALU']].drop_duplicates()
-X240.columns = ['rekord_id', '240']
-X240['240'] = '\\\\$a' + X240['240'].str.replace('^(.*?\])(.*$)',r'\1', regex=True).str.replace('^\[|\]$', '', regex=True)
-X245 = pbl_books[['rekord_id', 'autor_nazwisko', 'autor_imie', 'tytul', 'wspoltworcy', 'ZA_INSTYTUCJA', 'ZA_TOMY']].drop_duplicates()    
-X245['tytul_ok'] = X245.apply(lambda x: '10$a' + clear_tytul(x) + '$n' + x['ZA_TOMY'] if pd.notnull(x['ZA_TOMY']) else '10$a' + clear_tytul(x), axis=1)  
-X245['autor'] = X245.apply(lambda x: autor_245(x), axis=1)
-X245 = X245[['rekord_id', 'tytul_ok', 'autor', 'wspoltworcy', 'ZA_INSTYTUCJA']]
-X245['tytul_ok'] = X245.groupby('rekord_id')['tytul_ok'].transform(lambda x: '❦'.join(x.drop_duplicates().dropna().str.strip()))
-X245['autor'] = X245.groupby('rekord_id')['autor'].transform(lambda x: '❦'.join(x.drop_duplicates().dropna().str.strip()))
-X245['autor'] = X245['autor'].str.replace('\❦\$c', ', ', regex=True)
-X245['wspoltworcy'] = X245.groupby('rekord_id')['wspoltworcy'].transform(lambda x: '❦'.join(x.drop_duplicates().dropna().str.strip()))
-X245['ZA_INSTYTUCJA'] = X245.groupby('rekord_id')['ZA_INSTYTUCJA'].transform(lambda x: '❦'.join(x.drop_duplicates().dropna().str.strip()))
-X245['245'] = X245.apply(lambda x: f"{x['tytul_ok']} /{x['autor']} ; {x['wspoltworcy']} ; {x['ZA_INSTYTUCJA']}.", axis=1)
-X245['245'] = X245['245'].apply(lambda x: re.sub('( ;  ; )(\.)|( ;   ; )(\.)|( ; )(\.)|', r'\2', x)).apply(lambda x: re.sub('^\.$', '', x))
-X245 = X245[['rekord_id', '245']].drop_duplicates()
-X245['245'] = X245['245'].str.replace('( ; )+', ' ; ')
-X250 = pbl_books[['rekord_id', 'ZA_WYDANIE']].drop_duplicates()
-X250.columns = ['rekord_id', '250']
-X250['250'] = X250['250'].apply(lambda x: '\\\\$a' + x if pd.notnull(x) else np.nan)
-X264 = pbl_books[['rekord_id', 'wydawnictwo', 'miejscowosc', 'ZA_RO_ROK']].drop_duplicates()
-X264['264'] = X264.apply(lambda x: wydawnictwo(x), axis=1)
-X264 = X264[['rekord_id', '264', 'ZA_RO_ROK']]
-X264['264'] = X264.groupby('rekord_id')['264'].transform(lambda x: '; '.join(x.dropna().str.strip()))
-X264['ZA_RO_ROK'] = X264.groupby('rekord_id')['ZA_RO_ROK'].transform(lambda x: '❦'.join(x.drop_duplicates().dropna().astype(str).str.strip()))
-X264 = X264.drop_duplicates()
-X264['264'] = X264['264'] + ',$c' + X264['ZA_RO_ROK']
-X264 = X264[['rekord_id', '264']]
-X300 = pbl_books[['rekord_id', 'opis_fizyczny']].drop_duplicates()
-X300.columns = ['rekord_id', '300']
-X300['300'] = X300['300'].apply(lambda x: opis_fiz(x))
-X490 = pbl_books[['rekord_id', 'ZA_SERIA_WYDAWNICZA']].drop_duplicates()
-X490.columns = ['rekord_id', '490']
-X490['490'] = X490['490'].str.replace('^ {0,}\(', '', regex=True).str.replace('\)\.{0,1}$', '', regex=True).str.replace('\);{0,1} {0,1}\(', '#', regex=True).str.replace('(\d+)(\. )', r'\1\2#', regex=True)
-X490['490'] = X490['490'].apply(lambda x: re.sub('(\) )([a-zA-ZÀ-ž])', r'\1(\2', x) if pd.notnull(x) and re.findall('\) [a-zA-ZÀ-ž]', x) and not re.findall('\(', x) else x).str.replace('\) \(', '#', regex=True)
-X490 = cSplit(X490, 'rekord_id', '490', '#')
-X490['490'] = X490['490'].apply(lambda x: seria(x))
-X490 = cSplit(X490, 'rekord_id', '490', '❦', 'wide', 1)
-X490['490_1'] = X490['490_1'].str.replace(r'❦', '; ')
-X490['490'] = X490.apply(lambda x: seria2(x), axis = 1)
-X490 = X490[['rekord_id', '490']]
-X490['490'] = X490.groupby('rekord_id')['490'].transform(lambda x: '❦'.join(x.dropna().str.strip()))
-X490 = X490.drop_duplicates()
-X520 = pbl_books[['rekord_id', 'adnotacja', 'adnotacja2', 'adnotacja3']].drop_duplicates()
-X520['adnotacja'] = X520[X520.columns[1:]].apply(lambda x: ' '.join(x.dropna().astype(str).str.strip()), axis=1).str.replace(' +', ' ')
-X520 = X520[['rekord_id', 'adnotacja']]
-X520['adnotacja'] = X520['adnotacja'].apply(lambda x: '2\\$a' + re.sub('\n', '', re.sub(' +', ' ', x)) if x != '' else np.nan)
-X520.columns = ['rekord_id', '520']
-X590 = pbl_books[['rekord_id', 'rodzaj_zapisu']].drop_duplicates()
-X590.columns = ['rekord_id', '590']
-X590['590'] = X590['590'].apply(lambda x: f"\\\\$a{x}")
-X600 = pbl_books[['rekord_id', 'rodzaj_zapisu', 'tworca_nazwisko', 'tworca_imie', '$a', '$d', '$0']].drop_duplicates()
-X600 = X600.loc[(X600['rodzaj_zapisu'] == 'książka o twórcy (przedmiotowa)') &
-                (X600['tworca_nazwisko'].notnull())]
-X600['tworca_nazwisko'] = X600.apply(lambda x: x['tworca_nazwisko'].replace(',', '❦') if pd.notnull(x['tworca_nazwisko']) and ',' in x['tworca_nazwisko'] and x['tworca_imie'] == '*' else x['tworca_nazwisko'], axis=1)
-X600['tworca_imie'] = X600.apply(lambda x: '' if pd.notnull(x['tworca_nazwisko']) and x['tworca_imie'] == '*' else x['tworca_imie'], axis=1)
-X600 = cSplit(X600, 'rekord_id', 'tworca_nazwisko', '❦')
-for column in X600:
-    X600[column] = X600[column].apply(lambda x: x.strip() if isinstance(x, str) else x)
-X600['600'] = X600.apply(lambda x: x600(x), axis=1)
-X600 = X600[['rekord_id', '600']].drop_duplicates()
-X600['600'] = X600.groupby('rekord_id')['600'].transform(lambda x: '❦'.join(x))
-X600 = X600.drop_duplicates()
-X600 = pd.merge(X600, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', left_on = 'rekord_id', right_on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
-X610 = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
-pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '24,61']
-X610 = pd.merge(X610, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
-X610['610'] = X610.apply(lambda x: f"24$a{x['HP_NAZWA']}, {x['KH_NAZWA']}" if pd.notnull(x['KH_NAZWA']) else f"24$a{x['HP_NAZWA']}", axis=1)
-X610 = X610[['rekord_id', '610']]
-X610['610'] = X610.groupby('rekord_id')['610'].transform(lambda x: '❦'.join(x))
-X610 = X610.drop_duplicates()
-X610 = pd.merge(X610, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
-X611 = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
-pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '24,611']
-X611 = pd.merge(X611, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
-X611['611'] = X611.apply(lambda x: f"24$a{x['HP_NAZWA']}, {x['KH_NAZWA']}" if pd.notnull(x['KH_NAZWA']) else f"24$a{x['HP_NAZWA']}", axis=1)
-X611 = X611[['rekord_id', '611']]
-X611['611'] = X611.groupby('rekord_id')['611'].transform(lambda x: '❦'.join(x))
-X611 = X611.drop_duplicates()
-X611 = pd.merge(X611, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
-X630a = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
-pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '4,63']
-X630a = pd.merge(X630a, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
-X630a['630'] = X630a.apply(lambda x: f"\\4$a{x['HP_NAZWA']}, {x['KH_NAZWA']}" if pd.notnull(x['KH_NAZWA']) else f"\\4$a{x['HP_NAZWA']}", axis=1)
-X630a = X630a[['rekord_id', '630']]
-X630a['630'] = X630a.groupby('rekord_id')['630'].transform(lambda x: '❦'.join(x))
-X630a = X630a.drop_duplicates()
-X630b = pbl_books[['rekord_id', 'dzial']].drop_duplicates()
-X630b['dzial'] = X630b['dzial'].str.replace('(.*?)( - [A-ZÀ-Ž]$)', r'\1', regex=True)
-pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '4,63'][['HP_NAZWA', 'MARC_FIELD']]
-X630b = pd.merge(X630b, pbl_sh_test,  how='inner', left_on = 'dzial', right_on = 'HP_NAZWA').reset_index(drop=True)
-X630b['630'] = '\\4$a' + X630b['dzial']
-X630b = X630b[['rekord_id', '630']]
-X630 = pd.concat([X630a, X630b])
-del [X630a, X630b]
-X630['630'] = X630.groupby('rekord_id')['630'].transform(lambda x: '❦'.join(x.drop_duplicates()))
-X630 = X630.drop_duplicates()
-X630 = pd.merge(X630, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
-X650a = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
-pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'].isin(['4,65', '24,65'])]
-X650a = pd.merge(X650a, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
-X650a['650'] = X650a.apply(lambda x: x650(x), axis=1)
-X650a = X650a[['rekord_id', '650']]
-X650a['650'] = X650a.groupby('rekord_id')['650'].transform(lambda x: '❦'.join(x))
-X650a = X650a.drop_duplicates()
-X650b = pbl_books[['rekord_id', 'dzial']].drop_duplicates()
-X650b['dzial'] = X650b['dzial'].str.replace('(.*?)( - [A-ZA-Ž]$)', r'\1', regex=True)
-pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '4,65'][['HP_NAZWA', 'MARC_FIELD']]
-X650b = pd.merge(X650b, pbl_sh_test,  how='inner', left_on = 'dzial', right_on = 'HP_NAZWA').reset_index(drop=True)
-X650b['650'] = '04$a' + X650b['dzial']
-X650b = X650b[['rekord_id', '650']]
-X650b['650'] = X650b.groupby('rekord_id')['650'].transform(lambda x: '❦'.join(x))
-X650b = X650b.drop_duplicates()
-X650 = pd.concat([X650a, X650b])
-del [X650a, X650b]
-X650['650'] = X650.groupby('rekord_id')['650'].transform(lambda x: '❦'.join(x.drop_duplicates()))
-X650 = X650.drop_duplicates()
-X650 = pd.merge(X650, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
-X651 = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
-pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '4,651']
-X651 = pd.merge(X651, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
-X651['651'] = X651.apply(lambda x: f"\\4$a{x['HP_NAZWA']}, {x['KH_NAZWA']}" if pd.notnull(x['KH_NAZWA']) else f"\\4$a{x['HP_NAZWA']}", axis=1)
-X651 = X651[['rekord_id', '651']]
-X651['651'] = X651.groupby('rekord_id')['651'].transform(lambda x: '❦'.join(x))
-X651 = X651.drop_duplicates()
-X651 = pd.merge(X651, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
-X655 = pbl_books[['rekord_id', 'tytul']].drop_duplicates()
-X655['655'] = X655['tytul'].apply(lambda x: '❦'.join(re.findall('(?<!^.)(?<=\[)(.*?)(?=\])', x)).strip() if pd.notnull(x) else np.nan)
-X655 = X655[['rekord_id', '655']]
-X655 = cSplit(X655, 'rekord_id', '655', '❦')
-X655['655'] = X655['655'].apply(lambda x: f"\\4$a{x}" if pd.notnull(x) else np.nan)
-X655['655'] = X655.groupby('rekord_id')['655'].transform(lambda x: '❦'.join(x.dropna()))
-X655 = X655.drop_duplicates().reset_index(drop=True).replace(r'^\s*$', np.nan, regex=True)
-X700 = pbl_books[['rekord_id', 'funkcja_osoby', 'wspoltworca_nazwisko', 'wspoltworca_imie', 'MARC_ABBREVIATION']].drop_duplicates()
-X700['MARC_ABBREVIATION'] = X700['MARC_ABBREVIATION'].apply(lambda x: re.sub('(^|(?<=\❦))', r'$4', x) if pd.notnull(x) else np. nan).str.replace('❦', '')
-X700['700'] = X700.apply(lambda x: x700(x), axis=1)
-X700 = X700[['rekord_id', '700']]
-from100 = X100.loc[X100['700'].notnull()][['rekord_id', '700']]
-from100 = cSplit(from100, 'rekord_id', '700', '❦')
-X700 = X700.append(from100, ignore_index=True).sort_values('rekord_id').reset_index(drop=True)
-X700['700'] = X700.groupby('rekord_id')['700'].transform(lambda x: '❦'.join(x.dropna().str.strip()))
-X700 = X700.drop_duplicates().reset_index(drop=True).replace(r'^\s*$', np.nan, regex=True)
-X100 = X100[['rekord_id', '100']]
-X710 = pbl_books[['rekord_id', 'ZA_INSTYTUCJA']].drop_duplicates().reset_index(drop=True)
-X710.columns = ['rekord_id', '710']
-X710['710'] = X710['710'].apply(lambda x: f"24$a{x}$4isp" if pd.notnull(x) else np.nan)
-X787 = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
-pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '787']
-X787 = pd.merge(X787, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
-X787['787'] = X787.apply(lambda x: f"{x['HP_NAZWA']}, {x['KH_NAZWA']}" if pd.notnull(x['KH_NAZWA']) else f"{x['HP_NAZWA']}", axis=1)
-X787 = X787[['rekord_id', '787']]
-X787['787'] = X787['787'].apply(lambda x: f"\\\\$a{x}")
-X787['787'] = X787.groupby('rekord_id')['787'].transform(lambda x: '❦'.join(x))
-X787 = X787.drop_duplicates()
-X787 = pd.merge(X787, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
-X856 = pbl_relations[pbl_relations['zapis_typ'] == 'KS'][['rekord_id', '856']]
-X856['856'] = X856.groupby('rekord_id')['856'].transform(lambda x: '❦'.join(x))
-X856 = X856.drop_duplicates()
-X856 = pd.merge(X856, pbl_books[['rekord_id']].drop_duplicates(),  how='right', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
-X995 = pbl_books[['rekord_id', 'ZA_RO_ROK']].drop_duplicates().reset_index(drop=True)
-X995['995'] = X995['ZA_RO_ROK'].apply(lambda x: book_collection(x))
-X995 = X995[['rekord_id', '995']]
-dfs = [X001, X005, X008, X100, X240, X245, X250, X264, X300, X490, X520, X590, X600, X610, X611, X630, X650, X651, X655, X700, X787, X856, X995]
-pbl_marc_books = reduce(lambda left,right: pd.merge(left,right,on='rekord_id'), dfs)
-pbl_marc_books['LDR'] = LDR
-pbl_marc_books['040'] = X040
-del pbl_marc_books['rekord_id']
-columns_list = pbl_marc_books.columns.tolist()
-columns_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-pbl_marc_books = pbl_marc_books.reindex(columns=columns_list)
-
-pbl_marc_books.to_excel('pbl_marc_books.xlsx', index=False)
-# pbl_marc_books = pd.read_excel('pbl_marc_books.xlsx')
-
-df_to_mrc(pbl_marc_books, '❦', 'pbl_marc_books.mrc')
-
-test = pbl_marc_books.copy().head(10)
+# =============================================================================
+# # PBL books
+# 
+# pbl_books = pd.merge(pbl_books, pbl_persons_index,  how='left', left_on = 'rekord_id', right_on = 'ODI_ZA_ZAPIS_ID') 
+# pbl_books = pd.merge(pbl_books, pbl_subject_headings,  how='left', left_on = 'rekord_id', right_on = 'HZ_ZA_ZAPIS_ID') 
+# pbl_books = pd.merge(pbl_books, pbl_viaf_names_dates,  how='left', left_on = 'tworca_id', right_on = 'pbl_id') 
+# pbl_books = pd.merge(pbl_books, pbl_marc_roles,  how='left', left_on = 'funkcja_osoby', right_on = 'PBL_NAZWA').sort_values('rekord_id').reset_index(drop=True)
+# 
+# # PBL books fields
+# 
+# LDR = '-----nam---------4u-----'
+# X001 = pbl_books[['rekord_id']].drop_duplicates()
+# X001['001'] = pbl_books['rekord_id'].apply(lambda x: 'pl' + '{:09d}'.format(x))
+# X005 = pbl_books[['rekord_id', 'ZA_UZYTK_MOD_DATA', 'ZA_UZYTK_WPIS_DATA']].drop_duplicates()
+# X005.columns = ['rekord_id', '005', 'ZA_UZYTK_WPIS_DATA']
+# X005['005'] = X005['005'].apply(lambda x: date_to_string(x))
+# X005['ZA_UZYTK_WPIS_DATA'] = X005['ZA_UZYTK_WPIS_DATA'].apply(lambda x: date_to_string(x))
+# X005['005'] = X005.apply(lambda x: proper_date(x), axis=1)
+# X005 = X005[['rekord_id', '005']]
+# X008 = pbl_books[['rekord_id', 'ZA_UZYTK_WPIS_DATA','ZA_RO_ROK', 'tytul']].drop_duplicates()
+# X008['ZA_UZYTK_WPIS_DATA'] = X008['ZA_UZYTK_WPIS_DATA'].apply(lambda x: date_to_string2(x))
+# #czy to rozwiązanie jest okej?
+# X008['tytul'] = X008.apply(lambda x: clear_tytul(x), axis=1)    
+# X008['language'] = X008['tytul'].apply(lambda x: title_lang(x))
+# X008 = pd.merge(X008, language_codes[['country code', 'language code']],  how='left', left_on = 'language', right_on = 'country code')
+# X008 = X008.iloc[:, [0, 1, 2, 3, 6]]
+# X008['language code'] = X008['language code'].apply(lambda x: '  -d' if pd.isnull(x) else x)
+# X008['008'] = X008.apply(lambda x: f"{x['ZA_UZYTK_WPIS_DATA']}s{x['ZA_RO_ROK']}----                    {x['language code']}", axis = 1)
+# X008 = X008[['rekord_id', '008']]
+# X040 = '\\\\$aIBL$bpol'
+# X100 = pbl_books[['rekord_id', 'rodzaj_zapisu', 'tworca_nazwisko', 'tworca_imie', 'autor_nazwisko', 'autor_imie', '$a', '$d', '$0']].drop_duplicates()
+# X100['tworca_nazwisko'] = X100.apply(lambda x: tworca_nazwisko_100(x), axis=1)
+# X100['tworca_imie'] = X100.apply(lambda x: tworca_imie_100(x), axis=1)
+# X100['100'] = X100.apply(lambda x: x100(x), axis=1)     
+# X100 = X100[['rekord_id', '100']].drop_duplicates()
+# X100['100'] = X100['100'].str.replace('..nan', '')
+# X100['100'] = X100.groupby('rekord_id')['100'].transform(lambda x: '❦'.join(x.dropna().str.strip()))
+# X100 = X100.drop_duplicates().reset_index(drop=True)
+# X100 = pd.DataFrame(X100['100'].str.split('❦', 1).tolist(), index=X100['rekord_id'])
+# X100['rekord_id'] = X100.index
+# X100 = X100.reset_index(drop=True).fillna(value=np.nan).replace(r'^\s*$', np.nan, regex=True)
+# X100.columns = ['100', '700', 'rekord_id']
+# X240 = pbl_books[['rekord_id', 'ZA_TYTUL_ORYGINALU']].drop_duplicates()
+# X240.columns = ['rekord_id', '240']
+# X240['240'] = '\\\\$a' + X240['240'].str.replace('^(.*?\])(.*$)',r'\1', regex=True).str.replace('^\[|\]$', '', regex=True)
+# X245 = pbl_books[['rekord_id', 'autor_nazwisko', 'autor_imie', 'tytul', 'wspoltworcy', 'ZA_INSTYTUCJA', 'ZA_TOMY']].drop_duplicates()    
+# X245['tytul_ok'] = X245.apply(lambda x: '10$a' + clear_tytul(x) + '$n' + x['ZA_TOMY'] if pd.notnull(x['ZA_TOMY']) else '10$a' + clear_tytul(x), axis=1)  
+# X245['autor'] = X245.apply(lambda x: autor_245(x), axis=1)
+# X245 = X245[['rekord_id', 'tytul_ok', 'autor', 'wspoltworcy', 'ZA_INSTYTUCJA']]
+# X245['tytul_ok'] = X245.groupby('rekord_id')['tytul_ok'].transform(lambda x: '❦'.join(x.drop_duplicates().dropna().str.strip()))
+# X245['autor'] = X245.groupby('rekord_id')['autor'].transform(lambda x: '❦'.join(x.drop_duplicates().dropna().str.strip()))
+# X245['autor'] = X245['autor'].str.replace('\❦\$c', ', ', regex=True)
+# X245['wspoltworcy'] = X245.groupby('rekord_id')['wspoltworcy'].transform(lambda x: '❦'.join(x.drop_duplicates().dropna().str.strip()))
+# X245['ZA_INSTYTUCJA'] = X245.groupby('rekord_id')['ZA_INSTYTUCJA'].transform(lambda x: '❦'.join(x.drop_duplicates().dropna().str.strip()))
+# X245['245'] = X245.apply(lambda x: f"{x['tytul_ok']} /{x['autor']} ; {x['wspoltworcy']} ; {x['ZA_INSTYTUCJA']}.", axis=1)
+# X245['245'] = X245['245'].apply(lambda x: re.sub('( ;  ; )(\.)|( ;   ; )(\.)|( ; )(\.)|', r'\2', x)).apply(lambda x: re.sub('^\.$', '', x))
+# X245 = X245[['rekord_id', '245']].drop_duplicates()
+# X245['245'] = X245['245'].str.replace('( ; )+', ' ; ')
+# X250 = pbl_books[['rekord_id', 'ZA_WYDANIE']].drop_duplicates()
+# X250.columns = ['rekord_id', '250']
+# X250['250'] = X250['250'].apply(lambda x: '\\\\$a' + x if pd.notnull(x) else np.nan)
+# X264 = pbl_books[['rekord_id', 'wydawnictwo', 'miejscowosc', 'ZA_RO_ROK']].drop_duplicates()
+# X264['264'] = X264.apply(lambda x: wydawnictwo(x), axis=1)
+# X264 = X264[['rekord_id', '264', 'ZA_RO_ROK']]
+# X264['264'] = X264.groupby('rekord_id')['264'].transform(lambda x: '; '.join(x.dropna().str.strip()))
+# X264['ZA_RO_ROK'] = X264.groupby('rekord_id')['ZA_RO_ROK'].transform(lambda x: '❦'.join(x.drop_duplicates().dropna().astype(str).str.strip()))
+# X264 = X264.drop_duplicates()
+# X264['264'] = X264['264'] + ',$c' + X264['ZA_RO_ROK']
+# X264 = X264[['rekord_id', '264']]
+# X300 = pbl_books[['rekord_id', 'opis_fizyczny']].drop_duplicates()
+# X300.columns = ['rekord_id', '300']
+# X300['300'] = X300['300'].apply(lambda x: opis_fiz(x))
+# X490 = pbl_books[['rekord_id', 'ZA_SERIA_WYDAWNICZA']].drop_duplicates()
+# X490.columns = ['rekord_id', '490']
+# X490['490'] = X490['490'].str.replace('^ {0,}\(', '', regex=True).str.replace('\)\.{0,1}$', '', regex=True).str.replace('\);{0,1} {0,1}\(', '#', regex=True).str.replace('(\d+)(\. )', r'\1\2#', regex=True)
+# X490['490'] = X490['490'].apply(lambda x: re.sub('(\) )([a-zA-ZÀ-ž])', r'\1(\2', x) if pd.notnull(x) and re.findall('\) [a-zA-ZÀ-ž]', x) and not re.findall('\(', x) else x).str.replace('\) \(', '#', regex=True)
+# X490 = cSplit(X490, 'rekord_id', '490', '#')
+# X490['490'] = X490['490'].apply(lambda x: seria(x))
+# X490 = cSplit(X490, 'rekord_id', '490', '❦', 'wide', 1)
+# X490['490_1'] = X490['490_1'].str.replace(r'❦', '; ')
+# X490['490'] = X490.apply(lambda x: seria2(x), axis = 1)
+# X490 = X490[['rekord_id', '490']]
+# X490['490'] = X490.groupby('rekord_id')['490'].transform(lambda x: '❦'.join(x.dropna().str.strip()))
+# X490 = X490.drop_duplicates()
+# X520 = pbl_books[['rekord_id', 'adnotacja', 'adnotacja2', 'adnotacja3']].drop_duplicates()
+# X520['adnotacja'] = X520[X520.columns[1:]].apply(lambda x: ' '.join(x.dropna().astype(str).str.strip()), axis=1).str.replace(' +', ' ')
+# X520 = X520[['rekord_id', 'adnotacja']]
+# X520['adnotacja'] = X520['adnotacja'].apply(lambda x: '2\\$a' + re.sub('\n', '', re.sub(' +', ' ', x)) if x != '' else np.nan)
+# X520.columns = ['rekord_id', '520']
+# X590 = pbl_books[['rekord_id', 'rodzaj_zapisu']].drop_duplicates()
+# X590.columns = ['rekord_id', '590']
+# X590['590'] = X590['590'].apply(lambda x: f"\\\\$a{x}")
+# X600 = pbl_books[['rekord_id', 'rodzaj_zapisu', 'tworca_nazwisko', 'tworca_imie', '$a', '$d', '$0']].drop_duplicates()
+# X600 = X600.loc[(X600['rodzaj_zapisu'] == 'książka o twórcy (przedmiotowa)') &
+#                 (X600['tworca_nazwisko'].notnull())]
+# X600['tworca_nazwisko'] = X600.apply(lambda x: x['tworca_nazwisko'].replace(',', '❦') if pd.notnull(x['tworca_nazwisko']) and ',' in x['tworca_nazwisko'] and x['tworca_imie'] == '*' else x['tworca_nazwisko'], axis=1)
+# X600['tworca_imie'] = X600.apply(lambda x: '' if pd.notnull(x['tworca_nazwisko']) and x['tworca_imie'] == '*' else x['tworca_imie'], axis=1)
+# X600 = cSplit(X600, 'rekord_id', 'tworca_nazwisko', '❦')
+# for column in X600:
+#     X600[column] = X600[column].apply(lambda x: x.strip() if isinstance(x, str) else x)
+# X600['600'] = X600.apply(lambda x: x600(x), axis=1)
+# X600 = X600[['rekord_id', '600']].drop_duplicates()
+# X600['600'] = X600.groupby('rekord_id')['600'].transform(lambda x: '❦'.join(x))
+# X600 = X600.drop_duplicates()
+# X600 = pd.merge(X600, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', left_on = 'rekord_id', right_on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
+# X610 = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
+# pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '24,61']
+# X610 = pd.merge(X610, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
+# X610['610'] = X610.apply(lambda x: f"24$a{x['HP_NAZWA']}, {x['KH_NAZWA']}" if pd.notnull(x['KH_NAZWA']) else f"24$a{x['HP_NAZWA']}", axis=1)
+# X610 = X610[['rekord_id', '610']]
+# X610['610'] = X610.groupby('rekord_id')['610'].transform(lambda x: '❦'.join(x))
+# X610 = X610.drop_duplicates()
+# X610 = pd.merge(X610, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
+# X611 = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
+# pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '24,611']
+# X611 = pd.merge(X611, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
+# X611['611'] = X611.apply(lambda x: f"24$a{x['HP_NAZWA']}, {x['KH_NAZWA']}" if pd.notnull(x['KH_NAZWA']) else f"24$a{x['HP_NAZWA']}", axis=1)
+# X611 = X611[['rekord_id', '611']]
+# X611['611'] = X611.groupby('rekord_id')['611'].transform(lambda x: '❦'.join(x))
+# X611 = X611.drop_duplicates()
+# X611 = pd.merge(X611, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
+# X630a = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
+# pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '4,63']
+# X630a = pd.merge(X630a, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
+# X630a['630'] = X630a.apply(lambda x: f"\\4$a{x['HP_NAZWA']}, {x['KH_NAZWA']}" if pd.notnull(x['KH_NAZWA']) else f"\\4$a{x['HP_NAZWA']}", axis=1)
+# X630a = X630a[['rekord_id', '630']]
+# X630a['630'] = X630a.groupby('rekord_id')['630'].transform(lambda x: '❦'.join(x))
+# X630a = X630a.drop_duplicates()
+# X630b = pbl_books[['rekord_id', 'dzial']].drop_duplicates()
+# X630b['dzial'] = X630b['dzial'].str.replace('(.*?)( - [A-ZÀ-Ž]$)', r'\1', regex=True)
+# pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '4,63'][['HP_NAZWA', 'MARC_FIELD']]
+# X630b = pd.merge(X630b, pbl_sh_test,  how='inner', left_on = 'dzial', right_on = 'HP_NAZWA').reset_index(drop=True)
+# X630b['630'] = '\\4$a' + X630b['dzial']
+# X630b = X630b[['rekord_id', '630']]
+# X630 = pd.concat([X630a, X630b])
+# del [X630a, X630b]
+# X630['630'] = X630.groupby('rekord_id')['630'].transform(lambda x: '❦'.join(x.drop_duplicates()))
+# X630 = X630.drop_duplicates()
+# X630 = pd.merge(X630, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
+# X650a = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
+# pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'].isin(['4,65', '24,65'])]
+# X650a = pd.merge(X650a, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
+# X650a['650'] = X650a.apply(lambda x: x650(x), axis=1)
+# X650a = X650a[['rekord_id', '650']]
+# X650a['650'] = X650a.groupby('rekord_id')['650'].transform(lambda x: '❦'.join(x))
+# X650a = X650a.drop_duplicates()
+# X650b = pbl_books[['rekord_id', 'dzial']].drop_duplicates()
+# X650b['dzial'] = X650b['dzial'].str.replace('(.*?)( - [A-ZA-Ž]$)', r'\1', regex=True)
+# pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '4,65'][['HP_NAZWA', 'MARC_FIELD']]
+# X650b = pd.merge(X650b, pbl_sh_test,  how='inner', left_on = 'dzial', right_on = 'HP_NAZWA').reset_index(drop=True)
+# X650b['650'] = '04$a' + X650b['dzial']
+# X650b = X650b[['rekord_id', '650']]
+# X650b['650'] = X650b.groupby('rekord_id')['650'].transform(lambda x: '❦'.join(x))
+# X650b = X650b.drop_duplicates()
+# X650 = pd.concat([X650a, X650b])
+# del [X650a, X650b]
+# X650['650'] = X650.groupby('rekord_id')['650'].transform(lambda x: '❦'.join(x.drop_duplicates()))
+# X650 = X650.drop_duplicates()
+# X650 = pd.merge(X650, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
+# X651 = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
+# pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '4,651']
+# X651 = pd.merge(X651, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
+# X651['651'] = X651.apply(lambda x: f"\\4$a{x['HP_NAZWA']}, {x['KH_NAZWA']}" if pd.notnull(x['KH_NAZWA']) else f"\\4$a{x['HP_NAZWA']}", axis=1)
+# X651 = X651[['rekord_id', '651']]
+# X651['651'] = X651.groupby('rekord_id')['651'].transform(lambda x: '❦'.join(x))
+# X651 = X651.drop_duplicates()
+# X651 = pd.merge(X651, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
+# X655 = pbl_books[['rekord_id', 'tytul']].drop_duplicates()
+# X655['655'] = X655['tytul'].apply(lambda x: '❦'.join(re.findall('(?<!^.)(?<=\[)(.*?)(?=\])', x)).strip() if pd.notnull(x) else np.nan)
+# X655 = X655[['rekord_id', '655']]
+# X655 = cSplit(X655, 'rekord_id', '655', '❦')
+# X655['655'] = X655['655'].apply(lambda x: f"\\4$a{x}" if pd.notnull(x) else np.nan)
+# X655['655'] = X655.groupby('rekord_id')['655'].transform(lambda x: '❦'.join(x.dropna()))
+# X655 = X655.drop_duplicates().reset_index(drop=True).replace(r'^\s*$', np.nan, regex=True)
+# X700 = pbl_books[['rekord_id', 'funkcja_osoby', 'wspoltworca_nazwisko', 'wspoltworca_imie', 'MARC_ABBREVIATION']].drop_duplicates()
+# X700['MARC_ABBREVIATION'] = X700['MARC_ABBREVIATION'].apply(lambda x: re.sub('(^|(?<=\❦))', r'$4', x) if pd.notnull(x) else np. nan).str.replace('❦', '')
+# X700['700'] = X700.apply(lambda x: x700(x), axis=1)
+# X700 = X700[['rekord_id', '700']]
+# from100 = X100.loc[X100['700'].notnull()][['rekord_id', '700']]
+# from100 = cSplit(from100, 'rekord_id', '700', '❦')
+# X700 = X700.append(from100, ignore_index=True).sort_values('rekord_id').reset_index(drop=True)
+# X700['700'] = X700.groupby('rekord_id')['700'].transform(lambda x: '❦'.join(x.dropna().str.strip()))
+# X700 = X700.drop_duplicates().reset_index(drop=True).replace(r'^\s*$', np.nan, regex=True)
+# X100 = X100[['rekord_id', '100']]
+# X710 = pbl_books[['rekord_id', 'ZA_INSTYTUCJA']].drop_duplicates().reset_index(drop=True)
+# X710.columns = ['rekord_id', '710']
+# X710['710'] = X710['710'].apply(lambda x: f"24$a{x}$4isp" if pd.notnull(x) else np.nan)
+# X787 = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
+# pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '787']
+# X787 = pd.merge(X787, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
+# X787['787'] = X787.apply(lambda x: f"{x['HP_NAZWA']}, {x['KH_NAZWA']}" if pd.notnull(x['KH_NAZWA']) else f"{x['HP_NAZWA']}", axis=1)
+# X787 = X787[['rekord_id', '787']]
+# X787['787'] = X787['787'].apply(lambda x: f"\\\\$a{x}")
+# X787['787'] = X787.groupby('rekord_id')['787'].transform(lambda x: '❦'.join(x))
+# X787 = X787.drop_duplicates()
+# X787 = pd.merge(X787, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
+# X856 = pbl_relations[pbl_relations['zapis_typ'] == 'KS'][['rekord_id', '856']]
+# X856['856'] = X856.groupby('rekord_id')['856'].transform(lambda x: '❦'.join(x))
+# X856 = X856.drop_duplicates()
+# X856 = pd.merge(X856, pbl_books[['rekord_id']].drop_duplicates(),  how='right', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
+# X995 = pbl_books[['rekord_id', 'ZA_RO_ROK']].drop_duplicates().reset_index(drop=True)
+# X995['995'] = X995['ZA_RO_ROK'].apply(lambda x: book_collection(x))
+# X995 = X995[['rekord_id', '995']]
+# dfs = [X001, X005, X008, X100, X240, X245, X250, X264, X300, X490, X520, X590, X600, X610, X611, X630, X650, X651, X655, X700, X787, X856, X995]
+# pbl_marc_books = reduce(lambda left,right: pd.merge(left,right,on='rekord_id'), dfs)
+# pbl_marc_books['LDR'] = LDR
+# pbl_marc_books['040'] = X040
+# del pbl_marc_books['rekord_id']
+# columns_list = pbl_marc_books.columns.tolist()
+# columns_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+# pbl_marc_books = pbl_marc_books.reindex(columns=columns_list)
+# 
+# pbl_marc_books.to_excel('pbl_marc_books.xlsx', index=False)
+# # pbl_marc_books = pd.read_excel('pbl_marc_books.xlsx')
+# 
+# df_to_mrc(pbl_marc_books, '❦', 'pbl_marc_books.mrc')
+# =============================================================================
 
 # PBL articles
 
