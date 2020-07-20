@@ -15,60 +15,116 @@ from functools import reduce
 import glob
 from my_functions import f
 
-bn_magazines = gsheet_to_df('1V6BreA4_cEb3FRvv53E5ri2Yl1u3Z2x-yQxxBbAzCeo', 'Sheet1')
-bn_magazines = bn_magazines[bn_magazines['decyzja'] == 'tak']['bn_magazine'].tolist()
+# def
 
-# path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/'
-path = 'C:/Users/User/Documents/bn_all/'
-files = [f for f in glob.glob(path + '*.mrk8', recursive=True)]
-
-encoding = 'utf-8'
-marc_df = pd.DataFrame()
-for i, file_path in enumerate(files):
-    print(str(i) + '/' + str(len(files)))
-    marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
-    marc_list = list(filter(None, marc_list))  
-    df = pd.DataFrame(marc_list, columns = ['test'])
-    df['field'] = df['test'].replace(r'(^.)(...)(.+?$)', r'\2', regex = True)
-    df['content'] = df['test'].replace(r'(^.)(.....)(.+?$)', r'\3', regex = True)
-    df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
-    df['help'] = df['help'].ffill()
-    df['magazine'] = df.apply(lambda x: f(x, '773'), axis=1)
-    df['magazine'] = df.groupby('help')['magazine'].ffill().bfill()
-    df = df[df['magazine'].notnull()]
+def dziedzina_PBL(x):
     try:
-        df['index'] = df.index + 1
-        df_field = marc_parser_1_field(df, 'index', 'magazine', '\$')[['index', '$t']]
-        df_field.columns = ['index', 'title']
-        df = pd.merge(df, df_field, how='left', on='index')
-        df = df[df['title'].isin(bn_magazines)].drop(columns=['magazine', 'index', 'title'])
-    except AttributeError:
-        pass
-    if len(df) > 0:
-        df['id'] = df.apply(lambda x: f(x, '009'), axis = 1)
-        df['id'] = df.groupby('help')['id'].ffill().bfill()
-        df = df[['id', 'field', 'content']]
-        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
-        df = df.drop_duplicates().reset_index(drop=True)
-        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
-        marc_df = marc_df.append(df_wide)
- 
-fields = marc_df.columns.tolist()
-fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
-marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
+        if bool(regex.search('(?<=\$a|:|\[|\+|\()(82)', x)):
+            val = 'ukd_lit'
+        elif bool(regex.search('(?<=\$a|:|\[|\+)(791)', x)) or bool(regex.search('(?<=\$a|:)(792)', x)) or bool(regex.search('\$a7\.09', x)):
+            val = 'ukd_tfrtv'
+        elif bool(regex.search('(?<=\$a01)(\(|\/|2|4|5|9)', x)) or bool(regex.search('(?<=\$a|\[])(050)', x)) or bool(regex.search('(?<=\$a|:|\[|\+|\()(811\.162)', x)):
+            val = 'ukd_biblio'
+        elif bool(regex.search('\$a002', x)) or bool(regex.search('(?<=\$a|:)(305)', x)) or bool(regex.search('(?<=\$a39|:39)(\(438\)|8\.2)', x)) or bool(regex.search('(?<=\$a|:)(929[^\.]051)', x)) or bool(regex.search('(?<=\$a|:)(929[^\.]052)', x)):
+            val = 'ukd_pogranicze'
+        else:
+            val = 'bez_ukd_PBL'
+    except TypeError:
+        val = 'bez_ukd_PBL'
+    return val
 
-fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-marc_df = marc_df.reindex(columns=fields)       
-marc_df.to_csv('bn_articles.csv', index=False)
+def position_of_dash(x):
+    try:
+        if bool(re.search('(\\\\\$a|:)(821\.)', x)):
+            val = x.index('-')
+        else: 
+            val = np.nan
+    except (TypeError, ValueError):
+        val = np.nan
+    return val
+
+def position_of_091(x):
+    try:
+        val = x.index('(091)')
+    except (AttributeError, ValueError):
+        val = np.nan
+    return val
+
+def rodzaj_zapisu(x):
+    if pd.isnull(x['dash_position']) and pd.notnull(x['655']) and '$x' in x['655'] and '$y' in x['655']:
+        val = 'przedmiotowy'
+    elif pd.isnull(x['dash_position']) and pd.notnull(x['655']) and '$x' not in x['655'] and '$y' in x['655']:
+        val = 'podmiotowy'
+    elif pd.isnull(x['dash_position']):
+        val = 'przedmiotowy'
+    elif pd.notnull(x['dash_position']) and pd.notnull(x['091_position']) and int(x['dash_position']) > int(x['091_position']):
+        val = 'przedmiotowy'
+    elif pd.notnull(x['dash_position']) and pd.notnull(x['655']) and '$y' not in x['655']:
+        val = 'przedmiotowy'
+    elif pd.notnull(x['091_position']):
+        val = 'przedmiotowy'
+    else:
+        val = 'podmiotowy'
+    return val
+
+# =============================================================================
+# bn_magazines = gsheet_to_df('1V6BreA4_cEb3FRvv53E5ri2Yl1u3Z2x-yQxxBbAzCeo', 'Sheet1')
+# bn_magazines = bn_magazines[bn_magazines['decyzja'] == 'tak']['bn_magazine'].tolist()
+# 
+# # path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/'
+# path = 'C:/Users/User/Documents/bn_all/'
+# files = [f for f in glob.glob(path + '*.mrk8', recursive=True)]
+# 
+# encoding = 'utf-8'
+# marc_df = pd.DataFrame()
+# for i, file_path in enumerate(files):
+#     print(str(i) + '/' + str(len(files)))
+#     marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+#     marc_list = list(filter(None, marc_list))  
+#     df = pd.DataFrame(marc_list, columns = ['test'])
+#     df['field'] = df['test'].replace(r'(^.)(...)(.+?$)', r'\2', regex = True)
+#     df['content'] = df['test'].replace(r'(^.)(.....)(.+?$)', r'\3', regex = True)
+#     df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
+#     df['help'] = df['help'].ffill()
+#     df['magazine'] = df.apply(lambda x: f(x, '773'), axis=1)
+#     df['magazine'] = df.groupby('help')['magazine'].ffill().bfill()
+#     df = df[df['magazine'].notnull()]
+#     try:
+#         df['index'] = df.index + 1
+#         df_field = marc_parser_1_field(df, 'index', 'magazine', '\$')[['index', '$t']]
+#         df_field.columns = ['index', 'title']
+#         df = pd.merge(df, df_field, how='left', on='index')
+#         df = df[df['title'].isin(bn_magazines)].drop(columns=['magazine', 'index', 'title'])
+#     except AttributeError:
+#         pass
+#     if len(df) > 0:
+#         df['id'] = df.apply(lambda x: f(x, '009'), axis = 1)
+#         df['id'] = df.groupby('help')['id'].ffill().bfill()
+#         df = df[['id', 'field', 'content']]
+#         df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+#         df = df.drop_duplicates().reset_index(drop=True)
+#         df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+#         marc_df = marc_df.append(df_wide)
+#  
+# fields = marc_df.columns.tolist()
+# fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+# marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
+# 
+# fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+# marc_df = marc_df.reindex(columns=fields)       
+# marc_df.to_csv('bn_articles.csv', index=False)
+# =============================================================================
         
 # SQL connection
 
 dsn_tns = cx_Oracle.makedsn('pbl.ibl.poznan.pl', '1521', service_name='xe')
 connection = cx_Oracle.connect(user='IBL_SELECT', password='CR333444', dsn=dsn_tns, encoding='windows-1250')
 
-bn_articles = pd.read_excel('bn_articles.xlsx')   
+bn_cz_mapping = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bn_cz_mapping.xlsx')
+bn_articles = pd.read_csv('F:/Cezary/Documents/IBL/Migracja z BN/bn_articles.csv')  
 bn_articles = bn_articles[bn_articles['773'].notnull()].reset_index(drop=True) 
 bn_articles['id'] = bn_articles['009']
+bn_articles['005'] = bn_articles['005'].astype(str)
 
 pbl_viaf_links = ['1cEz73dGN2r2-TTc702yne9tKfH9PQ6UyAJ2zBSV6Jb0', '1_Bhwzo0xu4yTn8tF0ZNAZq9iIAqIxfcrjeLVCm_mggM', '1L-7Zv9EyLr5FeCIY_s90rT5Hz6DjAScCx6NxfuHvoEQ']
 pbl_viaf = pd.DataFrame()
@@ -108,27 +164,10 @@ X600 = X600.drop(columns='osoba_pbl_dzial_id_name').drop_duplicates()
 bn_articles = [bn_articles, X100, X600]
 bn_articles = reduce(lambda left,right: pd.merge(left,right,on='id', how = 'outer'), bn_articles)
 
-def dziedzina_PBL(x):
-    try:
-        if bool(regex.search('(?<=\$a|:|\[|\+|\()(82)', x)):
-            val = 'ukd_lit'
-        elif bool(regex.search('(?<=\$a|:|\[|\+)(791)', x)) or bool(regex.search('(?<=\$a|:)(792)', x)) or bool(regex.search('\$a7\.09', x)):
-            val = 'ukd_tfrtv'
-        elif bool(regex.search('(?<=\$a01)(\(|\/|2|4|5|9)', x)) or bool(regex.search('(?<=\$a|\[])(050)', x)) or bool(regex.search('(?<=\$a|:|\[|\+|\()(811\.162)', x)):
-            val = 'ukd_biblio'
-        elif bool(regex.search('\$a002', x)) or bool(regex.search('(?<=\$a|:)(305)', x)) or bool(regex.search('(?<=\$a39|:39)(\(438\)|8\.2)', x)) or bool(regex.search('(?<=\$a|:)(929[^\.]051)', x)) or bool(regex.search('(?<=\$a|:)(929[^\.]052)', x)):
-            val = 'ukd_pogranicze'
-        else:
-            val = 'bez_ukd_PBL'
-    except TypeError:
-        val = 'bez_ukd_PBL'
-    return val
-
 bn_articles['dziedzina_PBL'] = bn_articles['080'].apply(lambda x: dziedzina_PBL(x))
 
-literary_word_keys = bn_articles.copy()[['id', '080', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL']]
-
 literary_words = 'literat|literac|pisar|bajk|dramat|epigramat|esej|felieton|film|komedi|nowel|opowiadani|pamiętnik|poemiks|poezj|powieść|proza|reportaż|satyr|wspomnieni|Scenariusze zajęć|Podręczniki dla gimnazjów|teatr|Nagrod|aforyzm|baśń|baśnie|polonijn|dialogi|fantastyka naukowa|legend|pieśń|poemat|przypowieś|honoris causa|filologi|kino polskie|pieśni|interpretacj|poet|liryk'
+literary_word_keys = bn_articles.copy()[['id', '080', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL']]
 literary_word_keys['literary_word_keys'] = literary_word_keys['245'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['600'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['610'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['630'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['648'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['650'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['651'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['655'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['658'].str.contains(literary_words, flags=re.IGNORECASE)
 literary_word_keys = literary_word_keys[literary_word_keys['literary_word_keys'] == True][['id', 'literary_word_keys']]
 bn_articles = pd.merge(bn_articles, literary_word_keys, how='left', on='id')
@@ -159,42 +198,159 @@ dobre = dobre[~dobre['id'].isin(zle['id'])]
 dobre = dobre[['id', '080', '773', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL', 'literary_word_keys', 'wspomnienia', 'biblia']]
 dobre['decision'] = 'OK'
 dobre = dobre[['id', 'decision']]
-
 bn_articles = pd.merge(bn_articles, dobre, 'left', 'id')
 
 bn_articles.to_excel('bn_magazines_to_statistics.xlsx', index=False)
 
-test = bn_articles.copy()
-test.dtypes
-bn_articles['year'] = bn_articles['008'].apply(lambda x: x[7:11].astype)
+years = [str(i) for i in range(2004, 2021)]
+bn_articles['year'] = bn_articles['008'].apply(lambda x: x[7:11])
+bn_articles = bn_articles[(bn_articles['decision'] == 'OK') &
+                          (bn_articles['year'].isin(years))]
 
+fields_to_remove = bn_cz_mapping[bn_cz_mapping['cz'] == 'del']['bn'].to_list()
+fields_to_remove = [x[1:] if x[0] == 'X' else x for x in fields_to_remove]
 
-bn_articles = bn_articles[bn_articles['decision'] == 'OK']
+bn_articles = bn_articles.loc[:, ~bn_articles.columns.isin(fields_to_remove)]
 
+bn_articles['czy_ma_ukd'] = bn_articles['080'].apply(lambda x: 'tak' if pd.notnull(x) else 'nie')   
+bn_articles['dash_position'] = bn_articles['080'].apply(lambda x: position_of_dash(x))
+bn_articles['091_position'] = bn_articles['080'].apply(lambda x: position_of_091(x))
+bn_articles['rodzaj'] = bn_articles.apply(lambda x: rodzaj_zapisu(x), axis=1)
 
+# wczytanie danych pbl
+pbl_dzialy = pd.read_sql('select * from PBL_DZIALY', con=connection).iloc[:, [0,2,5]]
+pbl_dzialy_path = pd.merge(pbl_dzialy, pbl_dzialy, how='left', left_on = 'DZ_DZ_DZIAL_ID', right_on='DZ_DZIAL_ID').drop(columns='DZ_DZIAL_ID_y')
+pbl_dzialy_path.columns = ['DZ_DZIAL_ID', 'DZ_NAZWA', 'NAD_DZ_DZIAL_ID', 'NAD_DZ_NAZWA', 'NAD_NAD_DZ_DZIAL_ID']
+pbl_dzialy_path = pd.merge(pbl_dzialy_path, pbl_dzialy, how='left', left_on = 'NAD_NAD_DZ_DZIAL_ID', right_on='DZ_DZIAL_ID').drop(columns='DZ_DZIAL_ID_y')
+pbl_dzialy_path.columns = ['DZ_DZIAL_ID', 'DZ_NAZWA', 'NAD_DZ_DZIAL_ID', 'NAD_DZ_NAZWA', 'NAD_NAD_DZ_DZIAL_ID', 'NAD_NAD_DZ_NAZWA', 'NAD_NAD_NAD_DZ_DZIAL_ID']
+pbl_dzialy_path = pd.merge(pbl_dzialy_path, pbl_dzialy, how='left', left_on = 'NAD_NAD_NAD_DZ_DZIAL_ID', right_on='DZ_DZIAL_ID').drop(columns='DZ_DZIAL_ID_y')
+pbl_dzialy_path.columns = ['DZ_DZIAL_ID', 'DZ_NAZWA', 'NAD_DZ_DZIAL_ID', 'NAD_DZ_NAZWA', 'NAD_NAD_DZ_DZIAL_ID', 'NAD_NAD_DZ_NAZWA', 'NAD_NAD_NAD_DZ_DZIAL_ID', 'NAD_NAD_NAD_DZ_NAZWA', 'NAD_NAD_NAD_NAD_DZ_DZIAL_ID']
+pbl_dzialy_path = pd.merge(pbl_dzialy_path, pbl_dzialy, how='left', left_on = 'NAD_NAD_NAD_NAD_DZ_DZIAL_ID', right_on='DZ_DZIAL_ID').drop(columns='DZ_DZIAL_ID_y')
+pbl_dzialy_path.columns = ['DZ_DZIAL_ID', 'DZ_NAZWA', 'NAD_DZ_DZIAL_ID', 'NAD_DZ_NAZWA', 'NAD_NAD_DZ_DZIAL_ID', 'NAD_NAD_DZ_NAZWA', 'NAD_NAD_NAD_DZ_DZIAL_ID', 'NAD_NAD_NAD_DZ_NAZWA', 'NAD_NAD_NAD_NAD_DZ_DZIAL_ID', 'NAD_NAD_NAD_NAD_DZ_NAZWA', 'NAD_NAD_NAD_NAD_NAD_DZ_DZIAL_ID']
+pbl_dzialy_path = pd.merge(pbl_dzialy_path, pbl_dzialy, how='left', left_on = 'NAD_NAD_NAD_NAD_NAD_DZ_DZIAL_ID', right_on='DZ_DZIAL_ID').drop(columns='DZ_DZIAL_ID_y')
+pbl_dzialy_path.columns = ['DZ_DZIAL_ID', 'DZ_NAZWA', 'NAD_DZ_DZIAL_ID', 'NAD_DZ_NAZWA', 'NAD_NAD_DZ_DZIAL_ID', 'NAD_NAD_DZ_NAZWA', 'NAD_NAD_NAD_DZ_DZIAL_ID', 'NAD_NAD_NAD_DZ_NAZWA', 'NAD_NAD_NAD_NAD_DZ_DZIAL_ID', 'NAD_NAD_NAD_NAD_DZ_NAZWA', 'NAD_NAD_NAD_NAD_NAD_DZ_DZIAL_ID', 'NAD_NAD_NAD_NAD_NAD_DZ_NAZWA', 'NAD_NAD_NAD_NAD_NAD_NAD_DZ_DZIAL_ID']
+pbl_dzialy_path = pbl_dzialy_path[pbl_dzialy_path['DZ_DZIAL_ID'] != 0]
 
+pbl_dz_osob = pbl_dzialy_path[(pbl_dzialy_path['DZ_NAZWA'].str.contains('osobowe')) |
+                              (pbl_dzialy_path['NAD_DZ_NAZWA'].str.contains('osobowe')) |
+                              (pbl_dzialy_path['NAD_NAD_DZ_NAZWA'].str.contains('osobowe')) |
+                              (pbl_dzialy_path['NAD_NAD_NAD_DZ_NAZWA'].str.contains('osobowe')) |
+                              (pbl_dzialy_path['NAD_NAD_NAD_NAD_DZ_NAZWA'].str.contains('osobowe')) |
+                              (pbl_dzialy_path['NAD_NAD_NAD_NAD_NAD_DZ_NAZWA'].str.contains('osobowe'))].iloc[:, :8]
 
+df_osoby_dzial = pd.DataFrame()
+col_set = [[0,1,2,3], [0,1,4,5], [0,1,6,7]]
+for s in col_set:
+    df_set = pbl_dz_osob.iloc[:, s]
+    df_set.columns = ['DZ_DZIAL_ID', 'DZ_NAZWA', 'DZ_DZ_DZIAL_ID', 'DZ_DZ_NAZWA']
+    df_osoby_dzial = df.append(df_set)
+df_osoby_dzial = df_osoby_dzial[df_osoby_dzial['DZ_DZ_DZIAL_ID'].notnull()]    
+listOfSeries = [pd.Series([15043, "Hasła osobowe(luksemburska)",15043, "Hasła osobowe(luksemburska)"], index=df_osoby_dzial.columns),
+                pd.Series([430, "Hasła osobowe (Ludzie teatru i filmu)",430, "Hasła osobowe (Ludzie teatru i filmu)"], index=df_osoby_dzial.columns)]
+df_osoby_dzial = df_osoby_dzial.append(listOfSeries, ignore_index=True).reset_index(drop=True)
 
-
-
-
-
-
-
-
-type_of_record_old = bn_articles.copy()
-type_of_record_old['czy_ma_ukd'] = type_of_record_old['080'].apply(lambda x: 'tak' if pd.notnull(x) else 'nie')
-def position_of_dash(x):
-    try:
-        if bool(re.search('(\\\\\$a|:)(821\.)', x)):
-            val = x.index('-')
-        else: 
-            val = np.nan
-    except (TypeError, ValueError):
-        val = np.nan
+df_osoby_dzial_bez_teatru = df_osoby_dzial.copy()[df_osoby_dzial['DZ_DZIAL_ID'] != 430]
+pbl_tworcy = pd.read_sql('select * from PBL_TWORCY', con=connection).iloc[:, :4]
+tworca_i_dzial = pd.merge(pbl_tworcy, df_osoby_dzial_bez_teatru, how='inner', left_on='TW_DZ_DZIAL_ID', right_on='DZ_DZ_DZIAL_ID')
+def tworca_litera_dzial_pl(x):
+    if x['DZ_DZ_DZIAL_ID'] == 148 and x['TW_NAZWISKO'][0] == x['DZ_NAZWA'][-1]:
+        val = True
+    elif x['DZ_DZ_DZIAL_ID'] == 148 and x['TW_NAZWISKO'][0] != x['DZ_NAZWA'][-1]:
+        val = False
+    else:
+        val = True
     return val
+
+tworca_i_dzial['select'] = tworca_i_dzial.apply(lambda x: tworca_litera_dzial_pl(x), axis=1)
+tworca_i_dzial = tworca_i_dzial[tworca_i_dzial['select'] == True].drop(columns=['select'])
+tworca_i_dzial['DZ_NAZWA'] = tworca_i_dzial.apply(lambda x: x['DZ_DZ_NAZWA'] if x['DZ_DZ_DZIAL_ID'] == 148 else x['DZ_NAZWA'], axis=1)
+tworca_i_dzial = tworca_i_dzial[['TW_TWORCA_ID', 'DZ_NAZWA']]
+
+# przypisanie działu pbl
+test = bn_articles.copy().head(10000)
+# przedmiotowe
+przedmiotowe = test.copy()
+przedmiotowe = przedmiotowe[przedmiotowe['rodzaj'] == 'przedmiotowy']
+
+X600 = marc_parser_1_field(przedmiotowe, 'id', '600', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
+X600['name'] = X600[['$a', '$d', '$c']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+X600 = X600[['id', 'name']]
+X600['name'] = X600['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
+X600 = pd.merge(X600, pbl_viaf, how='inner', left_on='name', right_on='BN_name')[['id', 'name', 'pbl_id']]
+X600['pbl_id'] = X600['pbl_id'].astype(np.int64)
+X600 = pd.merge(X600, tworca_i_dzial, how='left', left_on='pbl_id', right_on='TW_TWORCA_ID')[['id', 'DZ_NAZWA']]
+
+przedmiotowe = przedmiotowe[~przedmiotowe['id'].isin(X600['id'])]
+X655 = marc_parser_1_field(przedmiotowe, 'id', '655', '\$')[['id', '$a']]
+pbl_literatury = pbl_dzialy_path.copy()[pbl_dzialy_path['NAD_DZ_DZIAL_ID'] == 30].iloc[:, :2]
+pbl_literatury['nazwa'] = pbl_literatury['DZ_NAZWA'].str.replace("(.*?)( )(.*?)", r"\3")
+pbl_literatury.loc[pbl_literatury['DZ_NAZWA'].str.contains('romsk') == True, 'nazwa'] = 'romsk|cygańsk'
+
+dodane_literatury = pd.DataFrame({'DZ_DZIAL_ID':[32,32,32,32,59,86,107,149,67,69,34,34,34,34,34,55,32,99,34,148], 'DZ_NAZWA': ["Literatura brytyjska i irlandzka","Literatura brytyjska i irlandzka","Literatura brytyjska i irlandzka","Literatura brytyjska i irlandzka","Literatura grecka starożytna","Literatura łacińska średniowieczna","Literatura syryjska","Literatura esperanto","Literatura holenderska","Literatury Indii","Literatury Afryki Subsaharyjskiej","Literatury Afryki Subsaharyjskiej","Literatury Afryki Subsaharyjskiej","Literatury Afryki Subsaharyjskiej","Literatury Afryki Subsaharyjskiej", "Literatura egipsko-arabska", "Literatura brytyjska i irlandzka","Literatura palestyńsko-arabska","Literatury Afryki Subsaharyjskiej", "Literatura polska"], 'nazwa':["angielsk","szkock","irlandzk","walijsk","greck","łacińsk","syryjsk","esperanck","niderlandzk","indyjsk","południowoafryka","senegalsk","nigeryjsk","afrykańsk","ruandyjsk","egipsk. nowożytn","celtyck","palestyńsk","somalijsk","polsk"]})
+pbl_literatury = pbl_literatury.append(dodane_literatury).drop_duplicates()
+
+query = "select * from X655 a left join pbl_literatury b on a.`$a` like ('%'||b.nazwa||'%')"
+X655 = pandasql.sqldf(query)
+X655 = X655[X655['DZ_NAZWA'].notnull()][['id', 'DZ_NAZWA']]
+
+przedmiotowe = przedmiotowe[~przedmiotowe['id'].isin(X655['id'])]
+X650 = marc_parser_1_field(przedmiotowe, 'id', '650', '\$')[['id', '$a']]
+query = "select * from X650 a left join pbl_literatury b on a.`$a` like ('%'||b.nazwa||'%')"
+X650 = pandasql.sqldf(query)
+X650 = X650[X650['DZ_NAZWA'].notnull()][['id', 'DZ_NAZWA']]
+
+przedmiotowe = przedmiotowe[~przedmiotowe['id'].isin(X650['id'])]
+query = """select z.za_zapis_id, dz.dz_dzial_id, dz.dz_nazwa, z.za_status_imp, z.za_uwagi
+        from pbl_zapisy z
+        join pbl_dzialy dz on dz.dz_dzial_id=z.za_dz_dzial1_id
+        where z.za_uwagi like '%import%'"""
+imports = pd.read_sql(query, con=connection).fillna(value = np.nan)
+
+last_imports = ['1s22ClRxlrPHaAXi_n_JJH3mX6vKYzKjsKbpJpQztx_8', '1Vjeg0JsYI-8v9B-x_yyujIhmw7UR7Lk7poexrHNdVzM', '1Gc4gQSm9b4NDTQysiauzW9Jac6yP0oNuFbB8utO4kS4', '1HkWkX61sQWktSXf0v0uPV8j2DwuTocesyCJuKTdisIU', '1zeMx_Idsum8JmlM6G7Eufx9LxloHoAHv8V-My71VZf4', '19iL7YoD8ug-rLnpzS6FD46aS2J1BRf4qL5VxllywCGE', '1RshTeWdXBE7OzOEfoGpL9Ljb_GXDlGDePNjV1HKmuOo', '1RmDia97s4B8F74sS7Wbpnv_A9zMfr4xTvcD9leukAfM']
+df = pd.DataFrame()
+columns = ['pracownik', 'ZA_ZAPIS_ID', 'typ_ksiazki', 'link', 'link', 'rok', 'status', 'blad_w_imporcie_tytulu', 'X100', 'X245', 'X650', 'X655', 'X246', 'X250', 'X260', 'X300', 'X380', 'X490', 'X500', 'X501', 'X546', 'X600', 'X700', 'X041', 'X080']
+for elem in last_imports:
+    if elem != '1RmDia97s4B8F74sS7Wbpnv_A9zMfr4xTvcD9leukAfM':
+        df_year = gsheet_to_df(elem, 'lista_ksiazek')
+        df_year.columns = columns
+    else:
+        df_year = gsheet_to_df(elem, 'lista_książek')
+        df_year['typ_ksiazki'], df_year['link'], df_year['link_1'], df_year['status'], df_year['blad_w_imporcie_tytulu'] = [np.nan, np.nan, np.nan, np.nan, np.nan]
+        df_year = df_year[df.columns]
+        df_year.columns = columns
+    df = df.append(df_year)
     
-type_of_record_old['dash_position'] = type_of_record_old['080'].apply(lambda x: position_of_dash(x))
+df['X655'] = df['X655'].str.replace("(\$a)","|\1").str.replace("^\|", "")
+df['X650'] = df['X650'].str.replace("(\$a)","|\1").str.replace("^\|", "")
+df['X650'] = df['X650'].str.replace("(\$a)","\\❦7\1").str.replace("❦", "")
+df['X655'] = df['X655'].str.replace("(\$a)","\\❦7\1").str.replace("❦", "")
+
+imports['ZA_ZAPIS_ID'] = imports['ZA_ZAPIS_ID'].astype(object)
+df['ZA_ZAPIS_ID'] = df['ZA_ZAPIS_ID'].astype(object)
+imports = pd.merge(df, imports, how='outer', on='ZA_ZAPIS_ID')
+imports = imports[imports['ZA_STATUS_IMP'].isin(['IOK'])]
+
+# tutaj
+
+
+
+
+
+
+
+
+X600['osoba_bn_temat'] = X600.groupby('id')['osoba_pbl_dzial_id_name'].transform(lambda x: '❦'.join(x.astype(str)))
+X600 = X600.drop(columns='osoba_pbl_dzial_id_name').drop_duplicates()
+
+
+# podmiotowe
+podmiotowe = test.copy()
+podmiotowe = podmiotowe[podmiotowe['rodzaj'] == 'podmiotowy']  
+X600 = marc_parser_1_field(podmiotowe, 'id', '600', '\$')       
+       
+   
+   
+
 
 
 
@@ -247,16 +403,7 @@ stare_rodzajowanie <- stare_rodzajowanie %>%
 
 
 
-listy_2011 = gsheet_to_df('1s22ClRxlrPHaAXi_n_JJH3mX6vKYzKjsKbpJpQztx_8', 'lista_ksiazek')
-listy_2010 = gsheet_to_df('1Vjeg0JsYI-8v9B-x_yyujIhmw7UR7Lk7poexrHNdVzM', 'lista_ksiazek')
-listy_2009 = gsheet_to_df('1Gc4gQSm9b4NDTQysiauzW9Jac6yP0oNuFbB8utO4kS4', 'lista_ksiazek')
-listy_2005 = gsheet_to_df('1HkWkX61sQWktSXf0v0uPV8j2DwuTocesyCJuKTdisIU', 'lista_ksiazek')
-listy_2006 = gsheet_to_df('1zeMx_Idsum8JmlM6G7Eufx9LxloHoAHv8V-My71VZf4', 'lista_ksiazek')
-listy_2007 = gsheet_to_df('19iL7YoD8ug-rLnpzS6FD46aS2J1BRf4qL5VxllywCGE', 'lista_ksiazek')
-listy_2008 = gsheet_to_df('1RshTeWdXBE7OzOEfoGpL9Ljb_GXDlGDePNjV1HKmuOo', 'lista_ksiazek')
-listy_2004 = gsheet_to_df('1RmDia97s4B8F74sS7Wbpnv_A9zMfr4xTvcD9leukAfM', 'lista_książek')
-listy_2004['typ_ksiazki'], listy_2004['link'], listy_2004['link_1'], listy_2004['status'], listy_2004['blad_w_imporcie_tytulu'] = [np.nan, np.nan, np.nan, np.nan, np.nan]
-listy_2004 = listy_2004[listy_2005.columns]
+
 
 
 
