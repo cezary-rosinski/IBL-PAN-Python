@@ -259,32 +259,32 @@ def right_subject_heading(x):
 
 def relation_to(x):
     if x['zapis_rodzaj'] == 'sprostowanie':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yacorrection of: {x['zapis_odwolanie']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$ycorrection of: {x['zapis_odwolanie']}$4N"
     elif x['zapis_rodzaj'] == 'ikonografia':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yaimage of: {x['zapis_odwolanie']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yimage of: {x['zapis_odwolanie']}$4N"
     elif x['zapis_rodzaj'] == 'polemika':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yapolemic to: {x['zapis_odwolanie']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$ypolemic to: {x['zapis_odwolanie']}$4N"
     elif x['zapis_rodzaj'] in ['artykuł o utworze', 'artykuł w haśle rzeczowym', 'nawiązanie', 'książka o utworze', 'książka w haśle rzeczowym', 'omówienie (artykułu, książki)']:
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yareference to: {x['zapis_odwolanie']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yreference to: {x['zapis_odwolanie']}$4N"
     elif x['zapis_rodzaj'] == 'recenzja':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yareview of: {x['zapis_odwolanie']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yreview of: {x['zapis_odwolanie']}$4N"
     elif x['zapis_rodzaj'] == 'streszczenie (artykułu, książki)':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$yasummary of: {x['zapis_odwolanie']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_odwolanie_id'])}$ysummary of: {x['zapis_odwolanie']}$4N"
     return val
 
 def relation_from(x):
     if x['zapis_rodzaj'] == 'sprostowanie':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yacorrected by: {x['zapis']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$ycorrected by: {x['zapis']}$4N"
     elif x['zapis_rodzaj'] == 'ikonografia':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yaimaged by: {x['zapis']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yimaged by: {x['zapis']}$4N"
     elif x['zapis_rodzaj'] == 'polemika':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yapolemicized by: {x['zapis']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$ypolemicized by: {x['zapis']}$4N"
     elif x['zapis_rodzaj'] in ['artykuł o utworze', 'artykuł w haśle rzeczowym', 'nawiązanie', 'książka o utworze', 'książka w haśle rzeczowym', 'omówienie (artykułu, książki)']:
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yareferenced by: {x['zapis']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yreferenced by: {x['zapis']}$4N"
     elif x['zapis_rodzaj'] == 'recenzja':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yareviewed by: {x['zapis']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yreviewed by: {x['zapis']}$4N"
     elif x['zapis_rodzaj'] == 'streszczenie (artykułu, książki)':
-        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$yasummarized by: {x['zapis']}$4N"
+        val = f"42$uhttp://libri.ucl.cas.cz/Record/pl{'{:09d}'.format(x['zapis_id'])}$ysummarized by: {x['zapis']}$4N"
     return val
 
 # read google sheets
