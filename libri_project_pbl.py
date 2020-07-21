@@ -1,3 +1,13 @@
+# =============================================================================
+# błędy:
+#     - usunąć 773 z x jako źródłem - =773  0\$tx$gR.  nan$9 nan
+#     - usunąć frazy ', *$' (zostawić dolar) albo ', (\*)+\$'
+#     - usunać '*$dnan$0nan' i '$dnan$0nan'
+#     - '*$' na '$'
+#     - '$d$' na '$'
+#     - usunąć gwiazdki z twórców pbl
+#     - usunąć puste pola $d - =600  14$aJanda, Krystyna*$d$0viaf308292674   
+# =============================================================================
 import cx_Oracle
 import pandas as pd
 from my_functions import gsheet_to_df

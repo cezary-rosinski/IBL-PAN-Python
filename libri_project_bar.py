@@ -1,3 +1,5 @@
+błędy:
+    - w 773 usunąć $i// - =773  0\$i//$tKalina (Kraków). -$g1868, nr 6$91868
 import pandas as pd
 import io
 import re

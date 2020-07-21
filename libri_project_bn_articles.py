@@ -202,6 +202,8 @@ bn_articles = pd.merge(bn_articles, dobre, 'left', 'id')
 
 bn_articles.to_excel('bn_magazines_to_statistics.xlsx', index=False)
 
+bn_articles = pd.read_excel('bn_magazines_to_statistics.xlsx')
+
 years = [str(i) for i in range(2004, 2021)]
 bn_articles['year'] = bn_articles['008'].apply(lambda x: x[7:11])
 bn_articles = bn_articles[(bn_articles['decision'] == 'OK') &
@@ -243,7 +245,7 @@ col_set = [[0,1,2,3], [0,1,4,5], [0,1,6,7]]
 for s in col_set:
     df_set = pbl_dz_osob.iloc[:, s]
     df_set.columns = ['DZ_DZIAL_ID', 'DZ_NAZWA', 'DZ_DZ_DZIAL_ID', 'DZ_DZ_NAZWA']
-    df_osoby_dzial = df.append(df_set)
+    df_osoby_dzial = df_osoby_dzial.append(df_set)
 df_osoby_dzial = df_osoby_dzial[df_osoby_dzial['DZ_DZ_DZIAL_ID'].notnull()]    
 listOfSeries = [pd.Series([15043, "Hasła osobowe(luksemburska)",15043, "Hasła osobowe(luksemburska)"], index=df_osoby_dzial.columns),
                 pd.Series([430, "Hasła osobowe (Ludzie teatru i filmu)",430, "Hasła osobowe (Ludzie teatru i filmu)"], index=df_osoby_dzial.columns)]
@@ -264,12 +266,12 @@ def tworca_litera_dzial_pl(x):
 tworca_i_dzial['select'] = tworca_i_dzial.apply(lambda x: tworca_litera_dzial_pl(x), axis=1)
 tworca_i_dzial = tworca_i_dzial[tworca_i_dzial['select'] == True].drop(columns=['select'])
 tworca_i_dzial['DZ_NAZWA'] = tworca_i_dzial.apply(lambda x: x['DZ_DZ_NAZWA'] if x['DZ_DZ_DZIAL_ID'] == 148 else x['DZ_NAZWA'], axis=1)
-tworca_i_dzial = tworca_i_dzial[['TW_TWORCA_ID', 'DZ_NAZWA']]
+tworca_i_dzial = tworca_i_dzial[['TW_TWORCA_ID', 'TW_NAZWISKO', 'TW_IMIE', 'DZ_NAZWA']]
+tworca_i_dzial['name'] = tworca_i_dzial['TW_NAZWISKO'].str.lower().str.replace("\\W", "") + tworca_i_dzial['TW_IMIE'].str.lower().str.replace("\\W", "") 
 
 # przypisanie działu pbl
-test = bn_articles.copy().head(10000)
 # przedmiotowe
-przedmiotowe = test.copy()
+przedmiotowe = bn_articles.copy()
 przedmiotowe = przedmiotowe[przedmiotowe['rodzaj'] == 'przedmiotowy']
 
 X600 = marc_parser_1_field(przedmiotowe, 'id', '600', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
@@ -279,6 +281,7 @@ X600['name'] = X600['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: rege
 X600 = pd.merge(X600, pbl_viaf, how='inner', left_on='name', right_on='BN_name')[['id', 'name', 'pbl_id']]
 X600['pbl_id'] = X600['pbl_id'].astype(np.int64)
 X600 = pd.merge(X600, tworca_i_dzial, how='left', left_on='pbl_id', right_on='TW_TWORCA_ID')[['id', 'DZ_NAZWA']]
+X600 = X600[X600['DZ_NAZWA'].notnull()]
 
 przedmiotowe = przedmiotowe[~przedmiotowe['id'].isin(X600['id'])]
 X655 = marc_parser_1_field(przedmiotowe, 'id', '655', '\$')[['id', '$a']]
@@ -292,171 +295,118 @@ pbl_literatury = pbl_literatury.append(dodane_literatury).drop_duplicates()
 query = "select * from X655 a left join pbl_literatury b on a.`$a` like ('%'||b.nazwa||'%')"
 X655 = pandasql.sqldf(query)
 X655 = X655[X655['DZ_NAZWA'].notnull()][['id', 'DZ_NAZWA']]
+X655 = X655[X655['DZ_NAZWA'].notnull()]
 
 przedmiotowe = przedmiotowe[~przedmiotowe['id'].isin(X655['id'])]
 X650 = marc_parser_1_field(przedmiotowe, 'id', '650', '\$')[['id', '$a']]
 query = "select * from X650 a left join pbl_literatury b on a.`$a` like ('%'||b.nazwa||'%')"
 X650 = pandasql.sqldf(query)
 X650 = X650[X650['DZ_NAZWA'].notnull()][['id', 'DZ_NAZWA']]
+X650 = X650[X650['DZ_NAZWA'].notnull()]
 
-przedmiotowe = przedmiotowe[~przedmiotowe['id'].isin(X650['id'])]
-query = """select z.za_zapis_id, dz.dz_dzial_id, dz.dz_nazwa, z.za_status_imp, z.za_uwagi
-        from pbl_zapisy z
-        join pbl_dzialy dz on dz.dz_dzial_id=z.za_dz_dzial1_id
-        where z.za_uwagi like '%import%'"""
-imports = pd.read_sql(query, con=connection).fillna(value = np.nan)
+przedmiotowe = pd.concat([X600, X655, X650])
 
-last_imports = ['1s22ClRxlrPHaAXi_n_JJH3mX6vKYzKjsKbpJpQztx_8', '1Vjeg0JsYI-8v9B-x_yyujIhmw7UR7Lk7poexrHNdVzM', '1Gc4gQSm9b4NDTQysiauzW9Jac6yP0oNuFbB8utO4kS4', '1HkWkX61sQWktSXf0v0uPV8j2DwuTocesyCJuKTdisIU', '1zeMx_Idsum8JmlM6G7Eufx9LxloHoAHv8V-My71VZf4', '19iL7YoD8ug-rLnpzS6FD46aS2J1BRf4qL5VxllywCGE', '1RshTeWdXBE7OzOEfoGpL9Ljb_GXDlGDePNjV1HKmuOo', '1RmDia97s4B8F74sS7Wbpnv_A9zMfr4xTvcD9leukAfM']
-df = pd.DataFrame()
-columns = ['pracownik', 'ZA_ZAPIS_ID', 'typ_ksiazki', 'link', 'link', 'rok', 'status', 'blad_w_imporcie_tytulu', 'X100', 'X245', 'X650', 'X655', 'X246', 'X250', 'X260', 'X300', 'X380', 'X490', 'X500', 'X501', 'X546', 'X600', 'X700', 'X041', 'X080']
-for elem in last_imports:
-    if elem != '1RmDia97s4B8F74sS7Wbpnv_A9zMfr4xTvcD9leukAfM':
-        df_year = gsheet_to_df(elem, 'lista_ksiazek')
-        df_year.columns = columns
-    else:
-        df_year = gsheet_to_df(elem, 'lista_książek')
-        df_year['typ_ksiazki'], df_year['link'], df_year['link_1'], df_year['status'], df_year['blad_w_imporcie_tytulu'] = [np.nan, np.nan, np.nan, np.nan, np.nan]
-        df_year = df_year[df.columns]
-        df_year.columns = columns
-    df = df.append(df_year)
-    
-df['X655'] = df['X655'].str.replace("(\$a)","|\1").str.replace("^\|", "")
-df['X650'] = df['X650'].str.replace("(\$a)","|\1").str.replace("^\|", "")
-df['X650'] = df['X650'].str.replace("(\$a)","\\❦7\1").str.replace("❦", "")
-df['X655'] = df['X655'].str.replace("(\$a)","\\❦7\1").str.replace("❦", "")
-
-imports['ZA_ZAPIS_ID'] = imports['ZA_ZAPIS_ID'].astype(object)
-df['ZA_ZAPIS_ID'] = df['ZA_ZAPIS_ID'].astype(object)
-imports = pd.merge(df, imports, how='outer', on='ZA_ZAPIS_ID')
-imports = imports[imports['ZA_STATUS_IMP'].isin(['IOK'])]
-
-# tutaj
-
-
-
-
-
-
-
-
-X600['osoba_bn_temat'] = X600.groupby('id')['osoba_pbl_dzial_id_name'].transform(lambda x: '❦'.join(x.astype(str)))
-X600 = X600.drop(columns='osoba_pbl_dzial_id_name').drop_duplicates()
+# do wymyślenia po statystyce
+# =============================================================================
+# przedmiotowe = przedmiotowe[~przedmiotowe['id'].isin(X650['id'])]
+# query = """select z.za_zapis_id, dz.dz_dzial_id, dz.dz_nazwa, z.za_status_imp, z.za_uwagi
+#         from pbl_zapisy z
+#         join pbl_dzialy dz on dz.dz_dzial_id=z.za_dz_dzial1_id
+#         where z.za_uwagi like '%import%'"""
+# imports = pd.read_sql(query, con=connection).fillna(value = np.nan)
+# 
+# last_imports = ['1s22ClRxlrPHaAXi_n_JJH3mX6vKYzKjsKbpJpQztx_8', '1Vjeg0JsYI-8v9B-x_yyujIhmw7UR7Lk7poexrHNdVzM', '1Gc4gQSm9b4NDTQysiauzW9Jac6yP0oNuFbB8utO4kS4', '1HkWkX61sQWktSXf0v0uPV8j2DwuTocesyCJuKTdisIU', '1zeMx_Idsum8JmlM6G7Eufx9LxloHoAHv8V-My71VZf4', '19iL7YoD8ug-rLnpzS6FD46aS2J1BRf4qL5VxllywCGE', '1RshTeWdXBE7OzOEfoGpL9Ljb_GXDlGDePNjV1HKmuOo', '1RmDia97s4B8F74sS7Wbpnv_A9zMfr4xTvcD9leukAfM']
+# imports_bn = pd.DataFrame()
+# columns = ['pracownik', 'ZA_ZAPIS_ID', 'typ_ksiazki', 'link', 'link', 'rok', 'status', 'blad_w_imporcie_tytulu', 'X100', 'X245', 'X650', 'X655', 'X246', 'X250', 'X260', 'X300', 'X380', 'X490', 'X500', 'X501', 'X546', 'X600', 'X700', 'X041', 'X080']
+# for elem in last_imports:
+#     if elem != '1RmDia97s4B8F74sS7Wbpnv_A9zMfr4xTvcD9leukAfM':
+#         df_year = gsheet_to_df(elem, 'lista_ksiazek')
+#         df_year.columns = columns
+#     else:
+#         df_year = gsheet_to_df(elem, 'lista_książek')
+#         df_year['typ_ksiazki'], df_year['link'], df_year['link_1'], df_year['status'], df_year['blad_w_imporcie_tytulu'] = [np.nan, np.nan, np.nan, np.nan, np.nan]
+#         df_year = df_year[imports_bn.columns]
+#         df_year.columns = columns
+#     imports_bn = imports_bn.append(df_year)
+#     
+# imports_bn['X655'] = imports_bn['X655'].str.replace("(\$a)","|\1").str.replace("^\|", "")
+# imports_bn['X650'] = imports_bn['X650'].str.replace("(\$a)","|\1").str.replace("^\|", "")
+# imports_bn['X650'] = imports_bn['X650'].str.replace("(\$a)","\\❦7\1").str.replace("❦", "")
+# imports_bn['X655'] = imports_bn['X655'].str.replace("(\$a)","\\❦7\1").str.replace("❦", "")
+# 
+# imports['ZA_ZAPIS_ID'] = imports['ZA_ZAPIS_ID'].astype(np.int64)
+# imports_bn = imports_bn[imports_bn['ZA_ZAPIS_ID'] != '#N/A']
+# imports_bn['ZA_ZAPIS_ID'] = imports_bn['ZA_ZAPIS_ID'].astype(np.int64)
+# imports = pd.merge(imports_bn, imports, how='inner', on='ZA_ZAPIS_ID')
+# imports = imports[imports['ZA_STATUS_IMP'].isin(['IOK'])][['ZA_ZAPIS_ID', 'DZ_NAZWA', 'X650', 'X655']]
+# imports = imports.replace(r'^\s*$', np.nan, regex=True).fillna(value=np.nan)
+# imports_655 = imports.copy()[['X655', 'DZ_NAZWA']]
+# imports_655['DZ_NAZWA'] = imports_655['DZ_NAZWA'].str.replace(' - .$', '')
+# imports_655 = imports_655[imports_655['X655'].notnull()]
+# imports_655['X655'] = imports_655['X655'].str.replace(r'\7|', '',regex=False).str.replace('\$2DBN', '').str.replace("\$.|\|", " ").str.replace(" ", ".*").str.replace('(\.\*)+', '.*').str.replace('(\.)+', '.')
+# imports_655['X655'] = imports_655['X655'].apply(lambda x: regex.sub("[^\p{L}\d\*\.\-\s]", "", x)).apply(lambda x: regex.sub('^', '.*', x)).str.replace('(\.\*)+', '.*')
+# imports_655['test'] = imports_655.index+1
+# imports_655 = imports_655.groupby(['X655', 'DZ_NAZWA']).count().reset_index(level=['X655', 'DZ_NAZWA']).groupby('X655').max().reset_index(level=['X655']).sort_values(['X655'])
+# imports_655 = imports_655[imports_655['X655'].ne(imports_655['X655'].shift())]
+# # ?
+# to_repl = imports_655['X655'].values.tolist()
+# vals = imports_655['DZ_NAZWA'].values.tolist()
+# test = bn_articles.copy().head(1000)
+# test['test'] = test['655'].replace(to_repl, vals, regex=True)
+# test = test[['655', 'test']]
+# =============================================================================
 
 
 # podmiotowe
-podmiotowe = test.copy()
+podmiotowe = bn_articles.copy()
 podmiotowe = podmiotowe[podmiotowe['rodzaj'] == 'podmiotowy']  
-X600 = marc_parser_1_field(podmiotowe, 'id', '600', '\$')       
-       
-   
-   
 
+X100 = marc_parser_1_field(podmiotowe, 'id', '100', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
+X100['name'] = X100[['$a', '$d', '$c']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+X100 = X100[['id', 'name']]
+X100['name'] = X100['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
+X100 = pd.merge(X100, pbl_viaf, how='inner', left_on='name', right_on='BN_name')[['id', 'name', 'pbl_id']]
+X100['pbl_id'] = X100['pbl_id'].astype(np.int64)
+X100 = pd.merge(X100, tworca_i_dzial, how='left', left_on='pbl_id', right_on='TW_TWORCA_ID')[['id', 'DZ_NAZWA']]
+X100 = X100[X100['DZ_NAZWA'].notnull()]   
 
+podmiotowe = podmiotowe[~podmiotowe['id'].isin(X100['id'])]
+X100_names = marc_parser_1_field(podmiotowe, 'id', '100', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)[['id', '$a']]  
+X100_names['name'] = X100_names['$a'].str.lower().str.replace("\\W", "") 
+X100_names = pd.merge(X100_names, tworca_i_dzial, how='inner', on='name')[['id', 'DZ_NAZWA']]
 
+podmiotowe = podmiotowe[~podmiotowe['id'].isin(X100_names['id'])]
+bn_pbl_lista_literatur = gsheet_to_df('1zbwjnrtWGvbjrQTLMavJcWSu7HfP0I-USNgZ_KWiXjc', 'lista ukd bn')
+bn_pbl_lista_literatur = bn_pbl_lista_literatur[(bn_pbl_lista_literatur['ukd_ogolne'].notnull()) &
+                                                (bn_pbl_lista_literatur['pbl_id'] != '#N/A')].iloc[:,2:]
+query = "select * from podmiotowe a join bn_pbl_lista_literatur b on a.'080' like ('%'||b.ukd_ogolne||'%')"
+X080 = pandasql.sqldf(query)[['id', 'pbl_nazwa']]
+X080['pbl_nazwa'] = X080['pbl_nazwa'].str.replace('(^.+?)(\|.+$)', r'\1').str.replace(' - .$', '')
+X080.rename(columns={'pbl_nazwa':'DZ_NAZWA'}, inplace=True)
 
-test = type_of_record_old[['080', 'dash_position']]
+podmiotowe = podmiotowe[~podmiotowe['id'].isin(X080['id'])]
+X655 = marc_parser_1_field(podmiotowe, 'id', '655', '\$')[['id', '$a']].replace(r'^\s*$', np.NaN, regex=True)
+pbl_hasla_osobowe = gsheet_to_df('1zbwjnrtWGvbjrQTLMavJcWSu7HfP0I-USNgZ_KWiXjc', 'pbl_hasla_osobowe').iloc[:,[2,4]]
+pbl_hasla_osobowe['DZ_NAZWA'] = pbl_hasla_osobowe['DZ_NAZWA'].str.replace(' - .$', '')
+pbl_hasla_osobowe = pbl_hasla_osobowe.drop_duplicates()
+query = "select * from X655 a left join pbl_hasla_osobowe b on a.`$a` like ('%'||b.nazwa||'%')"
+X655 = pandasql.sqldf(query)[['id', 'DZ_NAZWA']].drop_duplicates().reset_index(drop=True)
+X655 = X655[X655['DZ_NAZWA'].notnull()]
 
+podmiotowe = podmiotowe[~podmiotowe['id'].isin(X655['id'])]
+X650 = marc_parser_1_field(podmiotowe, 'id', '650', '\$')[['id', '$a']].replace(r'^\s*$', np.NaN, regex=True)
+query = "select * from X650 a left join pbl_hasla_osobowe b on a.`$a` like ('%'||b.nazwa||'%')"
+X650 = pandasql.sqldf(query)[['id', 'DZ_NAZWA']].drop_duplicates().reset_index(drop=True)
+X650 = X650[X650['DZ_NAZWA'].notnull()]
 
-bn_ok <- chunk4
-stare_rodzajowanie <- bn_ok %>%
-  mutate(czy_ma_ukd = ifelse(X080=="","nie","tak"),
-         position_dash = ifelse(grepl("(\\\\\\\\\\$a|:)(821\\.)",X080),str_locate(X080,"\\-")[,1], NA),
-         position_dash = ifelse(is.na(position_dash),"",as.integer(position_dash)),
-         position_091 = str_locate(X080,"\\(091\\)")[,1],
-         position_091 = ifelse(is.na(position_091),"",as.integer(position_091)),
-         rodzaj_ksiazki = ifelse(grepl("Antologi",X655),"antologia",
-                                 ifelse(position_091!=""&position_dash!="",
-                          ifelse(as.integer(position_091)<as.integer(position_dash), "przedmiotowa", "podmiotowa"),
-                          ifelse(position_dash!="","podmiotowa","przedmiotowa"))),
-         rodzaj_ksiazki = ifelse(czy_ma_ukd=="nie","",as.character(rodzaj_ksiazki)))
-gatunki_podmiotowe <- stare_rodzajowanie %>%
-  filter(rodzaj_ksiazki=="podmiotowa") %>%
-  select(X655) %>%
-  unique() %>%
-  cSplit(.,"X655",sep = "|",direction = "long") %>%
-  unique() %>%
-  filter(str_detect(X655,"\\$y[\\d-]+ w\\."))
-gatunki_podmiotowe <- str_replace_all(str_replace_all(paste(gatunki_podmiotowe$X655,collapse = "|"),"(.{2})(\\$a)","\\2"),"\\$","\\\\$")
-stare_rodzajowanie$czy_podmiotowy <- grepl(gatunki_podmiotowe,stare_rodzajowanie$X655)|grepl(gatunki_podmiotowe,stare_rodzajowanie$X650)
-stare_rodzajowanie <- stare_rodzajowanie %>%
-  mutate(rodzaj_ksiazki = ifelse(str_count(X245, " / ")+1>2,"antologia",
-                                 ifelse(str_count(X245, " / ")+1==2,"współwydanie",
-                                        ifelse(rodzaj_ksiazki==""&czy_podmiotowy==TRUE&!grepl("xhistoria|xtematyka|xbiografia",X650)&!grepl("xhistoria|xtematyka|xbiografia",X655),"podmiotowa",
-                                               ifelse(X100!=""&grepl("aPamiętnik|aLiteratura podróżnicza",X655)&!grepl("xhistoria|xtematyka|xbiografia",X650)&!grepl("xhistoria|xtematyka|xbiografia",X655),"podmiotowa",
-                                                      ifelse(X100!=""&grepl("aReportaż",X655)&grepl("\\$y",X655)&!grepl("xhistoria|xtematyka|xbiografia",X650)&!grepl("xhistoria|xtematyka|xbiografia",X655),"podmiotowa",
-                                                             ifelse(X100!=""&(X655=="\\7$aReportaż polski$2DBN"|X655=="\\7$aReportaż$2DBN")&!grepl("xhistoria|xtematyka|xbiografia",X650)&!grepl("xhistoria|xtematyka|xbiografia",X655),"podmiotowa",
-                                                                    ifelse(rodzaj_ksiazki==""&czy_podmiotowy==FALSE,"przedmiotowa",as.character(rodzaj_ksiazki)))))))),
-         rodzaj_ksiazki = ifelse(rodzaj_ksiazki=="","przedmiotowa",as.character(rodzaj_ksiazki)),
-         rodzaj_ksiazki = ifelse(grepl("Lektury Wszech Czasów : streszczenie, analiza, interpretacja|Lektury Wszech Czasów - Literat|Biblioteczka Opracowań",X490)|grepl("Lektury Wszech Czasów : streszczenie, analiza, interpretacja|Lektury Wszech Czasów - Literat|Biblioteczka Opracowań",X830),"przedmiotowa",as.character(rodzaj_ksiazki)),
-         ilu_tworcow = str_count(X100,"\\$a"),
-         rodzaj_ksiazki = ifelse(ilu_tworcow>4&rodzaj_ksiazki=="podmiotowa","antologia",as.character(rodzaj_ksiazki)),
-         rodzaj_ksiazki = ifelse(grepl("Legendy",X655),"antologia",as.character(rodzaj_ksiazki))) %>%
-  filter(grepl("katalog wystawy",X655,ignore.case = TRUE)&rodzaj_ksiazki=="przedmiotowa") %>% 
-  select(id)
+podmiotowe = pd.concat([X100, X100_names, X080, X655, X650])
+pbl_dzial_enrichment = pd.concat([przedmiotowe, podmiotowe])
 
+bn_articles = pd.merge(bn_articles, pbl_dzial_enrichment, 'left', 'id')
+bn_articles = bn_articles.drop_duplicates().reset_index(drop=True).dropna(how='all', axis=1)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-test = bn_articles.copy().head(1000)
-
-
-
-
-
-
-
-test = bn_articles[bn_articles['dziedzina_PBL'] != 'błąd'][['X080', 'dziedzina_PBL']]
-
-for i, lista in test['X080'].iteritems():
-    for element in lista:
-        if isinstance(element, str) == False:
-            print(i, type(element))
-
-dir(pd.Series)
-
-
-bn_cz_mapping = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bn_cz_mapping.xlsx')
 gatunki_pbl = pd.DataFrame({'gatunek': ["aforyzm", "album", "antologia", "autobiografia", "dziennik", "esej", "felieton", "inne", "kazanie", "list", "miniatura prozą", "opowiadanie", "poemat", "powieść", "proza", "proza poetycka", "reportaż", "rozmyślanie religijne", "rysunek, obraz", "scenariusz", "szkic", "tekst biblijny", "tekst dramatyczny", "dramat", "wiersze", "wspomnienia", "wypowiedź", "pamiętniki", "poezja", "literatura podróżnicza", "satyra", "piosenka"]})
 gatunki_pbl['gatunek'] = gatunki_pbl['gatunek'].apply(lambda x: f"$a{x}")
-
-test = bn_articles.copy()
-test['osoba_bn_autor'] = test[['osoba_bn_autor', 'X100']].apply(lambda x: np.nan if pd.isnull(x['X100']) else x['osoba_bn_autor'], axis=1)
-test['osoba_bn_temat'] = test[['osoba_bn_temat', 'X600']].apply(lambda x: np.nan if pd.isnull(x['X600']) else x['osoba_bn_temat'], axis=1)
-test['dziedzina_PBL'] = test[['dziedzina_PBL', 'X080']].apply(lambda x: np.nan if pd.isnull(x['X080']) else x['dziedzina_PBL'], axis=1)
-
-testowy = test.copy()[(test['osoba_bn_autor'].isnull()) &
-                      (test['osoba_bn_temat'].isnull()) &
-                      (test['dziedzina_PBL'].isnull()) &
-                      (test['literary_word_keys'].isnull()) &
-                      (test['slowa_literackie'].isnull())][['X080', 'X100', 'X245', 'X600', 'X610', 'X630', 'X650', 'X651', 'X655', 'X773']]
-
-
-test = bn_articles[(bn_articles['X650'].isnull()) &
-                   (bn_articles['X655'].isnull()) &
-                   (bn_articles['X651'].isnull()) &
-                   (bn_articles['X600'].isnull()) &
-                   (bn_articles['X610'].isnull()) &
-                   (bn_articles['slowa_literackie'].isnull())]
-
-test2 = testowy[testowy['X245'].str.contains('Zaliczka albo dodatek')==True]
-
-test = bn_articles.head(10000)
-bn_articles = bn_articles[bn_articles['X001'] == 'b0000003184267']
-
-
-test = pbl_enrichment.copy()[pbl_enrichment.index == '991027974299705066']
 
 n = 10000
 list_df = [bn_articles[i:i+n] for i in range(0, bn_articles.shape[0],n)]
@@ -464,45 +414,46 @@ list_df = [bn_articles[i:i+n] for i in range(0, bn_articles.shape[0],n)]
 pbl_enrichment_full = pd.DataFrame()
 for i, group in enumerate(list_df):
     print(str(i) + '/' + str(len(list_df)))
-    pbl_enrichment = group.copy()[['id', 'dziedzina_PBL', 'rodzaj_ksiazki', 'DZ_NAZWA', 'X650', 'X655']]
-    pbl_enrichment['DZ_NAZWA'] = pbl_enrichment['DZ_NAZWA'].str.replace(' - .*?$', '', regex=True)
-    pbl_enrichment = cSplit(pbl_enrichment, 'id', 'X655', '|')
-    pbl_enrichment['jest x'] = pbl_enrichment['X655'].str.contains('\$x')
-    pbl_enrichment['nowe650'] = pbl_enrichment.apply(lambda x: x['X655'] if x['jest x'] == True else np.nan, axis=1)
-    pbl_enrichment['X655'] = pbl_enrichment.apply(lambda x: x['X655'] if x['jest x'] == False else np.nan, axis=1)
-    pbl_enrichment['X650'] = pbl_enrichment[['X650', 'nowe650']].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis=1)
+    pbl_enrichment = group.copy()[['id', 'dziedzina_PBL', 'rodzaj', 'DZ_NAZWA', '650', '655']]
+    pbl_enrichment = cSplit(pbl_enrichment, 'id', '655', '❦')
+    pbl_enrichment['jest x'] = pbl_enrichment['655'].str.contains('\$x')
+    pbl_enrichment['nowe650'] = pbl_enrichment.apply(lambda x: x['655'] if x['jest x'] == True else np.nan, axis=1)
+    pbl_enrichment['655'] = pbl_enrichment.apply(lambda x: x['655'] if x['jest x'] == False else np.nan, axis=1)
+    pbl_enrichment['650'] = pbl_enrichment[['650', 'nowe650']].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis=1)
     pbl_enrichment = pbl_enrichment.drop(['jest x', 'nowe650'], axis=1)
     
-    query = "select * from pbl_enrichment a join gatunki_pbl b on lower(a.X655) like '%'||b.gatunek||'%'"
+    query = "select * from pbl_enrichment a join gatunki_pbl b on lower(a.'655') like ('%'||b.gatunek||'%') where a.rodzaj like 'podmiotowy'"
     gatunki1 = pandasql.sqldf(query)
-    query = "select * from pbl_enrichment a join gatunki_pbl b on lower(a.X650) like '%'||b.gatunek||'%'"
+    query = "select * from pbl_enrichment a join gatunki_pbl b on lower(a.'650') like ('%'||b.gatunek||'%') where a.rodzaj like 'podmiotowy'"
     gatunki2 = pandasql.sqldf(query)
-    gatunki = pd.concat([gatunki1, gatunki2]).drop_duplicates()
-    gatunki['gatunek'] = gatunki['gatunek'].apply(lambda x: ''.join([x[:2], x[2].upper(), x[2 + 1:]]).strip())
+    gatunki3 = pbl_enrichment[(pbl_enrichment['655'].str.contains('Artykuł') == True) & (pbl_enrichment['rodzaj'] == 'przedmiotowy')]
+    gatunki4 = pbl_enrichment[(pbl_enrichment['650'].str.contains('Artykuł') == True) & (pbl_enrichment['rodzaj'] == 'przedmiotowy')]
+    gatunki = pd.concat([gatunki1, gatunki2, gatunki3, gatunki4]).drop_duplicates()
+    gatunki['gatunek'] = gatunki['gatunek'].apply(lambda x: ''.join([x[:2], x[2].upper(), x[2 + 1:]]).strip() if pd.notnull(x) else '$aArtykuł')
     try:
-        X655_field = marc_parser_1_field(gatunki, 'id', 'X655', '\$')[['id', '$y']].drop_duplicates()
+        X655_field = marc_parser_1_field(gatunki, 'id', '655', '\$')[['id', '$y']].drop_duplicates()
         X655_field = X655_field[X655_field['$y'] != '']   
         gatunki = pd.merge(gatunki, X655_field, how='left', on='id')
-    except KeyError:
+    except (IndexError, KeyError):
         pass
     gatunki['gatunek'] = gatunki['gatunek'].apply(lambda x: f"\\7{x.strip()}")
     try:
         gatunki['gatunek+data'] = gatunki.apply(lambda x: f"{x['gatunek']}$y{x['$y']}" if pd.notnull(x['$y']) else np.nan, axis=1)
-        gatunki['nowe655'] = gatunki[['X655', 'gatunek', 'gatunek+data']].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis=1)
-    except KeyError:
-        pass
-    gatunki['nowe655'] = gatunki[['X655', 'gatunek']].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis=1)
+        gatunki['nowe655'] = gatunki[['655', 'gatunek', 'gatunek+data']].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis=1)
+    except (ValueError, KeyError):
+        gatunki['nowe655'] = gatunki[['655', 'gatunek']].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis=1)
     gatunki['nowe655'] = gatunki.groupby('id')['nowe655'].transform(lambda x: '❦'.join(x))
     gatunki = gatunki[['id', 'nowe655']].drop_duplicates()
-    gatunki['nowe655'] = gatunki['nowe655'].str.split('❦').apply(set).str.join('❦')
+    if len(gatunki) > 0:
+        gatunki['nowe655'] = gatunki['nowe655'].str.split('❦').apply(set).str.join('❦')
     
     pbl_enrichment = pd.merge(pbl_enrichment, gatunki, how ='left', on='id')
-    pbl_enrichment['nowe650'] = pbl_enrichment.apply(lambda x: x['X655'] if pd.isnull(x['nowe655']) else np.nan, axis=1)
-    pbl_enrichment['DZ_NAZWA'] = pbl_enrichment['DZ_NAZWA'].apply(lambda x: f"\\7$a{x}" if 'do ustalenia' not in x else np.nan)
-    pbl_enrichment['X650'] = pbl_enrichment['X650'].replace(r'^\s*$', np.nan, regex=True)
-    pbl_enrichment['650'] = pbl_enrichment[['X650', 'nowe650', 'DZ_NAZWA']].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis=1)
+    pbl_enrichment['nowe650'] = pbl_enrichment.apply(lambda x: x['655'] if pd.isnull(x['nowe655']) else np.nan, axis=1)
+    pbl_enrichment['DZ_NAZWA'] = pbl_enrichment['DZ_NAZWA'].apply(lambda x: f"\\7$a{x}" if pd.notnull(x) else np.nan)
+    pbl_enrichment['650'] = pbl_enrichment['650'].replace(r'^\s*$', np.nan, regex=True)
+    pbl_enrichment['650'] = pbl_enrichment[['650', 'nowe650', 'DZ_NAZWA']].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis=1)
     pbl_enrichment['655'] = pbl_enrichment['nowe655'].replace(np.nan, '', regex=True)
-    pbl_enrichment['655'] = pbl_enrichment.apply(lambda x: f"{x['655']}❦\\7$aOpracowanie" if x['rodzaj_ksiazki'] == 'przedmiotowa' else f"{x['655']}❦\\7$aDzieło literackie", axis=1)
+    pbl_enrichment['655'] = pbl_enrichment.apply(lambda x: f"{x['655']}❦\\7$aOpracowanie" if x['rodzaj'] == 'przedmiotowy' else f"{x['655']}❦\\7$aDzieło literackie", axis=1)
     pbl_enrichment = pbl_enrichment[['id', '650', '655']].replace(r'^\❦', '', regex=True)
     pbl_enrichment['650'] = pbl_enrichment.groupby('id')['650'].transform(lambda x: '❦'.join(x.dropna().astype(str)))
     pbl_enrichment['655'] = pbl_enrichment.groupby('id')['655'].transform(lambda x: '❦'.join(x.dropna().astype(str)))
@@ -511,40 +462,38 @@ for i, group in enumerate(list_df):
     pbl_enrichment['655'] = pbl_enrichment['655'].str.split('❦').apply(set).str.join('❦')
     pbl_enrichment_full = pbl_enrichment_full.append(pbl_enrichment)
 
+regex_match = re.compile('^\d{3}$')
+idxs = [i for i, item in enumerate(bn_articles.columns.tolist()) if re.search(regex_match, item)][-1]+2
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-position_of_LDR = bn_articles.columns.get_loc("LDR")
-bn_articles_marc = bn_articles.iloc[:,position_of_LDR:]
-
-bn_articles_marc = bn_articles_marc.set_index('X009', drop=False)
-pbl_enrichment = pbl_enrichment.set_index('id').rename(columns={'650':'X650', '655':'X655'})
-bn_articles_marc = pbl_enrichment.combine_first(bn_articles_marc)
-
-fields_to_remove = bn_cz_mapping[bn_cz_mapping['cz'] == 'del']['bn'].to_list()
-bn_articles_marc = bn_articles_marc.loc[:, ~bn_articles_marc.columns.isin(fields_to_remove)]
+bn_articles_marc = bn_articles.iloc[:,:idxs].drop_duplicates()
+bn_articles_marc = bn_articles_marc.set_index('id', drop=False)
+pbl_enrichment_full = pbl_enrichment_full.set_index('id')
+bn_articles_marc = pbl_enrichment_full.combine_first(bn_articles_marc)
 
 merge_500s = [col for col in bn_articles_marc.columns if 'X5' in col]
-
 bn_articles_marc['500'] = bn_articles_marc[merge_500s].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis = 1)
 bn_articles_marc = bn_articles_marc.loc[:, ~bn_articles_marc.columns.isin(merge_500s)]
-bn_articles_marc.rename(columns={'X260':'X264'}, inplace=True)
-bn_articles_marc.drop(['X852', 'X856'], axis = 1, inplace=True) 
+bn_articles_marc.rename(columns={'260':'264'}, inplace=True)
+
+bn_articles_marc.to_excel('bn_articles_to_link.xlsx', index=False)
+
+bn_articles_marc = pd.read_excel('bn_articles_to_link.xlsx')
+full_text = marc_parser_1_field(bn_articles_marc, '001', '856', '\$')
+full_text['sygnatura'] = full_text['$u'].str.replace('http://polona.pl/item/', '', regex=False).str.strip()
+for i, row in full_text.iterrows():
+    print(str(i) + '/' + str(len(full_text)))
+    api_url = f"https://polona.pl/api/entities/?format=json&from=0&highlight=1&public=1&query={row['sygnatura']}"
+    json_data = requests.get(api_url)
+    json_data = json.loads(json_data.text)
+    try:
+        rights = ''.join([''.join([elem for elem in hit['rights']]) for hit in json_data['hits']])
+    except:
+        rights = 'brak praw'
+    full_text.at[i, 'rights'] = rights
+        
+
+
+bn_articles_marc.drop(['852', '856'], axis = 1, inplace=True) 
 bn_new_column_names = bn_articles_marc.columns.to_list()
 bn_new_column_names = [column.replace('X', '') for column in bn_new_column_names]
 bn_articles_marc.columns = bn_new_column_names
