@@ -471,36 +471,48 @@ bn_articles_marc = bn_articles_marc.set_index('id', drop=False)
 pbl_enrichment_full = pbl_enrichment_full.set_index('id')
 bn_articles_marc = pbl_enrichment_full.combine_first(bn_articles_marc)
 
-merge_500s = [col for col in bn_articles_marc.columns if 'X5' in col]
+merge_500s = [col for col in bn_articles_marc.columns if re.findall('^5', col) and col != '505']
 bn_articles_marc['500'] = bn_articles_marc[merge_500s].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis = 1)
+merge_500s = [x for x in merge_500s if x != '500']
 bn_articles_marc = bn_articles_marc.loc[:, ~bn_articles_marc.columns.isin(merge_500s)]
 bn_articles_marc.rename(columns={'260':'264'}, inplace=True)
 
-bn_articles_marc.to_excel('bn_articles_to_link.xlsx', index=False)
+# =============================================================================
+# bn_articles_marc = pd.read_excel('bn_articles_to_link.xlsx')
+# full_text = marc_parser_1_field(bn_articles_marc, '001', '856', '\$')
+# full_text['sygnatura'] = full_text['$u'].str.replace('http://polona.pl/item/', '', regex=False).str.strip()
+# for i, row in full_text.iterrows():
+#     print(str(i) + '/' + str(len(full_text)))
+#     api_url = f"https://polona.pl/api/entities/?format=json&from=0&highlight=1&public=1&query={row['sygnatura']}"
+#     try:
+#         json_data = requests.get(api_url)
+#         json_data = json.loads(json_data.text)
+#         try:
+#             rights = ''.join([''.join([elem for elem in hit['rights']]) for hit in json_data['hits']])
+#         except:
+#             rights = 'brak praw'
+#     except JSONDecodeError:
+#         rights = 'brak praw'
+#     full_text.at[i, 'rights'] = rights
+# =============================================================================
 
-bn_articles_marc = pd.read_excel('bn_articles_to_link.xlsx')
-full_text = marc_parser_1_field(bn_articles_marc, '001', '856', '\$')
-full_text['sygnatura'] = full_text['$u'].str.replace('http://polona.pl/item/', '', regex=False).str.strip()
-for i, row in full_text.iterrows():
-    print(str(i) + '/' + str(len(full_text)))
-    api_url = f"https://polona.pl/api/entities/?format=json&from=0&highlight=1&public=1&query={row['sygnatura']}"
-    try:
-        json_data = requests.get(api_url)
-        json_data = json.loads(json_data.text)
-        try:
-            rights = ''.join([''.join([elem for elem in hit['rights']]) for hit in json_data['hits']])
-        except:
-            rights = 'brak praw'
-    except JSONDecodeError:
-        rights = 'brak praw'
-    full_text.at[i, 'rights'] = rights
-        
-
-
-bn_articles_marc.drop(['852', '856'], axis = 1, inplace=True) 
-bn_new_column_names = bn_articles_marc.columns.to_list()
-bn_new_column_names = [column.replace('X', '') for column in bn_new_column_names]
-bn_articles_marc.columns = bn_new_column_names
+bn_articles_marc.drop(['852', 'id'], axis = 1, inplace=True) 
 bn_articles_marc['240'] = bn_articles_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' in x else np.nan)
 bn_articles_marc['246'] = bn_articles_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' not in x else np.nan)
+bn_articles_marc['008'] = bn_articles_marc['008'].str.replace('\\', ' ')
+if bn_articles_marc['009'].dtype == np.float64:
+        bn_articles_marc['009'] = bn_articles_marc['009'].astype(np.int64)
 bn_articles_marc['995'] = '\\\\$aPBL 2004-2019: czasopisma'
+bn_articles_marc = bn_articles_marc.drop_duplicates().reset_index(drop=True).dropna(how='all', axis=1)
+
+df_to_mrc(bn_articles_marc, '❦', 'libri_marc_bn_articles.mrc')
+
+
+
+
+
+
+
+
+
+

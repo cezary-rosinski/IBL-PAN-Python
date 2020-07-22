@@ -10,7 +10,7 @@ from my_functions import df_to_mrc
 import io
 
 bn_cz_mapping = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bn_cz_mapping.xlsx')
-gatunki_pbl = pd.DataFrame({'gatunek': ["aforyzm", "album", "antologia", "autobiografia", "dziennik", "esej", "felieton", "inne", "kazanie", "list", "miniatura prozą", "opowiadanie", "poemat", "powieść", "proza", "proza poetycka", "reportaż", "rozmyślanie religijne", "rysunek, obraz", "scenariusz", "szkic", "tekst biblijny", "tekst dramatyczny", "dramat", "wiersze", "wspomnienia", "wypowiedź", "pamiętniki", "poezja", "literatura podróżnicza", "satyra", "piosenka"]})
+gatunki_pbl = pd.DataFrame({'gatunek': ["aforyzm", "album", "antologia", "autobiografia", "dziennik", "esej", "felieton", "inne", "kazanie", "list", "miniatura prozą", "opowiadanie", "poemat", "powieść", "proza", "proza poetycka", "reportaż", "rozmyślanie religijne", "rysunek, obraz", "scenariusz", "szkic", "tekst biblijny", "tekst dramatyczny", "dramat", "wiersze", "wspomnienia", "wypowiedź", "pamiętniki", "poezja", "literatura podróżnicza", "satyra", "piosenka", 'opowiadania i nowele']})
 gatunki_pbl['gatunek'] = gatunki_pbl['gatunek'].apply(lambda x: f"$a{x}")
 
 # polona full text url
@@ -131,9 +131,9 @@ for i, year in enumerate(years):
     fields_to_remove = bn_cz_mapping[bn_cz_mapping['cz'] == 'del']['bn'].to_list()
     bn_books_marc = bn_books_marc.loc[:, ~bn_books_marc.columns.isin(fields_to_remove)]
     
-    merge_500s = [col for col in bn_books_marc.columns if 'X5' in col]
-    
-    bn_books_marc['500'] = bn_books_marc[merge_500s].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis = 1)
+    merge_500s = [col for col in bn_books_marc.columns if 'X5' in col and col != 'X505']
+    bn_books_marc['X500'] = bn_books_marc[merge_500s].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis = 1)
+    merge_500s = [x for x in merge_500s if x != 'X500']
     bn_books_marc = bn_books_marc.loc[:, ~bn_books_marc.columns.isin(merge_500s)]
     bn_books_marc.rename(columns={'X260':'X264'}, inplace=True)
     bn_books_marc.drop(['X852', 'X856'], axis = 1, inplace=True) 
