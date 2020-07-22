@@ -14,6 +14,7 @@ import regex
 from functools import reduce
 import glob
 from my_functions import f
+from json.decoder import JSONDecodeError
 
 # def
 
@@ -483,11 +484,14 @@ full_text['sygnatura'] = full_text['$u'].str.replace('http://polona.pl/item/', '
 for i, row in full_text.iterrows():
     print(str(i) + '/' + str(len(full_text)))
     api_url = f"https://polona.pl/api/entities/?format=json&from=0&highlight=1&public=1&query={row['sygnatura']}"
-    json_data = requests.get(api_url)
-    json_data = json.loads(json_data.text)
     try:
-        rights = ''.join([''.join([elem for elem in hit['rights']]) for hit in json_data['hits']])
-    except:
+        json_data = requests.get(api_url)
+        json_data = json.loads(json_data.text)
+        try:
+            rights = ''.join([''.join([elem for elem in hit['rights']]) for hit in json_data['hits']])
+        except:
+            rights = 'brak praw'
+    except JSONDecodeError:
         rights = 'brak praw'
     full_text.at[i, 'rights'] = rights
         
