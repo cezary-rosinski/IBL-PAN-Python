@@ -496,6 +496,9 @@ bn_articles_marc.rename(columns={'260':'264'}, inplace=True)
 #     full_text.at[i, 'rights'] = rights
 # =============================================================================
 
+# linki do pełnych tekstów
+bn_art_full_text = gsheet_to_df('1ewU50T08ZVNUP-U3dTTrb5VDDfWqT4TeYrMLrYns7c8', 'Sheet1')
+
 bn_articles_marc.drop(['852', 'id'], axis = 1, inplace=True) 
 bn_articles_marc['240'] = bn_articles_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' in x else np.nan)
 bn_articles_marc['246'] = bn_articles_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' not in x else np.nan)
