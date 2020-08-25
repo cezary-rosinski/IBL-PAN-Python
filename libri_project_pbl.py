@@ -968,21 +968,6 @@ mrc_to_mrk('pbl_marc_articles.mrc', 'pbl_marc_articles.mrk')
 # =============================================================================
 
 
-#błędy - 10000 książek nie przeszło
-
-errors = pd.read_excel('pbl_marc_books.xlsx')
-errors['numer'] = errors['001'].apply(lambda x: int(re.findall('\d+', x)[0]))
-errors = errors[errors['numer'] >= 1450103].reset_index(drop=True).drop(columns=['numer'])
-
-errors.at[0, '520']
-
-mrc_to_mrk('pbl_books_errors.mrc', 'pbl_books_errors.mrk')
-
-df_to_mrc(errors, '❦', 'pbl_books_errors.mrc')
-
-
-X773['rok'] = X773['rok'].apply(lambda x: '{:4.0f}'.format(x))  
-int(filter(str.isdigit, str1))
 
 
 
