@@ -13,6 +13,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 from my_functions import gsheet_to_df
+from my_functions import mrc_to_mrk
 
 # def
 def f(row, id_field):
@@ -261,6 +262,7 @@ for i, column in enumerate(bar_catalog):
 bar_catalog.to_excel('bar_catalog.xlsx', index=False)
 
 df_to_mrc(bar_catalog, '❦', 'bar_catalog.mrc')
+mrc_to_mrk('bar_catalog.mrc', 'bar_catalog.mrk')
 
 # =============================================================================
 # kod zwrócił 100 błędów

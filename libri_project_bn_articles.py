@@ -15,6 +15,7 @@ from functools import reduce
 import glob
 from my_functions import f
 from json.decoder import JSONDecodeError
+from my_functions import mrc_to_mrk
 
 # def
 
@@ -509,6 +510,7 @@ bn_articles_marc['995'] = '\\\\$aPBL 2004-2019: czasopisma'
 bn_articles_marc = bn_articles_marc.drop_duplicates().reset_index(drop=True).dropna(how='all', axis=1)
 
 df_to_mrc(bn_articles_marc, '❦', 'libri_marc_bn_articles.mrc')
+mrc_to_mrk('libri_marc_bn_articles.mrc', 'libri_marc_bn_articles.mrk')
 
 
 

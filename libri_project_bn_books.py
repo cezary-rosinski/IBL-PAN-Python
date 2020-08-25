@@ -8,6 +8,7 @@ import json
 import requests
 from my_functions import df_to_mrc
 import io
+from my_functions import mrc_to_mrk
 
 bn_cz_mapping = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bn_cz_mapping.xlsx')
 gatunki_pbl = pd.DataFrame({'gatunek': ["aforyzm", "album", "antologia", "autobiografia", "dziennik", "esej", "felieton", "inne", "kazanie", "list", "miniatura prozą", "opowiadanie", "poemat", "powieść", "proza", "proza poetycka", "reportaż", "rozmyślanie religijne", "rysunek, obraz", "scenariusz", "szkic", "tekst biblijny", "tekst dramatyczny", "dramat", "wiersze", "wspomnienia", "wypowiedź", "pamiętniki", "poezja", "literatura podróżnicza", "satyra", "piosenka", 'opowiadania i nowele']})
@@ -156,6 +157,7 @@ if bn_books_marc_total['009'].dtype == np.float64:
         bn_books_marc_total['009'] = bn_books_marc_total['009'].astype(np.int64)
 
 df_to_mrc(bn_books_marc_total, '❦', 'libri_marc_bn_books.mrc')
+mrc_to_mrk('libri_marc_bn_books.mrc', 'libri_marc_bn_books.mrk')
 
 print('Done')
 
