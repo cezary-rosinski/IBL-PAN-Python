@@ -6,8 +6,8 @@ import re
 import numpy as np
 from bs4 import BeautifulSoup
 from my_functions import cosine_sim_2_elem
-from langdetect import detect_langs
-from textblob import TextBlob 
+# from langdetect import detect_langs
+# from textblob import TextBlob 
 
 
 

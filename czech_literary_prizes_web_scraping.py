@@ -4,6 +4,9 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import pandas as pd
+import numpy as np
+import regex
+from my_functions import cSplit
 
 FormData = {'q' : '*',
             'so' : 've jménech osob'}
@@ -41,3 +44,17 @@ end_time = time.time()
 print(end_time - start_time)
 
 df = pd.DataFrame(data, columns =['data_person', 'role', 'description'])
+
+df['person_year'] = df['data_person'].apply(lambda x: re.sub('(.+)(, )(\d.+)', r'\3', x) if re.findall('\d{4}', x) else np.nan)
+df['single_prize'] = df['description'].apply(lambda x: regex.sub('(\n)(\d{4} \p{Lu})', r'❦\2', x))
+df['index'] = df.index + 1
+df = cSplit(df, 'index', 'single_prize', '❦')
+df['single_prize'] = df['single_prize'].str.replace('\n', '❦')
+df = df[df['single_prize'].notnull()]
+df['prize_year'] = df['single_prize'].str.replace('(^\d{4})(.+)', r'\1')
+df['book_title_reason'] = df['single_prize'].apply(lambda x: re.sub('(^\d{4} )(.+)(❦)(.+)', r'\4', x) if re.findall('❦', x) else np.nan)
+
+
+
+
+df.iloc[9,2]
