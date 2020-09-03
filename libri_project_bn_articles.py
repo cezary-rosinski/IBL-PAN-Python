@@ -1,3 +1,4 @@
+#trzeba zmienić w ldr naa na naab
 import pandas as pd
 import numpy as np
 from my_functions import marc_parser_1_field
