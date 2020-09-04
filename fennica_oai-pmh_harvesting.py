@@ -53,6 +53,7 @@ stop = valid_date(stop_date)
 # main
 
 while start < stop:
+    print(start)
     from_date = start
     start = start + timedelta(days=1)  # increase days one by one
     until_date = start
