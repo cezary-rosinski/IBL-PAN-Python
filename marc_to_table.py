@@ -14,7 +14,7 @@ def year(row, field):
     return val
 
 # mrc to mrk
-path = 'E:/Cezary/Documents/IBL/Translations/'
+path = 'F:/Cezary/Documents/IBL/Translations/Fennica/'
 files = [f for f in glob.glob(path + '*.mrc', recursive=True)]
 for i, file_path in enumerate(files):
     print(str(i) + '/' + str(len(files)))

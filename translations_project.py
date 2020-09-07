@@ -460,6 +460,120 @@ fields_order = full_data.columns.tolist()
 fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', x)[0].isdigit() else 'a')), x))
 full_data = full_data.reindex(columns=fields_order)
 full_data.to_excel('pol_data_cz_origin.xlsx', index = False)
+
+# Finnish database    
+fi_names = df_names.copy()
+fi_names_cz = fi_names[['index', 'cz_name', 'viaf_id']]
+# fi_names['cz_name'] = fi_names.apply(lambda x: f"{x['cz_name']} {x['cz_dates']}", axis=1)
+fi_names = fi_names[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
+fi_names = cSplit(fi_names, 'index', 'name_and_source', '❦')
+fi1 = fi_names[['index', 'cz_name', 'viaf_id']].drop_duplicates()
+fi_names = cSplit(fi_names, 'index', 'name_and_source', '‽', 'wide', 1).drop_duplicates()
+fi2 = fi_names[['index', 'name_and_source_0', 'viaf_id']]
+fi2.columns = fi1.columns
+def n_letters(x):
+    try:
+        val = len(''.join(regex.findall('\p{L}', x)))
+    except TypeError:
+        val = np.nan
+    return val
+fi2['n_letters'] = fi2['cz_name'].apply(lambda x: n_letters(x))
+def n_uppers(x):
+    try:
+        val = len(''.join(regex.findall('\p{Lu}', x)))
+    except TypeError:
+        val = np.nan
+    return val
+fi2['n_uppers'] = fi2['cz_name'].apply(lambda x: n_uppers(x))
+def has_digits(x):
+    try:
+        val = bool(re.findall('\d+', x))
+    except TypeError:
+        val = np.nan
+    return val
+fi2['has_digits'] = fi2['cz_name'].apply(lambda x: has_digits(x))
+fi2 = fi2[(fi2['n_letters'] != fi2['n_uppers']) |
+            (fi2['has_digits'] == True)]
+def n_initials(x):
+    try:
+        val = len(''.join(regex.findall('(?<= )(\p{Lu})(?=\.)', x)))
+    except TypeError:
+        val = np.nan
+    return val
+fi2['n_initials'] = fi2['cz_name'].apply(lambda x: n_initials(x))
+def n_words(x):
+    try:
+        val = len(regex.findall('(\p{L}+)(?=[^\p{L}])', x))
+    except TypeError:
+        val = np.nan
+    return val
+fi2['n_words'] = fi2['cz_name'].apply(lambda x: n_words(x))
+fi2 = fi2[(fi2['n_words'] != fi2['n_initials'] + 1) |
+            (fi2['has_digits'] == True)]
+fi2 = fi2[['index', 'cz_name', 'viaf_id']]
+fi_names = pd.concat([fi_names_cz, fi1, fi2]).sort_values(['viaf_id', 'cz_name']).drop_duplicates()
+fi_names = fi_names[(fi_names['cz_name'].notna()) &
+                    (fi_names['cz_name'].str.contains(' '))]
+
+fi_names_table = fi_names.copy()
+fi_names_table.columns = ['index', 'name', 'viaf_id']
+
+fi_names = fi_names[['cz_name']].drop_duplicates().values.tolist()
+fi_names = [re.escape(item) for sublist in fi_names for item in sublist]
+fi_names = '|'.join(fi_names)
+
+# Finnish database harvesting
+path = 'F:/Cezary/Documents/IBL/Translations/Fennica/'
+files = [f for f in glob.glob(path + '*.mrk', recursive=True)]
+
+encoding = 'utf-8'
+marc_df = pd.DataFrame()
+for i, file_path in enumerate(files):
+    print(str(i) + '/' + str(len(files)))
+    marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+    marc_list = list(filter(None, marc_list))  
+    df = pd.DataFrame(marc_list, columns = ['test'])
+    df['field'] = df['test'].replace(r'(^.)(...)(.+?$)', r'\2', regex = True)
+    df['content'] = df['test'].replace(r'(^.)(.....)(.+?$)', r'\3', regex = True)
+    df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
+    df['help'] = df['help'].ffill()
+    df_help = df.copy()[df['field'].isin(['100', '700'])]
+    df_help = df_help[df_help['content'].str.contains(fi_names)]['help'].apply(lambda x: int(x)).values.tolist()
+    df = df[df['help'].isin(df_help)]
+    if len(df) > 0:
+        df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
+        df['id'] = df.groupby('help')['id'].ffill().bfill()
+        df = df[['id', 'field', 'content']]
+        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+        df = df.drop_duplicates().reset_index(drop=True)
+        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
+        df_wide = df_wide[df_wide['LDR'].str.contains('^.{6}am', regex=True)]
+        marc_df = marc_df.append(df_wide)
+
+fields = marc_df.columns.tolist()
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
+
+fi_names = fi_names_table.copy()
+
+X100 = marc_df[['001', '100']]
+query = "select * from X100 a join fi_names b on a.'100' like '%'||b.name||'%'"
+X100 = pandasql.sqldf(query)
+X100 = X100[['001', 'index', 'name', 'viaf_id']]
+
+X700 = marc_df[['001', '700']]
+query = "select * from X700 a join fi_names b on a.'700' like '%'||b.name||'%'"
+X700 = pandasql.sqldf(query)
+X700 = X700[['001', 'index', 'name', 'viaf_id']]
+
+X100700 = pd.concat([X100, X700]).drop_duplicates()
+marc_df = pd.merge(marc_df, X100700, on='001', how='left')
+
+fields_order = marc_df.columns.tolist()
+
+fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', x)[0].isdigit() else 'a')), x))
+marc_df = marc_df.reindex(columns=fields_order)
+marc_df.to_excel('fi_data.xlsx', index=False)
         
 # Czech database    
 cz_names = pd.read_excel('cz_authorities.xlsx')
@@ -479,7 +593,7 @@ cz_names = [re.escape(m) for m in cz_names]
 cz_names = '|'.join(cz_names)
 
 # Czech database harvesting
-path = 'F:/Cezary/Documents/IBL/Translations/'
+path = 'F:/Cezary/Documents/IBL/Translations/Czech database'
 files = [f for f in glob.glob(path + '*.mrk', recursive=True)]
 
 encoding = 'utf-8'
