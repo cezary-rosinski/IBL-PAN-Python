@@ -435,7 +435,9 @@ pbl_articles_query = """select z.za_zapis_id "rekord_id", z.za_type "typ", rz.rz
                     full outer join IBL_OWNER.pbl_udzialy_osob uo on uo.uo_za_zapis_id = z.za_zapis_id
                     full outer join IBL_OWNER.pbl_osoby os on uo.uo_os_osoba_id=os.os_osoba_id
                     full outer join IBL_OWNER.pbl_funkcje_osob fo on fo.fo_symbol=uo.uo_fo_symbol
-                    where z.za_type in ('IZA','PU')"""                  
+                    where z.za_type in ('IZA','PU')
+                    and zr.zr_tytul is not null
+                    and zr.zr_tytul not like 'x'"""                  
 pbl_sh_query1 = """select hpz.hz_za_zapis_id,hp.hp_nazwa,khp.kh_nazwa
                 from IBL_OWNER.pbl_hasla_przekrojowe hp
                 join IBL_OWNER.pbl_hasla_przekr_zapisow hpz on hpz.hz_hp_haslo_id=hp.hp_haslo_id
