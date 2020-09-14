@@ -178,17 +178,17 @@ df_names = df_names[df_names['viaf_id'].isin(test_names)]
 # Swedish database
 # with dates and without dates - OV decides
 swe_names = df_names.copy()
-swe_names_cz = swe_names[['index', 'cz_name', 'viaf_id']]
+swe_names_cz = swe_names[['index', 'cz_name', 'viaf']]
 swe_names = swe_names.loc[swe_names['IDs'].str.contains("SELIBR") == True].reset_index(drop = True)
 # swe_names['cz_name'] = swe_names.apply(lambda x: f"{x['cz_name']} {x['cz_dates']}", axis=1)
-swe_names = swe_names[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
+swe_names = swe_names[['index', 'cz_name', 'viaf', 'IDs', 'name_and_source']]
 swe_names = cSplit(swe_names, 'index', 'name_and_source', '❦')
-swe1 = swe_names[['index', 'cz_name', 'viaf_id']].drop_duplicates()
+swe1 = swe_names[['index', 'cz_name', 'viaf']].drop_duplicates()
 swe_names = swe_names.loc[swe_names['name_and_source'].str.contains("SELIBR") == True].reset_index(drop = True)   
 swe_names = cSplit(swe_names, 'index', 'name_and_source', '‽', 'wide', 1).drop_duplicates()
-swe2 = swe_names[['index', 'name_and_source_0', 'viaf_id']]
+swe2 = swe_names[['index', 'name_and_source_0', 'viaf']]
 swe2.columns = swe1.columns
-swe_names = pd.concat([swe_names_cz, swe1, swe2]).sort_values(['viaf_id', 'cz_name']).drop_duplicates().values.tolist()     
+swe_names = pd.concat([swe_names_cz, swe1, swe2]).sort_values(['viaf', 'cz_name']).drop_duplicates().values.tolist()     
         
 # Swedish database harvesting
 full_data = pd.DataFrame()
@@ -282,9 +282,9 @@ fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', 
 full_data = full_data.reindex(columns=fields_order)
 # full_data.to_excel('swe_data.xlsx', index = False)
 full_data.to_excel('swe_data_no_dates.xlsx', index = False)
-swe_errors = pd.DataFrame(errors, columns = ['name_index', 'authority_index', 'name', 'viaf_id'])
+swe_errors = pd.DataFrame(errors, columns = ['name_index', 'authority_index', 'name', 'viaf'])
 swe_errors.to_excel('swe_errors.xlsx', index = False)
-swe_names = pd.DataFrame(swe_names, columns = ['authority_index', 'name', 'viaf_id'])
+swe_names = pd.DataFrame(swe_names, columns = ['authority_index', 'name', 'viaf'])
 swe_names.to_excel('swe_names.xlsx', index = False)
 
 # Swedish harvesting Czech original
@@ -344,15 +344,15 @@ full_data.to_excel('swe_data_cz_origin.xlsx', index = False)
 # with dates and without dates - OV decides
 
 pol_names = df_names.copy()
-pol_names_cz = pol_names[['index', 'cz_name', 'viaf_id']]
+pol_names_cz = pol_names[['index', 'cz_name', 'viaf']]
 pol_names = pol_names.loc[pol_names['IDs'].str.contains("PLWABN") == True].reset_index(drop = True)
 # pol_names['cz_name'] = pol_names.apply(lambda x: f"{x['cz_name']} {x['cz_dates']}", axis=1)
-pol_names = pol_names[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
+pol_names = pol_names[['index', 'cz_name', 'viaf', 'IDs', 'name_and_source']]
 pol_names = cSplit(pol_names, 'index', 'name_and_source', '❦')
-pol1 = pol_names[['index', 'cz_name', 'viaf_id']].drop_duplicates()
+pol1 = pol_names[['index', 'cz_name', 'viaf']].drop_duplicates()
 pol_names = pol_names.loc[pol_names['name_and_source'].str.contains("PLWABN") == True].reset_index(drop = True)   
 pol_names = cSplit(pol_names, 'index', 'name_and_source', '‽', 'wide', 1).drop_duplicates()
-pol2 = pol_names[['index', 'name_and_source_0', 'viaf_id']]
+pol2 = pol_names[['index', 'name_and_source_0', 'viaf']]
 pol2.columns = pol1.columns
 pol2['n_letters'] = pol2['cz_name'].apply(lambda x: len(''.join(re.findall('[a-zA-ZÀ-ž]', x))))
 pol2['n_uppers'] = pol2['cz_name'].apply(lambda x: len(''.join(re.findall('[A-ZÀ-Ž]', x))))
@@ -363,8 +363,8 @@ pol2['n_initials'] = pol2['cz_name'].apply(lambda x: len(''.join(re.findall('(?<
 pol2['n_words'] = pol2['cz_name'].apply(lambda x: len(re.findall('([a-zA-ZÀ-ž]+)(?=[^a-zA-ZÀ-ž])', x)))
 pol2 = pol2[(pol2['n_words'] != pol2['n_initials'] + 1) |
             (pol2['has_digits'] == True)]
-pol2 = pol2[['index', 'cz_name', 'viaf_id']]
-pol_names = pd.concat([pol_names_cz, pol1, pol2]).sort_values(['viaf_id', 'cz_name']).drop_duplicates().values.tolist()
+pol2 = pol2[['index', 'cz_name', 'viaf']]
+pol_names = pd.concat([pol_names_cz, pol1, pol2]).sort_values(['viaf', 'cz_name']).drop_duplicates().values.tolist()
 
 # Polish database harvesting
 ns = '{http://www.loc.gov/MARC21/slim}'
@@ -416,9 +416,9 @@ fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', 
 full_data = full_data.reindex(columns=fields_order)
 # full_data.to_excel('pol_data.xlsx', index = False)
 full_data.to_excel('pol_data_no_dates.xlsx', index = False)
-pol_errors = pd.DataFrame(errors, columns = ['name_index', 'authority_index', 'name', 'viaf_id'])
+pol_errors = pd.DataFrame(errors, columns = ['name_index', 'authority_index', 'name', 'viaf'])
 pol_errors.to_excel('pol_errors.xlsx', index = False)
-pol_names = pd.DataFrame(pol_names, columns = ['authority_index', 'name', 'viaf_id'])
+pol_names = pd.DataFrame(pol_names, columns = ['authority_index', 'name', 'viaf'])
 pol_names.to_excel('pol_names.xlsx', index = False)
 
 # Polish harvesting Czech original
@@ -463,13 +463,13 @@ full_data.to_excel('pol_data_cz_origin.xlsx', index = False)
 
 # Finnish database    
 fi_names = df_names.copy()
-fi_names_cz = fi_names[['index', 'cz_name', 'viaf_id']]
+fi_names_cz = fi_names[['index', 'cz_name', 'viaf']]
 # fi_names['cz_name'] = fi_names.apply(lambda x: f"{x['cz_name']} {x['cz_dates']}", axis=1)
-fi_names = fi_names[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
+fi_names = fi_names[['index', 'cz_name', 'viaf', 'IDs', 'name_and_source']]
 fi_names = cSplit(fi_names, 'index', 'name_and_source', '❦')
-fi1 = fi_names[['index', 'cz_name', 'viaf_id']].drop_duplicates()
+fi1 = fi_names[['index', 'cz_name', 'viaf']].drop_duplicates()
 fi_names = cSplit(fi_names, 'index', 'name_and_source', '‽', 'wide', 1).drop_duplicates()
-fi2 = fi_names[['index', 'name_and_source_0', 'viaf_id']]
+fi2 = fi_names[['index', 'name_and_source_0', 'viaf']]
 fi2.columns = fi1.columns
 def n_letters(x):
     try:
@@ -510,13 +510,13 @@ def n_words(x):
 fi2['n_words'] = fi2['cz_name'].apply(lambda x: n_words(x))
 fi2 = fi2[(fi2['n_words'] != fi2['n_initials'] + 1) |
             (fi2['has_digits'] == True)]
-fi2 = fi2[['index', 'cz_name', 'viaf_id']]
-fi_names = pd.concat([fi_names_cz, fi1, fi2]).sort_values(['viaf_id', 'cz_name']).drop_duplicates()
+fi2 = fi2[['index', 'cz_name', 'viaf']]
+fi_names = pd.concat([fi_names_cz, fi1, fi2]).sort_values(['viaf', 'cz_name']).drop_duplicates()
 fi_names = fi_names[(fi_names['cz_name'].notna()) &
                     (fi_names['cz_name'].str.contains(' '))]
 
 fi_names_table = fi_names.copy()
-fi_names_table.columns = ['index', 'name', 'viaf_id']
+fi_names_table.columns = ['index', 'name', 'viaf']
 
 fi_names = fi_names[['cz_name']].drop_duplicates().values.tolist()
 fi_names = [re.escape(item) for sublist in fi_names for item in sublist]
@@ -559,12 +559,12 @@ fi_names = fi_names_table.copy()
 X100 = marc_df[['001', '100']]
 query = "select * from X100 a join fi_names b on a.'100' like '%'||b.name||'%'"
 X100 = pandasql.sqldf(query)
-X100 = X100[['001', 'index', 'name', 'viaf_id']]
+X100 = X100[['001', 'index', 'name', 'viaf']]
 
 X700 = marc_df[['001', '700']]
 query = "select * from X700 a join fi_names b on a.'700' like '%'||b.name||'%'"
 X700 = pandasql.sqldf(query)
-X700 = X700[['001', 'index', 'name', 'viaf_id']]
+X700 = X700[['001', 'index', 'name', 'viaf']]
 
 X100700 = pd.concat([X100, X700]).drop_duplicates()
 marc_df = pd.merge(marc_df, X100700, on='001', how='left')
@@ -581,12 +581,12 @@ cz_names = marc_parser_1_field(cz_names, '001', '100', '\$\$')
 cz_names = cz_names[(cz_names['$$7'] != '') |
                     (cz_names['$$d'] != '')]
 cz_names['index'] = cz_names.index + 1
-cz_names = pd.merge(cz_names, df_names[['index', 'viaf_id']], on='index', how='left')
-cz_viaf = cz_names[['viaf_id']]
+cz_names = pd.merge(cz_names, df_names[['index', 'viaf']], on='index', how='left')
+cz_viaf = cz_names[['viaf']]
 # test filtering
-cz_names = cz_names[cz_names['viaf_id'].isin(test_names)]
-cz_names_table = cz_names[['index', '$$a', 'viaf_id']]
-cz_names_table.columns = ['index', 'name', 'viaf_id']
+cz_names = cz_names[cz_names['viaf'].isin(test_names)]
+cz_names_table = cz_names[['index', '$$a', 'viaf']]
+cz_names_table.columns = ['index', 'name', 'viaf']
 cz_names = cz_names['100'].apply(lambda x: x.replace('|', '')).apply(lambda x: x.replace('$$', '$')).values.tolist()
 cz_names = [f'{e}$4aut' for e in cz_names]
 cz_names = [re.escape(m) for m in cz_names]
@@ -629,12 +629,12 @@ cz_names = cz_names_table.copy()
 X100 = marc_df[['001', '100']]
 query = "select * from X100 a join cz_names b on a.'100' like '%'||b.name||'%'"
 X100 = pandasql.sqldf(query)
-X100 = X100[['001', 'index', 'name', 'viaf_id']]
+X100 = X100[['001', 'index', 'name', 'viaf']]
 
 X700 = marc_df[['001', '700']]
 query = "select * from X700 a join cz_names b on a.'700' like '%'||b.name||'%'"
 X700 = pandasql.sqldf(query)
-X700 = X700[['001', 'index', 'name', 'viaf_id']]
+X700 = X700[['001', 'index', 'name', 'viaf']]
 
 X100700 = pd.concat([X100, X700]).drop_duplicates()
 marc_df = pd.merge(marc_df, X100700, on='001', how='left')
@@ -795,10 +795,102 @@ pol_data.to_excel('pol_data_clean.xlsx', index=False)
 # Connect appearances for several authors from all datasets
 
 
+pol = pd.read_excel('pol_data_clean.xlsx')
+pol['source'] = 'pol'
+swe = pd.read_excel('swe_data_clean.xlsx')
+swe['source'] = 'swe'
+cze = pd.read_excel('cz_data.xlsx')
+cze['source'] = 'cze'
+cze['id'] = cze.index+1
+fin = pd.read_excel('fi_data.xlsx')
+fin['source'] = 'fin'
+
+# core of names
+cz_foundation = cze.copy()[['id', 'name', 'viaf', '008', '245']]
+cz_foundation['language'] = cz_foundation['008'].apply(lambda x: x[-5:-2])
+cz_foundation = cz_foundation[cz_foundation['language'] == 'cze']
+cz245 = marc_parser_1_field(cz_foundation, 'id', '245', '\\$')[['id', '$a']]
+cz_foundation = pd.merge(cz_foundation, cz245, how='inner', on='id')[['name', 'viaf', '$a']].drop_duplicates()
+cz_foundation['$a'] = cz_foundation['$a'].apply(lambda x: x[:-2])
+cz_foundation = cz_foundation.drop_duplicates()
+cz_foundation['simple'] = cz_foundation['$a'].apply(lambda x: unidecode.unidecode(x))
+
+
+total = pd.concat([pol, swe, fin]).sort_values('viaf')
+
+# generator approach?
+
+test = total.copy()[['index', 'name', 'viaf', '008', '041', '100', '245', '240', '246', '250', '260', '300', '080', 'source']]
+test = test[test['viaf'] == 34458072].reset_index(drop=True)
+
+def search_for_simple(x):
+    for title in cz_foundation['simple']:
+        if pd.notnull(x['245']) and title in unidecode.unidecode(x['245']):
+            val = '245'
+        elif pd.notnull(x['240']) and title in unidecode.unidecode(x['240']):
+            val = '240'
+        elif pd.notnull(x['246']) and title in unidecode.unidecode(x['246']):
+            val = '246'
+        else:
+            val = None
+        yield val
+
+
+test['match'] = test.apply(lambda x: search_for_simple(x), axis=1)
+
+def get_generator(x):
+    l = []
+    for elem in x:
+        l.append(elem)
+        # l = [e for e in l if e]
+    return l
+
+test['match'] = test['match'].apply(lambda x: get_generator(x))
+
+'Atomova masina znacky Perkeo' in unidecode.unidecode('00$aAtomová mašina značky Perkeo :$btexty z let 1949-1989')
+
+
+for title in cz_foundation['simple']:
+    print(title)
+test.at[1, 'match2']
+
+for i, row in test.iterrows():
+    print((i, row['match2']))
+
+list(test.at[1, 'match2'])
+
+
+for row in test.iterrows():
+    print(row)
+
+for elem in test.at[1, 'match']:
+    print(list(elem))
+    
+
+
+
+test = test[test['viaf'] == 4931097].reset_index(drop=True)
+test['id'] = test.index+1
+# test.to_excel('translations_test.xlsx', index=False)
 
 
 
 
+x245 = marc_parser_1_field(test, 'id', '245', '\\$').replace(r'^\s*$', np.NaN, regex=True)
+x245['title'] = x245[['$a', '$b', '$n', '$p']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+x245 = x245[['id', 'title']]
+
+x240 = marc_parser_1_field(test, 'id', '240', '\\$').replace(r'^\s*$', np.NaN, regex=True)
+x240['original title'] = x240['$a']
+x240 = x240[['id', 'original title']]
+
+together = pd.merge(x245, x240, how='outer', on='id')
+
+physical_description_notes = pd.merge(physical_description_notes1, physical_description_notes2,  how='outer', left_on = 'id', right_on = 'id')         
+
+
+pol_test = pol[pol['viaf'] == 4931097]
+swe_test = swe[swe['viaf'] == 4931097]
 
 
 
