@@ -847,6 +847,14 @@ def get_generator(x):
 
 test['match'] = test['match'].apply(lambda x: get_generator(x))
 
+len(test.at[1, 'match'])
+for el in test.at[1, 'match']:
+    if el != None:
+        print(el)
+        
+pd.notnull(test.at[349, '245']) and cz_foundation.at[10199, 'simple'] in unidecode.unidecode(test.at[349, '245'])
+# dlaczego to nie działa w yield?
+
 'Atomova masina znacky Perkeo' in unidecode.unidecode('00$aAtomová mašina značky Perkeo :$btexty z let 1949-1989')
 
 
