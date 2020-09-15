@@ -823,17 +823,22 @@ total = pd.concat([pol, swe, fin]).sort_values('viaf')
 test = total.copy()[['index', 'name', 'viaf', '008', '041', '100', '245', '240', '246', '250', '260', '300', '080', 'source']]
 test = test[test['viaf'] == 34458072].reset_index(drop=True)
 
+# dodać jeszcze warunek, że viaf musi być taki sam dla cz_foundation i w danych
+
 def search_for_simple(x):
+    result = []
     for title in cz_foundation['simple']:
         if pd.notnull(x['245']) and title in unidecode.unidecode(x['245']):
-            val = '245'
+            val = '245: ' + title
         elif pd.notnull(x['240']) and title in unidecode.unidecode(x['240']):
-            val = '240'
+            val = '240: ' + title
         elif pd.notnull(x['246']) and title in unidecode.unidecode(x['246']):
-            val = '246'
+            val = '246: ' + title
         else:
             val = None
-        yield val
+        if val != None:
+            result.append(val)
+    return result
 
 
 test['match'] = test.apply(lambda x: search_for_simple(x), axis=1)
