@@ -821,7 +821,7 @@ total = pd.concat([pol, swe, fin]).sort_values('viaf')
 # generator approach?
 
 test = total.copy()[['index', 'name', 'viaf', '008', '041', '100', '245', '240', '246', '250', '260', '300', '080', 'source']].reset_index(drop=True)
-test = test[test['viaf'] == 34458072].reset_index(drop=True)
+# test = test[test['viaf'] == 34458072].reset_index(drop=True)
 
 # dodać jeszcze warunek, że viaf musi być taki sam dla cz_foundation i w danych
 
@@ -842,6 +842,7 @@ def search_for_simple(x):
     return result
 
 test['match'] = test.apply(lambda x: search_for_simple(x), axis=1)
+test.to_excel('translation_trajectories_test.xlsx', index=False)
 
 def get_generator(x):
     l = []
