@@ -832,7 +832,7 @@ def search_for_simple(x):
         if pd.notnull(x['245']) and row['simple'] in unidecode.unidecode(x['245']) and row['viaf'] == x['viaf']:
             val = f"{row['viaf']}❦{row['name']}❦row{['$a']}❦field: 245"
         elif pd.notnull(x['240']) and row['simple'] in unidecode.unidecode(x['240']) and row['viaf'] == x['viaf']:
-            val = f"{row['viaf']}❦{row['name']}❦row{['$a']}❦field: 240"
+            val = f"{row['viaf']}❦{row['name']}❦{row['$a']}❦field: 240"
         elif pd.notnull(x['246']) and row['simple'] in unidecode.unidecode(x['246']) and row['viaf'] == x['viaf']:
             val = f"{row['viaf']}❦{row['name']}❦row{['$a']}❦field: 246"
         else:
