@@ -24,13 +24,13 @@ def marc_parser_1_field(df, field_id, field_data, subfield_code, delimiter='❦'
         marc_field = pd.concat([marc_field.reset_index(drop=True), empty_table], axis=1)
         for marker in subfield_list:
             marker = "".join([i if i.isalnum() else f'\\{i}' for i in marker])            
-            marc_field[field_data] = marc_field[field_data].str.replace(f'({marker})', r'|\1', 1)
+            marc_field[field_data] = marc_field[field_data].str.replace(f'({marker})', r'❦\1', 1)
         for marker in subfield_list:
-            string = f'(^)(.*?\❦\{marker}|)(.*?)(\,{{0,1}})((\❦{subfield_code})(.*)|$)'
+            marker2 = "".join([i if i.isalnum() else f'\\{i}' for i in marker])
+            string = f'(^)(.*?\❦{marker2}|)(.*?)(\,{{0,1}})((\❦{subfield_code})(.*)|$)'
             marc_field[marker] = marc_field[field_data].str.replace(string, r'\3')
             marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
     else:
-        from itertools import chain
         subfield_list = list(set(list(chain.from_iterable(subfield_list))))
         subfield_list = [x for x in subfield_list if re.findall(r'\$\w+', x)]
         subfield_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))

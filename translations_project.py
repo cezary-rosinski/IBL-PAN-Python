@@ -581,11 +581,11 @@ cz_names = marc_parser_1_field(cz_names, '001', '100', '\$\$')
 cz_names = cz_names[(cz_names['$$7'] != '') |
                     (cz_names['$$d'] != '')]
 cz_names['index'] = cz_names.index + 1
-cz_names = pd.merge(cz_names, df_names[['index', 'viaf']], on='index', how='left')
-cz_viaf = cz_names[['viaf']]
+cz_names = pd.merge(cz_names, df_names[['index', 'viaf_id']], on='index', how='left')
+cz_viaf = cz_names[['viaf_id']]
 # test filtering
-cz_names = cz_names[cz_names['viaf'].isin(test_names)]
-cz_names_table = cz_names[['index', '$$a', 'viaf']]
+cz_names = cz_names[cz_names['viaf_id'].isin(test_names)]
+cz_names_table = cz_names[['index', '$$a', 'viaf_id']]
 cz_names_table.columns = ['index', 'name', 'viaf']
 cz_names = cz_names['100'].apply(lambda x: x.replace('|', '')).apply(lambda x: x.replace('$$', '$')).values.tolist()
 cz_names = [f'{e}$4aut' for e in cz_names]
@@ -820,26 +820,26 @@ total = pd.concat([pol, swe, fin]).sort_values('viaf')
 
 # generator approach?
 
-test = total.copy()[['index', 'name', 'viaf', '008', '041', '100', '245', '240', '246', '250', '260', '300', '080', 'source']]
+test = total.copy()[['index', 'name', 'viaf', '008', '041', '100', '245', '240', '246', '250', '260', '300', '080', 'source']].reset_index(drop=True)
 test = test[test['viaf'] == 34458072].reset_index(drop=True)
 
 # dodać jeszcze warunek, że viaf musi być taki sam dla cz_foundation i w danych
 
 def search_for_simple(x):
+    print(str(x.name) + '/' + str(len(test)))
     result = []
-    for title in cz_foundation['simple']:
-        if pd.notnull(x['245']) and title in unidecode.unidecode(x['245']):
-            val = '245: ' + title
-        elif pd.notnull(x['240']) and title in unidecode.unidecode(x['240']):
-            val = '240: ' + title
-        elif pd.notnull(x['246']) and title in unidecode.unidecode(x['246']):
-            val = '246: ' + title
+    for i, row in cz_foundation.iterrows():
+        if pd.notnull(x['245']) and row['simple'] in unidecode.unidecode(x['245']) and row['viaf'] == x['viaf']:
+            val = f"{row['viaf']}❦{row['name']}❦row{['$a']}❦field: 245"
+        elif pd.notnull(x['240']) and row['simple'] in unidecode.unidecode(x['240']) and row['viaf'] == x['viaf']:
+            val = f"{row['viaf']}❦{row['name']}❦row{['$a']}❦field: 240"
+        elif pd.notnull(x['246']) and row['simple'] in unidecode.unidecode(x['246']) and row['viaf'] == x['viaf']:
+            val = f"{row['viaf']}❦{row['name']}❦row{['$a']}❦field: 246"
         else:
             val = None
         if val != None:
             result.append(val)
     return result
-
 
 test['match'] = test.apply(lambda x: search_for_simple(x), axis=1)
 
@@ -851,6 +851,9 @@ def get_generator(x):
     return l
 
 test['match'] = test['match'].apply(lambda x: get_generator(x))
+
+for i, row in test.iterrows():
+    print(row.index.item())
 
 len(test.at[1, 'match'])
 for el in test.at[1, 'match']:
