@@ -10,21 +10,17 @@
 # =============================================================================
 import cx_Oracle
 import pandas as pd
-from my_functions import gsheet_to_df
+from my_functions import gsheet_to_df, df_to_mrc, cosine_sim_2_elem, mrc_to_mrk, cSplit
 import pymarc
 import numpy as np
 import copy
 import math
 from datetime import datetime
-from langdetect import detect_langs
-from langdetect import detect
+from langdetect import detect_langs, detect
 import re
-from my_functions import cSplit
 from functools import reduce
-from my_functions import df_to_mrc
-from my_functions import cosine_sim_2_elem
 import pandasql
-from my_functions import mrc_to_mrk
+from urllib.parse import urlparse
 
 # def
 def date_to_string(x):
@@ -306,6 +302,12 @@ pbl_marc_roles = gsheet_to_df('1iQ4JGo1hLWZbQX4u2kB8LwqSWMLwicFfBsVFc9MNUUk', 'p
 pbl_marc_roles = pbl_marc_roles[pbl_marc_roles['MARC_ABBREVIATION'] != '#N/A'][['PBL_NAZWA', 'MARC_ABBREVIATION']]
 pbl_marc_roles['MARC_ABBREVIATION'] = pbl_marc_roles.groupby('PBL_NAZWA')['MARC_ABBREVIATION'].transform(lambda x: '❦'.join(x))
 pbl_marc_roles = pbl_marc_roles.drop_duplicates().reset_index(drop=True)
+
+bazhum_links = gsheet_to_df('1s77-5qyUPlrQuQRkR1Bvq8LUqB6_TNKuZT7WqIYsLzY', 'pbl_mapping')
+bazhum_links['is_link'] = bazhum_links['full_text'].apply(lambda x: urlparse(x)[0])
+bazhum_links = bazhum_links[bazhum_links['is_link'] == 'http']
+bazhum_links = bazhum_links[['rekord_id', 'full_text']]
+
 
 # read excel files
 pbl_subject_headings_info = pd.read_csv("pbl_subject_headings.csv", sep=';', encoding='cp1250')
@@ -872,9 +874,14 @@ X787['787'] = X787['787'].apply(lambda x: f"\\\\$a{x}")
 X787['787'] = X787.groupby('rekord_id')['787'].transform(lambda x: '❦'.join(x))
 X787 = X787.drop_duplicates()
 X787 = pd.merge(X787, pbl_articles[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
-X856 = pbl_relations[pbl_relations['zapis_typ'].isin(['IZA', 'PU'])][['rekord_id', '856']]
+X856_relations = pbl_relations[pbl_relations['zapis_typ'].isin(['IZA', 'PU'])][['rekord_id', '856']]
+X856_full_texts = bazhum_links.copy()
+X856_full_texts['856'] = X856_full_texts['full_text'].apply(lambda x: f"40$u{x}$yonline$4N")
+X856_full_texts = X856_full_texts[['rekord_id', '856']]
+X856_full_texts['rekord_id'] = X856_full_texts['rekord_id'].astype(int)
+X856 = pd.concat([X856_relations, X856_full_texts])
 X856['856'] = X856.groupby('rekord_id')['856'].transform(lambda x: '❦'.join(x))
-X856 = X856.drop_duplicates()
+X856 = X856[X856['856'].notnull()].drop_duplicates()
 X856 = pd.merge(X856, pbl_articles[['rekord_id']].drop_duplicates(),  how='right', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X995 = pbl_articles[['rekord_id']].drop_duplicates().reset_index(drop=True)
 X995['995'] = '\\\\$aPBL 1989-2003: książki i czasopisma'
@@ -891,6 +898,8 @@ pbl_marc_articles.to_excel('pbl_marc_articles.xlsx', index=False)
 
 df_to_mrc(pbl_marc_articles, '❦', 'pbl_marc_articles.mrc')
 mrc_to_mrk('pbl_marc_articles.mrc', 'pbl_marc_articles.mrk')
+
+
 
 
 

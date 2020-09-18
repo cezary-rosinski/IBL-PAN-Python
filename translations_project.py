@@ -1,17 +1,12 @@
-from my_functions import gsheet_to_df
 import xml.etree.ElementTree as et
 import requests
 import pandas as pd
 import re
 import numpy as np
-from my_functions import xml_to_mrk
-from my_functions import cSplit
-from my_functions import f
-from my_functions import marc_parser_1_field
 import pymarc
 import io
 from bs4 import BeautifulSoup
-from my_functions import cosine_sim_2_elem
+from my_functions import cosine_sim_2_elem, marc_parser_1_field, gsheet_to_df, xml_to_mrk, cSplit, f, df_to_mrc, mrc_to_mrk
 import glob
 import regex
 import unidecode
@@ -805,7 +800,32 @@ cze['id'] = cze.index+1
 fin = pd.read_excel('fi_data.xlsx')
 fin['source'] = 'fin'
 
-# core of names
+total = pd.concat([cze, pol, swe, fin]).sort_values('viaf')
+
+total['005'] = total['005'].astype(str)
+total['008'] = total['008'].str.replace('\\', ' ')
+
+fields = total.columns.tolist()
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+total = total.reindex(columns=fields)     
+total.to_excel('translations_total.xlsx', index=False)   
+        
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+total = total.loc[:, total.columns.isin(fields)]
+
+df_to_mrc(total, '❦', 'translations_total.mrc')
+mrc_to_mrk('translations_total.mrc', 'translations_total.mrk')
+
+#no czech originals
+no_cz_orig = total.copy()
+no_cz_orig['lang'] = no_cz_orig['008'].apply(lambda x: x[35:38])
+no_cz_orig = no_cz_orig[no_cz_orig['lang'] != 'cze'].drop(columns='lang')
+
+no_cz_orig.to_excel('no_cz_original.xlsx', index=False) 
+df_to_mrc(no_cz_orig, '❦', 'no_cz_original.mrc')
+mrc_to_mrk('no_cz_original.mrc', 'no_cz_original.mrk')
+
+# translations search engine
 cz_foundation = cze.copy()[['id', 'name', 'viaf', '008', '245']]
 cz_foundation['language'] = cz_foundation['008'].apply(lambda x: x[-5:-2])
 cz_foundation = cz_foundation[cz_foundation['language'] == 'cze']
@@ -815,10 +835,7 @@ cz_foundation['$a'] = cz_foundation['$a'].apply(lambda x: x[:-2])
 cz_foundation = cz_foundation.drop_duplicates()
 cz_foundation['simple'] = cz_foundation['$a'].apply(lambda x: unidecode.unidecode(x))
 
-
 total = pd.concat([pol, swe, fin]).sort_values('viaf')
-
-# generator approach?
 
 test = total.copy()[['index', 'name', 'viaf', '008', '041', '100', '245', '240', '246', '250', '260', '300', '080', 'source']].reset_index(drop=True)
 # test = test[test['viaf'] == 34458072].reset_index(drop=True)
@@ -830,18 +847,21 @@ def search_for_simple(x):
     result = []
     for i, row in cz_foundation.iterrows():
         if pd.notnull(x['245']) and row['simple'] in unidecode.unidecode(x['245']) and row['viaf'] == x['viaf']:
-            val = f"{row['viaf']}❦{row['name']}❦row{['$a']}❦field: 245"
+            val = f"{row['viaf']}❦{row['name']}❦{row['$a']}❦field: 245"
         elif pd.notnull(x['240']) and row['simple'] in unidecode.unidecode(x['240']) and row['viaf'] == x['viaf']:
             val = f"{row['viaf']}❦{row['name']}❦{row['$a']}❦field: 240"
         elif pd.notnull(x['246']) and row['simple'] in unidecode.unidecode(x['246']) and row['viaf'] == x['viaf']:
-            val = f"{row['viaf']}❦{row['name']}❦row{['$a']}❦field: 246"
+            val = f"{row['viaf']}❦{row['name']}❦{row['$a']}❦field: 246"
         else:
             val = None
         if val != None:
             result.append(val)
     return result
 
-test['match'] = test.apply(lambda x: search_for_simple(x), axis=1)
+test['exact match'] = test.apply(lambda x: search_for_simple(x), axis=1)
+
+# dodać close match na podstawie cosine similarity
+
 test.to_excel('translation_trajectories_test.xlsx', index=False)
 
 def get_generator(x):
