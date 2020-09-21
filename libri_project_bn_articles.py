@@ -140,37 +140,42 @@ for elem in pbl_viaf_links:
     pbl_viaf = pbl_viaf.append(df)
 pbl_viaf = pbl_viaf.drop_duplicates()
 
-tworca_i_dzial = """select tw.tw_tworca_id "pbl_id", dz.dz_dzial_id||'|'||dz.dz_nazwa "osoba_pbl_dzial_id_name"
-                    from pbl_tworcy tw
-                    full join pbl_dzialy dz on dz.dz_dzial_id=tw.tw_dz_dzial_id"""
-tworca_i_dzial = pd.read_sql(tworca_i_dzial, con=connection).fillna(value = np.nan)
-tworca_i_dzial['pbl_id'] = tworca_i_dzial['pbl_id'].apply(lambda x: '{:4.0f}'.format(x))
+# doesn't work for articles (still good for books)
 
-X100 = marc_parser_1_field(bn_articles, 'id', '100', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
-X100['name'] = X100[['$a', '$d', '$c']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
-X100 = X100[['id', 'name']]
-X100['name'] = X100['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
-X100 = pd.merge(X100, pbl_viaf, how='inner', left_on='name', right_on='BN_name')[['id', 'name', 'pbl_id']]
-X100 = pd.merge(X100, tworca_i_dzial, how='left', on='pbl_id')[['id', 'osoba_pbl_dzial_id_name']]
-X100['osoba_bn_autor'] = X100.groupby('id')['osoba_pbl_dzial_id_name'].transform(lambda x: '❦'.join(x.astype(str)))
-X100 = X100.drop(columns='osoba_pbl_dzial_id_name').drop_duplicates()
-
-X600 = marc_parser_1_field(bn_articles, 'id', '600', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
-X600['name'] = X600[['$a', '$d', '$c']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
-X600 = X600[['id', 'name']]
-X600['name'] = X600['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
-X600 = pd.merge(X600, pbl_viaf, how='inner', left_on='name', right_on='BN_name')[['id', 'name', 'pbl_id']]
-X600 = pd.merge(X600, tworca_i_dzial, how='left', on='pbl_id')[['id', 'osoba_pbl_dzial_id_name']]
-X600['osoba_bn_temat'] = X600.groupby('id')['osoba_pbl_dzial_id_name'].transform(lambda x: '❦'.join(x.astype(str)))
-X600 = X600.drop(columns='osoba_pbl_dzial_id_name').drop_duplicates()
-
-bn_articles = [bn_articles, X100, X600]
-bn_articles = reduce(lambda left,right: pd.merge(left,right,on='id', how = 'outer'), bn_articles)
+# =============================================================================
+# tworca_i_dzial = """select tw.tw_tworca_id "pbl_id", dz.dz_dzial_id||'|'||dz.dz_nazwa "osoba_pbl_dzial_id_name"
+#                     from pbl_tworcy tw
+#                     full join pbl_dzialy dz on dz.dz_dzial_id=tw.tw_dz_dzial_id"""
+# tworca_i_dzial = pd.read_sql(tworca_i_dzial, con=connection).fillna(value = np.nan)
+# tworca_i_dzial['pbl_id'] = tworca_i_dzial['pbl_id'].apply(lambda x: '{:4.0f}'.format(x))
+# 
+# X100 = marc_parser_1_field(bn_articles, 'id', '100', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
+# X100['name'] = X100[['$a', '$d', '$c']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+# X100 = X100[['id', 'name']]
+# X100['name'] = X100['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
+# X100 = pd.merge(X100, pbl_viaf, how='inner', left_on='name', right_on='BN_name')[['id', 'name', 'pbl_id']]
+# X100 = pd.merge(X100, tworca_i_dzial, how='left', on='pbl_id')[['id', 'osoba_pbl_dzial_id_name']]
+# X100['osoba_bn_autor'] = X100.groupby('id')['osoba_pbl_dzial_id_name'].transform(lambda x: '❦'.join(x.astype(str)))
+# X100 = X100.drop(columns='osoba_pbl_dzial_id_name').drop_duplicates()
+# 
+# X600 = marc_parser_1_field(bn_articles, 'id', '600', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
+# X600['name'] = X600[['$a', '$d', '$c']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+# X600 = X600[['id', 'name']]
+# X600['name'] = X600['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
+# X600 = pd.merge(X600, pbl_viaf, how='inner', left_on='name', right_on='BN_name')[['id', 'name', 'pbl_id']]
+# X600 = pd.merge(X600, tworca_i_dzial, how='left', on='pbl_id')[['id', 'osoba_pbl_dzial_id_name']]
+# X600['osoba_bn_temat'] = X600.groupby('id')['osoba_pbl_dzial_id_name'].transform(lambda x: '❦'.join(x.astype(str)))
+# X600 = X600.drop(columns='osoba_pbl_dzial_id_name').drop_duplicates()
+# 
+# bn_articles = [bn_articles, X100, X600]
+# bn_articles = reduce(lambda left,right: pd.merge(left,right,on='id', how = 'outer'), bn_articles)
+# =============================================================================
 
 bn_articles['dziedzina_PBL'] = bn_articles['080'].apply(lambda x: dziedzina_PBL(x))
 
 literary_words = 'literat|literac|pisar|bajk|dramat|epigramat|esej|felieton|film|komedi|nowel|opowiadani|pamiętnik|poemiks|poezj|powieść|proza|reportaż|satyr|wspomnieni|Scenariusze zajęć|Podręczniki dla gimnazjów|teatr|Nagrod|aforyzm|baśń|baśnie|polonijn|dialogi|fantastyka naukowa|legend|pieśń|poemat|przypowieś|honoris causa|filologi|kino polskie|pieśni|interpretacj|poet|liryk'
-literary_word_keys = bn_articles.copy()[['id', '080', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL']]
+#literary_word_keys = bn_articles.copy()[['id', '080', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL']]
+literary_word_keys = bn_articles.copy()[['id', '080', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'dziedzina_PBL']]
 literary_word_keys['literary_word_keys'] = literary_word_keys['245'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['600'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['610'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['630'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['648'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['650'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['651'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['655'].str.contains(literary_words, flags=re.IGNORECASE) | literary_word_keys['658'].str.contains(literary_words, flags=re.IGNORECASE)
 literary_word_keys = literary_word_keys[literary_word_keys['literary_word_keys'] == True][['id', 'literary_word_keys']]
 bn_articles = pd.merge(bn_articles, literary_word_keys, how='left', on='id')
@@ -188,24 +193,31 @@ bible = bible[bible['biblia'] == True][['id', 'biblia']]
 bn_articles = pd.merge(bn_articles, bible, how='left', on='id')
 
 zle = bn_articles.copy()
-zle = zle[(zle['osoba_bn_autor'].isnull()) & 
-        (zle['osoba_bn_temat'].isnull()) & 
-        (zle['dziedzina_PBL'] == 'bez_ukd_PBL') & 
+# zle = zle[(zle['osoba_bn_autor'].isnull()) & 
+#         (zle['osoba_bn_temat'].isnull()) & 
+#         (zle['dziedzina_PBL'] == 'bez_ukd_PBL') & 
+#         (zle['literary_word_keys'].isnull()) & 
+#         (zle['wspomnienia'].isnull()) & 
+#         (zle['biblia'].isnull())]
+# zle = zle[['id', '080', '773', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL', 'literary_word_keys', 'wspomnienia', 'biblia']]
+zle = zle[(zle['dziedzina_PBL'] == 'bez_ukd_PBL') & 
         (zle['literary_word_keys'].isnull()) & 
         (zle['wspomnienia'].isnull()) & 
         (zle['biblia'].isnull())]
-zle = zle[['id', '080', '773', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL', 'literary_word_keys', 'wspomnienia', 'biblia']]
+zle = zle[['id', '080', '773', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'dziedzina_PBL', 'literary_word_keys', 'wspomnienia', 'biblia']]
 
 dobre = bn_articles.copy()
 dobre = dobre[~dobre['id'].isin(zle['id'])]
-dobre = dobre[['id', '080', '773', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL', 'literary_word_keys', 'wspomnienia', 'biblia']]
+# dobre = dobre[['id', '080', '773', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'osoba_bn_autor', 'osoba_bn_temat', 'dziedzina_PBL', 'literary_word_keys', 'wspomnienia', 'biblia']]
+dobre = dobre[['id', '080', '773', '245', '600', '610', '630', '648', '650', '651', '655', '658', 'dziedzina_PBL', 'literary_word_keys', 'wspomnienia', 'biblia']]
 dobre['decision'] = 'OK'
 dobre = dobre[['id', 'decision']]
 bn_articles = pd.merge(bn_articles, dobre, 'left', 'id')
 
-bn_articles.to_excel('bn_magazines_to_statistics.xlsx', index=False)
-
-bn_articles = pd.read_excel('bn_magazines_to_statistics.xlsx')
+# =============================================================================
+# bn_articles.to_excel('bn_magazines_to_statistics.xlsx', index=False)
+# bn_articles = pd.read_excel('bn_magazines_to_statistics.xlsx')
+# =============================================================================
 
 years = [str(i) for i in range(2004, 2021)]
 bn_articles['year'] = bn_articles['008'].apply(lambda x: x[7:11])
@@ -509,6 +521,8 @@ if bn_articles_marc['009'].dtype == np.float64:
         bn_articles_marc['009'] = bn_articles_marc['009'].astype(np.int64)
 bn_articles_marc['995'] = '\\\\$aPBL 2004-2019: czasopisma'
 bn_articles_marc = bn_articles_marc.drop_duplicates().reset_index(drop=True).dropna(how='all', axis=1)
+
+test = bn_articles_marc[(bn_articles_marc['100'].notnull()) & (bn_articles_marc['100'].str.contains('Gańczak'))]
 
 df_to_mrc(bn_articles_marc, '❦', 'libri_marc_bn_articles.mrc')
 mrc_to_mrk('libri_marc_bn_articles.mrc', 'libri_marc_bn_articles.mrk')
