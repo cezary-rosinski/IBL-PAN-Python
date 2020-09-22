@@ -4,7 +4,6 @@ from googletrans import Translator
 import requests
 from bs4 import BeautifulSoup
 import regex as re
-from json.decoder import JSONDecodeError
 
 lcsh_ssh = pd.read_csv('C:/Users/Cezary/Downloads/SSH-LCSH.csv', sep=';', index_col=False).sort_values('en').reset_index(drop=True)
 
@@ -30,7 +29,7 @@ translation_table.to_excel('triple_labels_translation.xlsx', index=False)
 translation_table = pd.read_excel('triple_labels_translation.xlsx')
 
 def other_translations(x):
-  print(str(ind) + ':    ' + str(x.name))
+  print(f"{ind}:    '{x.name}/{len(translation_table)}")
   other_trans = translator.translate(x['en'], src='en', dest=language).extra_data['possible-translations']
   try:
     for i in other_trans:
