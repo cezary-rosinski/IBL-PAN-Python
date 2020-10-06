@@ -138,34 +138,32 @@ url = "https://bibliografia.malopolska.pl/sowacgi.php?KatID=0&typ=repl&plnk=q__*
 results = requests.get(url)
 soup = BeautifulSoup(results.text, "html.parser")
 
+suma_rekordow = soup.select('#results-count span')[0].text
+suma_rekordow = [int(s) for s in suma_rekordow.split() if s.isdigit()][0]
+
 rekordy_na_stronie = soup.select('.record-description')
-
-
-lista_rekordow = []
-for rekord in rekordy_na_stronie:
-    lista_rekordow.append(rekord.text.split('\n'))
-    
-lista_rekordow = [[elem for elem in podlista if elem.startswith('LDR')] for podlista in lista_rekordow]
-lista_rekordow = [item for sublist in lista_rekordow for item in sublist]
-
-lista_rekordow = [podlista for podlista in lista_rekordow if max(podlista)]
+rekordy_na_stronie = [rekord.text.split('\n') for rekord in rekordy_na_stronie]  
+rekordy_na_stronie = [[elem for elem in podlista if elem.startswith('LDR')] for podlista in rekordy_na_stronie]
+rekordy_na_stronie = [item for sublist in rekordy_na_stronie for item in sublist]
 
 browser = webdriver.Chrome()
 browser.get("https://bibliografia.malopolska.pl/sowacgi.php?KatID=0&typ=repl&plnk=q__*&sort=byscore&view=3")
 
-next_page = browser.find_element_by_xpath('//body/div[1]/div[2]/div[2]/div[1]/div[2]/a[3]/*[1]')
-url = browser.current_url
-next_page.click()
-
-
-
-schemat = re.compile('\/sztuki\/.')
-
-indeks_tytulow =  soup.findAll('a', attrs={'href': schemat})
-    
-    
-    
-    
+lista_rekordow = rekordy_na_stronie[:]
+pobrane_rekordy = len(rekordy_na_stronie)
+while suma_rekordow > pobrane_rekordy:
+    print(f"{pobrane_rekordy}/{suma_rekordow}")
+    next_page_button = browser.find_element_by_xpath('//body/div[1]/div[2]/div[2]/div[1]/div[2]/a[3]/*[1]')
+    next_page_button.click()
+    current_page = browser.current_url
+    results = requests.get(current_page)
+    soup = BeautifulSoup(results.text, "html.parser")
+    rekordy_na_stronie = soup.select('.record-description')
+    rekordy_na_stronie = [rekord.text.split('\n') for rekord in rekordy_na_stronie]  
+    rekordy_na_stronie = [[elem for elem in podlista if elem.startswith('LDR')] for podlista in rekordy_na_stronie]
+    rekordy_na_stronie = [item for sublist in rekordy_na_stronie for item in sublist]
+    lista_rekordow += rekordy_na_stronie
+    pobrane_rekordy += len(rekordy_na_stronie)
     
     
     
