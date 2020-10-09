@@ -1,4 +1,4 @@
-from my_functions import gsheet_to_df
+from my_functions import gsheet_to_df, df_to_gsheet
 import pandas as pd
 import re
 import regex
@@ -50,6 +50,7 @@ for i, row in aktualny_numer.iterrows():
         sciezka_pdf = [e for e in pdf_pl if nazwisko in e and slowo_z_tytulu in e.lower()][0]
         sciezka_pdf = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_pdf)
         aktualny_numer.at[i, 'link do pdf'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_pdf}"
+        aktualny_numer.at[i, 'link do jpg'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_jpg}"
         aktualny_numer.at[i, 'jpg'] = sciezka_jpg
     elif row['język'] == 'eng':
         sciezka_jpg = [e for e in jpg_eng if nazwisko in e and slowo_z_tytulu in e.lower()][0]
@@ -57,7 +58,10 @@ for i, row in aktualny_numer.iterrows():
         sciezka_pdf = [e for e in pdf_eng if nazwisko in e and slowo_z_tytulu in e.lower()][0]
         sciezka_pdf = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_pdf)
         aktualny_numer.at[i, 'link do pdf'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_pdf}"
+        aktualny_numer.at[i, 'link do jpg'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_jpg}"
         aktualny_numer.at[i, 'jpg'] = sciezka_jpg
+
+#wprowadzanie nowych wpisów
         
 browser = webdriver.Chrome()
 browser.get("http://fp.amu.edu.pl/admin")    
@@ -73,11 +77,6 @@ password_input.send_keys(password)
 
 login_button = browser.find_element_by_id('wp-submit').click()
 
-# =============================================================================
-# aktualny_numer = aktualny_numer.iloc[2:4, :]
-# index = 2
-# row = aktualny_numer.iloc[0]
-# =============================================================================
 for index, row in aktualny_numer.iterrows():
     if index%2 == 0:
 
@@ -115,17 +114,29 @@ for index, row in aktualny_numer.iterrows():
         wybierz_pdf = browser.find_element_by_xpath("//select[@id = 'metakeyselect']/option[text()='pdf-url']").click()
         wprowadz_pdf_link = browser.find_element_by_id('metavalue').send_keys(row['link do pdf'])
         dodaj_pdf = browser.find_element_by_id("newmeta-submit").click()
+        
+        if row['kategoria'] == 'Przekłady' and row['ORCID'] == '':
+            tagi_autorow = row['tag autora'].split('❦')
+            autorzy = row['autor'].split('❦')
+            
+            sekcja_autorstwa = """"""
 
-        tagi_autorow = row['tag autora'].split('❦')
-        autorzy = row['autor'].split('❦')
-        orcidy = row['ORCID'].split('❦')
+            for t, a in zip(tagi_autorow, autorzy):
+                tag_autor_orcid_line = f"""<h4><a href="http://fp.amu.edu.pl/tag/{t}">{a}</a></h4>\n"""
+                sekcja_autorstwa += tag_autor_orcid_line
+                
+        else:            
 
-        sekcja_autorstwa = """"""
-
-        for t, a, o in zip(tagi_autorow, autorzy, orcidy):
-            tag_autor_orcid_line = f"""<h4><a href="http://fp.amu.edu.pl/tag/{t}">{a}</a></h4>
-        <div><strong><strong>ORCID:</strong></strong> <a href="https://orcid.org/{o}">{o}</a></div>\n"""
-            sekcja_autorstwa += tag_autor_orcid_line
+            tagi_autorow = row['tag autora'].split('❦')
+            autorzy = row['autor'].split('❦')
+            orcidy = row['ORCID'].split('❦')
+    
+            sekcja_autorstwa = """"""
+    
+            for t, a, o in zip(tagi_autorow, autorzy, orcidy):
+                tag_autor_orcid_line = f"""<h4><a href="http://fp.amu.edu.pl/tag/{t}">{a}</a></h4>
+            <div><strong><strong>ORCID:</strong></strong> <a href="https://orcid.org/{o}">{o}</a></div>\n"""
+                sekcja_autorstwa += tag_autor_orcid_line
 
         abstrakt = row['abstrakt']
 
@@ -137,13 +148,13 @@ for index, row in aktualny_numer.iterrows():
 
         content = browser.find_element_by_id('content').send_keys(body)
 
+        opublikuj = browser.find_element_by_id('publish').click()
+        
         odnosnik = browser.find_element_by_id('sample-permalink').text
         aktualny_numer.at[index, 'odnosnik'] = odnosnik
         
         url_edycji = browser.current_url
         aktualny_numer.at[index, 'url_edycji'] = url_edycji
-
-        opublikuj = browser.find_element_by_id('publish').click()
 
         create_english = browser.find_element_by_xpath("//a[@title = 'For create a linked draft translation in en_US']").click()
 #English
@@ -181,47 +192,115 @@ for index, row in aktualny_numer.iterrows():
         wprowadz_pdf_link = browser.find_element_by_id('metavalue').send_keys(aktualny_numer.at[index+1, 'link do pdf'])
         dodaj_pdf = browser.find_element_by_id("newmeta-submit").click()
         
-        tagi_autorow = aktualny_numer.at[index+1, 'tag autora'].split('❦')
-        autorzy = aktualny_numer.at[index+1, 'autor'].split('❦')
-        orcidy = aktualny_numer.at[index+1, 'ORCID'].split('❦')
+        if aktualny_numer.at[index+1, 'kategoria'] == 'Przekłady' and aktualny_numer.at[index+1, 'ORCID'] == '':
+            tagi_autorow = aktualny_numer.at[index+1, 'tag autora'].split('❦')
+            autorzy = aktualny_numer.at[index+1, 'autor'].split('❦')
+            
+            sekcja_autorstwa = """"""
 
-        sekcja_autorstwa = """"""
+            for t, a in zip(tagi_autorow, autorzy):
+                tag_autor_orcid_line = f"""<h4><a href="http://fp.amu.edu.pl/tag/{t}">{a}</a></h4>\n"""
+                sekcja_autorstwa += tag_autor_orcid_line
+                
+            abstrakt = aktualny_numer.at[index+1, 'abstrakt']
+                
+            body = f"""{sekcja_autorstwa}
+            <hr />
+            
+            {abstrakt}"""
+        elif aktualny_numer.at[index+1, 'kategoria'] == 'Przekłady':
+            tagi_autorow = aktualny_numer.at[index+1, 'tag autora'].split('❦')
+            autorzy = aktualny_numer.at[index+1, 'autor'].split('❦')
+            orcidy = aktualny_numer.at[index+1, 'ORCID'].split('❦')
+            
+            sekcja_autorstwa = """"""
 
-        for t, a, o in zip(tagi_autorow, autorzy, orcidy):
-            tag_autor_orcid_line = f"""<h4><a href="http://fp.amu.edu.pl/tag/{t}">{a}</a></h4>
-        <div><strong><strong>ORCID:</strong></strong> <a href="https://orcid.org/{o}">{o}</a></div>\n"""
-            sekcja_autorstwa += tag_autor_orcid_line
-
-        abstrakt = aktualny_numer.at[index+1, 'abstrakt']
-
-        body = f"""{sekcja_autorstwa}
-        <hr />
-        <p style="text-align: justify;"><strong><span style="color: #808080;">A b s t r a k t</span></strong></p>
-        
-        {abstrakt}"""
+            for t, a, o in zip(tagi_autorow, autorzy, orcidy):
+                tag_autor_orcid_line = f"""<h4><a href="http://fp.amu.edu.pl/tag/{t}">{a}</a></h4>
+            <div><strong><strong>ORCID:</strong></strong> <a href="https://orcid.org/{o}">{o}</a></div>\n"""
+                sekcja_autorstwa += tag_autor_orcid_line
+                
+            abstrakt = aktualny_numer.at[index+1, 'abstrakt']
+                
+            body = f"""{sekcja_autorstwa}
+            <hr />
+            
+            {abstrakt}"""
+        else:
+            tagi_autorow = aktualny_numer.at[index+1, 'tag autora'].split('❦')
+            autorzy = aktualny_numer.at[index+1, 'autor'].split('❦')
+            orcidy = aktualny_numer.at[index+1, 'ORCID'].split('❦')
+    
+            sekcja_autorstwa = """"""
+    
+            for t, a, o in zip(tagi_autorow, autorzy, orcidy):
+                tag_autor_orcid_line = f"""<h4><a href="http://fp.amu.edu.pl/tag/{t}">{a}</a></h4>
+            <div><strong><strong>ORCID:</strong></strong> <a href="https://orcid.org/{o}">{o}</a></div>\n"""
+                sekcja_autorstwa += tag_autor_orcid_line
+    
+            abstrakt = aktualny_numer.at[index+1, 'abstrakt']
+    
+            body = f"""{sekcja_autorstwa}
+            <hr />
+            <p style="text-align: justify;"><strong><span style="color: #808080;">A b s t r a k t</span></strong></p>
+            
+            {abstrakt}"""
         
         content = browser.find_element_by_id('content').clear()
-        content = browser.find_element_by_id('content').send_keys(body)
+        content = browser.find_element_by_id('content').send_keys(body)      
 
+        opublikuj = browser.find_element_by_id('publish').click()
+        
         odnosnik = browser.find_element_by_id('sample-permalink').text
         aktualny_numer.at[index+1, 'odnosnik'] = odnosnik
         
         url_edycji = browser.current_url
         aktualny_numer.at[index+1, 'url_edycji'] = url_edycji
+
+#dane do strony numeru
+        
+for i, row in aktualny_numer.iterrows():
+    tytul = row['tytuł artykułu'].replace('<i>', '</em>').replace('</i>', '<em>')   
+    body = f"""<p style="text-align: left; margin: 0cm 0cm 15pt; line-height: 15pt; font-size: 11pt; font-family: ChaparralPro-Regular; color: black; letter-spacing: 0.1pt; padding-left: 30px;" align="left"><a href="{row['odnosnik']}">{row['autor']}, <em>{tytul}</em></a></p>"""
+    aktualny_numer.at[i, 'spis treści'] = body
+        
+#uzupełnienie tabeli na dysku google
+
+df_to_gsheet(aktualny_numer, gs_table, 'artykuły po pętli')
+
+#ile dla kategorii, potem pętla co dwa, a dla kategorii licznik i while, jeśli licznik jest niższy od tego, ile dla kategorii
+
+#wprowadzenie strony nowego numeru
+
+strona_numeru = gsheet_to_df(gs_table, 'strona')
+
+for i, row in strona_numeru.iterrows():
+    if row['język'] == 'pl':
+        sciezka_pdf = min(pdf_pl, key=len)
+        sciezka_pdf = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_pdf)
+        sciezka_jpg = min(jpg_pl, key=len)
+        sciezka_jpg = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_jpg)
+        strona_numeru.at[i, 'link do pdf'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_pdf}"
+        strona_numeru.at[i, 'link do jpg'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_jpg}"
+        strona_numeru.at[i, 'jpg'] = sciezka_jpg
+    elif row['język'] == 'eng':
+        sciezka_pdf = min(pdf_eng, key=len)
+        sciezka_pdf = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_pdf)
+        sciezka_jpg = min(jpg_eng, key=len)
+        sciezka_jpg = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_jpg)
+        strona_numeru.at[i, 'link do pdf'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_pdf}"
+        strona_numeru.at[i, 'link do jpg'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_jpg}"
+        strona_numeru.at[i, 'jpg'] = sciezka_jpg
         
 
-        opublikuj = browser.find_element_by_id('publish').click()
-        
+
+# link do pdf
+# link do jpg, jpg, spis treści
+
+#spis treści generowany automatycznie
+
+
 browser.close()
-
-
-
-
-
-
-
-
-
 
 
 

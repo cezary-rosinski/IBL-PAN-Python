@@ -160,7 +160,7 @@ def gsheet_to_df(gsheetId, scope):
     CLIENT_SECRET_FILE = 'client_secret.json'
     API_SERVICE_NAME = 'sheets'
     API_VERSION = 'v4'
-    SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
     s = Create_Service(CLIENT_SECRET_FILE, API_SERVICE_NAME, API_VERSION, SCOPES)
     gs = s.spreadsheets()
     rows = gs.values().get(spreadsheetId=gsheetId,range=scope).execute()
@@ -168,6 +168,23 @@ def gsheet_to_df(gsheetId, scope):
     values = rows.get('values', [])[1:]  # Everything else is data.
     df = pd.DataFrame(values, columns = header)
     return df
+
+#write google sheet
+def df_to_gsheet(df, gsheetId,scope='Arkusz1!A1'):
+    CLIENT_SECRET_FILE = 'client_secret.json'
+    API_SERVICE_NAME = 'sheets'
+    API_VERSION = 'v4'
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+    service = Create_Service(CLIENT_SECRET_FILE, API_SERVICE_NAME, API_VERSION, SCOPES)
+    df.replace(np.nan, '', inplace=True)
+    response_date = service.spreadsheets().values().append(
+        spreadsheetId=gsheetId,
+        valueInputOption='RAW',
+        range=scope,
+        body=dict(
+            majorDimension='ROWS',
+            values=df.T.reset_index().T.values.tolist())
+    ).execute()
 
 # marc conversions
 def xml_to_mrc(path_in, path_out):
