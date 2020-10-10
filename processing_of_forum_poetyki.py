@@ -11,6 +11,8 @@ import wordpress_credentials
 import time
 from selenium.common.exceptions import NoSuchElementException
 
+pd.options.display.max_colwidth = 1000
+
 now = datetime.datetime.now()
 year = now.year
 month = now.month
@@ -90,7 +92,7 @@ password_input.send_keys(password)
 login_button = browser.find_element_by_id('wp-submit').click()
 
 for index, row in aktualny_numer.iterrows():
-    if index%2 == 0:
+    if row['język'] == 'pl':
       
         browser.get('http://fp.amu.edu.pl/wp-admin/post-new.php')
         tekstowy = browser.find_element_by_id('content-html').click()
@@ -284,21 +286,42 @@ for index, row in aktualny_numer.iterrows():
 #dane do strony numeru
         
 for i, row in aktualny_numer.iterrows():
-    tytul = row['tytuł artykułu'].replace('<i>', '</em>').replace('</i>', '<em>')   
-    body = f"""<p style="text-align: left; margin: 0cm 0cm 15pt; line-height: 15pt; font-size: 11pt; font-family: ChaparralPro-Regular; color: black; letter-spacing: 0.1pt; padding-left: 30px;" align="left"><a href="{row['odnosnik']}">{row['autor']}, <em>{tytul}</em></a></p>"""
+    tytul = row['tytuł artykułu'].replace('<i>', '</em>').replace('</i>', '<em>')
+    autor = row['autor'].replace('❦', ', ')
+    body = f"""<p style="text-align: left; margin: 0cm 0cm 15pt; line-height: 15pt; font-size: 11pt; font-family: ChaparralPro-Regular; color: black; letter-spacing: 0.1pt; padding-left: 30px;" align="left"><a href="{row['odnosnik']}">{autor}, <em>{tytul}</em></a></p>"""
     aktualny_numer.at[i, 'spis treści'] = body
         
 #uzupełnienie tabeli na dysku google
 
 df_to_gsheet(aktualny_numer, gs_table, 'artykuły po pętli')
+aktualny_numer = gsheet_to_df('1r3Lq1VcmIiUXIiX8rjeUAFlWe0XQdrpX_rxNXaepFzY', 'artykuły po pętli')
 
 #ile dla kategorii, potem pętla co dwa, a dla kategorii licznik i while, jeśli licznik jest niższy od tego, ile dla kategorii
 
-ile_dla_kategorii = aktualny_numer[['kategoria', 'język']].value_counts()
-
+uzyte_kategorie_pl = []
+spis_tresci_pl = """"""
+uzyte_kategorie_eng = []
+spis_tresci_eng = """"""
+for i, row in aktualny_numer.iterrows():
+    if row['język'] == 'pl':
+        if row['kategoria'] not in uzyte_kategorie_pl:
+            kategoria_spis_tresci = kategorie_wpisow.copy()[kategorie_wpisow['kategoria'] == row['kategoria']]['spis treści pl'].to_string(index=False).strip()
+            spis_tresci_pl += f"{kategoria_spis_tresci}\n"
+            uzyte_kategorie_pl.append(row['kategoria'])
+        spis_tresci_pl += f"{row['spis treści']}\n"
+    elif row['język'] == 'eng':
+        if row['kategoria'] not in uzyte_kategorie_eng:
+            kategoria_spis_tresci = kategorie_wpisow.copy()[kategorie_wpisow['kategoria'] == row['kategoria']]['spis treści eng'].to_string(index=False).strip()
+            spis_tresci_eng += f"{kategoria_spis_tresci}\n"
+            uzyte_kategorie_eng.append(row['kategoria'])
+        spis_tresci_eng += f"{row['spis treści']}\n"        
+        
 #wprowadzenie strony nowego numeru
 
 strona_numeru = gsheet_to_df(gs_table, 'strona')
+strona_numeru = gsheet_to_df('1r3Lq1VcmIiUXIiX8rjeUAFlWe0XQdrpX_rxNXaepFzY', 'strona')
+
+strona_numeru['spis treści'] = strona_numeru.apply(lambda x: spis_tresci_pl if x['język'] == 'pl' else spis_tresci_eng, axis=1)
 
 for i, row in strona_numeru.iterrows():
     if row['język'] == 'pl':
