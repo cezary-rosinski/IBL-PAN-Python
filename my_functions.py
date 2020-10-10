@@ -170,7 +170,7 @@ def gsheet_to_df(gsheetId, scope):
     return df
 
 #write google sheet
-def df_to_gsheet(df, gsheetId,scope='Arkusz1!A1'):
+def df_to_gsheet(df, gsheetId,scope='Arkusz1'):
     CLIENT_SECRET_FILE = 'client_secret.json'
     API_SERVICE_NAME = 'sheets'
     API_VERSION = 'v4'
@@ -180,7 +180,7 @@ def df_to_gsheet(df, gsheetId,scope='Arkusz1!A1'):
     response_date = service.spreadsheets().values().append(
         spreadsheetId=gsheetId,
         valueInputOption='RAW',
-        range=scope,
+        range=scope + '!A1',
         body=dict(
             majorDimension='ROWS',
             values=df.T.reset_index().T.values.tolist())

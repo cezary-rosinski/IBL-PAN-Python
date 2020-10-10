@@ -45,17 +45,29 @@ for i, row in aktualny_numer.iterrows():
     tytul_art = row['tytuł artykułu'].replace('<i>', '').replace('</i>', '')
     slowo_z_tytulu = unidecode(max(tytul_art.split(' '), key=len)).lower()
     if row['język'] == 'pl':
-        sciezka_jpg = [e for e in jpg_pl if nazwisko in e and slowo_z_tytulu in e.lower()][0]
+        try:
+            sciezka_jpg = [e for e in jpg_pl if nazwisko in e and slowo_z_tytulu in e.lower()][0]
+        except IndexError:
+            sciezka_jpg = [e for e in jpg_pl if nazwisko in e][0]
         sciezka_jpg = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_jpg)
-        sciezka_pdf = [e for e in pdf_pl if nazwisko in e and slowo_z_tytulu in e.lower()][0]
+        try:
+            sciezka_pdf = [e for e in pdf_pl if nazwisko in e and slowo_z_tytulu in e.lower()][0]
+        except IndexError:
+            sciezka_pdf = [e for e in pdf_pl if nazwisko in e][0]
         sciezka_pdf = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_pdf)
         aktualny_numer.at[i, 'link do pdf'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_pdf}"
         aktualny_numer.at[i, 'link do jpg'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_jpg}"
         aktualny_numer.at[i, 'jpg'] = sciezka_jpg
     elif row['język'] == 'eng':
-        sciezka_jpg = [e for e in jpg_eng if nazwisko in e and slowo_z_tytulu in e.lower()][0]
+        try:
+            sciezka_jpg = [e for e in jpg_eng if nazwisko in e and slowo_z_tytulu in e.lower()][0]
+        except IndexError:
+            sciezka_jpg = [e for e in jpg_eng if nazwisko in e][0]
         sciezka_jpg = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_jpg)
-        sciezka_pdf = [e for e in pdf_eng if nazwisko in e and slowo_z_tytulu in e.lower()][0]
+        try:
+            sciezka_pdf = [e for e in pdf_eng if nazwisko in e and slowo_z_tytulu in e.lower()][0]
+        except IndexError:
+            sciezka_pdf = [e for e in pdf_eng if nazwisko in e][0]
         sciezka_pdf = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_pdf)
         aktualny_numer.at[i, 'link do pdf'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_pdf}"
         aktualny_numer.at[i, 'link do jpg'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_jpg}"
@@ -79,7 +91,7 @@ login_button = browser.find_element_by_id('wp-submit').click()
 
 for index, row in aktualny_numer.iterrows():
     if index%2 == 0:
-
+      
         browser.get('http://fp.amu.edu.pl/wp-admin/post-new.php')
         tekstowy = browser.find_element_by_id('content-html').click()
 
@@ -88,26 +100,35 @@ for index, row in aktualny_numer.iterrows():
 
         jezyk_pl_button = browser.find_element_by_id('xili_language_check_pl_pl').click()
 
-        kategoria = kategorie_wpisow.copy()[kategorie_wpisow['kategoria'] == row['kategoria']]['id'].to_string(index=False).strip()
-        kategoria = browser.find_element_by_id(kategoria).click()
+        kategoria_id = kategorie_wpisow.copy()[kategorie_wpisow['kategoria'] == row['kategoria']]['id'].to_string(index=False).strip()
+        time.sleep(1)
+        kategoria = browser.find_element_by_id(kategoria_id)
+        time.sleep(1)
+        if kategoria.get_attribute('id') == kategoria_id:
+            kategoria.click()
+        else:
+            print(f"Błąd w artytule o tytule: {row['tytuł artykułu']}")
 
         tagi = browser.find_element_by_id('new-tag-post_tag')
-        tagi_wpisu = ','.join(row['tag autora'].split('❦')) + ',' + row['tag numeru']
+        tagi_wpisu = ','.join(row['autor'].split('❦')) + ',' + row['tag numeru']
         tagi.send_keys(tagi_wpisu)
         dodaj_tagi = browser.find_element_by_xpath("//input[@class = 'button tagadd']").click()
         
+        wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
+        
         while True:
             try:
-                wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
                 search_box = browser.find_element_by_id('mla-media-search-input').clear()
                 search_box = browser.find_element_by_id('mla-media-search-input')
                 search_box.send_keys(row['jpg'])
                 search_button = browser.find_element_by_id('mla-search-submit').click()
-                time.sleep(3)
+                time.sleep(2)
                 znajdz_obrazek = browser.find_element_by_css_selector('.thumbnail').click()
+                time.sleep(2)
                 zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']").click()
                 czy_obrazek = browser.find_element_by_xpath("//img[@class = 'attachment-post-thumbnail size-post-thumbnail']")
             except NoSuchElementException:
+                time.sleep(5)
                 continue
             break
 
@@ -164,7 +185,7 @@ for index, row in aktualny_numer.iterrows():
         wprowadz_tytul = browser.find_element_by_name('post_title').send_keys(aktualny_numer.at[index+1, 'tytuł artykułu'])
         
         tagi = browser.find_element_by_id('new-tag-post_tag')
-        tagi_wpisu = ','.join(aktualny_numer.at[index+1, 'tag autora'].split('❦')) + ',' + aktualny_numer.at[index+1, 'tag numeru']
+        tagi_wpisu = ','.join(aktualny_numer.at[index+1, 'autor'].split('❦')) + ',' + aktualny_numer.at[index+1, 'tag numeru']
         tagi.send_keys(tagi_wpisu)
         dodaj_tagi = browser.find_element_by_xpath("//input[@class = 'button tagadd']").click()
         
@@ -173,18 +194,21 @@ for index, row in aktualny_numer.iterrows():
         except NoSuchElementException:
             pass
         
+        wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
+        
         while True:
             try:
-                wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
                 search_box = browser.find_element_by_id('mla-media-search-input').clear()
                 search_box = browser.find_element_by_id('mla-media-search-input')
                 search_box.send_keys(aktualny_numer.at[index+1, 'jpg'])
                 search_button = browser.find_element_by_id('mla-search-submit').click()
-                time.sleep(3)
+                time.sleep(2)
                 znajdz_obrazek = browser.find_element_by_css_selector('.thumbnail').click()
+                time.sleep(2)
                 zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']").click()
                 czy_obrazek = browser.find_element_by_xpath("//img[@class = 'attachment-post-thumbnail size-post-thumbnail']")
             except NoSuchElementException:
+                time.sleep(5)
                 continue
             break
         
@@ -269,6 +293,8 @@ for i, row in aktualny_numer.iterrows():
 df_to_gsheet(aktualny_numer, gs_table, 'artykuły po pętli')
 
 #ile dla kategorii, potem pętla co dwa, a dla kategorii licznik i while, jeśli licznik jest niższy od tego, ile dla kategorii
+
+ile_dla_kategorii = aktualny_numer[['kategoria', 'język']].value_counts()
 
 #wprowadzenie strony nowego numeru
 
