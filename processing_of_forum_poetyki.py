@@ -7,7 +7,7 @@ from unidecode import unidecode
 import datetime
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
-import wordpress_credentials
+import fp_credentials
 import time
 from selenium.common.exceptions import NoSuchElementException
 
@@ -83,8 +83,8 @@ browser.implicitly_wait(5)
 username_input = browser.find_element_by_id('user_login')
 password_input = browser.find_element_by_id('user_pass')
 
-username = wordpress_credentials.wordpress_username
-password = wordpress_credentials.wordpress_password
+username = fp_credentials.wordpress_username
+password = fp_credentials.wordpress_password
 
 username_input.send_keys(username)
 password_input.send_keys(password)
@@ -443,6 +443,56 @@ browser.close()
 df_to_gsheet(strona_numeru, gs_table, 'strona po pętli')
 
 print('Done')
+
+#pressto
+
+browser = webdriver.Chrome()
+browser.get("https://pressto.amu.edu.pl/index.php/index/login") 
+browser.implicitly_wait(5)
+username_input = browser.find_element_by_id('login-username')
+password_input = browser.find_element_by_id('login-password')
+
+username = fp_credentials.pressto_username
+password = fp_credentials.pressto_password
+
+username_input.send_keys(username)
+password_input.send_keys(password)
+
+login_button = browser.find_element_by_css_selector('.btn-primary').click()
+
+browser.get("https://pressto.amu.edu.pl/index.php/fp/manageIssues#futureIssues")
+
+utworz_numer = browser.find_element_by_css_selector('.pkp_linkaction_icon_add_category').click()
+
+odznacz_numer = browser.find_element_by_id('showNumber').click()
+
+#dynamicznie uzupełnić wartości
+tom = browser.find_element_by_xpath("//input[@name='volume']").send_keys('1')
+rok = browser.find_element_by_xpath("//input[@name='year']").send_keys('2000')
+tytul_pl = browser.find_element_by_xpath("//input[@name='title[pl_PL]']").send_keys('Tytuł polski')
+tytul_eng = browser.find_element_by_xpath("//input[@name='title[en_US]']").send_keys('English title')
+wstep_pl_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[0].click()
+wstep_pl_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys('wstępniak')
+wstep_pl_ok = browser.find_element_by_xpath("//span[contains(text(),'Ok')]").click()
+
+
+wstep_eng_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[1].click()
+wstep_eng_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys('introduction')
+wstep_eng_ok = browser.find_element_by_xpath("//span[contains(text(),'Ok')]").click()
+
+#wgranie okładki
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
