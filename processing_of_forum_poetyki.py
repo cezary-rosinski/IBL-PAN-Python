@@ -11,7 +11,7 @@ import wordpress_credentials
 import time
 from selenium.common.exceptions import NoSuchElementException
 
-pd.options.display.max_colwidth = 1000
+pd.options.display.max_colwidth = 10000
 
 now = datetime.datetime.now()
 year = now.year
@@ -173,7 +173,9 @@ for index, row in aktualny_numer.iterrows():
 
         opublikuj = browser.find_element_by_id('publish').click()
         
-        odnosnik = browser.find_element_by_id('sample-permalink').text
+        caly_link = browser.find_element_by_id('edit-slug-buttons').click()
+        odnosnik = browser.find_element_by_id('new-post-slug')
+        odnosnik = odnosnik.get_attribute('value')
         aktualny_numer.at[index, 'odnosnik'] = odnosnik
         
         url_edycji = browser.current_url
@@ -277,7 +279,9 @@ for index, row in aktualny_numer.iterrows():
 
         opublikuj = browser.find_element_by_id('publish').click()
         
-        odnosnik = browser.find_element_by_id('sample-permalink').text
+        caly_link = browser.find_element_by_id('edit-slug-buttons').click()
+        odnosnik = browser.find_element_by_id('new-post-slug')
+        odnosnik = odnosnik.get_attribute('value')
         aktualny_numer.at[index+1, 'odnosnik'] = odnosnik
         
         url_edycji = browser.current_url
@@ -294,7 +298,6 @@ for i, row in aktualny_numer.iterrows():
 #uzupełnienie tabeli na dysku google
 
 df_to_gsheet(aktualny_numer, gs_table, 'artykuły po pętli')
-aktualny_numer = gsheet_to_df('1r3Lq1VcmIiUXIiX8rjeUAFlWe0XQdrpX_rxNXaepFzY', 'artykuły po pętli')
 
 #ile dla kategorii, potem pętla co dwa, a dla kategorii licznik i while, jeśli licznik jest niższy od tego, ile dla kategorii
 
@@ -319,8 +322,6 @@ for i, row in aktualny_numer.iterrows():
 #wprowadzenie strony nowego numeru
 
 strona_numeru = gsheet_to_df(gs_table, 'strona')
-strona_numeru = gsheet_to_df('1r3Lq1VcmIiUXIiX8rjeUAFlWe0XQdrpX_rxNXaepFzY', 'strona')
-
 strona_numeru['spis treści'] = strona_numeru.apply(lambda x: spis_tresci_pl if x['język'] == 'pl' else spis_tresci_eng, axis=1)
 
 for i, row in strona_numeru.iterrows():
@@ -341,15 +342,111 @@ for i, row in strona_numeru.iterrows():
         strona_numeru.at[i, 'link do jpg'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_jpg}"
         strona_numeru.at[i, 'jpg'] = sciezka_jpg
         
+row = strona_numeru.loc[0]
+index = 0
+for index, row in strona_numeru.iterrows():
+    if row['język'] == 'pl':
+      
+        browser.get('http://fp.amu.edu.pl/wp-admin/post-new.php?post_type=page')
+        tekstowy = browser.find_element_by_id('content-html').click()
 
+        wprowadz_tytul = browser.find_element_by_name('post_title')
+        wprowadz_tytul.send_keys(row['tytuł numeru'])
 
-# link do pdf
-# link do jpg, jpg, spis treści
+        jezyk_pl_button = browser.find_element_by_id('xili_language_check_pl_pl').click()
+        time.sleep(1)
+        wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
+        
+        while True:
+            try:
+                search_box = browser.find_element_by_id('mla-media-search-input').clear()
+                search_box = browser.find_element_by_id('mla-media-search-input')
+                search_box.send_keys(row['jpg'])
+                search_button = browser.find_element_by_id('mla-search-submit').click()
+                time.sleep(2)
+                znajdz_obrazek = browser.find_element_by_css_selector('.thumbnail').click()
+                time.sleep(2)
+                zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']").click()
+                czy_obrazek = browser.find_element_by_xpath("//img[@class = 'attachment-post-thumbnail size-post-thumbnail']")
+            except NoSuchElementException:
+                time.sleep(5)
+                continue
+            break
+        
+        body = f"""<a href="{row['link do pdf']}"><img class="alignleft wp-image-3823" src="{row['link do jpg']}" alt="" width="166" height="235" /></a>{row['wstęp']}
 
-#spis treści generowany automatycznie
+        <h3>Spis treści:</h3>
+        {row['spis treści']}"""
 
+        content = browser.find_element_by_id('content').send_keys(body)
+
+        opublikuj = browser.find_element_by_id('publish').click()
+        
+        caly_link = browser.find_element_by_id('edit-slug-buttons').click()
+        odnosnik = browser.find_element_by_id('new-post-slug')
+        odnosnik = odnosnik.get_attribute('value')
+        strona_numeru.at[index, 'odnosnik'] = odnosnik
+        
+        url_edycji = browser.current_url
+        strona_numeru.at[index, 'url_edycji'] = url_edycji
+
+        create_english = browser.find_element_by_xpath("//a[@title = 'For create a linked draft translation in en_US']").click()
+#English
+        tekstowy = browser.find_element_by_id('content-html').click()
+
+        wprowadz_tytul = browser.find_element_by_name('post_title').clear()
+        wprowadz_tytul = browser.find_element_by_name('post_title').send_keys(strona_numeru.at[index+1, 'tytuł numeru'])
+        
+        try:
+            usun_obrazek = browser.find_element_by_id('remove-post-thumbnail').click()
+        except NoSuchElementException:
+            pass
+        
+        wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
+        
+        while True:
+            try:
+                search_box = browser.find_element_by_id('mla-media-search-input').clear()
+                search_box = browser.find_element_by_id('mla-media-search-input')
+                search_box.send_keys(strona_numeru.at[index+1, 'jpg'])
+                search_button = browser.find_element_by_id('mla-search-submit').click()
+                time.sleep(2)
+                znajdz_obrazek = browser.find_element_by_css_selector('.thumbnail').click()
+                time.sleep(2)
+                zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']").click()
+                czy_obrazek = browser.find_element_by_xpath("//img[@class = 'attachment-post-thumbnail size-post-thumbnail']")
+            except NoSuchElementException:
+                time.sleep(5)
+                continue
+            break
+        
+        body = f"""<a href="{strona_numeru.at[index+1, 'link do pdf']}"><img class="alignleft wp-image-3823" src="{strona_numeru.at[index+1, 'link do jpg']}" alt="" width="166" height="235" /></a>{strona_numeru.at[index+1, 'wstęp']}
+
+        <h3>Table of Contents:</h3>
+        {strona_numeru.at[index+1, 'spis treści']}"""
+        
+        content = browser.find_element_by_id('content').clear()
+        content = browser.find_element_by_id('content').send_keys(body)      
+
+        opublikuj = browser.find_element_by_id('publish').click()
+        
+        caly_link = browser.find_element_by_id('edit-slug-buttons').click()
+        odnosnik = browser.find_element_by_id('new-post-slug')
+        odnosnik = odnosnik.get_attribute('value')
+        strona_numeru.at[index+1, 'odnosnik'] = odnosnik
+        
+        url_edycji = browser.current_url
+        strona_numeru.at[index+1, 'url_edycji'] = url_edycji
 
 browser.close()
+        
+df_to_gsheet(strona_numeru, gs_table, 'strona po pętli')
+
+print('Done')
+
+
+
+
 
 
 
