@@ -38,10 +38,11 @@ for el in arkusze:
     
 uwagi = full_synat['uwagi'].value_counts()
 
-liczba_festiwali = len(full_synat.copy()[full_synat['520'].str.lower().str.contains('festiwal')])
+liczba_festiwali = len(full_synat.copy()[full_synat['520'].str.lower().str.contains('festiwal|konkurs|nagrod|plebiscyt')])
 
 liczba_tworcow = len(full_synat.copy()[full_synat['uwagi'].str.lower().str.contains('biograf')])
 
-liczba_instytucji = len(full_synat.copy()[full_synat['710'] != ''])
+liczba_instytucji = len(full_synat.copy()[(full_synat['710'] != '') &
+                                          (~full_synat['516'].str.lower().str.contains('wydawnictw'))])
 
 liczba_wydawnictw = len(full_synat.copy()[full_synat['516'].str.lower().str.contains('wydawnictw')])
