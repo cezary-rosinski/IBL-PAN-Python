@@ -309,6 +309,8 @@ df_to_gsheet(aktualny_numer, gs_table, 'artykuły po pętli')
 
 #wprowadzanie tagów
 
+aktualny_numer = gsheet_to_df(gs_table, 'artykuły po pętli')
+
 tagi_osob = []
 for i, row in aktualny_numer.iterrows():
     if row['język'] == 'pl':
@@ -316,6 +318,8 @@ for i, row in aktualny_numer.iterrows():
             tagi_osob.append((a, f"{t_pl}|{t_eng}"))
             
 for a, t in tagi_osob:
+    a = tagi_osob[0][0]
+    t = tagi_osob[0][1]
     browser.get('http://fp.amu.edu.pl/wp-admin/edit-tags.php?taxonomy=post_tag')
     szukaj_tagu = browser.find_element_by_id('tag-search-input').send_keys(a)
     szukaj_tagu_button = browser.find_element_by_id('search-submit').click()
@@ -685,6 +689,18 @@ print('Done')
 # ręcznie dodać redaktora - dlaczego?
 # czemu doi są nieaktywne?
         
+
+
+# podczas przypisania tagów pobrać nową treść, która jest odpowiednio sformatowana i wpisać ją do tabeli; pamiętać o dwóch wersjach językowych i o tym, że w polu może być kilka biogramów - odwrócić proces? lista to df?
+
+# dopisać afiliację w tabeli
+
+# wpisać do pressto dodawanie afiliacji i bio
+
+# dodać numerację w bibliografii
+
+# przepisać kod tak, by dodawał artykuły przy użyciu wtyczki quicksubmit
+# https://pressto.amu.edu.pl/index.php/fp/management/importexport/plugin/QuickSubmitPlugin
 
 
 

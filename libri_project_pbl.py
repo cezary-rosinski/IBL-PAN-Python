@@ -296,7 +296,6 @@ def relation_from(x):
 
 # read google sheets
 language_magazine = gsheet_to_df('1EKKdPL8II1l7vYivDVJCYePuswlimt1tQHgvgsScJjs', 'Export Worksheet')
-full_text = gsheet_to_df('11_EA1S-4pcIoT3SxjcxYso1o842fV8_NuDmT9cXfsVY', 'Arkusz1')
 pbl_viaf_names_dates = gsheet_to_df('1S_KsVppXzisd4zlsZ70rJE3d40SF9XRUO75no360dnY', 'pbl_viaf')
 pbl_marc_roles = gsheet_to_df('1iQ4JGo1hLWZbQX4u2kB8LwqSWMLwicFfBsVFc9MNUUk', 'pbl-marc')
 pbl_marc_roles = pbl_marc_roles[pbl_marc_roles['MARC_ABBREVIATION'] != '#N/A'][['PBL_NAZWA', 'MARC_ABBREVIATION']]
@@ -908,8 +907,8 @@ mrc_to_mrk('pbl_marc_articles.mrc', 'pbl_marc_articles.mrk')
 # if z inputem?
 
 
-# bazhum enrichment
 # =============================================================================
+# # bazhum enrichment
 # pbl_magazine_year = pbl_articles[['czasopismo_id', 'czasopismo', 'rok']].drop_duplicates().sort_values(['czasopismo', 'rok'])
 # pbl_magazine_year['rok'] = pbl_magazine_year['rok'].apply(lambda x: '{:4.0f}'.format(x))
 # pbl_magazine_year['join'] = pbl_magazine_year.apply(lambda x: '❦'.join(x.astype(str)), axis=1)
