@@ -5,6 +5,7 @@ import re
 import numpy as np
 import glob
 from my_functions import mrc_to_mrk
+from dask import delayed, dataframe as dd
 
 def year(row, field):
     if row['field'] == field:
@@ -93,10 +94,10 @@ for i, file_path in enumerate(files):
     df['id'] = df.apply(lambda x: f(x, '001'), axis = 1)
     df['id'] = df.groupby('help')['id'].ffill().bfill()
     df = df[['id', 'field', 'content']]
-    df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
-    df = df.drop_duplicates().reset_index(drop=True)
-    df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
-    df_wide.to_excel(f"{path}df_{i}.xlsx", index = False)
+    df = dd.from_pandas(df, npartitions=4)
+    df2 = df.groupby(['id', 'field'])['content'].apply(lambda x: '❦'.join(x.drop_duplicates().astype(str))).reset_index().compute()
+    df_wide = df2.pivot(index = 'id', columns = 'field', values = 'content')
+    df_wide.to_csv(f"{path}df_{i}.csv", index = False)
 
 fields = marc_df.columns.tolist()
 fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]

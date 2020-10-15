@@ -302,10 +302,6 @@ for i, row in aktualny_numer.iterrows():
     autor = row['autor'].replace('❦', ', ')
     body = f"""<p style="text-align: left; margin: 0cm 0cm 15pt; line-height: 15pt; font-size: 11pt; font-family: ChaparralPro-Regular; color: black; letter-spacing: 0.1pt; padding-left: 30px;" align="left"><a href="{row['odnosnik']}">{autor}, <em>{tytul}</em></a></p>"""
     aktualny_numer.at[i, 'spis treści'] = body
-        
-#uzupełnienie tabeli na dysku google
-
-df_to_gsheet(aktualny_numer, gs_table, 'artykuły po pętli')
 
 #wprowadzanie tagów
 
@@ -314,12 +310,11 @@ aktualny_numer = gsheet_to_df(gs_table, 'artykuły po pętli')
 tagi_osob = []
 for i, row in aktualny_numer.iterrows():
     if row['język'] == 'pl':
-        for a, t_pl, t_eng in zip(row['autor'].split('❦'), row['biografia'].split('❦'), aktualny_numer.at[i+1, 'biografia'].split('❦')):
-            tagi_osob.append((a, f"{t_pl}|{t_eng}"))
-            
-for a, t in tagi_osob:
-    a = tagi_osob[0][0]
-    t = tagi_osob[0][1]
+        for a, t_pl, t_eng in zip(row['autor'].split('❦'), row['biogram'].split('❦'), aktualny_numer.at[i+1, 'biogram'].split('❦')):
+            tagi_osob.append((row['lp'], a, f"{t_pl}|{t_eng}"))
+
+nowe_tagi_osob = []            
+for lp, a, t in tagi_osob:
     browser.get('http://fp.amu.edu.pl/wp-admin/edit-tags.php?taxonomy=post_tag')
     szukaj_tagu = browser.find_element_by_id('tag-search-input').send_keys(a)
     szukaj_tagu_button = browser.find_element_by_id('search-submit').click()
@@ -327,8 +322,24 @@ for a, t in tagi_osob:
     opis_tagu = browser.find_element_by_id('description').clear()
     opis_tagu = browser.find_element_by_id('description').send_keys(t)
     zaktualizuj = browser.find_element_by_xpath("//input[@class = 'button button-primary' and @value = 'Zaktualizuj']").click()
+    opis_tagu = browser.find_element_by_id('description').get_attribute('value')
+    tag_pl = re.sub('(.+)(\|)(.+)', r'\1', opis_tagu)
+    tag_eng = re.sub('(.+)(\|)(.+)', r'\3', opis_tagu)
+    nowe_tagi_osob.append((int(lp), a, tag_pl))
+    nowe_tagi_osob.append((int(lp)+1, a, tag_eng))
+    
+nowe_tagi_df = pd.DataFrame(nowe_tagi_osob, columns=['lp', 'autor', 'biogram'])
+nowe_tagi_df['autor'] = nowe_tagi_df.groupby('lp')['autor'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+nowe_tagi_df['biogram'] = nowe_tagi_df.groupby('lp')['biogram'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+nowe_tagi_df = nowe_tagi_df.drop_duplicates().reset_index(drop=True)
+
+aktualny_numer['biogram'] = nowe_tagi_df['biogram']
 
 print('Tagi na wordpressie wprowadzone')
+
+#uzupełnienie tabeli artykułów na dysku google
+
+df_to_gsheet(aktualny_numer, gs_table, 'artykuły po pętli')
 
 #przygotowanie spisu treści
 
