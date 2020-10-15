@@ -77,7 +77,7 @@ for i, file_path in enumerate(files):
     path_mrk = file_path.replace('.utf8', '.mrk')
     mrc_to_mrk(file_path, path_mrk)
       
-path = 'F:/Cezary/Documents/IBL/Translations/LoC/'
+path = 'C:/Users/User/Desktop/LoC/'
 files = [f for f in glob.glob(path + '*.mrk', recursive=True)]
 
 encoding = 'UTF-8'
