@@ -14,12 +14,14 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+import numpy as np
 
 pd.options.display.max_colwidth = 10000
 
 now = datetime.datetime.now()
 year = now.year
 month = now.month
+day = now.day
 
 
 table_url = input('Podaj link do arkusza bieżącego numeru: ')
@@ -305,8 +307,6 @@ for i, row in aktualny_numer.iterrows():
 
 #wprowadzanie tagów
 
-aktualny_numer = gsheet_to_df(gs_table, 'artykuły po pętli')
-
 tagi_osob = []
 for i, row in aktualny_numer.iterrows():
     if row['język'] == 'pl':
@@ -539,50 +539,10 @@ print('Strona numeru na pressto opublikowana')
 
 for i, row in aktualny_numer.iterrows():
     if row['język'] == 'pl':
-        nowe_zgloszenie = browser.get('https://pressto.amu.edu.pl/index.php/fp/submission/wizard')
+        nowe_zgloszenie = browser.get('https://pressto.amu.edu.pl/index.php/fp/management/importexport/plugin/QuickSubmitPlugin')
         dzial_fp = row['kategoria']
         dzial = browser.find_element_by_xpath(f"//select[@id = 'sectionId']/option[text()='{dzial_fp}']").click()
         time.sleep(1)
-        
-        check_box_nr = 0
-        while True:
-            try:
-                check_box_wymagania = browser.find_elements_by_xpath("//input[@type='checkbox']")[check_box_nr]
-                check_box_wymagania.send_keys(Keys.SPACE, Keys.TAB, Keys.SPACE, Keys.TAB, Keys.SPACE, Keys.TAB, Keys.SPACE, Keys.TAB, Keys.SPACE, Keys.TAB, Keys.SPACE)
-            except ElementNotInteractableException:
-                check_box_nr += 1
-                continue
-            break
-        check_box_oswiadczenia = browser.find_element_by_name('copyrightNoticeAgree').send_keys(Keys.SPACE, Keys.TAB, Keys.SPACE)
-        
-        zapisz_kontynuuj = browser.find_element_by_xpath("//button[@class = 'pkp_button submitFormButton']").click()
-        
-        element_artykulu = browser.find_element_by_xpath("//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
-        pdf_pl_na_dysku = f"{row['folder lokalny']}\{row['pdf']}"
-        przeslij_pdf = browser.find_element_by_xpath("//input[@type='file']").send_keys(pdf_pl_na_dysku)
-        time.sleep(2)
-        kontynuuj = browser.find_element_by_id('continueButton').click()
-        time.sleep(2)
-        kontynuuj = browser.find_element_by_id('continueButton').click()
-        time.sleep(2)
-        dodaj_kolejny_pdf = browser.find_element_by_name('newFile').click()
-        time.sleep(2)
-        wersja_artykulu = browser.find_element_by_xpath("//select[@id = 'revisedFileId']/option[text()='To nie jest nowa wersja istniejącego pliku']").click()
-        element_artykulu = browser.find_element_by_xpath("//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
-        pdf_eng_na_dysku = f"{aktualny_numer.at[i+1, 'folder lokalny']}\{aktualny_numer.at[i+1, 'pdf']}"
-        przeslij_pdf = browser.find_element_by_xpath("//input[@type='file']").send_keys(pdf_eng_na_dysku)
-        time.sleep(1)
-        wersja_artykulu = browser.find_element_by_xpath("//select[@id = 'revisedFileId']/option[text()='To nie jest nowa wersja istniejącego pliku']").click()
-        time.sleep(2)
-        kontynuuj = browser.find_element_by_id('continueButton').click()
-        time.sleep(2)
-        kontynuuj = browser.find_element_by_id('continueButton').click()
-        time.sleep(2)
-        dokoncz = browser.find_element_by_id('continueButton').click()
-        
-        zapisz_kontynuuj = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
-        zapisz_kontynuuj[1].click()
-        
         pressto_tytul_art_pl = row['tytuł artykułu'].replace('<i>', '').replace('</i>', '')
         pressto_tytul_art_pl = browser.find_element_by_xpath("//input[@name='title[pl_PL]']").send_keys(pressto_tytul_art_pl)
         pressto_tytul_art_eng = aktualny_numer.at[i+1, 'tytuł artykułu'].replace('<i>', '').replace('</i>', '')
@@ -590,19 +550,31 @@ for i, row in aktualny_numer.iterrows():
         
         abstrakt_pl_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[0].click()
         abstrakt_pl_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(row['abstrakt'])
-        abstrakt_pl_ok = browser.find_element_by_xpath("//span[contains(text(),'Ok')]").click()
-        
+        abstrakt_pl_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1].click()
         abstrakt_eng_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[1].click()
         abstrakt_eng_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(aktualny_numer.at[i+1, 'abstrakt'])
-        abstrakt_eng_ok = browser.find_element_by_xpath("//span[contains(text(),'Ok')]").click()
-        
+        abstrakt_eng_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1].click()
         kliknij_poza_abstrakt = browser.find_element_by_xpath("//input[@name='title[pl_PL]']").click()
         
-        wspolautor_strzalka = browser.find_elements_by_xpath("//a[@class='show_extras']")[-1].click()
-        wspolautor_usun = browser.find_element_by_xpath("//a[@title='Usuń autora']").click()
-        time.sleep(1)
-        wspolautor_usun_ok = browser.find_element_by_xpath("//a[@class='ok pkpModalConfirmButton']").click()
-        for a, o in zip(row['autor'].split('❦'), row['ORCID'].split('❦')):
+        metadane_jezyk_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[0].send_keys('pl')
+        metadane_jezyk_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[1].send_keys('en') 
+        for s in row['słowa kluczowe'].split(', '):
+            slowa_kluczowe_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[2].send_keys(s, Keys.TAB)
+        for s in aktualny_numer.at[i+1, 'słowa kluczowe'].split(', '):
+            slowa_kluczowe_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[3].send_keys(s, Keys.TAB)
+
+        bibliografia_df = pd.DataFrame(row['bibliografia'].split('\n'), columns=['bibliografia'])
+        bibliografia_df = bibliografia_df[bibliografia_df['bibliografia'] != '']
+        bibliografia_df['autor pozycji'] = bibliografia_df['bibliografia'].apply(lambda x: re.sub('(^.+?)(\..+$)', r'\1', x))
+        bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].replace('-+|—+|–+', np.nan, regex=True).ffill()       
+        bibliografia_df['pozycja'] = bibliografia_df['bibliografia'].apply(lambda x: re.sub('(^.+?)(\..+$)', r'\2', x))
+        bibliografia_df['id'] = bibliografia_df.index+1
+        bibliografia_df['id'] = bibliografia_df['id'].astype(str) + '. '
+        bibliografia_df = bibliografia_df['id'] + bibliografia_df['autor pozycji'] + bibliografia_df['pozycja'] + '\n' 
+
+        bibliografia = browser.find_element_by_name('citations').send_keys(bibliografia_df, Keys.BACK_SPACE)
+        
+        for a, o, af, b in zip(row['autor'].split('❦'), row['ORCID'].split('❦'), row['afiliacja'].split('❦'), row['biogram'].split('❦')):
             wspolautor_dodaj = browser.find_element_by_xpath("//a[@title = 'Dodaj autora']").click()
             autor_imie = re.findall('.+(?= (?!.* ))', a)[0]
             wprowadz_imie = browser.find_element_by_name('givenName[pl_PL]').send_keys(autor_imie)
@@ -612,34 +584,14 @@ for i, row in aktualny_numer.iterrows():
             kraj = browser.find_element_by_xpath("//select[@id = 'country']/option[text()='Polska']").click()
             orcid = f"https://orcid.org/{o}"
             wprowadz_orcid = browser.find_element_by_name('orcid').send_keys(orcid)
+            afiliacja = browser.find_element_by_xpath("//input[@name='affiliation[pl_PL]']").send_keys(af)
+            biogram = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[-2].click()
+            biogram = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(b)
+            biogram_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1].click()
+            kliknij_poza_biogram = browser.find_element_by_name('orcid').click()
             rola_autora = browser.find_element_by_xpath("//input[@name='userGroupId' and @value='14']").click()
             zapisz_autora = browser.find_elements_by_xpath("//button[@class = 'pkp_button submitFormButton']")[-1].click()
-# czy dodawać tłumacza?
-        metadane_jezyk_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[0].send_keys('Język Polski')
-        metadane_jezyk_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[1].send_keys('English') 
-        for s in row['słowa kluczowe'].split(', '):
-            slowa_kluczowe_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[2].send_keys(s, Keys.TAB)
-        for s in aktualny_numer.at[i+1, 'słowa kluczowe'].split(', '):
-            slowa_kluczowe_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[3].send_keys(s, Keys.TAB)
-        bibliografia = browser.find_element_by_name('citations').send_keys(row['bibliografia'])
-        zapisz_kontynuuj = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
-        zapisz_kontynuuj[-1].click()
-        time.sleep(1)
-        zakoncz_zglaszanie = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
-        zakoncz_zglaszanie[-1].click()
-        zakoncz_zglaszanie_ok = browser.find_element_by_xpath("//a[@class='ok pkpModalConfirmButton']").click()
-        time.sleep(5)
-        url_zgloszenia = browser.current_url
-        zgloszenie_id = re.findall('(?<=submissionId=)\d+', url_zgloszenia)[0]
-        
-        browser.get(f"https://pressto.amu.edu.pl/index.php/fp/workflow/index/{zgloszenie_id}/1")
-        
-        try:
-            browser.switch_to_alert().accept()
-        except NoAlertPresentException:
-            pass
-        
-        realizacja = browser.find_element_by_xpath("//a[contains(text(),'Realizacja')]").click()
+            
         dodaj_plik_pl = browser.find_element_by_xpath("//a[@title='Dodaj plik do publikacji']").click()
         time.sleep(2)
         etykieta = browser.find_element_by_xpath("//input[@class='field text required' and @name = 'label']").send_keys('PDF')
@@ -658,16 +610,22 @@ for i, row in aktualny_numer.iterrows():
         zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
         zapisz[-1].click()
         
-        do_publikacji = browser.find_element_by_xpath("//a[@title='##grid.action.schedulePublication##']").click()
+        zaplanuj_do_publikacji = browser.find_element_by_id('articlePublished').click()
+        time.sleep(2)
         publikuj_w = browser.find_element_by_xpath(f"//select[@id = 'issueId']/option[text()='{nazwa_numeru}']").click()
         publikuj_strony = browser.find_element_by_name('pages').send_keys(row['strony'])
+        
+        opublikowany_data = browser.find_element_by_name('datePublished-removed').send_keys(f"{year}-{month}-{day}",Keys.ESCAPE)
+        prawa_autorskie = browser.find_element_by_name('copyrightHolder[pl_PL]').send_keys(row['autor'])
+        rok_praw = browser.find_element_by_name('copyrightYear').send_keys(year)        
+        
         zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
         zapisz[-1].click()
-        time.sleep(1)
-        przydziel_doi = browser.find_element_by_css_selector('label').text
-        doi_artykulu = re.findall('(?<=Przydziel DOI ).*(?= dla artykuł)', przydziel_doi)[0]
-        publikacja_ok = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
-        publikacja_ok[-1].click()
+        
+        wzoc_do_zgloszenia = browser.find_element_by_xpath("//a[contains(text(),'Go to Submission')]").click()
+        metadane = browser.find_element_by_xpath("//a[@title = 'Wyświetl metadane zgłoszenia']").click()
+        identyfikatory = browser.find_element_by_xpath("//a[@name = 'catalog' and @class = 'ui-tabs-anchor']").click()
+        doi_artykulu = browser.find_element_by_xpath("//p[contains(text(), 'fp')]").text
         
 #dodanie doi do wordpressa
         browser.get(row['url_edycji'])
@@ -697,21 +655,7 @@ browser.close()
 
 print('Done')
 
-# ręcznie dodać redaktora - dlaczego?
-# czemu doi są nieaktywne?
-        
 
-
-# podczas przypisania tagów pobrać nową treść, która jest odpowiednio sformatowana i wpisać ją do tabeli; pamiętać o dwóch wersjach językowych i o tym, że w polu może być kilka biogramów - odwrócić proces? lista to df?
-
-# dopisać afiliację w tabeli
-
-# wpisać do pressto dodawanie afiliacji i bio
-
-# dodać numerację w bibliografii
-
-# przepisać kod tak, by dodawał artykuły przy użyciu wtyczki quicksubmit
-# https://pressto.amu.edu.pl/index.php/fp/management/importexport/plugin/QuickSubmitPlugin
 
 
 
