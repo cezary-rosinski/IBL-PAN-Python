@@ -572,9 +572,61 @@ marc_df.to_excel('fi_data.xlsx', index=False)
 
 #LoC database
 
+loc_names = df_names.copy()
+loc_names_cz = loc_names[['index', 'cz_name', 'viaf_id']]
+loc_names = loc_names.loc[loc_names['IDs'].str.contains("LC") == True].reset_index(drop = True)
+# loc_names['cz_name'] = loc_names.apply(lambda x: f"{x['cz_name']} {x['cz_dates']}", axis=1)
+loc_names = loc_names[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
+loc_names = cSplit(loc_names, 'index', 'name_and_source', '❦')
+loc1 = loc_names[['index', 'cz_name', 'viaf_id']].drop_duplicates()
+loc_names = loc_names.loc[loc_names['name_and_source'].str.contains("LC") == True].reset_index(drop = True)   
+loc_names = cSplit(loc_names, 'index', 'name_and_source', '‽', 'wide', 1).drop_duplicates()
+loc2 = loc_names[['index', 'name_and_source_0', 'viaf_id']]
+loc2.columns = loc1.columns
+loc2['n_letters'] = loc2['cz_name'].apply(lambda x: len(''.join(re.findall('[a-zA-ZÀ-ž]', x))))
+loc2['n_uppers'] = loc2['cz_name'].apply(lambda x: len(''.join(re.findall('[A-ZÀ-Ž]', x))))
+loc2['has_digits'] = loc2['cz_name'].apply(lambda x: bool(re.findall('\d+', x)))
+loc2 = loc2[(loc2['n_letters'] != loc2['n_uppers']) |
+            (loc2['has_digits'] == True)]
+loc2['n_initials'] = loc2['cz_name'].apply(lambda x: len(''.join(re.findall('(?<= )([A-ZÀ-Ž])(?=\.)', x))))
+loc2['n_words'] = loc2['cz_name'].apply(lambda x: len(re.findall('([a-zA-ZÀ-ž]+)(?=[^a-zA-ZÀ-ž])', x)))
+loc2 = loc2[(loc2['n_words'] != loc2['n_initials'] + 1) |
+            (loc2['has_digits'] == True)]
+loc2 = loc2[['index', 'cz_name', 'viaf_id']]
+loc_names = pd.concat([loc_names_cz, loc1, loc2]).sort_values(['viaf_id', 'cz_name']).drop_duplicates().values.tolist()
 
 #LoC database harvesting
-        
+
+path = 'F:/Cezary/Documents/IBL/Translations/LoC/'
+files = [f for f in glob.glob(path + '*.csv', recursive=True)]
+
+new_df = pd.DataFrame()
+for i, file in enumerate(files):
+    print(f"{i}/{len(files)}")
+    loc_data = pd.read_csv(file)
+    for name_index, (index, name, viaf) in enumerate(loc_names):
+        print(f"    {name_index}/{len(loc_names)}")
+        df = loc_data[(loc_data['100'].notnull()) & (loc_data['100'].str.contains(name))]
+        df['name'] = name
+        df['viaf'] = viaf
+        df['index'] = index
+        if len(df) > 0:
+            new_df = new_df.append(df)
+        df = loc_data[(loc_data['700'].notnull()) & (loc_data['700'].str.contains(name))]
+        df['name'] = name
+        df['viaf'] = viaf
+        df['index'] = index
+        if len(df) > 0:
+            new_df = new_df.append(df)
+    
+kopia = new_df.copy()
+
+fields_order = new_df.columns.tolist()
+fields_order = [f for f in fields_order if re.findall('[0-9][0-9][0-9]', f) or f in ['name', 'viaf', 'index']]
+fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', x)[0].isdigit() else 'a')), x))
+new_df = new_df.reindex(columns=fields_order)
+new_df.to_excel('loc_data.xlsx', index = False)
+
 # Czech database    
 cz_names = pd.read_excel('cz_authorities.xlsx')
 cz_names = marc_parser_1_field(cz_names, '001', '100', '\$\$')
