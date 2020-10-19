@@ -569,6 +569,11 @@ fields_order = marc_df.columns.tolist()
 fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', x)[0].isdigit() else 'a')), x))
 marc_df = marc_df.reindex(columns=fields_order)
 marc_df.to_excel('fi_data.xlsx', index=False)
+
+#LoC database
+
+
+#LoC database harvesting
         
 # Czech database    
 cz_names = pd.read_excel('cz_authorities.xlsx')
