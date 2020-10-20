@@ -12,6 +12,8 @@ import regex
 import unidecode
 import pandasql
 import regex
+import time
+import sandals
 
 ### def
 
@@ -164,11 +166,24 @@ df_names = df_names.loc[(~df_names['czy_czech'].isin(['nie', 'boardercase'])) &
 df_names.fillna(value=pd.np.nan, inplace=True)
 df_names['index'] = df_names['index'].astype(int)
 
-blacklist = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'blacklist')
-# test filtering
-test_names = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'test_list').values.tolist()
-test_names = [item for sublist in test_names for item in sublist]
-df_names = df_names[df_names['viaf_id'].isin(test_names)]
+blacklist = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'blacklist').values.tolist()
+
+for viaf, name in blacklist:
+    df = df_names.copy()[df_names['viaf_id'] == viaf]
+    try:
+        df_index = df.index.values.astype(int)[0]
+        df = df.at[df_index, 'name_and_source'].split('❦')
+        df = '❦'.join([s for s in df if s != name])
+        df_names.at[df_index, 'name_and_source'] = df
+    except IndexError:
+        pass
+
+# =============================================================================
+# # test filtering
+# test_names = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'test_list').values.tolist()
+# test_names = [item for sublist in test_names for item in sublist]
+# df_names = df_names[df_names['viaf_id'].isin(test_names)]
+# =============================================================================
 
 # Swedish database
 # with dates and without dates - OV decides
@@ -575,7 +590,7 @@ marc_df.to_excel('fi_data.xlsx', index=False)
 loc_names = df_names.copy()
 loc_names_cz = loc_names[['index', 'cz_name', 'viaf_id']]
 loc_names = loc_names.loc[loc_names['IDs'].str.contains("LC") == True].reset_index(drop = True)
-# loc_names['cz_name'] = loc_names.apply(lambda x: f"{x['cz_name']} {x['cz_dates']}", axis=1)
+loc_names['cz_name'] = loc_names.apply(lambda x: f"{x['cz_name']} {x['cz_dates']}", axis=1)
 loc_names = loc_names[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
 loc_names = cSplit(loc_names, 'index', 'name_and_source', '❦')
 loc1 = loc_names[['index', 'cz_name', 'viaf_id']].drop_duplicates()
@@ -593,36 +608,33 @@ loc2['n_words'] = loc2['cz_name'].apply(lambda x: len(re.findall('([a-zA-ZÀ-ž]
 loc2 = loc2[(loc2['n_words'] != loc2['n_initials'] + 1) |
             (loc2['has_digits'] == True)]
 loc2 = loc2[['index', 'cz_name', 'viaf_id']]
-loc_names = pd.concat([loc_names_cz, loc1, loc2]).sort_values(['viaf_id', 'cz_name']).drop_duplicates().values.tolist()
+loc_names = pd.concat([loc1, loc2]).sort_values(['viaf_id', 'cz_name']).drop_duplicates()
 
 #LoC database harvesting
 
 path = 'F:/Cezary/Documents/IBL/Translations/LoC/'
 files = [f for f in glob.glob(path + '*.csv', recursive=True)]
 
+query_100 = "select * from loc_data_slim a join loc_names b on a.'100' like '%'||b.cz_name||'%'"
+query_700 = "select * from loc_data_slim a join loc_names b on a.'700' like '%'||b.cz_name||'%'"
 new_df = pd.DataFrame()
 for i, file in enumerate(files):
-    print(f"{i}/{len(files)}")
+    print(f"{i+1}/{len(files)}")
     loc_data = pd.read_csv(file)
-    for name_index, (index, name, viaf) in enumerate(loc_names):
-        print(f"    {name_index}/{len(loc_names)}")
-        df = loc_data[(loc_data['100'].notnull()) & (loc_data['100'].str.contains(name))]
-        df['name'] = name
-        df['viaf'] = viaf
-        df['index'] = index
-        if len(df) > 0:
-            new_df = new_df.append(df)
-        df = loc_data[(loc_data['700'].notnull()) & (loc_data['700'].str.contains(name))]
-        df['name'] = name
-        df['viaf'] = viaf
-        df['index'] = index
-        if len(df) > 0:
-            new_df = new_df.append(df)
-    
-kopia = new_df.copy()
+    loc_data_slim = loc_data[['001', '100', '700']]
+    df = pandasql.sqldf(query_100)
+    df = df[['001', 'index', 'cz_name', 'viaf_id']]
+    df['field match'] = '100'
+    df = pd.merge(loc_data, df, on='001', how='inner')
+    new_df = new_df.append(df)
+    df = pandasql.sqldf(query_700)
+    df = df[['001', 'index', 'cz_name', 'viaf_id']]
+    df['field match'] = '700'
+    df = pd.merge(loc_data, df, on='001', how='inner')
+    new_df = new_df.append(df)
 
 fields_order = new_df.columns.tolist()
-fields_order = [f for f in fields_order if re.findall('[0-9][0-9][0-9]', f) or f in ['name', 'viaf', 'index']]
+fields_order = [f for f in fields_order if re.findall('[0-9][0-9][0-9]', f) or f in ['name', 'viaf', 'index', 'field match']]
 fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', x)[0].isdigit() else 'a')), x))
 new_df = new_df.reindex(columns=fields_order)
 new_df.to_excel('loc_data.xlsx', index = False)
@@ -636,7 +648,7 @@ cz_names['index'] = cz_names.index + 1
 cz_names = pd.merge(cz_names, df_names[['index', 'viaf_id']], on='index', how='left')
 cz_viaf = cz_names[['viaf_id']]
 # test filtering
-cz_names = cz_names[cz_names['viaf_id'].isin(test_names)]
+# cz_names = cz_names[cz_names['viaf_id'].isin(test_names)]
 cz_names_table = cz_names[['index', '$$a', 'viaf_id']]
 cz_names_table.columns = ['index', 'name', 'viaf']
 cz_names = cz_names['100'].apply(lambda x: x.replace('|', '')).apply(lambda x: x.replace('$$', '$')).values.tolist()
