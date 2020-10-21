@@ -331,7 +331,7 @@ def mrk_to_df(path_in, field_with_id, encoding='UTF-8'):
     reader = io.open(path_in, 'rt', encoding = encoding).read().splitlines()
     mrk_list = []
     for row in reader:
-        if 'LDR' not in row:
+        if '=LDR' not in row:
             mrk_list[-1] += '\n' + row
         else:
             mrk_list.append(row)

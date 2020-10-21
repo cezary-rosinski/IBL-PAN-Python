@@ -1,3 +1,5 @@
+# dla każdej biblioteki przygotowac nową listę nazewnictw na podstawie kolumny all_names
+# poprawione: loc
 import xml.etree.ElementTree as et
 import requests
 import pandas as pd
@@ -6,7 +8,7 @@ import numpy as np
 import pymarc
 import io
 from bs4 import BeautifulSoup
-from my_functions import cosine_sim_2_elem, marc_parser_1_field, gsheet_to_df, xml_to_mrk, cSplit, f, df_to_mrc, mrc_to_mrk
+from my_functions import cosine_sim_2_elem, marc_parser_1_field, gsheet_to_df, xml_to_mrk, cSplit, f, df_to_mrc, mrc_to_mrk, mrk_to_df
 import glob
 import regex
 import unidecode
@@ -14,6 +16,7 @@ import pandasql
 import regex
 import time
 import sandals
+from xml.sax import SAXParseException
 
 ### def
 
@@ -158,7 +161,7 @@ def author(row, field):
 # 
 # viaf_df.to_excel('cz_viaf.xlsx', index = False)
 # =============================================================================
-
+    
 #google sheets
 df_names = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1').drop_duplicates()
 df_names = df_names.loc[(~df_names['czy_czech'].isin(['nie', 'boardercase'])) &
@@ -166,23 +169,55 @@ df_names = df_names.loc[(~df_names['czy_czech'].isin(['nie', 'boardercase'])) &
 df_names.fillna(value=pd.np.nan, inplace=True)
 df_names['index'] = df_names['index'].astype(int)
 
-blacklist = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'blacklist').values.tolist()
-
-for viaf, name in blacklist:
-    df = df_names.copy()[df_names['viaf_id'] == viaf]
-    try:
-        df_index = df.index.values.astype(int)[0]
-        df = df.at[df_index, 'name_and_source'].split('❦')
-        df = '❦'.join([s for s in df if s != name])
-        df_names.at[df_index, 'name_and_source'] = df
-    except IndexError:
-        pass
+#czarna lista jest już niepotrzebna, bo w all_names są już dobre wartości
+# =============================================================================
+# blacklist = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'blacklist').values.tolist()
+# 
+# for viaf, name in blacklist:
+#     df = df_names.copy()[df_names['viaf_id'] == viaf]
+#     try:
+#         df_index = df.index.values.astype(int)[0]
+#         df = df.at[df_index, 'name_and_source'].split('❦')
+#         df = '❦'.join([s for s in df if s != name])
+#         df_names.at[df_index, 'name_and_source'] = df
+#     except IndexError:
+#         pass
+# =============================================================================
 
 # =============================================================================
 # # test filtering
 # test_names = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'test_list').values.tolist()
 # test_names = [item for sublist in test_names for item in sublist]
 # df_names = df_names[df_names['viaf_id'].isin(test_names)]
+# =============================================================================
+           
+# viaf other names in MARC21 format
+
+# =============================================================================
+# viaf_for_search = list(set(df_names['viaf_id'].tolist()))
+# 
+# viaf_marc_df = pd.DataFrame()
+# errorfile = io.open('marc_errors.txt', 'wt', encoding='UTF-8')
+# for i, n in enumerate(viaf_for_search):    
+#     print(f"{i+1}/{len(viaf_for_search)}")
+#     url = f'https://viaf.org/viaf/{n}/marc21.xml'
+#     r = requests.get(url, allow_redirects=True)
+#     open('test.xml', 'wb').write(r.content)
+#     try:
+#         xml_to_mrk('test.xml', 'test.mrk')
+#         viaf_df = mrk_to_df('test.mrk', '001')
+#         viaf_marc_df = viaf_marc_df.append(viaf_df)
+#     except SAXParseException:
+#         errorfile.write(str(n) + '\n\n')
+# errorfile.close()
+# 
+# fields_order = viaf_marc_df.columns.tolist()
+# fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', x)[0].isdigit() else 'a')), x))
+# viaf_marc_df = viaf_marc_df.reindex(columns=fields_order)
+# viaf_marc_df.to_excel('viaf_other_names.xlsx', index = False)
+# 
+# viaf_names = viaf_marc_df.copy()[['001', '700']]
+# viaf_names.to_excel('viaf_names.xlsx', index=False)
 # =============================================================================
 
 # Swedish database
@@ -587,36 +622,18 @@ marc_df.to_excel('fi_data.xlsx', index=False)
 
 #LoC database
 
-loc_names = df_names.copy()
-loc_names_cz = loc_names[['index', 'cz_name', 'viaf_id']]
-loc_names = loc_names.loc[loc_names['IDs'].str.contains("LC") == True].reset_index(drop = True)
-loc_names['cz_name'] = loc_names.apply(lambda x: f"{x['cz_name']} {x['cz_dates']}", axis=1)
-loc_names = loc_names[['index', 'cz_name', 'viaf_id', 'IDs', 'name_and_source']]
-loc_names = cSplit(loc_names, 'index', 'name_and_source', '❦')
-loc1 = loc_names[['index', 'cz_name', 'viaf_id']].drop_duplicates()
-loc_names = loc_names.loc[loc_names['name_and_source'].str.contains("LC") == True].reset_index(drop = True)   
-loc_names = cSplit(loc_names, 'index', 'name_and_source', '‽', 'wide', 1).drop_duplicates()
-loc2 = loc_names[['index', 'name_and_source_0', 'viaf_id']]
-loc2.columns = loc1.columns
-loc2['n_letters'] = loc2['cz_name'].apply(lambda x: len(''.join(re.findall('[a-zA-ZÀ-ž]', x))))
-loc2['n_uppers'] = loc2['cz_name'].apply(lambda x: len(''.join(re.findall('[A-ZÀ-Ž]', x))))
-loc2['has_digits'] = loc2['cz_name'].apply(lambda x: bool(re.findall('\d+', x)))
-loc2 = loc2[(loc2['n_letters'] != loc2['n_uppers']) |
-            (loc2['has_digits'] == True)]
-loc2['n_initials'] = loc2['cz_name'].apply(lambda x: len(''.join(re.findall('(?<= )([A-ZÀ-Ž])(?=\.)', x))))
-loc2['n_words'] = loc2['cz_name'].apply(lambda x: len(re.findall('([a-zA-ZÀ-ž]+)(?=[^a-zA-ZÀ-ž])', x)))
-loc2 = loc2[(loc2['n_words'] != loc2['n_initials'] + 1) |
-            (loc2['has_digits'] == True)]
-loc2 = loc2[['index', 'cz_name', 'viaf_id']]
-loc_names = pd.concat([loc1, loc2]).sort_values(['viaf_id', 'cz_name']).drop_duplicates()
+loc_names = df_names.copy()[['index', 'cz_name', 'viaf_id', 'all_names']]
+loc_names = cSplit(loc_names, 'index', 'all_names', '❦')
+loc_names = loc_names.loc[loc_names['all_names'].str.contains("\$0\(LC\)") == True].reset_index(drop = True)
+loc_names['all_names'] = loc_names['all_names'].str.replace('(..)(.+?)(\$0.+)', r'\2')
 
 #LoC database harvesting
 
 path = 'F:/Cezary/Documents/IBL/Translations/LoC/'
 files = [f for f in glob.glob(path + '*.csv', recursive=True)]
 
-query_100 = "select * from loc_data_slim a join loc_names b on a.'100' like '%'||b.cz_name||'%'"
-query_700 = "select * from loc_data_slim a join loc_names b on a.'700' like '%'||b.cz_name||'%'"
+query_100 = "select * from loc_data_slim a join loc_names b on a.'100' like '%'||b.all_names||'%'"
+query_700 = "select * from loc_data_slim a join loc_names b on a.'700' like '%'||b.all_names||'%'"
 new_df = pd.DataFrame()
 for i, file in enumerate(files):
     print(f"{i+1}/{len(files)}")
