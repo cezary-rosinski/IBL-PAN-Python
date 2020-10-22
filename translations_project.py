@@ -651,7 +651,7 @@ for i, file in enumerate(files):
     new_df = new_df.append(df)
 
 fields_order = new_df.columns.tolist()
-fields_order = [f for f in fields_order if re.findall('[0-9][0-9][0-9]', f) or f in ['name', 'viaf', 'index', 'field match']]
+fields_order = [f for f in fields_order if re.findall('[0-9][0-9][0-9]', f) or f in ['LDR', 'cz_name', 'viaf_id', 'index', 'field match']]
 fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', x)[0].isdigit() else 'a')), x))
 new_df = new_df.reindex(columns=fields_order)
 new_df.to_excel('loc_data.xlsx', index = False)

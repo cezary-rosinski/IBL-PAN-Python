@@ -1,13 +1,5 @@
-# =============================================================================
-# błędy:
-#     - usunąć 773 z x jako źródłem - =773  0\$tx$gR.  nan$9 nan
-#     - usunąć frazy ', *$' (zostawić dolar) albo ', (\*)+\$'
-#     - usunać '*$dnan$0nan' i '$dnan$0nan'
-#     - '*$' na '$'
-#     - '$d$' na '$'
-#     - usunąć gwiazdki z twórców pbl
-#     - usunąć puste pola $d - =600  14$aJanda, Krystyna*$d$0viaf308292674   
-# =============================================================================
+# dodać dask.dataframe przy każdym groupby
+# zmienić , nan$ na $
 import cx_Oracle
 import pandas as pd
 from my_functions import gsheet_to_df, df_to_mrc, cosine_sim_2_elem, mrc_to_mrk, cSplit
@@ -503,6 +495,7 @@ X100 = pd.DataFrame(X100['100'].str.split('❦', 1).tolist(), index=X100['rekord
 X100['rekord_id'] = X100.index
 X100 = X100.reset_index(drop=True).fillna(value=np.nan).replace(r'^\s*$', np.nan, regex=True)
 X100.columns = ['100', '700', 'rekord_id']
+X100['100'] = X100['100'].str.replace('(, (\*)+)(\$)', r'\3').str.replace('(, *)(\$)', r'\2').str.replace('(\*)(\$)', r'\2').str.replace('(\$d)(\$)', r'\2').str.replace('\*', '')
 X240 = pbl_books[['rekord_id', 'ZA_TYTUL_ORYGINALU']].drop_duplicates()
 X240.columns = ['rekord_id', '240']
 X240['240'] = '\\\\$a' + X240['240'].str.replace('^(.*?\])(.*$)',r'\1', regex=True).str.replace('^\[|\]$', '', regex=True)
@@ -550,6 +543,7 @@ X520['adnotacja'] = X520[X520.columns[1:]].apply(lambda x: ' '.join(x.dropna().a
 X520 = X520[['rekord_id', 'adnotacja']]
 X520['adnotacja'] = X520['adnotacja'].apply(lambda x: '2\\$a' + re.sub('\n', '', re.sub(' +', ' ', x)) if x != '' else np.nan)
 X520.columns = ['rekord_id', '520']
+X520['520'] = X520['520'].str.replace('\<i\>|\<\/i\>', '"')
 X590 = pbl_books[['rekord_id', 'rodzaj_zapisu']].drop_duplicates()
 X590.columns = ['rekord_id', '590']
 X590['590'] = X590['590'].apply(lambda x: f"\\\\$a{x}")
@@ -565,6 +559,7 @@ X600['600'] = X600.apply(lambda x: x600(x), axis=1)
 X600 = X600[['rekord_id', '600']].drop_duplicates()
 X600['600'] = X600.groupby('rekord_id')['600'].transform(lambda x: '❦'.join(x))
 X600 = X600.drop_duplicates()
+X600['600'] = X600['600'].str.replace('(, (\*)+)(\$)', r'\3').str.replace('(, *)(\$)', r'\2').str.replace('\*{0,}\$dnan\$0nan', '').str.replace('(\*)(\$)', r'\2').str.replace('(\$d)(\$)', r'\2').str.replace('\*', '')
 X600 = pd.merge(X600, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', left_on = 'rekord_id', right_on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X610 = pbl_books[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
 pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '24,61']
@@ -644,6 +639,7 @@ from100 = cSplit(from100, 'rekord_id', '700', '❦')
 X700 = X700.append(from100, ignore_index=True).sort_values('rekord_id').reset_index(drop=True)
 X700['700'] = X700.groupby('rekord_id')['700'].transform(lambda x: '❦'.join(x.dropna().str.strip()))
 X700 = X700.drop_duplicates().reset_index(drop=True).replace(r'^\s*$', np.nan, regex=True)
+X700['700'] = X700['700'].str.replace('(, (\*)+)(\$)', r'\3').str.replace('(, *)(\$)', r'\2').str.replace('(\*)(\$)', r'\2').str.replace('(\$d)(\$)', r'\2').str.replace('\*', '')
 X100 = X100[['rekord_id', '100']]
 X710 = pbl_books[['rekord_id', 'ZA_INSTYTUCJA']].drop_duplicates().reset_index(drop=True)
 X710.columns = ['rekord_id', '710']
@@ -752,6 +748,7 @@ X100 = pd.DataFrame(X100['100'].str.split('❦', 1).tolist(), index=X100['rekord
 X100['rekord_id'] = X100.index
 X100 = X100.reset_index(drop=True).fillna(value=np.nan).replace(r'^\s*$', np.nan, regex=True)
 X100.columns = ['100', '700', 'rekord_id']
+X100['100'] = X100['100'].str.replace('(, (\*)+)(\$)', r'\3').str.replace('(, *)(\$)', r'\2').str.replace('(\*)(\$)', r'\2').str.replace('(\$d)(\$)', r'\2').str.replace('\*', '')
 X240 = pbl_articles[['rekord_id', 'ZA_TYTUL_ORYGINALU']].drop_duplicates()
 X240.columns = ['rekord_id', '240']
 X240['240'] = '\\\\$a' + X240['240'].str.replace('^(.*?\])(.*$)',r'\1', regex=True).str.replace('^\[|\]$', '', regex=True)
@@ -772,6 +769,7 @@ X520['adnotacja'] = X520[X520.columns[1:]].apply(lambda x: ' '.join(x.dropna().a
 X520 = X520[['rekord_id', 'adnotacja']]
 X520['adnotacja'] = X520['adnotacja'].apply(lambda x: '2\\$a' + re.sub('\n', '', re.sub(' +', ' ', x)) if x != '' else np.nan)
 X520.columns = ['rekord_id', '520']
+X520['520'] = X520['520'].str.replace('\<i\>|\<\/i\>', '"')
 X600 = pbl_articles[['rekord_id', 'rodzaj_zapisu', 'tworca_nazwisko', 'tworca_imie', '$a', '$d', '$0']].drop_duplicates()
 X600 = X600.loc[(~X600['rodzaj_zapisu'].isin(["adaptacja utworów", "antologia w czasopiśmie", "listy", "proza", "tekst paraliteracki twórcy", "twórczość pozaliteracka", "wiersz"])) &
                 (X600['tworca_nazwisko'].notnull())]
@@ -784,6 +782,7 @@ X600['600'] = X600.apply(lambda x: x600(x), axis=1)
 X600 = X600[['rekord_id', '600']].drop_duplicates()
 X600['600'] = X600.groupby('rekord_id')['600'].transform(lambda x: '❦'.join(x))
 X600 = X600.drop_duplicates()
+X600['600'] = X600['600'].str.replace('(, (\*)+)(\$)', r'\3').str.replace('(, *)(\$)', r'\2').str.replace('\*{0,}\$dnan\$0nan', '').str.replace('(\*)(\$)', r'\2').str.replace('(\$d)(\$)', r'\2').str.replace('\*', '')
 X600 = pd.merge(X600, pbl_articles[['rekord_id']].drop_duplicates(),  how='outer', left_on = 'rekord_id', right_on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X610 = pbl_articles[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
 pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '24,61']
@@ -859,11 +858,13 @@ from100 = cSplit(from100, 'rekord_id', '700', '❦')
 X700 = X700.append(from100, ignore_index=True).sort_values('rekord_id').reset_index(drop=True)
 X700['700'] = X700.groupby('rekord_id')['700'].transform(lambda x: '❦'.join(x.dropna().str.strip()))
 X700 = X700.drop_duplicates().reset_index(drop=True).replace(r'^\s*$', np.nan, regex=True)
+X700['700'] = X700['700'].str.replace('(, (\*)+)(\$)', r'\3').str.replace('(, *)(\$)', r'\2').str.replace('(\*)(\$)', r'\2').str.replace('(\$d)(\$)', r'\2').str.replace('\*', '')
 X100 = X100[['rekord_id', '100']]
 X773 = pbl_articles[['rekord_id', 'czasopismo', 'rok', 'numer', 'strony']].drop_duplicates()
 X773['rok'] = X773['rok'].apply(lambda x: '{:4.0f}'.format(x))  
 X773['773'] = X773.apply(lambda x: X773_art(x), axis=1)
 X773 = X773[['rekord_id', '773']]
+X773['773'] = X773['773'].str.replace('(\$gR\.)(  nan)', r'\1').str.replace('(\$9)( nan)', r'\1')
 X787 = pbl_articles[['rekord_id', 'HP_NAZWA', 'KH_NAZWA']].drop_duplicates()
 pbl_sh_test = pbl_subject_headings_info.loc[pbl_subject_headings_info['MARC_FIELD'] == '787']
 X787 = pd.merge(X787, pbl_sh_test,  how='inner', on = ['HP_NAZWA', 'KH_NAZWA']).reset_index(drop=True)
