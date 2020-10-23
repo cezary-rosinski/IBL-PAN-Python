@@ -299,6 +299,7 @@ bazhum_links['is_link'] = bazhum_links['full_text'].apply(lambda x: urlparse(x)[
 bazhum_links = bazhum_links[bazhum_links['is_link'] == 'http']
 bazhum_links = bazhum_links[['rekord_id', 'full_text']]
 
+bn_relations = gsheet_to_df('1WPhir3CwlYre7pw4e76rEnJq5DPvVZs3_828c_Mqh9c', 'relacje_rev_book')
 
 # read excel files
 pbl_subject_headings_info = pd.read_csv("pbl_subject_headings.csv", sep=';', encoding='cp1250')
@@ -654,6 +655,10 @@ X787['787'] = X787.groupby('rekord_id')['787'].transform(lambda x: '❦'.join(x)
 X787 = X787.drop_duplicates()
 X787 = pd.merge(X787, pbl_books[['rekord_id']].drop_duplicates(),  how='outer', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)
 X856 = pbl_relations[pbl_relations['zapis_typ'] == 'KS'][['rekord_id', '856']]
+X856['856'] = X856.groupby('rekord_id')['856'].transform(lambda x: '❦'.join(x))
+X856 = X856.drop_duplicates()
+X856_bn = bn_relations.copy()[(bn_relations['id'].str.contains('pl')) & (bn_relations['typ'] == 'book')].drop(columns='typ').rename(columns={'id':'rekord_id'})
+X856 = pd.concat([X856, X856_bn])
 X856['856'] = X856.groupby('rekord_id')['856'].transform(lambda x: '❦'.join(x))
 X856 = X856.drop_duplicates()
 X856 = pd.merge(X856, pbl_books[['rekord_id']].drop_duplicates(),  how='right', on = 'rekord_id').sort_values('rekord_id').reset_index(drop=True)

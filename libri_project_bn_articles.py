@@ -519,9 +519,6 @@ bn_articles_marc.rename(columns={'260':'264'}, inplace=True)
 #     full_text.at[i, 'rights'] = rights
 # =============================================================================
 
-# linki do pełnych tekstów
-bn_art_full_text = gsheet_to_df('1ewU50T08ZVNUP-U3dTTrb5VDDfWqT4TeYrMLrYns7c8', 'Sheet1')
-
 bn_articles_marc.drop(['852', 'id'], axis = 1, inplace=True) 
 bn_articles_marc['240'] = bn_articles_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' in x else np.nan)
 bn_articles_marc['246'] = bn_articles_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' not in x else np.nan)
@@ -531,12 +528,28 @@ if bn_articles_marc['009'].dtype == np.float64:
 bn_articles_marc['995'] = '\\\\$aPBL 2004-2019: czasopisma'
 bn_articles_marc = bn_articles_marc.drop_duplicates().reset_index(drop=True).dropna(how='all', axis=1)
 
-test = bn_articles_marc[(bn_articles_marc['100'].notnull()) & (bn_articles_marc['100'].str.contains('Gańczak'))]
-df_to_mrc(test, '❦', 'ganczak.mrc')
-mrc_to_mrk('ganczak.mrc', 'ganczak.mrk')
+# linki do pełnych tekstów i relacje
+bn_art_full_text = gsheet_to_df('1ewU50T08ZVNUP-U3dTTrb5VDDfWqT4TeYrMLrYns7c8', 'Sheet1')
+bn_art_full_text = bn_art_full_text[(bn_art_full_text['rights'].notnull()) & (bn_art_full_text['rights'] != 'brak praw')][['001', '856']]
 
-# df_to_mrc(bn_articles_marc, '❦', 'libri_marc_bn_articles.mrc')
-# mrc_to_mrk('libri_marc_bn_articles.mrc', 'libri_marc_bn_articles.mrk')
+bn_relations = gsheet_to_df('1WPhir3CwlYre7pw4e76rEnJq5DPvVZs3_828c_Mqh9c', 'relacje_rev_book').drop(columns='typ').rename(columns={'id':'001'})
+
+X856 = pd.concat([bn_art_full_text, bn_relations])
+X856['856'] = X856.groupby('001')['856'].transform(lambda x: '❦'.join(x))
+X856 = X856[X856['856'].notnull()].drop_duplicates()
+
+del bn_articles_marc['856']
+
+bn_articles_marc = pd.merge(bn_articles_marc, X856, on='001', how='left')
+
+field_list = bn_articles_marc.columns.tolist()
+field_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+bn_articles_marc = bn_articles_marc.reindex(columns=field_list)
+bn_articles_marc = bn_articles_marc.reset_index(drop=True)
+
+bn_articles_marc.to_excel('bn_books_marc.xlsx', index=False)
+df_to_mrc(bn_articles_marc, '❦', 'libri_marc_bn_articles.mrc')
+mrc_to_mrk('libri_marc_bn_articles.mrc', 'libri_marc_bn_articles.mrk')
 
 
 

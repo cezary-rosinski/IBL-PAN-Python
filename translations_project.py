@@ -13,9 +13,7 @@ import glob
 import regex
 import unidecode
 import pandasql
-import regex
 import time
-import sandals
 from xml.sax import SAXParseException
 
 ### def

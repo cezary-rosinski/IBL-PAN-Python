@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from my_functions import marc_parser_1_field
+from my_functions import marc_parser_1_field, gsheet_to_df
 import re
 import pandasql
 from my_functions import cSplit
@@ -9,6 +9,8 @@ import requests
 from my_functions import df_to_mrc
 import io
 from my_functions import mrc_to_mrk
+
+bn_relations = gsheet_to_df('1WPhir3CwlYre7pw4e76rEnJq5DPvVZs3_828c_Mqh9c', 'relacje_rev_book').drop(columns='typ').rename(columns={'id':'001'})
 
 bn_cz_mapping = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bn_cz_mapping.xlsx')
 gatunki_pbl = pd.DataFrame({'gatunek': ["aforyzm", "album", "antologia", "autobiografia", "dziennik", "esej", "felieton", "inne", "kazanie", "list", "miniatura prozą", "opowiadanie", "poemat", "powieść", "proza", "proza poetycka", "reportaż", "rozmyślanie religijne", "rysunek, obraz", "scenariusz", "szkic", "tekst biblijny", "tekst dramatyczny", "dramat", "wiersze", "wspomnienia", "wypowiedź", "pamiętniki", "poezja", "literatura podróżnicza", "satyra", "piosenka", 'opowiadania i nowele']})
@@ -148,13 +150,18 @@ for i, year in enumerate(years):
     bn_books_marc_total = bn_books_marc_total.append(bn_books_marc)
 
 bn_books_marc_total = bn_books_marc_total.replace(r'^\❦', '', regex=True).replace(r'\❦$', '', regex=True)
-subfield_list= bn_books_marc_total.columns.tolist()
-subfield_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-bn_books_marc_total = bn_books_marc_total.reindex(columns=subfield_list)
+
+bn_books_marc_total = pd.merge(bn_books_marc_total, bn_relations, on='001', how='left')
+
+field_list = bn_books_marc_total.columns.tolist()
+field_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+bn_books_marc_total = bn_books_marc_total.reindex(columns=field_list)
 bn_books_marc_total = bn_books_marc_total.reset_index(drop=True)
 bn_books_marc_total['008'] = bn_books_marc_total['008'].str.replace('\\', ' ')
 if bn_books_marc_total['009'].dtype == np.float64:
         bn_books_marc_total['009'] = bn_books_marc_total['009'].astype(np.int64)
+
+bn_books_marc_total.to_excel('bn_books_marc.xlsx', index=False)
 
 df_to_mrc(bn_books_marc_total, '❦', 'libri_marc_bn_books.mrc')
 mrc_to_mrk('libri_marc_bn_books.mrc', 'libri_marc_bn_books.mrk')

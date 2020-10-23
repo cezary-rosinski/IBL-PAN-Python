@@ -1,4 +1,11 @@
 /wordpress_credentials.py
+/bn_books_marc.xlsx
+/libri_marc_bn_articles.mrc
+/libri_marc_bn_articles.mrk
+/libri_marc_bn_books.mrc
+/libri_marc_bn_books.mrk
+/pbl_retro.mrc
+/pbl_retro.mrk
 /loc_data.xlsx
 /fp_credentials.py
 /do ignorowania.txt
