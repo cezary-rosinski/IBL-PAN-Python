@@ -33,7 +33,7 @@ for book in books:
 
 
 for i, (no, book, url) in enumerate(empik_books):
-    print(f"{i}/{len(empik_books)}")
+    print(f"{i+1}/{len(empik_books)}")
     url = 'https://www.empik.com/' + url
     results = requests.get(url)
     soup = BeautifulSoup(results.text, "html.parser")
