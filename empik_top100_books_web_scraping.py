@@ -38,9 +38,12 @@ for i, (no, book, url) in enumerate(empik_books):
     results = requests.get(url)
     soup = BeautifulSoup(results.text, "html.parser")
     description = soup.select_one('.ta-product-description').text.strip()
+    reviews = soup.select('.productComments__itemDescription')
+    reviews = '❦'.join([r.text.strip() for r in reviews])
     empik_books[i].append(description)
+    empik_books[i].append(reviews)
     
-df = pd.DataFrame(empik_books, columns=['pozycja', 'tytuł + autor', 'link', 'opis'])
+df = pd.DataFrame(empik_books, columns=['pozycja', 'tytuł + autor', 'link', 'opis', 'recenzje'])
 df.to_excel(f"empik_top100_books_{year}-{month}-{day}.xlsx", index=False)
 
 print('Done')
