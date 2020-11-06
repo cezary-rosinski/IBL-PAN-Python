@@ -330,6 +330,7 @@ def df_to_mrc(df, delimiter, path_out):
 def mrk_to_df(path_in, field_with_id, encoding='UTF-8'):
     reader = io.open(path_in, 'rt', encoding = encoding).read().splitlines()
     mrk_list = []
+    errors = []
     for row in reader:
         if '=LDR' not in row:
             mrk_list[-1] += '\n' + row
@@ -338,19 +339,22 @@ def mrk_to_df(path_in, field_with_id, encoding='UTF-8'):
     full_data_list = []     
     for index, record in enumerate(mrk_list):
         print(str(index) + '/' + str(len(mrk_list)))
-        record = re.split('^=|\n=', record)
-        record = list(filter(None, record))
-        for i, row in enumerate(record):
-            record[i] = record[i].rstrip().split('  ', 1)
-        df = pd.DataFrame(record, columns = ['field', 'content'])
-        df['id'] = df.apply(lambda x: f(x, field_with_id), axis = 1)
-        df['id'] = df['id'].ffill().bfill()
-        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
-        df = df.drop_duplicates().reset_index(drop=True)
-        record_dict = df.pivot(index = 'id', columns = 'field', values = 'content').to_dict('records')
-        full_data_list += record_dict
+        try:
+            record = re.split('^=|\n=', record)
+            record = list(filter(None, record))
+            for i, row in enumerate(record):
+                record[i] = record[i].rstrip().split('  ', 1)
+            df = pd.DataFrame(record, columns = ['field', 'content'])
+            df['id'] = df.apply(lambda x: f(x, field_with_id), axis = 1)
+            df['id'] = df['id'].ffill().bfill()
+            df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+            df = df.drop_duplicates().reset_index(drop=True)
+            record_dict = df.pivot(index = 'id', columns = 'field', values = 'content').to_dict('records')
+            full_data_list += record_dict
+        except ValueError:
+            errors.append(record)
     full_df = pd.DataFrame.from_records(full_data_list)
     fields_order = full_df.columns.tolist()
     fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
     full_df = full_df.reindex(columns=fields_order)
-    return full_df
+    return full_df, errors
