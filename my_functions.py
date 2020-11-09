@@ -272,8 +272,7 @@ def mrk_to_mrc(path_in, path_out, field_with_id):
                         subfields = record_in_list[1:]
                         marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
                         pymarc_record.add_ordered_field(marc_field)
-        outputfile.write(pymarc_record.as_marc())
-        
+        outputfile.write(pymarc_record.as_marc())     
     outputfile.close()
     
 def df_to_mrc(df, delimiter, path_out):

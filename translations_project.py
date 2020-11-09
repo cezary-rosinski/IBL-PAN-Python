@@ -701,7 +701,7 @@ mrk_to_mrc('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_la
 oclc_viaf = mrk_to_df('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', '001')
 oclc_viaf.to_excel('oclc_viaf.xlsx', index=False)
 oclc_lang, ocl_viaf_errors = mrk_to_df('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_lang.mrk', '001')
-oclc_lang.to_excel('oclc_lang.xlsx', index=False)
+oclc_lang.to_csv('oclc_lang.csv', index=False)
 
 
 
