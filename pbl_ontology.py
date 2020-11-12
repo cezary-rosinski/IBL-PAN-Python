@@ -28,6 +28,10 @@ class CollectiveBook(Book):
     
 bibframe = get_ontology('http://id.loc.gov/ontologies/bibframe/')
 
+# schema.org ontology
+
+schema = get_ontology('C:/Users/Cezary/Downloads/schemaorg.owl')
+
 
 
 

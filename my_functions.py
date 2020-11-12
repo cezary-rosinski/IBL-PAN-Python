@@ -19,7 +19,7 @@ def marc_parser_1_field(df, field_id, field_data, subfield_code, delimiter='❦'
     subfield_list = df[field_data].str.findall(f'{subfield_code}.').dropna().tolist()
     if marc_field[field_data][0].find(subfield_code[-1]) == 0: 
         subfield_list = sorted(set(list(chain.from_iterable(subfield_list))))
-        subfield_list = [x for x in subfield_list if re.findall(r'\$\w+', x)]
+        subfield_list = [x for x in subfield_list if re.findall(f'{subfield_code}\w+', x)]
         empty_table = pd.DataFrame(index = range(0, len(marc_field)), columns = subfield_list)
         marc_field = pd.concat([marc_field.reset_index(drop=True), empty_table], axis=1)
         for marker in subfield_list:
@@ -32,10 +32,10 @@ def marc_parser_1_field(df, field_id, field_data, subfield_code, delimiter='❦'
             marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
     else:
         subfield_list = list(set(list(chain.from_iterable(subfield_list))))
-        subfield_list = [x for x in subfield_list if re.findall(r'\$\w+', x)]
+        subfield_list = [x for x in subfield_list if re.findall(f'{subfield_code}\w+', x)]
         subfield_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
         empty_table = pd.DataFrame(index = range(0, len(marc_field)), columns = subfield_list)
-        marc_field['indicator'] = marc_field[field_data].str.replace(r'(^.*?)(\$.*)', r'\1')
+        marc_field['indicator'] = marc_field[field_data].str.replace(f'(^.*?)({subfield_code}.*)', r'\1')
         marc_field = pd.concat([marc_field.reset_index(drop=True), empty_table], axis=1)
         for marker in subfield_list:
             marker = "".join([i if i.isalnum() else f'\\{i}' for i in marker])            

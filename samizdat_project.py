@@ -1,9 +1,6 @@
 # przygotowanie książek do importu
 import pandas as pd
-from my_functions import marc_parser_1_field
-from my_functions import unique_elem_from_column_split
-from my_functions import cSplit
-from my_functions import replacenth
+from my_functions import marc_parser_1_field, unique_elem_from_column_split, cSplit, replacenth
 import re
 from functools import reduce
 import numpy as np
@@ -477,9 +474,93 @@ title_cw_fixed = title_cw_fixed.drop_duplicates()
 test = re.search('(?<=%b)(.*?)(?= %f)', '%bWierzbicki Piotr (1935- ) %fSpór z niańkami').group(1)
 
 
+#12.11.2020
+#unmerge
+bn_books = pd.read_csv("F:/Cezary/Documents/IBL/Samizdat/bn_books.csv", sep=';')
 
+df = pd.DataFrame()
 
+un1_full = "bn_books-120-%1-66753|bn_books-120-%1-66992|bn_books-120-%1-67008|bn_books-120-%1-67023|bn_books-120-%1-67038|bn_books-120-%1-67054|bn_books-120-%1-67069|bn_books-120-%1-67090|bn_books-120-%1-67103|bn_books-120-%1-67247|bn_books-120-%1-67263|bn_books-120-%1-67332|bn_books-120-%1-66810|bn_books-120-%1-66831|bn_books-120-%1-66849|bn_books-120-%1-66871|bn_books-120-%1-66890|bn_books-120-%1-66925|bn_books-120-%1-66948|bn_books-120-%1-66969|bn_books-120-%1-67138|bn_books-120-%1-67156|bn_books-120-%1-67125|bn_books-120-%1-67174|bn_books-120-%1-67189|bn_books-120-%1-67280|bn_books-120-%1-67297"
+un1 = re.findall('(\d+)(?=\||$)', un1_full)
+un1 = bn_books[bn_books['id'].isin(un1)]
 
+institutions_120 = marc_parser_1_field(un1, 'id', 'X120', '%')[['id', '%1', '%2']]
+institutions_120.columns = [['id', 'Entity_Name', 'Related_Entity_Sub_Entity']]
+institutions_120['MRC'] = '120'
+institutions_120['subfield'] = '%1'
+institutions_120['Related_Entity_Main_Entity'] = np.nan
+institutions_120['Located_Location'] = np.nan
+sub_institutions_120 = marc_parser_1_field(un1, 'id', 'X120', '%')[['id', '%2', '%1']]
+sub_institutions_120 = sub_institutions_120.loc[sub_institutions_120['%2'] != ""]
+sub_institutions_120.columns = [['id', 'Entity_Name', 'Related_Entity_Main_Entity']]
+sub_institutions_120['MRC'] = '120'
+sub_institutions_120['subfield'] = '%2'
+sub_institutions_120['Related_Entity_Sub_Entity'] = np.nan
+sub_institutions_120['Located_Location'] = np.nan
+bn_institutions120 = pd.concat([institutions_120, sub_institutions_120], axis = 0)
+bn_institutions120['source'] = "bn_books"
+bn_institutions120.columns = bn_institutions120.columns.get_level_values(0)
+
+bn_institutions120['Grouped'] = bn_institutions120[['source', 'MRC', 'subfield', 'id']].apply(lambda x: '-'.join(x.astype(str)), axis = 1)
+bn_institutions120 = bn_institutions120[['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity', 'Located_Location', 'Grouped']].sort_values(['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity'])
+bn_institutions120['simple_name_loc'] = bn_institutions120[['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity', 'Located_Location']].apply(lambda x: '|'.join(x.dropna().astype(str).str.lower().str.replace('\W', '')), axis = 1)
+
+for column in bn_institutions120.iloc[:,:5]:
+    bn_institutions120[column] = bn_institutions120.groupby('simple_name_loc')[column].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
+
+bn_institutions120 = bn_institutions120.drop_duplicates().sort_values(['simple_name_loc', 'Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity']).reset_index(drop = True)
+bn_institutions120['group_id'] = bn_institutions120.index + 1
+bn_institutions120 = bn_institutions120.replace('nan', '')
+
+bn_institutions120 = bn_institutions120[bn_institutions120['Grouped'].str.contains(un1_full)]
+df = df.append(bn_institutions120)
+
+un2_full = "bn_books-110-%1-66685|bn_books-110-%1-66702|bn_books-110-%1-66727|bn_books-110-%1-66741|bn_books-110-%1-66766|bn_books-110-%1-66782|bn_books-110-%1-66797|bn_books-110-%1-66910|bn_books-110-%1-67211|bn_books-110-%1-67227|bn_books-110-%1-67318"
+un2 = re.findall('(\d+)(?=\||$)', un2_full)
+un2 = bn_books[bn_books['id'].isin(un2)]
+
+institutions_110 = marc_parser_1_field(un2, 'id', 'X110', '%')[['id', '%1', '%2']]
+institutions_110.columns = [['id', 'Entity_Name', 'Related_Entity_Sub_Entity']]
+institutions_110['MRC'] = '110'
+institutions_110['subfield'] = '%1'
+institutions_110['Related_Entity_Main_Entity'] = np.nan
+institutions_110['Located_Location'] = np.nan
+sub_institutions_110 = marc_parser_1_field(un2, 'id', 'X110', '%')[['id', '%2', '%1']]
+sub_institutions_110 = sub_institutions_110.loc[sub_institutions_110['%2'] != ""]
+sub_institutions_110.columns = [['id', 'Entity_Name', 'Related_Entity_Main_Entity']]
+sub_institutions_110['MRC'] = '110'
+sub_institutions_110['subfield'] = '%2'
+sub_institutions_110['Related_Entity_Sub_Entity'] = np.nan
+sub_institutions_110['Located_Location'] = np.nan
+bn_institutions110 = pd.concat([institutions_110, sub_institutions_110], axis = 0)
+bn_institutions110['source'] = "bn_books"
+bn_institutions110.columns = bn_institutions110.columns.get_level_values(0)
+
+bn_institutions110['Grouped'] = bn_institutions110[['source', 'MRC', 'subfield', 'id']].apply(lambda x: '-'.join(x.astype(str)), axis = 1)
+bn_institutions110 = bn_institutions110[['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity', 'Located_Location', 'Grouped']].sort_values(['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity'])
+bn_institutions110['simple_name_loc'] = bn_institutions110[['Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity', 'Located_Location']].apply(lambda x: '|'.join(x.dropna().astype(str).str.lower().str.replace('\W', '')), axis = 1)
+
+for column in bn_institutions110.iloc[:,:5]:
+    bn_institutions110[column] = bn_institutions110.groupby('simple_name_loc')[column].transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
+
+bn_institutions110 = bn_institutions110.drop_duplicates().sort_values(['simple_name_loc', 'Entity_Name', 'Related_Entity_Sub_Entity', 'Related_Entity_Main_Entity']).reset_index(drop = True)
+bn_institutions110['group_id'] = bn_institutions110.index + 1
+bn_institutions110 = bn_institutions110.replace('nan', '')
+
+bn_institutions110 = bn_institutions110[bn_institutions110['Grouped'].str.contains(un2_full)]
+df = df.append(bn_institutions110)
+
+#relations
+
+samizdat_institutions = pd.read_excel("F:/Cezary/Documents/IBL/Samizdat/samizdat_instytucje_2020_11_12.xlsx", "ver3")
+
+inst_relations_with_main = samizdat_institutions[['group_id', 'Related_Entity_Main_Entity']]
+inst_relations_with_main = inst_relations_with_main[inst_relations_with_main['Related_Entity_Main_Entity'].notnull()].drop_duplicates().reset_index(drop=True)
+inst_relations_with_main['index'] = inst_relations_with_main.index + 1
+inst_relations_with_main['Related_Entity_Main_Entity'] = inst_relations_with_main['Related_Entity_Main_Entity'].astype(str)
+inst_relations_with_main = cSplit(inst_relations_with_main, 'index', 'Related_Entity_Main_Entity', '\|').drop(columns='index')
+inst_relations_with_main['group_id'] = inst_relations_with_main.groupby('Related_Entity_Main_Entity').transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
+inst_relations_with_main = inst_relations_with_main.drop_duplicates()
 
 
 
