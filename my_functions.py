@@ -45,6 +45,9 @@ def marc_parser_1_field(df, field_id, field_data, subfield_code, delimiter='❦'
             string = f'(^)(.*?\❦{marker2}|)(.*?)(\,{{0,1}})((\❦{subfield_code})(.*)|$)'
             marc_field[marker] = marc_field[field_data].apply(lambda x: re.sub(string, r'\3', x) if marker in x else '')
             marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
+    for (column_name, column_data) in marc_field.iteritems():
+        if re.findall(f'{subfield_code}', column_name):
+            marc_field[column_name] = marc_field[column_name].str.replace(re.escape(column_name), '❦')
     return marc_field
 
 def marc_parser_1_field_simple(df, field_id, field_data, subfield_code):

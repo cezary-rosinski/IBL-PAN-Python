@@ -1,6 +1,6 @@
 # przygotowanie książek do importu
 import pandas as pd
-from my_functions import marc_parser_1_field, unique_elem_from_column_split, cSplit, replacenth
+from my_functions import marc_parser_1_field, unique_elem_from_column_split, cSplit, replacenth, gsheet_to_df
 import re
 from functools import reduce
 import numpy as np
@@ -561,6 +561,37 @@ inst_relations_with_main['Related_Entity_Main_Entity'] = inst_relations_with_mai
 inst_relations_with_main = cSplit(inst_relations_with_main, 'index', 'Related_Entity_Main_Entity', '\|').drop(columns='index')
 inst_relations_with_main['group_id'] = inst_relations_with_main.groupby('Related_Entity_Main_Entity').transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
 inst_relations_with_main = inst_relations_with_main.drop_duplicates()
+
+# merge and collapse
+
+samizdat_institutions = gsheet_to_df('15pI92bcYWOMpSWaqtmQbOAPZys-SzesWbbMzc2zWqDY', 'ver_3').drop_duplicates()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

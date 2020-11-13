@@ -656,52 +656,95 @@ new_df.to_excel('loc_data.xlsx', index = False)
 
 #OCLC
 
-oclc_viaf = 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/dr117byviaf.xml'
-oclc_lang = 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/dr117bylang.xml'
+#preparation
 
-ov = open(oclc_viaf, "r", encoding="UTF-8")
-ind = 0
-for line in ov:
-    ind += 1
-ov_number = ind
-print(f"Number of OCLC VIAF records: {ov_number}")
+# =============================================================================
+# oclc_viaf = 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/dr117byviaf.xml'
+# oclc_lang = 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/dr117bylang.xml'
+# 
+# ov = open(oclc_viaf, "r", encoding="UTF-8")
+# ind = 0
+# for line in ov:
+#     ind += 1
+# ov_number = ind
+# print(f"Number of OCLC VIAF records: {ov_number}")
+# 
+# ol = open(oclc_lang, "r", encoding="UTF-8")
+# ind = 0
+# for line in ol:
+#     ind += 1
+# ol_number = ind
+# print(f"Number of OCLC Czech records: {ol_number}")
+# 
+# ov = open(oclc_viaf, "r", encoding="UTF-8")
+# writer = pymarc.TextWriter(io.open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', 'wt', encoding="utf-8"))
+# for i, line in enumerate(ov, 1):
+#     print(f"{i}/{ov_number}")
+#     with open('test.xml', 'wt', encoding="UTF-8") as file:
+#         file.write(line)
+#     records = pymarc.map_xml(writer.write, 'test.xml')
+# writer.close()
+# 
+# ol = open(oclc_lang, "r", encoding="UTF-8")
+# ol_errors = []
+# writer = pymarc.TextWriter(io.open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.mrk', 'wt', encoding="utf-8"))
+# for i, line in enumerate(ol, 1):
+#     print(f"{i}/{ol_number}")
+#     try:
+#         with open('test.xml', 'wt', encoding="UTF-8") as file:
+#             file.write(line)
+#         records = pymarc.map_xml(writer.write, 'test.xml')
+#     except PermissionError:
+#         ol_errors.append(line)
+# writer.close()
+# 
+# mrk_to_mrc('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrc', '001')
+# mrk_to_mrc('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.mrk', 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.mrc', '001')
+# 
+# oclc_viaf = mrk_to_df('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', '001')
+# oclc_viaf.to_excel('oclc_viaf.xlsx', index=False)
+# oclc_lang, ocl_viaf_errors = mrk_to_df('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_lang.mrk', '001')
+# oclc_lang.to_csv('oclc_lang.csv', index=False)
+# =============================================================================
 
-ol = open(oclc_lang, "r", encoding="UTF-8")
-ind = 0
-for line in ol:
-    ind += 1
-ol_number = ind
-print(f"Number of OCLC Czech records: {ol_number}")
+oclc_lang = pd.read_csv('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv')
 
-ov = open(oclc_viaf, "r", encoding="UTF-8")
-writer = pymarc.TextWriter(io.open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', 'wt', encoding="utf-8"))
-for i, line in enumerate(ov, 1):
-    print(f"{i}/{ov_number}")
-    with open('test.xml', 'wt', encoding="UTF-8") as file:
-        file.write(line)
-    records = pymarc.map_xml(writer.write, 'test.xml')
-writer.close()
+# all records = 1854243
+# language from 008
+oclc_language_008 = oclc_lang['008'].apply(lambda x: x[35:38]).to_frame()
+count = oclc_language_008['008'].value_counts().to_frame()
+count['language'] = count.index
+count.reset_index(drop=True,inplace=True)
+count.to_excel('oclc_lang_count_008.xlsx', index=False)
 
-ol = open(oclc_lang, "r", encoding="UTF-8")
-ol_errors = []
-writer = pymarc.TextWriter(io.open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.mrk', 'wt', encoding="utf-8"))
-for i, line in enumerate(ol, 1):
-    print(f"{i}/{ol_number}")
-    try:
-        with open('test.xml', 'wt', encoding="UTF-8") as file:
-            file.write(line)
-        records = pymarc.map_xml(writer.write, 'test.xml')
-    except PermissionError:
-        ol_errors.append(line)
-writer.close()
+# records with field 041 = 176445
+X041 = marc_parser_1_field(oclc_lang, '001', '041', '\$')
+count_041 = X041['$a'].value_counts().to_frame()
+count_041['language'] = count_041.index
+count_041.reset_index(drop=True,inplace=True)
+count_041.to_excel('oclc_lang_count_041.xlsx', index=False)
 
-mrk_to_mrc('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrc', '001')
-mrk_to_mrc('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.mrk', 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.mrc', '001')
+# records with language = eng based on 008
+oclc_lang['language'] = oclc_lang['008'].apply(lambda x: x[35:38])
+oclc_eng = oclc_lang[oclc_lang['language'] == 'eng']
+oclc_eng.to_excel('oclc_lang_cz_to_eng.xlsx', index=False)
 
-oclc_viaf = mrk_to_df('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', '001')
-oclc_viaf.to_excel('oclc_viaf.xlsx', index=False)
-oclc_lang, ocl_viaf_errors = mrk_to_df('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_lang.mrk', '001')
-oclc_lang.to_csv('oclc_lang.csv', index=False)
+#filter scope by viaf id
+viaf_ids = '|'.join(['viaf\/' + r for r in df_names['viaf_id'].drop_duplicates().tolist()])
+oclc_by_viaf = oclc_lang.loc[(oclc_lang['100'].str.contains(viaf_ids) == True) | (oclc_lang['700'].str.contains(viaf_ids) == True)]
+oclc_by_viaf.to_excel('oclc_by_viaf.xlsx', index=False)
+
+# who created record
+
+X040 = marc_parser_1_field(oclc_lang, '001', '040', '\$')
+count_040 = X040.groupby(["$a", "$b"]).size().reset_index(name="frequency")
+count_040.to_excel('oclc_cataloguing_agency.xlsx', index=False)
+
+# languages: cz and others
+oclc_cz_language = oclc_lang[oclc_lang['language'] == 'cze'].drop(columns='language')
+oclc_cz_language.to_csv('oclc_cz_language.csv', index=False)
+oclc_other_languages = oclc_lang[oclc_lang['language'] != 'cze'].drop(columns='language')
+oclc_other_languages.to_csv('oclc_other_languages.csv', index=False)
 
 
 
