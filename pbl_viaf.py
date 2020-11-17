@@ -1,38 +1,31 @@
 import cx_Oracle
 import pandas as pd
-from my_functions import gsheet_to_df, df_to_mrc, cosine_sim_2_elem, mrc_to_mrk, cSplit, get_cosine_result
-import pymarc
+from my_functions import gsheet_to_df, get_cosine_result
 import numpy as np
-import copy
-import math
-from datetime import datetime
 import regex as re
-from functools import reduce
-import pandasql
-from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
-#from Levenshtein import distance as levenshtein_distance
-
+import itertools
 
 dsn_tns = cx_Oracle.makedsn('pbl.ibl.poznan.pl', '1521', service_name='xe')
 connection = cx_Oracle.connect(user='IBL_SELECT', password='CR333444', dsn=dsn_tns, encoding='windows-1250')
 
-# PBL queries
+# PHASE 1 - automatic comparing PBL persons index with VIAF
 
 pbl_indeks_osobowy = """select distinct ind.odi_imie, ind.odi_nazwisko
 from IBL_OWNER.pbl_osoby_do_indeksu ind"""                   
 pbl_indeks_osobowy = pd.read_sql(pbl_indeks_osobowy, con=connection).fillna(value = np.nan)
-pbl_indeks_osobowy['full name'] = pbl_indeks_osobowy.apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
 
-cluster_maryi = pbl_indeks_osobowy[pbl_indeks_osobowy['ODI_NAZWISKO'].str.contains('Jezus')]
+pbl_indeks_osobowy['full name'] = pbl_indeks_osobowy.apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1).str.replace('\* ', '').str.replace(' \*', '')
 
-test = pbl_indeks_osobowy.head(25)
+pbl_indeks_osobowy.to_excel('pbl_indeks_osobowy.xlsx', index=False)
+
+pbl_indeks_osobowy = pd.read_excel('pbl_indeks_osobowy.xlsx')
+
 # viaf
-viaf_errors = []
 pbl_indeks_viaf = pd.DataFrame()
-for index, row in test.iterrows():
-    print(str(index+1) + '/' + str(len(test)))
+for index, row in pbl_indeks_osobowy.iterrows():
+    print(str(index+1) + '/' + str(len(pbl_indeks_osobowy)))
     try:
         url = re.sub('\s+', '%20', f"http://viaf.org/viaf/search?query=local.personalNames%20all%20%22{row['full name']}%22&sortKeys=holdingscount&recordSchema=BriefVIAF")
         response = requests.get(url)
@@ -52,31 +45,78 @@ for index, row in test.iterrows():
         viaf_people['full name'] = f"{row['full name']}"
         for ind, vname in viaf_people.iterrows():
             viaf_people.at[ind, 'cosine'] = get_cosine_result(vname['viaf name'], vname['full name'])
-        viaf_people['viaf len'] = viaf_people['viaf'].apply(lambda x: len(x))
 
         viaf_people = viaf_people[viaf_people['cosine'] == viaf_people['cosine'].max()]
-        viaf_people = viaf_people[viaf_people['viaf len'] == viaf_people['viaf len'].min()]
-        if len(viaf_people[viaf_people['libraries'].str.contains('Biblioteka Narodowa (Polska)|NUKAT (Polska)')]) == 0:
-            viaf_people = viaf_people.head(1).drop(columns=['cosine', 'viaf len', 'libraries'])
+        if len(viaf_people[viaf_people['libraries'].str.contains('Biblioteka Narodowa \(Polska\)|NUKAT \(Polska\)|National Library of Poland|NUKAT Center of Warsaw University Library')]) == 0:
+            viaf_people = viaf_people.head(1).drop(columns=['cosine', 'libraries'])
         else:
-            viaf_people = viaf_people[viaf_people['libraries'].str.contains('Biblioteka Narodowa (Polska)|NUKAT (Polska)')]
+            viaf_people = viaf_people[viaf_people['libraries'].str.contains('Biblioteka Narodowa \(Polska\)|NUKAT \(Polska\)|National Library of Poland|NUKAT Center of Warsaw University Library')]
+            viaf_people = viaf_people.head(1).drop(columns=['cosine', 'libraries'])
         pbl_indeks_viaf = pbl_indeks_viaf.append(viaf_people)
     except (IndexError, KeyError):
-        error = [row['full name']]
-        viaf_errors.append(error)   
+        pass
         
-test = pd.merge(test, pbl_indeks_viaf, how='left', on='full name')
-      
+pbl_indeks_osobowy = pd.merge(pbl_indeks_osobowy, pbl_indeks_viaf, how='left', on='full name')
+pbl_indeks_osobowy['viaf name'] = pbl_indeks_osobowy['viaf name'].str.replace('\\u200e', '').str.strip()
+pbl_indeks_osobowy['viaf'] = pbl_indeks_osobowy['viaf'].str.replace('viaf.xml', '')
+
+pbl_indeks_osobowy = pbl_indeks_osobowy.sort_values('viaf')
+pbl_indeks_osobowy_bez_viaf = pbl_indeks_osobowy[pbl_indeks_osobowy['viaf'].isnull()]
+pbl_indeks_osobowy = pbl_indeks_osobowy[pbl_indeks_osobowy['viaf'].notnull()]
+
+count = pbl_indeks_osobowy['viaf'].value_counts().to_frame().rename(columns={'viaf': 'count'})
+count['viaf'] = count.index
+count.reset_index(drop=True, inplace=True)
+
+pbl_indeks_osobowy = pd.merge(pbl_indeks_osobowy, count, how='left', on='viaf').sort_values(['count', 'viaf'], ascending=[False, True])
+
+pbl_indeks_osobowy.to_excel('pbl_index_viaf.xlsx', index=False)
+
+pbl_indeks_osobowy_bez_viaf.drop(columns=['viaf name', 'viaf'], inplace=True)
+pbl_indeks_osobowy_bez_viaf.reset_index(drop=True, inplace=True)
+pbl_indeks_osobowy_bez_viaf.to_excel('pbl_index_without_viaf.xlsx', index=False)
+
+# PHASE 2 - manual corrections
+
+# PHASE 3 - joining names without viaf with viaf names
+
+#wczytać wartości z dysku google dla unique_viaf i plik pbl_indeks_osobowy_bez_viaf
+
+unique_viaf = pbl_indeks_osobowy[['viaf', 'viaf name']].drop_duplicates()
+
+df_similarity = pd.DataFrame()
+for i, row in pbl_indeks_osobowy_bez_viaf.iterrows():
+    print(f"{i+1}/{len(pbl_indeks_osobowy_bez_viaf)}")
+    combinations = list(itertools.product([row['full name']], unique_viaf['viaf name'].to_list()))
+    df = pd.DataFrame(combinations, columns=['full name', 'viaf name'])
+    df['similarity'] = df.apply(lambda x: get_cosine_result(x['full name'], x['viaf name']), axis=1)
+    df = df[df['similarity'] > 0.35].sort_values(['viaf name', 'full name'], ascending=[True, False])
+    df['ODI_IMIE'] = row['ODI_IMIE']
+    df['ODI_NAZWISKO'] = row['ODI_NAZWISKO']
+    df_similarity = df_similarity.append(df)
+    
+df_similarity = pd.merge(df_similarity, unique_viaf, how='left', on='viaf name')
+col_order = pbl_indeks_osobowy.columns.tolist()[:-1]
+col_order.append('similarity')
+
+df_similarity = df_similarity.reindex(columns=col_order)  
+
+#4 PHASE 4 - manual corrections of names reconciliation  
+
+
+# szukamy VIAF dla całego indeksu
+# clastrujemy po VIAF ID
+# to, co nie zostało znalezione we VIAFie zderzamy z 'viaf name'
+# do sprawdzania są dwie rzeczy: 1. poprawność automatycznego wyszukania viaf dla indeksu; 2. ręczne utożsamienie/weryfikacja zderzenia tego, co nie zostało znalezione we VIAFie z clusterami VIAF ID (po 'viaf name')
 
 
 
+strumillo = pbl_indeks_osobowy[pbl_indeks_osobowy['ODI_NAZWISKO'].str.contains('Miłosz')]
+
+get_cosine_result('Grażyna Strumiłło-Miłosz', 'Grażyna Srumiłło-Miłosz')
 
 
-
-
-
-
-
+# Miłosz
 
 
 
