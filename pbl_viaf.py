@@ -59,12 +59,14 @@ for index, row in pbl_indeks_osobowy.iterrows():
             pbl_indeks_viaf = pbl_indeks_viaf.append(viaf_people)
         except (IndexError, KeyError):
             pass
-        except ConnectionError:
+        except requests.exceptions.ConnectionError:
             print(connection_no)
             connection_no += 1
             time.sleep(300)
             continue
         break
+
+# pbl_indeks_viaf = pd.read_excel('pbl_indeks_viaf.xlsx')
         
 pbl_indeks_osobowy = pd.merge(pbl_indeks_osobowy, pbl_indeks_viaf, how='left', on='full name')
 pbl_indeks_osobowy['viaf name'] = pbl_indeks_osobowy['viaf name'].str.replace('\\u200e', '').str.strip()
@@ -80,11 +82,11 @@ count.reset_index(drop=True, inplace=True)
 
 pbl_indeks_osobowy = pd.merge(pbl_indeks_osobowy, count, how='left', on='viaf').sort_values(['count', 'viaf'], ascending=[False, True])
 
-pbl_indeks_osobowy.to_excel('pbl_index_viaf.xlsx', index=False)
+pbl_indeks_osobowy.to_csv('pbl_index_viaf.csv', index=False)
 
 pbl_indeks_osobowy_bez_viaf.drop(columns=['viaf name', 'viaf'], inplace=True)
 pbl_indeks_osobowy_bez_viaf.reset_index(drop=True, inplace=True)
-pbl_indeks_osobowy_bez_viaf.to_excel('pbl_index_without_viaf.xlsx', index=False)
+pbl_indeks_osobowy_bez_viaf.to_csv('pbl_index_without_viaf.csv', index=False)
 
 # PHASE 2 - manual corrections
 
