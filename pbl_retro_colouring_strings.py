@@ -11,7 +11,7 @@ df = gsheet_to_df('1H6xtk4CkAY9RAVwqt2JgZZtynhPUJtoDiZZpYeS62X4', 'Arkusz głów
 df['regex'] = df['PBL 50-51'].apply(lambda x: re.findall('\w+(?=\s\d{1,}\:\d{1,})', x))
 
 # Kickstart the xlsxwriter
-writer = pd.ExcelWriter('Testing rich strings.xlsx', engine='xlsxwriter')
+writer = pd.ExcelWriter('pbl_retro_coloured_strings.xlsx', engine='xlsxwriter')
 df.to_excel(writer, sheet_name='Sheet1', header=False, index=False)
 workbook  = writer.book
 worksheet = writer.sheets['Sheet1']
@@ -23,7 +23,7 @@ cell_format_default = workbook.add_format({'bold': False})
 # Start iterating through the rows and through all of the words in the list
 
 for row in range(0, df.shape[0]):
-    print(f"{row}/{len(df)}")
+    print(f"{row+1}/{len(df)}")
     word_indexes = []
     word_starts = 0
     for word in df.iloc[row,2]:
