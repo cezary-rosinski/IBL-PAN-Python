@@ -116,20 +116,6 @@ df_similarity = df_similarity.reindex(columns=col_order)
 #4 PHASE 4 - manual corrections of names reconciliation  
 
 
-# szukamy VIAF dla całego indeksu
-# clastrujemy po VIAF ID
-# to, co nie zostało znalezione we VIAFie zderzamy z 'viaf name'
-# do sprawdzania są dwie rzeczy: 1. poprawność automatycznego wyszukania viaf dla indeksu; 2. ręczne utożsamienie/weryfikacja zderzenia tego, co nie zostało znalezione we VIAFie z clusterami VIAF ID (po 'viaf name')
-
-
-
-strumillo = pbl_indeks_osobowy[pbl_indeks_osobowy['ODI_NAZWISKO'].str.contains('Miłosz')]
-
-get_cosine_result('Grażyna Strumiłło-Miłosz', 'Grażyna Srumiłło-Miłosz')
-
-
-# Miłosz
-
 
 
 
