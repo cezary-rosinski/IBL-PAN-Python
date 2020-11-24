@@ -1,6 +1,7 @@
 # przygotowanie książek do importu
 import pandas as pd
-from my_functions import marc_parser_1_field, unique_elem_from_column_split, cSplit, replacenth, gsheet_to_df
+from my_functions import marc_parser_1_field, unique_elem_from_column_split, cSplit, replacenth, gsheet_to_df, df_to_gsheet
+import regex
 import re
 from functools import reduce
 import numpy as np
@@ -562,18 +563,66 @@ inst_relations_with_main = cSplit(inst_relations_with_main, 'index', 'Related_En
 inst_relations_with_main['group_id'] = inst_relations_with_main.groupby('Related_Entity_Main_Entity').transform(lambda x: '|'.join(x.drop_duplicates().astype(str)))
 inst_relations_with_main = inst_relations_with_main.drop_duplicates()
 
+
+
+
+#24.11.2020
+samizdat_institutions = gsheet_to_df('15pI92bcYWOMpSWaqtmQbOAPZys-SzesWbbMzc2zWqDY', 'ver_3').drop(columns='alt_name_vol_2').drop_duplicates()
+
+#cleaning of 'Alternative_form_of_name'
+
+#quotes
+
+def quotes(x):
+    x = x.split('|')
+    for i, ver in enumerate(x):
+        x[i] = ver.replace('\"', '')
+    x = '|'.join(list(set(x)))
+    return x
+
+samizdat_institutions['Alternative_form_of_name'] = samizdat_institutions['Alternative_form_of_name'].apply(lambda x: quotes(x))
+
+def brackets(x):
+    x = x.split('|')
+    for i, ver in enumerate(x):
+        if 'i. e.' in ver:
+            x[i] = ver.replace('[', '').replace(']', '')
+        elif regex.findall('\p{Ll}\[', ver):
+            if ver.count('[') != ver.count(']'):
+                x[i] = f"{ver}]"            
+            x[i] = regex.sub('(?<=\p{Ll})(\[.+?\])', '.', x[i])
+            x[i] = re.sub('\[.+?\]', '', x[i]).strip()
+        elif len(ver) > 0 and ver[0] == '[' and ver[-1] == ']':
+            x[i] = ver.replace('[', '').replace(']', '').strip()
+        elif '[' in ver:
+            if ver.count('[') != ver.count(']'):
+                x[i] = f"{ver}]"
+            x[i] = re.sub('\[.+?\]', '', x[i])
+            x[i] = re.sub(' +', ' ', x[i]).strip()
+    x = '|'.join(list(set(x)))
+    return x
+    
+samizdat_institutions['Alternative_form_of_name'] = samizdat_institutions['Alternative_form_of_name'].apply(lambda x: brackets(x))           
+samizdat_institutions['Alternative_form_of_name'] = samizdat_institutions.apply(lambda x: np.nan if x['Alternative_form_of_name'] == x['Entity_Name'] else x['Alternative_form_of_name'], axis=1)
+
+# df_to_gsheet(samizdat_institutions, '15pI92bcYWOMpSWaqtmQbOAPZys-SzesWbbMzc2zWqDY')
+
 # merge and collapse
 
-samizdat_institutions = gsheet_to_df('15pI92bcYWOMpSWaqtmQbOAPZys-SzesWbbMzc2zWqDY', 'ver_3').drop_duplicates()
+def unique_and_merge(x):
+    x = '|'.join(x.dropna().drop_duplicates().astype(str))
+    x = '|'.join(list(set(x.split('|'))))                                                                              
+    return x
+    
+for column in samizdat_institutions.iloc[:,2:]:
+    samizdat_institutions[column] = samizdat_institutions.groupby('group_id')[column].transform(lambda x: unique_and_merge(x))
+    
+samizdat_institutions = samizdat_institutions.drop_duplicates().reset_index(drop=True)    
 
-
-
-
-
-
-
-
-
+df_to_gsheet(samizdat_institutions, '15pI92bcYWOMpSWaqtmQbOAPZys-SzesWbbMzc2zWqDY', 'ver_4')    
+    
+    
+ 
 
 
 
