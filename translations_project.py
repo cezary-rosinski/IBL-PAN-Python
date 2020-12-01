@@ -747,6 +747,39 @@ oclc_other_languages = oclc_lang[oclc_lang['language'] != 'cze'].drop(columns='l
 oclc_other_languages.to_csv('oclc_other_languages.csv', index=False)
 
 
+# 01.12.2020
+
+oclc_lang = pd.read_csv('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv')
+oclc_viaf = pd.read_excel('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.xlsx')
+
+oclc_full = pd.concat([oclc_lang, oclc_viaf])
+oclc_full['language'] = oclc_full['008'].apply(lambda x: x[35:38])
+
+oclc_cz_from_all = oclc_full[oclc_full['language'] == 'cze']
+oclc_other_languages = oclc_full[oclc_full['language'] != 'cze']
+
+oclc_other_languages['nature_of_contents'] = oclc_other_languages['008'].apply(lambda x: x[24:27])
+oclc_other_languages = oclc_other_languages[oclc_other_languages['nature_of_contents'].isin(['\\\\\\', '6\\\\', '\\6\\', '\\\\6'])]
+
+oclc_other_languages['language_material'] = oclc_other_languages['LDR'].apply(lambda x: x[6])
+oclc_other_languages['bibliographic_level'] = oclc_other_languages['LDR'].apply(lambda x: x[7])
+oclc_other_languages = oclc_other_languages[(oclc_other_languages['language_material'] == 'a') &
+                                            (oclc_other_languages['bibliographic_level'] == 'a')]
+
+oclc_other_languages.to_excel('oclc_other_languages.xlsx', index=False)
+
+oclc_language_008 = oclc_other_languages['008'].apply(lambda x: x[35:38]).to_frame()
+count = oclc_language_008['008'].value_counts().to_frame()
+count['language'] = count.index
+count.reset_index(drop=True,inplace=True)
+count.to_excel('oclc_other_lang_count_008.xlsx', index=False)
+
+
+
+
+
+
+
 
 
 
