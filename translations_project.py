@@ -764,7 +764,7 @@ oclc_other_languages = oclc_other_languages[oclc_other_languages['nature_of_cont
 oclc_other_languages['language_material'] = oclc_other_languages['LDR'].apply(lambda x: x[6])
 oclc_other_languages['bibliographic_level'] = oclc_other_languages['LDR'].apply(lambda x: x[7])
 oclc_other_languages = oclc_other_languages[(oclc_other_languages['language_material'] == 'a') &
-                                            (oclc_other_languages['bibliographic_level'] == 'a')]
+                                            (oclc_other_languages['bibliographic_level'] == 'm')] # wcześniej było "a" i były błędy
 
 oclc_other_languages.to_excel('oclc_other_languages.xlsx', index=False)
 
@@ -773,6 +773,34 @@ count = oclc_language_008['008'].value_counts().to_frame()
 count['language'] = count.index
 count.reset_index(drop=True,inplace=True)
 count.to_excel('oclc_other_lang_count_008.xlsx', index=False)
+
+
+oclc_other_languages = pd.read_excel('oclc_other_languages.xlsx')
+
+oclc_pl = oclc_other_languages[oclc_other_languages['language'] == 'pol']
+
+hasek_pl = oclc_pl[(oclc_pl['100'].notnull()) & (oclc_pl['100'].str.contains('4931097'))]
+hrabal_pl = oclc_pl[(oclc_pl['100'].notnull()) & (oclc_pl['100'].str.contains('34458072'))]
+kundera_pl = oclc_pl[(oclc_pl['100'].notnull()) & (oclc_pl['100'].str.contains('51691735'))]
+
+oclc_swe = oclc_other_languages[oclc_other_languages['language'] == 'swe']
+
+hasek_swe = oclc_swe[(oclc_swe['100'].notnull()) & (oclc_swe['100'].str.contains('4931097'))]
+hrabal_swe = oclc_swe[(oclc_swe['100'].notnull()) & (oclc_swe['100'].str.contains('34458072'))]
+kundera_swe = oclc_swe[(oclc_swe['100'].notnull()) & (oclc_swe['100'].str.contains('51691735'))]
+
+oclc_fin = oclc_other_languages[oclc_other_languages['language'] == 'fin']
+
+hasek_fin = oclc_fin[(oclc_fin['100'].notnull()) & (oclc_fin['100'].str.contains('4931097'))]
+hrabal_fin = oclc_fin[(oclc_fin['100'].notnull()) & (oclc_fin['100'].str.contains('34458072'))]
+kundera_fin = oclc_fin[(oclc_fin['100'].notnull()) & (oclc_fin['100'].str.contains('51691735'))]
+
+
+
+
+records_no = [910969568, 906979376, 1041639715]
+
+test = oclc_full[oclc_full['001'].isin(records_no)]
 
 
 
