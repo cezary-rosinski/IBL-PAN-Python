@@ -753,7 +753,44 @@ oclc_lang = pd.read_csv('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_
 oclc_viaf = pd.read_excel('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.xlsx')
 
 oclc_full = pd.concat([oclc_lang, oclc_viaf])
+
 oclc_full['language'] = oclc_full['008'].apply(lambda x: x[35:38])
+oclc_other_languages = oclc_full[oclc_full['language'] != 'cze']
+
+oclc_other_languages['nature_of_contents'] = oclc_other_languages['008'].apply(lambda x: x[24:27])
+oclc_other_languages = oclc_other_languages[oclc_other_languages['nature_of_contents'].isin(['\\\\\\', '6\\\\', '\\6\\', '\\\\6'])]
+
+oclc_other_languages['type of record + bibliographic level'] = oclc_other_languages['LDR'].apply(lambda x: x[6:8])
+oclc_other_languages['fiction_type'] = oclc_other_languages['008'].apply(lambda x: x[33])
+
+
+fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
+languages = ['pol', 'swe', 'ita', 'eng']
+
+for language in languages:
+    df = oclc_other_languages[(oclc_other_languages['language'] == language)]
+    df_language_materials_monograhps = df[df['type of record + bibliographic level'] == 'am']
+    df_other_types = df[~df['001'].isin(df_language_materials_monograhps['001'])]
+    df_other_types.to_excel(f"oclc_{language}_other_types_(first_negative).xlsx", index=False)
+    df_ok = df_language_materials_monograhps[(df_language_materials_monograhps['041'].str.contains('\$hcz')) &
+                                             (df_language_materials_monograhps['fiction_type'].isin(fiction_types))]
+    df_ok.to_excel(f"oclc_{language}_positive.xlsx", index=False)
+    df_no = df_language_materials_monograhps[~df_language_materials_monograhps['001'].isin(df_ok['001'])]
+    df_no.to_excel(f"oclc_{language}_negative.xlsx", index=False)
+    print(f"Total records in {language}: {len(df)}")
+    print(f"Total language material + monograph records in {language}: {len(df_language_materials_monograhps)}")
+    print(f"Total records with other types in {language}: {len(df_other_types)}")
+    print(f"Total positive records in {language}: {len(df_ok)}")
+    print(f"Total negative records in {language}: {len(df_no)}")
+    print("_______________________________________")
+    
+    
+    
+    
+    
+    
+# notatki
+
 
 oclc_cz_from_all = oclc_full[oclc_full['language'] == 'cze']
 oclc_other_languages = oclc_full[oclc_full['language'] != 'cze']
@@ -762,9 +799,9 @@ oclc_other_languages['nature_of_contents'] = oclc_other_languages['008'].apply(l
 oclc_other_languages = oclc_other_languages[oclc_other_languages['nature_of_contents'].isin(['\\\\\\', '6\\\\', '\\6\\', '\\\\6'])]
 
 oclc_other_languages['language_material'] = oclc_other_languages['LDR'].apply(lambda x: x[6])
-oclc_other_languages['bibliographic_level'] = oclc_other_languages['LDR'].apply(lambda x: x[7])
+oclc_other_languages['monograph'] = oclc_other_languages['LDR'].apply(lambda x: x[7])
 oclc_other_languages = oclc_other_languages[(oclc_other_languages['language_material'] == 'a') &
-                                            (oclc_other_languages['bibliographic_level'] == 'm')] # wcześniej było "a" i były błędy
+                                            (oclc_other_languages['monograph'] == 'm')] # wcześniej było "a" i były błędy
 
 oclc_other_languages.to_excel('oclc_other_languages.xlsx', index=False)
 
@@ -777,6 +814,15 @@ count.to_excel('oclc_other_lang_count_008.xlsx', index=False)
 
 oclc_other_languages = pd.read_excel('oclc_other_languages.xlsx')
 
+
+
+
+
+
+oclc_other_languages['is_fiction'] = oclc_other_languages['008'].apply(lambda x: x[33])
+oclc_other_languages_fiction = oclc_other_languages[oclc_other_languages['is_fiction'] != '0']
+
+
 oclc_pl = oclc_other_languages[oclc_other_languages['language'] == 'pol']
 
 hasek_pl = oclc_pl[(oclc_pl['100'].notnull()) & (oclc_pl['100'].str.contains('4931097'))]
@@ -784,6 +830,12 @@ hrabal_pl = oclc_pl[(oclc_pl['100'].notnull()) & (oclc_pl['100'].str.contains('3
 kundera_pl = oclc_pl[(oclc_pl['100'].notnull()) & (oclc_pl['100'].str.contains('51691735'))]
 
 oclc_swe = oclc_other_languages[oclc_other_languages['language'] == 'swe']
+oclc_swe['is_fiction'] = oclc_swe['008'].apply(lambda x: x[33])
+
+oclc_swe_ok = oclc_swe[oclc_swe['is_fiction'] != '0']
+oclc_swe_out = oclc_swe[~oclc_swe['001'].isin(oclc_swe_ok['001'])]
+
+
 
 hasek_swe = oclc_swe[(oclc_swe['100'].notnull()) & (oclc_swe['100'].str.contains('4931097'))]
 hrabal_swe = oclc_swe[(oclc_swe['100'].notnull()) & (oclc_swe['100'].str.contains('34458072'))]
@@ -796,16 +848,61 @@ hrabal_fin = oclc_fin[(oclc_fin['100'].notnull()) & (oclc_fin['100'].str.contain
 kundera_fin = oclc_fin[(oclc_fin['100'].notnull()) & (oclc_fin['100'].str.contains('51691735'))]
 
 
+#ita from oclc
 
+oclc_ita = oclc_other_languages[oclc_other_languages['language'] == 'ita']
+oclc_ita['is_fiction'] = oclc_ita['008'].apply(lambda x: x[33])
+
+oclc_ita_ok = oclc_ita[oclc_ita['is_fiction'] != '0']
+oclc_ita_out = oclc_ita[~oclc_ita['001'].isin(oclc_ita_ok['001'])]
+oclc_ita_ok.to_excel('oclc_ita_positive.xlsx', index=False)
+oclc_ita_out.to_excel('oclc_ita_negative.xlsx', index=False)
+
+
+#swe national library file
+
+swe_all = pd.read_excel('swe_data_clean.xlsx')
+
+swe_all['language'] = swe_all['008'].apply(lambda x: x[35:38])
+
+swe_all = swe_all[swe_all['language'] == 'swe']
+swe = swe_all.copy()
+swe['nature_of_contents'] = swe['008'].apply(lambda x: x[24:27])
+swe = swe[swe['nature_of_contents'].isin(['\\\\\\', '6\\\\', '\\6\\', '\\\\6'])]
+
+swe['language_material'] = swe['LDR'].apply(lambda x: x[6])
+swe['monograph'] = swe['LDR'].apply(lambda x: x[7])
+swe = swe[(swe['language_material'] == 'a') &
+          (swe['monograph'] == 'm')] # wcześniej było "a" i były błędy
+swe['is_fiction'] = swe['008'].apply(lambda x: x[33])
+swe = swe[swe['is_fiction'] != '0']
+
+swe_out = swe_all[~swe_all['001'].isin(swe['001'])]
+
+
+oclc_swe_ok.to_excel('oclc_swe_positive.xlsx', index=False)
+oclc_swe_out.to_excel('oclc_swe_negative.xlsx', index=False)
+
+
+swe.to_excel('swe_national_library_positive.xlsx', index=False)
+swe_out.to_excel('swe_national_library_negative.xlsx', index=False)
 
 records_no = [910969568, 906979376, 1041639715]
 
 test = oclc_full[oclc_full['001'].isin(records_no)]
 
 
+# skupić się na: pol, swe, eng, ita
+# zbudować wnioskowanie i pozytywne pliki dla tych języków
 
+# steps from out to in
+#1 041 $aita$hcze + viaf
+#2 viaf
 
-
+# workflow - 1. positive do tabeli, 2. pierwszy positive z negative jako kolejny arkusz; każdy kolejny warunek jako następny arkusz
+# można jednocześnie pracować ręcznie na pewnych arkuszach i dodawać kolejne
+# ręczną pracę zaczynamy, gdy nie da się nic polepszyć automatycznie
+# wtedy ręczne zmiany i ich nie śledzimy - i one prowadzą do przygotowania gotowych plików do dalszego przetwarzania
 
 
 
