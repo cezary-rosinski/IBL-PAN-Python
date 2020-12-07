@@ -7,12 +7,12 @@ from functools import reduce
 import numpy as np
 import copy
 
-bn_books = pd.read_csv("C:/Users/Cezary/Desktop/bn_books.csv", sep=';')
+bn_books = pd.read_csv("F:/Cezary/Documents/IBL/Samizdat/bn_books.csv", sep=';')
 bn_books.iloc[142, 18] = '%fWspomnienia 1939-1945 : (fragmenty) %bPużak Kazimierz %ss. 58-130 %z1|%fPolitycy i żołnierze %bGarliński Józef %ss. 131-147 %z2|%aZawiera : "Proces szesnastu" w Moskwie : (wspomnienia osobiste) / K.      Bagiński. Wspomnienia 1939-1945 : (fragmenty) / K. Pużak. Politycy i      żołnierze / J. Garliński %bBagiński Kazimierz %f"Proces szesnastu" w      Moskwie %ss. 3-57 %z0'
-cz_books = pd.read_csv("C:/Users/Cezary/Desktop/cz_books.csv", sep=';')
-cz_articles = pd.read_csv("C:/Users/Cezary/Desktop/cz_articles.csv", sep=';')
-pbl_books = pd.read_csv("C:/Users/Cezary/Desktop/pbl_books.csv", sep=';')
-pbl_articles = pd.read_csv("C:/Users/Cezary/Desktop/pbl_articles.csv", sep=';')
+cz_books = pd.read_csv("F:/Cezary/Documents/IBL/Samizdat/cz_books.csv", sep=';')
+cz_articles = pd.read_csv("F:/Cezary/Documents/IBL/Samizdat/cz_articles.csv", sep=';')
+pbl_books = pd.read_csv("F:/Cezary/Documents/IBL/Samizdat/pbl_books.csv", sep=';')
+pbl_articles = pd.read_csv("F:/Cezary/Documents/IBL/Samizdat/pbl_articles.csv", sep=';')
 
 
 # kartoteka intytucji
@@ -567,6 +567,7 @@ inst_relations_with_main = inst_relations_with_main.drop_duplicates()
 
 
 #24.11.2020
+
 samizdat_institutions = gsheet_to_df('15pI92bcYWOMpSWaqtmQbOAPZys-SzesWbbMzc2zWqDY', 'ver_3').drop(columns='alt_name_vol_2').drop_duplicates()
 
 #cleaning of 'Alternative_form_of_name'
@@ -599,10 +600,12 @@ def brackets(x):
                 x[i] = f"{ver}]"
             x[i] = re.sub('\[.+?\]', '', x[i])
             x[i] = re.sub(' +', ' ', x[i]).strip()
+        elif ']' in ver:
+            x[i] = ver.replace(']', '')            
     x = '|'.join(list(set(x)))
     return x
     
-samizdat_institutions['Alternative_form_of_name'] = samizdat_institutions['Alternative_form_of_name'].apply(lambda x: brackets(x))           
+samizdat_institutions['Alternative_form_of_name'] = samizdat_institutions['Alternative_form_of_name'].apply(lambda x: brackets(x)).str.replace('(', '').str.replace(')', '')          
 samizdat_institutions['Alternative_form_of_name'] = samizdat_institutions.apply(lambda x: np.nan if x['Alternative_form_of_name'] == x['Entity_Name'] else x['Alternative_form_of_name'], axis=1)
 
 # df_to_gsheet(samizdat_institutions, '15pI92bcYWOMpSWaqtmQbOAPZys-SzesWbbMzc2zWqDY')
@@ -611,23 +614,734 @@ samizdat_institutions['Alternative_form_of_name'] = samizdat_institutions.apply(
 
 def unique_and_merge(x):
     x = '|'.join(x.dropna().drop_duplicates().astype(str))
-    x = '|'.join(list(set(x.split('|'))))                                                                              
+    x = '|'.join(list(set([s.strip() for s in x.split('|')])))                                                                              
     return x
     
 for column in samizdat_institutions.iloc[:,2:]:
     samizdat_institutions[column] = samizdat_institutions.groupby('group_id')[column].transform(lambda x: unique_and_merge(x))
+    samizdat_institutions[column] = samizdat_institutions[column].apply(lambda x: re.sub('^\|', '', x))
     
-samizdat_institutions = samizdat_institutions.drop_duplicates().reset_index(drop=True)    
+samizdat_institutions = samizdat_institutions.drop(columns=['REV']).drop_duplicates().reset_index(drop=True)    
 
 df_to_gsheet(samizdat_institutions, '15pI92bcYWOMpSWaqtmQbOAPZys-SzesWbbMzc2zWqDY', 'ver_4')    
     
-    
+#07.12.2020 - samizdat people    
  
+# kartoteka osób
+
+samizdat_people = gsheet_to_df('1Y8Y_pfkuKiv5npL6QJAXWbDO6twIJqsK3ArvaokjFkU', 'samizdat').drop_duplicates()
+samizdat_people['name_simple'] = samizdat_people.apply(lambda x: re.sub('na$', '', x['name_simple']) if x['name_form'][-4:] == ', NA' else x['name_simple'], axis=1)
+samizdat_people['name_form'] = samizdat_people['name_form'].str.replace(', NA', '')
+
+tilde_encoding = gsheet_to_df('1dbBf-skFsksLoKmXelDDeP78yLXV_WyjWQ-LbRa-CRE', 'Sheet1')[['error', 'encoding']]
+tilde_encoding['length'] = tilde_encoding['error'].apply(lambda x: len(x))
+tilde_encoding = tilde_encoding.sort_values(['length', 'error'], ascending=(False, False))[['error', 'encoding']].values.tolist()
+tilde_encoding = [(re.escape(m), n if n is not None else '') for m, n in tilde_encoding]
+
+for ind, elem in enumerate(tilde_encoding):
+    print(str(ind+1) + '/' + str(len(tilde_encoding)))
+    samizdat_people['name_form'] = samizdat_people['name_form'].str.replace(elem[0], elem[1], regex=True)
+samizdat_people['name_form'] = samizdat_people['name_form'].str.replace('\~', '', regex=True)
+
+def people_brackets(x):
+    x = x.split('|')
+    for i, ver in enumerate(x):
+        x[i] = ver.replace('[', '').replace(']', '')
+    x = '|'.join(list(set([m.strip() for m in x])))
+    return x
+
+samizdat_people['name_form'] = samizdat_people['name_form'].apply(lambda x: people_brackets(x))
+samizdat_people['index'] = samizdat_people.index+1
+
+test = cSplit(samizdat_people, 'index', 'name_form_id', '|')
+for i, row in test.iterrows():
+    print(f"{i+1}/{len(test)}")
+    location = '-'.join(row['name_form_id'].split('-')[-2:])
+    test.at[i, location] = row['name_form']
+    
+
+
+# bn books 100, 700, 701
+people_bn_100 = marc_parser_1_field(bn_books, 'id', 'X100', '%', '|')
+people_bn_100['location'] = 'bn_X100'
+people_bn_700 = marc_parser_1_field(bn_books, 'id', 'X700', '%', '|')
+people_bn_700['location'] = 'bn_X700'
+people_bn_701 = marc_parser_1_field(bn_books, 'id', 'X701', '%', '|')
+people_bn_701['location'] = 'bn_X701'
+# cz books & articles 100, 600, 700
+people_cz_100 = marc_parser_1_field(pd.concat([cz_books, cz_articles]), 'id', 'X100', '\$\$')
+people_cz_100['location'] = 'cz_X100'
+people_cz_600 = marc_parser_1_field(pd.concat([cz_books, cz_articles]), 'id', 'X600', '\$\$')
+people_cz_600['location'] = 'cz_X600'
+people_cz_700 = marc_parser_1_field(pd.concat([cz_books, cz_articles]), 'id', 'X700', '\$\$')
+people_cz_700['location'] = 'cz_X700'
+
+all_people = pd.concat([people_bn_100, people_bn_700, people_bn_701, people_cz_100, people_cz_600, people_cz_700])
+
+df_final = pd.DataFrame()
+for i, row in test.iterrows():
+    df = test.iloc[[i]]
+
+# wziąć każdy wiersz testu i dla niego zrobić merge bo źródle, polu i id
+    # może być kilka wierszy, ale to potem będę jeszcze filtrował
 
 
 
 
 
+
+
+count = all_people.groupby(["id", "location"]).size().reset_index(name="frequency")
+
+
+X040 = marc_parser_1_field(oclc_lang, '001', '040', '\$')
+count_040 = X040.groupby(["$a", "$b"]).size().reset_index(name="frequency")
+count_040.to_excel('oclc_cataloguing_agency.xlsx', index=False)
+
+'[A.A.], NA'[-4:]
+
+name_form
+project_ID
+LOD_ID
+Index_Name
+Name
+Given_Name
+Pseudonym_Kryptonym
+True_Name
+Other_Name_Form
+Addition_to_Name
+Numeration
+Numeration_Arabic
+Birth
+Death
+
+
+
+
+# kartoteka intytucji
+# bn books
+#110
+institutions_110 = marc_parser_1_field(bn_books, 'id', 'X110', '%')[['id', '%1', '%2', '%6']]
+institutions_110.columns = [['id', 'Entity_Name', 'Related_Entity_Sub_Entity', 'Located_Location']]
+institutions_110['MRC'] = '110'
+institutions_110['subfield'] = '%1'
+institutions_110['Related_Entity_Main_Entity'] = np.nan
+sub_institutions_110 = marc_parser_1_field(bn_books, 'id', 'X110', '%')[['id', '%2', '%1', '%7']]
+sub_institutions_110 = sub_institutions_110.loc[sub_institutions_110['%2'] != ""]
+sub_institutions_110.columns = [['id', 'Entity_Name', 'Related_Entity_Main_Entity', 'Located_Location']]
+sub_institutions_110['MRC'] = '110'
+sub_institutions_110['subfield'] = '%2'
+sub_institutions_110['Related_Entity_Sub_Entity'] = np.nan
+bn_institutions110 = pd.concat([institutions_110, sub_institutions_110], axis = 0)
+#120
+institutions_120 = marc_parser_1_field(bn_books, 'id', 'X120', '%')[['id', '%1', '%2']]
+institutions_120.columns = [['id', 'Entity_Name', 'Related_Entity_Sub_Entity']]
+institutions_120['MRC'] = '120'
+institutions_120['subfield'] = '%1'
+institutions_120['Related_Entity_Main_Entity'] = np.nan
+institutions_120['Located_Location'] = np.nan
+sub_institutions_120 = marc_parser_1_field(bn_books, 'id', 'X120', '%')[['id', '%2', '%1']]
+sub_institutions_120 = sub_institutions_120.loc[sub_institutions_120['%2'] != ""]
+sub_institutions_120.columns = [['id', 'Entity_Name', 'Related_Entity_Main_Entity']]
+sub_institutions_120['MRC'] = '120'
+sub_institutions_120['subfield'] = '%2'
+sub_institutions_120['Related_Entity_Sub_Entity'] = np.nan
+sub_institutions_120['Located_Location'] = np.nan
+bn_institutions120 = pd.concat([institutions_120, sub_institutions_120], axis = 0)
+#210
+X210 = bn_books[['id', 'X210']].dropna()
+X210['rok_wydania'] = X210['X210'].str.extract(r'(?<=\%d)(.*?)(?=\%e|$)')
+X210['bez_roku'] = X210['X210'].str.replace(r'.\%d.*', "")
+X210['ile_wydawnictw'] = X210['bez_roku'].str.count(r'\%c')
+X210['ile_miejsc'] = X210['bez_roku'].str.count(r'\%a')
+X210['kolejnosc'] = X210['bez_roku'].str.findall(r'(?<=\%)(.)').str.join("")
+X210['lista'] = X210['bez_roku'].str.split(r' (?=\%)')
+
+
+
+
+marc_field_bnb_100$field <- "X100"
+bn_record_people_X100 <- marc_field_bnb_100 %>%
+  select(record_id = id, `%1`, `%2`, `%d`, `%4`, `%3`, `%s`,`%w`,`%p`,`%k`) %>%
+  mutate(`%1` = paste(`%1`,`%3`,sep = " ")) %>%
+  mutate(`%2` = paste(`%2`,`%4`,sep = " ")) %>%
+  select(-`%3`,-`%4`) %>%
+  mutate(data_set = "bn_books", field = "X100") %>%
+  select(data_set, field, 1:8)
+bn_record_people_X100[] <- lapply(bn_record_people_X100, gsub, pattern=' NA', replacement='')
+bn_record_people_X100[] <- lapply(bn_record_people_X100, gsub, pattern='NANA', replacement='')
+bn_record_people_X100[] <- lapply(bn_record_people_X100, gsub, pattern='NA$', replacement='')
+bn_record_people_X100$name <- paste(bn_record_people_X100$`%1`,bn_record_people_X100$`%2`,bn_record_people_X100$`%d`,sep = "|")
+bn_record_people_X100[] <- lapply(bn_record_people_X100, gsub, pattern='\\|NA', replacement='')
+#field X700
+marc_field_bnb_700 <- bn_books %>%
+  select(id,X700)%>%
+  filter(X700!="") %>%
+  cSplit(.,"X700",sep = "|",direction = "long") %>%
+  filter(X700!="")
+subfield_list<- str_extract_all(bn_books$X700,"\\%.")
+subfield_list<- unique(unlist(subfield_list))
+empty_table<- data.frame(matrix(ncol = length(subfield_list),nrow = lengths(marc_field_bnb_700)[1]))
+colnames(empty_table) <-subfield_list
+marc_field_bnb_700<-cbind(marc_field_bnb_700,empty_table)
+subfield_list_char <- paste("(",subfield_list,")",sep = "")
+x <- 1:length(subfield_list)
+for (i in x) {
+  progress(match(i,x), max.value = length(x)) 
+  marc_field_bnb_700$X700 <- str_replace(marc_field_bnb_700$X700,subfield_list_char[i],"|\\1")
+}
+subfield_list_char2 <- str_replace_all(subfield_list,"\\%","\\\\%")
+for (i in x) {
+  progress(match(i,x), max.value = length(x))
+  string_a <- "(^)(.*?\\|"
+  string_b <- subfield_list_char2[i]
+  string_c <- ")(.*?)(\\,{0,1})((\\|\\%)(.*)|$)"
+  string <- paste(string_a,string_b,string_c,sep = "")
+  marc_field_bnb_700[,i+2] <- ifelse(grepl(subfield_list_char2[i],marc_field_bnb_700$X700),str_replace_all(gsub(string,"\\3",marc_field_bnb_700$X700),"\\%.", "~"),NA)
+}
+marc_field_bnb_700$`%1` <- trim(marc_field_bnb_700$`%1`)
+marc_field_bnb_700$`%2` <- trim(marc_field_bnb_700$`%2`)
+marc_field_bnb_700$`%d` <- trim(marc_field_bnb_700$`%d`)
+marc_field_bnb_700$`%4` <- trim(marc_field_bnb_700$`%4`)
+marc_field_bnb_700$`%3` <- trim(marc_field_bnb_700$`%3`)
+marc_field_bnb_700$`%s` <- trim(marc_field_bnb_700$`%s`)
+marc_field_bnb_700$`%w` <- trim(marc_field_bnb_700$`%w`)
+marc_field_bnb_700$`%r` <- trim(marc_field_bnb_700$`%r`)
+marc_field_bnb_700$`%m` <- trim(marc_field_bnb_700$`%m`)
+marc_field_bnb_700$`%p` <- trim(marc_field_bnb_700$`%p`)
+marc_field_bnb_700$`%k` <- trim(marc_field_bnb_700$`%k`)
+marc_field_bnb_700$field <- "X700"
+bn_record_people_X700 <- marc_field_bnb_700 %>%
+  select(record_id = id, `%1`, `%2`, `%d`, `%4`, `%3`, `%s`,`%w`,`%p`,`%k`) %>%
+  mutate(`%1` = paste(`%1`,`%3`,sep = " ")) %>%
+  mutate(`%2` = paste(`%2`,`%4`,sep = " ")) %>%
+  select(-`%3`,-`%4`) %>%
+  mutate(data_set = "bn_books", field = "X700") %>%
+  select(data_set, field, 1:8)
+bn_record_people_X700[] <- lapply(bn_record_people_X700, gsub, pattern=' NA', replacement='')
+bn_record_people_X700[] <- lapply(bn_record_people_X700, gsub, pattern='NANA', replacement='')
+bn_record_people_X700[] <- lapply(bn_record_people_X700, gsub, pattern='NA$', replacement='')
+bn_record_people_X700$name <- paste(bn_record_people_X700$`%1`,bn_record_people_X700$`%2`,bn_record_people_X700$`%d`,sep = "|")
+bn_record_people_X700[] <- lapply(bn_record_people_X700, gsub, pattern='\\|NA', replacement='')
+#field X701
+marc_field_bnb_701 <- bn_books %>%
+  select(id,X701)%>%
+  filter(X701!="") %>%
+  cSplit(.,"X701",sep = "|",direction = "long") %>%
+  filter(X701!="")
+subfield_list<- str_extract_all(bn_books$X701,"\\%.")
+subfield_list<- unique(unlist(subfield_list))
+empty_table<- data.frame(matrix(ncol = length(subfield_list),nrow = lengths(marc_field_bnb_701)[1]))
+colnames(empty_table) <-subfield_list
+marc_field_bnb_701<-cbind(marc_field_bnb_701,empty_table)
+subfield_list_char <- paste("(",subfield_list,")",sep = "")
+x <- 1:length(subfield_list)
+for (i in x) {
+  progress(match(i,x), max.value = length(x)) 
+  marc_field_bnb_701$X701 <- str_replace(marc_field_bnb_701$X701,subfield_list_char[i],"|\\1")
+}
+subfield_list_char2 <- str_replace_all(subfield_list,"\\%","\\\\%")
+for (i in x) {
+  progress(match(i,x), max.value = length(x))
+  string_a <- "(^)(.*?\\|"
+  string_b <- subfield_list_char2[i]
+  string_c <- ")(.*?)(\\,{0,1})((\\|\\%)(.*)|$)"
+  string <- paste(string_a,string_b,string_c,sep = "")
+  marc_field_bnb_701[,i+2] <- ifelse(grepl(subfield_list_char2[i],marc_field_bnb_701$X701),str_replace_all(gsub(string,"\\3",marc_field_bnb_701$X701),"\\%.", "~"),NA)
+}
+marc_field_bnb_701$`%1` <- trim(marc_field_bnb_701$`%1`)
+marc_field_bnb_701$`%2` <- trim(marc_field_bnb_701$`%2`)
+marc_field_bnb_701$`%d` <- trim(marc_field_bnb_701$`%d`)
+marc_field_bnb_701$`%3` <- trim(marc_field_bnb_701$`%3`)
+marc_field_bnb_701$`%s` <- trim(marc_field_bnb_701$`%s`)
+marc_field_bnb_701$`%r` <- trim(marc_field_bnb_701$`%r`)
+marc_field_bnb_701$`%p` <- trim(marc_field_bnb_701$`%p`)
+marc_field_bnb_701$field <- "X701"
+bn_record_people_X701 <- marc_field_bnb_701 %>%
+  select(record_id = id, `%1`, `%2`, `%d`, `%3`, `%s`, `%p`) %>%
+  mutate(`%4` = NA, `%w` = NA, `%k` = NA) %>%
+  mutate(`%1` = paste(`%1`,`%3`,sep = " ")) %>%
+  mutate(`%2` = paste(`%2`,`%4`,sep = " ")) %>%
+  select(-`%3`,-`%4`) %>%
+  mutate(data_set = "bn_books", field = "X701") %>%
+  select(colnames(bn_record_people_X100)[1:10])
+bn_record_people_X701[] <- lapply(bn_record_people_X701, gsub, pattern=' NA', replacement='')
+bn_record_people_X701[] <- lapply(bn_record_people_X701, gsub, pattern='NANA', replacement='')
+bn_record_people_X701[] <- lapply(bn_record_people_X701, gsub, pattern='NA$', replacement='')
+bn_record_people_X701$name <- paste(bn_record_people_X701$`%1`,bn_record_people_X701$`%2`,bn_record_people_X701$`%d`,sep = "|")
+bn_record_people_X701[] <- lapply(bn_record_people_X701, gsub, pattern='\\|NA', replacement='')
+#concatenate bn
+bn_record_people <- rbind(bn_record_people_X100,bn_record_people_X700,bn_record_people_X701) 
+bn_record_people <- bn_record_people %>%
+  mutate(id_osoby = paste("bnb",seq.int(nrow(bn_record_people)),sep = ""))
+names_of_columns <- colnames(bn_record_people)
+set1 <- bn_record_people %>%
+  select(1:6,11:12) %>%
+  mutate(`%1` = paste(`%1`,`%2`,`%d`, sep = " ")) %>% 
+  select(data_set,field,record_id,`%1`,name,id_osoby)
+set1 <- set1 %>%
+  mutate(subfield = colnames(set1)[4])
+colnames(set1)[4] <- "name_form"
+set1[] <- lapply(set1, gsub, pattern=' NA', replacement='')
+set1$name_form <- trim(set1$name_form)
+set2 <- bn_record_people[c(1:3,7,11:12)] %>%
+  filter(!is.na(`%s`))
+set2 <- set2 %>%
+  mutate(subfield = colnames(set2)[4])
+colnames(set2)[4] <- "name_form"
+set3 <- bn_record_people[c(1:3,8,11:12)] %>%
+  filter(!is.na(`%w`))
+set3 <- set3 %>%
+  mutate(subfield = colnames(set3)[4])
+colnames(set3)[4] <- "name_form"
+set4 <- bn_record_people[c(1:3,9,11:12)] %>%
+  filter(!is.na(`%p`))
+set4 <- set4 %>%
+  mutate(subfield = colnames(set4)[4])
+colnames(set4)[4] <- "name_form"
+set5 <- bn_record_people[c(1:3,10,11:12)] %>%
+  filter(!is.na(`%k`))
+set5 <- set5 %>%
+  mutate(subfield = colnames(set5)[4])
+colnames(set5)[4] <- "name_form"
+bn_record_people <- rbind(set1,set2,set3,set4,set5)
+bn_record_people <- bn_record_people %>%
+  select(data_set,record_id,field,subfield,id_osoby,name_form,id_osoby) %>%
+  mutate(name_form_id = paste(data_set,record_id,id_osoby,field,subfield,sep = "-")) %>%
+  mutate(name_simple = str_replace_all(str_to_lower(name_form), "\\W", ""))
+#cz_books
+#field X100
+marc_field_czb_100 <- cz_books %>%
+  select(id,X100)%>%
+  filter(X100!="") %>%
+  cSplit(.,"X100",sep = "|",direction = "long") %>%
+  filter(X100!="")
+marc_field_czb_100 <- mutate(marc_field_czb_100,
+               indicator = str_replace_all(marc_field_czb_100$X100,"(^.*?)(\\$.*)","\\1"))
+subfield_list<- str_extract_all(cz_books$X100,"\\${2}.")
+subfield_list<- unique(unlist(subfield_list))
+empty_table<- data.frame(matrix(ncol = length(subfield_list),nrow = lengths(marc_field_czb_100)[1]))
+colnames(empty_table) <-subfield_list
+marc_field_czb_100<-cbind(marc_field_czb_100,empty_table)
+subfield_list_char <- paste("(",subfield_list,")",sep = "")
+subfield_list_char <- str_replace_all(subfield_list_char,"\\$","\\\\$")
+x <- 1:length(subfield_list)
+for (i in x) {
+  marc_field_czb_100$X100 <- str_replace(marc_field_czb_100$X100,subfield_list_char[i],"|\\1")
+  progress(match(i,x), max.value = length(x)) 
+}
+for (i in x) {
+  progress(match(i,x), max.value = length(x))
+  subfield_list_char2 <- str_replace_all(subfield_list,"\\$","\\\\$")
+  string_a <- "(^)(.*?\\|"
+  string_b <- subfield_list_char2[i]
+  string_c <- ")(.*?)(\\,{0,1})((\\|\\${2})(.*)|$)"
+  string <- paste(string_a,string_b,string_c,sep = "")
+  marc_field_czb_100[,i+3] <- ifelse(grepl(subfield_list_char2[i],marc_field_czb_100$X100),str_replace_all(gsub(string,"\\3",marc_field_czb_100$X100),"\\${2}.", "~"),NA)
+}
+marc_field_czb_100$`$$a` <- trim(marc_field_czb_100$`$$a`)
+marc_field_czb_100$`$$d` <- trim(marc_field_czb_100$`$$d`)
+marc_field_czb_100$`$$b` <- str_remove(trim(marc_field_czb_100$`$$b`),"\\.$")
+marc_field_czb_100$field <- "X100"
+cz_record_people_X100 <- marc_field_czb_100 %>%
+  select(record_id = id, `$$a`, `$$b`, `$$d`) %>%
+  mutate(`$$a` = paste(`$$a`,`$$b`,sep = " ")) %>%
+  mutate(name = paste(`$$a`,`$$d`,sep = "|")) %>%
+  select(-3) %>%
+  mutate(data_set = "cz_books", field = "X100") %>%
+  select(data_set, field,1:4)
+cz_record_people_X100[] <- lapply(cz_record_people_X100, gsub, pattern=' NA', replacement='')
+cz_record_people_X100[] <- lapply(cz_record_people_X100, gsub, pattern='\\|NA', replacement='')
+#field X600
+marc_field_czb_600 <- cz_books %>%
+  select(id,X600)%>%
+  filter(X600!="") %>%
+  cSplit(.,"X600",sep = "|",direction = "long") %>%
+  filter(X600!="")
+marc_field_czb_600 <- mutate(marc_field_czb_600,
+               indicator = str_replace_all(marc_field_czb_600$X600,"(^.*?)(\\$.*)","\\1"))
+subfield_list<- str_extract_all(cz_books$X600,"\\${2}.")
+subfield_list<- unique(unlist(subfield_list))
+empty_table<- data.frame(matrix(ncol = length(subfield_list),nrow = lengths(marc_field_czb_600)[1]))
+colnames(empty_table) <-subfield_list
+marc_field_czb_600<-cbind(marc_field_czb_600,empty_table)
+subfield_list_char <- paste("(",subfield_list,")",sep = "")
+subfield_list_char <- str_replace_all(subfield_list_char,"\\$","\\\\$")
+x <- 1:length(subfield_list)
+for (i in x) {
+  marc_field_czb_600$X600 <- str_replace(marc_field_czb_600$X600,subfield_list_char[i],"|\\1")
+  progress(match(i,x), max.value = length(x)) 
+}
+for (i in x) {
+  progress(match(i,x), max.value = length(x))
+  subfield_list_char2 <- str_replace_all(subfield_list,"\\$","\\\\$")
+  string_a <- "(^)(.*?\\|"
+  string_b <- subfield_list_char2[i]
+  string_c <- ")(.*?)(\\,{0,1})((\\|\\${2})(.*)|$)"
+  string <- paste(string_a,string_b,string_c,sep = "")
+  marc_field_czb_600[,i+3] <- ifelse(grepl(subfield_list_char2[i],marc_field_czb_600$X600),str_replace_all(gsub(string,"\\3",marc_field_czb_600$X600),"\\${2}.", "~"),NA)
+}
+marc_field_czb_600$`$$a` <- trim(marc_field_czb_600$`$$a`)
+marc_field_czb_600$`$$d` <- trim(marc_field_czb_600$`$$d`)
+marc_field_czb_600$`$$b` <- str_remove(trim(marc_field_czb_600$`$$b`),"\\.$")
+marc_field_czb_600$field <- "X600"
+cz_record_people_X600 <- marc_field_czb_600 %>%
+  select(record_id = id, `$$a`, `$$b`, `$$d`) %>%
+  mutate(`$$a` = paste(`$$a`,`$$b`,sep = " ")) %>%
+  mutate(name = paste(`$$a`,`$$d`,sep = "|")) %>%
+  select(-3) %>%
+  mutate(data_set = "cz_books", field = "X600") %>%
+  select(data_set, field,1:4)
+cz_record_people_X600[] <- lapply(cz_record_people_X600, gsub, pattern=' NA', replacement='')
+cz_record_people_X600[] <- lapply(cz_record_people_X600, gsub, pattern='\\|NA', replacement='')
+#field X700
+marc_field_czb_700 <- cz_books %>%
+  select(id,X700)%>%
+  filter(X700!="") %>%
+  cSplit(.,"X700",sep = "|",direction = "long") %>%
+  filter(X700!="")
+marc_field_czb_700 <- mutate(marc_field_czb_700,
+               indicator = str_replace_all(marc_field_czb_700$X700,"(^.*?)(\\$.*)","\\1"))
+subfield_list<- str_extract_all(cz_books$X700,"\\${2}.")
+subfield_list<- unique(unlist(subfield_list))
+empty_table<- data.frame(matrix(ncol = length(subfield_list),nrow = lengths(marc_field_czb_700)[1]))
+colnames(empty_table) <-subfield_list
+marc_field_czb_700<-cbind(marc_field_czb_700,empty_table)
+subfield_list_char <- paste("(",subfield_list,")",sep = "")
+subfield_list_char <- str_replace_all(subfield_list_char,"\\$","\\\\$")
+x <- 1:length(subfield_list)
+for (i in x) {
+  marc_field_czb_700$X700 <- str_replace(marc_field_czb_700$X700,subfield_list_char[i],"|\\1")
+  progress(match(i,x), max.value = length(x)) 
+}
+for (i in x) {
+  progress(match(i,x), max.value = length(x))
+  subfield_list_char2 <- str_replace_all(subfield_list,"\\$","\\\\$")
+  string_a <- "(^)(.*?\\|"
+  string_b <- subfield_list_char2[i]
+  string_c <- ")(.*?)(\\,{0,1})((\\|\\${2})(.*)|$)"
+  string <- paste(string_a,string_b,string_c,sep = "")
+  marc_field_czb_700[,i+3] <- ifelse(grepl(subfield_list_char2[i],marc_field_czb_700$X700),str_replace_all(gsub(string,"\\3",marc_field_czb_700$X700),"\\${2}.", "~"),NA)
+}
+marc_field_czb_700$`$$a` <- trim(marc_field_czb_700$`$$a`)
+marc_field_czb_700$`$$d` <- trim(marc_field_czb_700$`$$d`)
+marc_field_czb_700$`$$b` <- str_remove(trim(marc_field_czb_700$`$$b`),"\\.$")
+marc_field_czb_700$field <- "X700"
+cz_record_people_X700 <- marc_field_czb_700 %>%
+  select(record_id = id, `$$a`, `$$b`, `$$d`) %>%
+  mutate(`$$a` = paste(`$$a`,`$$b`,sep = " ")) %>%
+  mutate(name = paste(`$$a`,`$$d`,sep = "|")) %>%
+  select(-3) %>%
+  mutate(data_set = "cz_books", field = "X700") %>%
+  select(data_set, field,1:4)
+cz_record_people_X700[] <- lapply(cz_record_people_X700, gsub, pattern=' NA', replacement='')
+cz_record_people_X700[] <- lapply(cz_record_people_X700, gsub, pattern='\\|NA', replacement='')
+#concatenate all cz books
+cz_record_people <- rbind(cz_record_people_X100,cz_record_people_X600,cz_record_people_X700)
+cz_record_people <- cz_record_people %>%
+  mutate(id_osoby = paste("czb",seq.int(nrow(cz_record_people)),sep = ""))
+names_of_columns <- colnames(cz_record_people)
+cz_record_people <- cz_record_people %>%
+  select(names_of_columns,id_osoby) %>%
+  arrange(field,as.integer(record_id))
+cz_record_people <- cz_record_people %>%
+  mutate(name_form = paste(`$$a`, `$$d`, sep = " ")) %>% 
+  select(data_set,field,record_id,name_form,name,id_osoby)
+cz_record_people <- cz_record_people %>%
+  mutate(subfield = "$$a")
+cz_record_people[] <- lapply(cz_record_people, gsub, pattern=' NA', replacement='')
+cz_record_people$name_form <- trim(cz_record_people$name_form)
+cz_record_people <- cz_record_people %>%
+  select(data_set,record_id,field,subfield,id_osoby,name_form) %>%
+  mutate(name_form_id = paste(data_set,record_id,id_osoby,field,subfield,sep = "-")) %>%
+  mutate(name_simple = str_replace_all(str_to_lower(name_form), "\\W", ""))
+#cz_articles
+#field X100
+marc_field_cza_100 <- cz_articles %>%
+  select(id,X100)%>%
+  filter(X100!="") %>%
+  cSplit(.,"X100",sep = "|",direction = "long") %>%
+  filter(X100!="")
+marc_field_cza_100 <- mutate(marc_field_cza_100,
+               indicator = str_replace_all(marc_field_cza_100$X100,"(^.*?)(\\$.*)","\\1"))
+subfield_list<- str_extract_all(cz_articles$X100,"\\${2}.")
+subfield_list<- unique(unlist(subfield_list))
+empty_table<- data.frame(matrix(ncol = length(subfield_list),nrow = lengths(marc_field_cza_100)[1]))
+colnames(empty_table) <-subfield_list
+marc_field_cza_100<-cbind(marc_field_cza_100,empty_table)
+subfield_list_char <- paste("(",subfield_list,")",sep = "")
+subfield_list_char <- str_replace_all(subfield_list_char,"\\$","\\\\$")
+x <- 1:length(subfield_list)
+for (i in x) {
+  marc_field_cza_100$X100 <- str_replace(marc_field_cza_100$X100,subfield_list_char[i],"|\\1")
+  progress(match(i,x), max.value = length(x)) 
+}
+for (i in x) {
+  progress(match(i,x), max.value = length(x))
+  subfield_list_char2 <- str_replace_all(subfield_list,"\\$","\\\\$")
+  string_a <- "(^)(.*?\\|"
+  string_b <- subfield_list_char2[i]
+  string_c <- ")(.*?)(\\,{0,1})((\\|\\${2})(.*)|$)"
+  string <- paste(string_a,string_b,string_c,sep = "")
+  marc_field_cza_100[,i+3] <- ifelse(grepl(subfield_list_char2[i],marc_field_cza_100$X100),str_replace_all(gsub(string,"\\3",marc_field_cza_100$X100),"\\${2}.", "~"),NA)
+}
+marc_field_cza_100$`$$a` <- trim(marc_field_cza_100$`$$a`)
+marc_field_cza_100$`$$d` <- trim(marc_field_cza_100$`$$d`)
+marc_field_cza_100$`$$b` <- str_remove(trim(marc_field_cza_100$`$$b`),"\\.$")
+marc_field_cza_100$field <- "X100"
+cz_record_people_art_X100 <- marc_field_cza_100 %>%
+  select(record_id = id, `$$a`, `$$b`, `$$d`) %>%
+  mutate(`$$a` = paste(`$$a`,`$$b`,sep = " ")) %>%
+  mutate(name = paste(`$$a`,`$$d`,sep = "|")) %>%
+  select(-3) %>%
+  mutate(data_set = "cz_articles", field = "X100") %>%
+  select(data_set, field,1:4)
+cz_record_people_art_X100[] <- lapply(cz_record_people_art_X100, gsub, pattern=' NA', replacement='')
+cz_record_people_art_X100[] <- lapply(cz_record_people_art_X100, gsub, pattern='\\|NA', replacement='')
+#field X600
+marc_field_cza_600 <- cz_articles %>%
+  select(id,X600)%>%
+  filter(X600!="") %>%
+  cSplit(.,"X600",sep = "|",direction = "long") %>%
+  filter(X600!="")
+marc_field_cza_600 <- mutate(marc_field_cza_600,
+               indicator = str_replace_all(marc_field_cza_600$X600,"(^.*?)(\\$.*)","\\1"))
+subfield_list<- str_extract_all(cz_articles$X600,"\\${2}.")
+subfield_list<- unique(unlist(subfield_list))
+empty_table<- data.frame(matrix(ncol = length(subfield_list),nrow = lengths(marc_field_cza_600)[1]))
+colnames(empty_table) <-subfield_list
+marc_field_cza_600<-cbind(marc_field_cza_600,empty_table)
+subfield_list_char <- paste("(",subfield_list,")",sep = "")
+subfield_list_char <- str_replace_all(subfield_list_char,"\\$","\\\\$")
+x <- 1:length(subfield_list)
+for (i in x) {
+  marc_field_cza_600$X600 <- str_replace(marc_field_cza_600$X600,subfield_list_char[i],"|\\1")
+  progress(match(i,x), max.value = length(x)) 
+}
+for (i in x) {
+  progress(match(i,x), max.value = length(x))
+  subfield_list_char2 <- str_replace_all(subfield_list,"\\$","\\\\$")
+  string_a <- "(^)(.*?\\|"
+  string_b <- subfield_list_char2[i]
+  string_c <- ")(.*?)(\\,{0,1})((\\|\\${2})(.*)|$)"
+  string <- paste(string_a,string_b,string_c,sep = "")
+  marc_field_cza_600[,i+3] <- ifelse(grepl(subfield_list_char2[i],marc_field_cza_600$X600),str_replace_all(gsub(string,"\\3",marc_field_cza_600$X600),"\\${2}.", "~"),NA)
+}
+marc_field_cza_600$`$$a` <- trim(marc_field_cza_600$`$$a`)
+marc_field_cza_600$`$$d` <- trim(marc_field_cza_600$`$$d`)
+marc_field_cza_600$`$$b` <- str_remove(trim(marc_field_cza_600$`$$b`),"\\.$")
+marc_field_cza_600$field <- "X600"
+cz_record_people_art_X600 <- marc_field_cza_600 %>%
+  select(record_id = id, `$$a`, `$$b`, `$$d`) %>%
+  mutate(`$$a` = paste(`$$a`,`$$b`,sep = " ")) %>%
+  mutate(name = paste(`$$a`,`$$d`,sep = "|")) %>%
+  select(-3) %>%
+  mutate(data_set = "cz_articles", field = "X600") %>%
+  select(data_set, field,1:4)
+cz_record_people_art_X600[] <- lapply(cz_record_people_art_X600, gsub, pattern=' NA', replacement='')
+cz_record_people_art_X600[] <- lapply(cz_record_people_art_X600, gsub, pattern='\\|NA', replacement='')
+#field X700
+marc_field_cza_700 <- cz_articles %>%
+  select(id,X700)%>%
+  filter(X700!="") %>%
+  cSplit(.,"X700",sep = "|",direction = "long") %>%
+  filter(X700!="")
+marc_field_cza_700 <- mutate(marc_field_cza_700,
+               indicator = str_replace_all(marc_field_cza_700$X700,"(^.*?)(\\$.*)","\\1"))
+subfield_list<- str_extract_all(cz_articles$X700,"\\${2}.")
+subfield_list<- unique(unlist(subfield_list))
+empty_table<- data.frame(matrix(ncol = length(subfield_list),nrow = lengths(marc_field_cza_700)[1]))
+colnames(empty_table) <-subfield_list
+marc_field_cza_700<-cbind(marc_field_cza_700,empty_table)
+subfield_list_char <- paste("(",subfield_list,")",sep = "")
+subfield_list_char <- str_replace_all(subfield_list_char,"\\$","\\\\$")
+x <- 1:length(subfield_list)
+for (i in x) {
+  marc_field_cza_700$X700 <- str_replace(marc_field_cza_700$X700,subfield_list_char[i],"|\\1")
+  progress(match(i,x), max.value = length(x)) 
+}
+for (i in x) {
+  progress(match(i,x), max.value = length(x))
+  subfield_list_char2 <- str_replace_all(subfield_list,"\\$","\\\\$")
+  string_a <- "(^)(.*?\\|"
+  string_b <- subfield_list_char2[i]
+  string_c <- ")(.*?)(\\,{0,1})((\\|\\${2})(.*)|$)"
+  string <- paste(string_a,string_b,string_c,sep = "")
+  marc_field_cza_700[,i+3] <- ifelse(grepl(subfield_list_char2[i],marc_field_cza_700$X700),str_replace_all(gsub(string,"\\3",marc_field_cza_700$X700),"\\${2}.", "~"),NA)
+}
+marc_field_cza_700$`$$a` <- trim(marc_field_cza_700$`$$a`)
+marc_field_cza_700$`$$d` <- trim(marc_field_cza_700$`$$d`)
+marc_field_cza_700$field <- "X700"
+cz_record_people_art_X700 <- marc_field_cza_700 %>%
+  select(record_id = id, `$$a`,`$$d`) %>%
+  mutate(name = paste(`$$a`,`$$d`,sep = "|")) %>%
+  mutate(data_set = "cz_articles", field = "X700") %>%
+  select(data_set, field,1:4)
+cz_record_people_art_X700[] <- lapply(cz_record_people_art_X700, gsub, pattern=' NA', replacement='')
+cz_record_people_art_X700[] <- lapply(cz_record_people_art_X700, gsub, pattern='\\|NA', replacement='')
+#concatenate all cz art
+cz_record_people_art <- rbind(cz_record_people_art_X100,cz_record_people_art_X600,cz_record_people_art_X700)
+cz_record_people_art <- cz_record_people_art %>%
+  mutate(id_osoby = paste("cza",seq.int(nrow(cz_record_people_art)),sep = ""))
+names_of_columns <- colnames(cz_record_people_art)
+cz_record_people_art <- cz_record_people_art %>%
+  select(names_of_columns,id_osoby) %>%
+  arrange(field,as.integer(record_id))
+cz_record_people_art <- cz_record_people_art %>%
+  mutate(name_form = paste(`$$a`, `$$d`, sep = " ")) %>% 
+  select(data_set,field,record_id,name_form,name,id_osoby)
+cz_record_people_art <- cz_record_people_art %>%
+  mutate(subfield = "$$a")
+cz_record_people_art[] <- lapply(cz_record_people_art, gsub, pattern=' NA', replacement='')
+cz_record_people_art$name_form <- trim(cz_record_people_art$name_form)
+cz_record_people_art <- cz_record_people_art %>%
+  select(data_set,record_id,field,subfield,id_osoby,name_form) %>%
+  mutate(name_form_id = paste(data_set,record_id,id_osoby,field,subfield,sep = "-")) %>%
+  mutate(name_simple = str_replace_all(str_to_lower(name_form), "\\W", ""))
+#pbl books
+pbl_record_people_books_creators <- pbl_books %>%
+  select(rekord_id,tworca_id,tworca_nazwisko,tworca_imie) %>%
+  filter(!is.na(tworca_id))
+pbl_record_people_books_creators <- pbl_record_people_books_creators %>%
+  mutate(data_set = "pbl_books") %>%
+  mutate(field = "tworcy") %>%
+  mutate(name = paste(tworca_nazwisko,tworca_imie,sep = "|")) %>%
+  mutate(name_form = paste(tworca_nazwisko,tworca_imie,sep = ", ")) %>%
+  mutate(subfield = NA) %>%
+  mutate(id_osoby = paste("pblt",tworca_id, sep = "")) %>%
+  mutate(name_form_id = paste(data_set,rekord_id,id_osoby,field,subfield,sep = "-")) %>%
+  mutate(name_simple = str_replace_all(str_to_lower(name_form), "\\W", "")) %>%
+  select(data_set, record_id = rekord_id, field, subfield, id_osoby, name_form, name_form_id, name_simple)
+pbl_record_people_books_authors <- pbl_books %>%
+  select(rekord_id,autor_id,autor_nazwisko,autor_imie) %>%
+  filter(!is.na(autor_id))
+pbl_record_people_books_authors <- pbl_record_people_books_authors %>%
+  mutate(data_set = "pbl_books") %>%
+  mutate(field = "autorzy") %>%
+  mutate(name = paste(autor_nazwisko,autor_imie,sep = "|")) %>%
+  mutate(name_form = paste(autor_nazwisko,autor_imie,sep = ", ")) %>%
+  mutate(subfield = NA) %>%
+  mutate(id_osoby = paste("pbla",autor_id, sep = "")) %>%
+  mutate(name_form_id = paste(data_set,rekord_id,id_osoby,field,subfield,sep = "-")) %>%
+  mutate(name_simple = str_replace_all(str_to_lower(name_form), "\\W", "")) %>%
+  select(data_set, record_id = rekord_id, field, subfield, id_osoby, name_form, name_form_id, name_simple)
+pbl_record_people_books_coworkers <- pbl_books %>%
+  select(rekord_id,wspoltworca_id,wspoltworca_nazwisko,wspoltworca_imie) %>%
+  filter(!is.na(wspoltworca_id))
+pbl_record_people_books_coworkers <- pbl_record_people_books_coworkers %>%
+  mutate(data_set = "pbl_books") %>%
+  mutate(field = "wspoltworcy") %>%
+  mutate(name = paste(wspoltworca_nazwisko,wspoltworca_imie,sep = "|")) %>%
+  mutate(name_form = paste(wspoltworca_nazwisko,wspoltworca_imie,sep = ", ")) %>%
+  mutate(subfield = NA) %>%
+  mutate(id_osoby = paste("pblw",wspoltworca_id, sep = "")) %>%
+  mutate(name_form_id = paste(data_set,rekord_id,id_osoby,field,subfield,sep = "-")) %>%
+  mutate(name_simple = str_replace_all(str_to_lower(name_form), "\\W", "")) %>%
+  select(data_set, record_id = rekord_id, field, subfield, id_osoby, name_form, name_form_id, name_simple)
+pbl_record_people_books <- rbind(pbl_record_people_books_creators,pbl_record_people_books_authors,pbl_record_people_books_coworkers)
+#pbl_articles
+pbl_record_people_art_creators <- pbl_articles %>%
+  select(rekord_id,tworca_id,tworca_nazwisko,tworca_imie) %>%
+  filter(!is.na(tworca_id))
+pbl_record_people_art_creators <- pbl_record_people_art_creators %>%
+  mutate(data_set = "pbl_articles") %>%
+  mutate(field = "tworcy") %>%
+  mutate(name = paste(tworca_nazwisko,tworca_imie,sep = "|")) %>%
+  mutate(name_form = paste(tworca_nazwisko,tworca_imie,sep = ", ")) %>%
+  mutate(subfield = NA) %>%
+  mutate(id_osoby = paste("pblt",tworca_id, sep = "")) %>%
+  mutate(name_form_id = paste(data_set,rekord_id,id_osoby,field,subfield,sep = "-")) %>%
+  mutate(name_simple = str_replace_all(str_to_lower(name_form), "\\W", "")) %>%
+  select(data_set, record_id = rekord_id, field, subfield, id_osoby, name_form, name_form_id, name_simple)
+pbl_record_people_art_authors <- pbl_articles %>%
+  select(rekord_id,autor_id,autor_nazwisko,autor_imie) %>%
+  filter(!is.na(autor_id))
+pbl_record_people_art_authors <- pbl_record_people_art_authors %>%
+  mutate(data_set = "pbl_articles") %>%
+  mutate(field = "autorzy") %>%
+  mutate(name = paste(autor_nazwisko,autor_imie,sep = "|")) %>%
+  mutate(name_form = paste(autor_nazwisko,autor_imie,sep = ", ")) %>%
+  mutate(subfield = NA) %>%
+  mutate(id_osoby = paste("pbla",autor_id, sep = "")) %>%
+  mutate(name_form_id = paste(data_set,rekord_id,id_osoby,field,subfield,sep = "-")) %>%
+  mutate(name_simple = str_replace_all(str_to_lower(name_form), "\\W", "")) %>%
+  select(data_set, record_id = rekord_id, field, subfield, id_osoby, name_form, name_form_id, name_simple)
+pbl_record_people_art_coworkers <- pbl_articles %>%
+  select(rekord_id,wspoltworca_id,wspoltworca_nazwisko,wspoltworca_imie) %>%
+  filter(!is.na(wspoltworca_id))
+pbl_record_people_art_coworkers <- pbl_record_people_art_coworkers %>%
+  mutate(data_set = "pbl_articles") %>%
+  mutate(field = "wspoltworcy") %>%
+  mutate(name = paste(wspoltworca_nazwisko,wspoltworca_imie,sep = "|")) %>%
+  mutate(name_form = paste(wspoltworca_nazwisko,wspoltworca_imie,sep = ", ")) %>%
+  mutate(subfield = NA) %>%
+  mutate(id_osoby = paste("pblw",wspoltworca_id, sep = "")) %>%
+  mutate(name_form_id = paste(data_set,rekord_id,id_osoby,field,subfield,sep = "-")) %>%
+  mutate(name_simple = str_replace_all(str_to_lower(name_form), "\\W", "")) %>%
+  select(data_set, record_id = rekord_id, field, subfield, id_osoby, name_form, name_form_id, name_simple)
+pbl_record_people_art <- rbind(pbl_record_people_art_creators,pbl_record_people_art_authors,pbl_record_people_art_coworkers)
+```
+
+```{r merge personal data}
+#putting all together
+record_people <- rbind(bn_record_people,cz_record_people,cz_record_people_art,pbl_record_people_books,pbl_record_people_art)
+#test <- record_people %>%
+#  filter(grepl("Amsterdamski|Żerski",name_form))
+#id tymczas, nazwa, id nazwy, id osoby
+tab_2 <- record_people %>%
+  select(name_form,name_form_id,name_simple,id_osoby) %>%
+  group_by(name_simple) %>%
+  mutate(name_form_id = paste(unique(name_form_id),collapse = "|")) %>%
+  mutate(name_form = paste(unique(name_form), collapse = "|")) %>%
+  mutate(id_osoby = paste(unique(id_osoby), collapse = "|")) %>%
+  ungroup() %>%
+  unique()
+tab_2$temp_id <- seq.int(nrow(tab_2))
+tab_2 <- tab_2 %>%
+  select(temp_id,name_form, name_simple, name_form_id, id_osoby)
+# łączenie po id osoby
+tab_3 <- tab_2 %>%
+  mutate(name_simple_short = str_extract(name_simple,"(^[a-zaáàâãäăāåąæeéèêëěēėęiíìîïīįioóòôõöőøœuúùûüűūůyýcćčçdďđđgģğkķlłļnńñňņŋrřsśšşsßtťŧþţzżźž]+)")) %>%
+  group_by(name_simple_short) %>%
+  mutate(temp_id = paste(unique(temp_id),collapse = "|")) %>%
+  mutate(name_form_id = paste(unique(name_form_id),collapse = "|")) %>%
+  mutate(name_form = paste(unique(name_form), collapse = "|")) %>%
+  mutate(id_osoby = paste(unique(id_osoby), collapse = "|")) %>%
+  mutate(name_simple = paste(unique(name_simple), collapse = "|")) %>%
+  ungroup() %>%
+  unique() %>%
+  select(-name_simple_short)
+id_osoby <- tab_3 %>%
+  select(id_osoby,temp_id2 = temp_id)
+id_osoby <- cSplit(id_osoby,"id_osoby",sep = "|",direction = "long") %>%
+  group_by(id_osoby) %>%
+  mutate(temp_id2 = paste(temp_id2,collapse = "|")) %>%
+  ungroup() %>%
+  unique() %>%
+  mutate(id_osoby = paste(id_osoby,"|",sep = ""))
+tab_3$id_osoby <- paste(tab_3$id_osoby,"|",sep = "")
+tab_4 <- sqldf::sqldf("select *
+                     from tab_3 a
+                     join id_osoby b on a.id_osoby like ('%'||b.id_osoby||'%')") %>%
+  select(-temp_id,-id_osoby..6) %>%
+  unique() %>%
+  mutate(temp_id2 = str_extract(temp_id2,"(^\\d+)(?=\\||$)")) %>%
+  group_by(temp_id2) %>%
+  mutate(name_form = paste(unique(name_form),collapse = "|")) %>%
+  mutate(name_simple = paste(unique(name_simple),collapse = "|")) %>%
+  mutate(name_form_id = paste(unique(name_form_id),collapse = "|")) %>%
+  mutate(id_osoby = paste(unique(id_osoby),collapse = "")) %>%
+  ungroup() %>%
+  unique()
+x <- 1:length(tab_4$temp_id2)
+for (i in x) {
+  progress(match(i,x), max.value = length(x)) 
+  tab_4$id_osoby[i] <- paste(paste(unique(unlist(strsplit(tab_4$id_osoby[i],"\\|"))),collapse = "|"),"|",sep = "")
+}
+tab_4 <- tab_4 %>%
+  select(id = temp_id2,name_form,name_simple,name_form_id,id_osoby)
+write.csv2(tab_4, "C:/Users/Cezary/Desktop/samizdat_kartoteka_osób.csv", row.names = F, na = '', fileEncoding = 'UTF-8')
+```
 
 
 
