@@ -11,9 +11,49 @@ import io
 from my_functions import mrc_to_mrk
 import itertools
 
+# def
+def unique_subfields(x):
+    new_x = []
+    for val in x:
+        val = val.split('❦')
+        new_x += val
+    new_x = list(set(new_x))
+    try:
+        new_x.sort(key = lambda x: ([str,int].index(type("a" if x[1].isalpha() else 1)), x))
+    except IndexError:
+        pass
+    new_x = '|'.join(new_x)
+    return new_x
+
 #books
 
-reader = io.open('F:/Cezary/Documents/IBL/Libri/Iteracja 10.2020/libri_marc_bn_books.mrk', 'rt', encoding = 'UTF-8').read().splitlines()
+reader = io.open('F:/Cezary/Documents/IBL/Libri/Iteracja 10.2020/libri_marc_bn_books.mrk', 'rt', encoding = 'UTF-8').read().splitlines()     
+
+bn_field_subfield = []        
+for i, l in enumerate(reader):
+    print(f"{i+1}/{len(reader)}")
+    if l:
+        field = re.sub('(^.)(...)(.*)', r'\2', l)
+        subfields = '❦'.join(re.findall('\$.', l))
+        bn_field_subfield.append([field, subfields])
+        
+df = pd.DataFrame(bn_field_subfield, columns = ['field', 'subfield'])
+          
+df['subfield'] = df.groupby('field')['subfield'].transform(lambda x: unique_subfields(x))   
+df = df.drop_duplicates().sort_values('field')
+df = cSplit(df, 'field', 'subfield', '|')
+
+
+
+
+
+
+
+
+
+
+
+
 
 test = [[r[1:4]] for r in reader if r]
 test2 = [re.findall('\$.', r) for r in reader if r]
