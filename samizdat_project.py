@@ -637,6 +637,7 @@ tilde_encoding = gsheet_to_df('1dbBf-skFsksLoKmXelDDeP78yLXV_WyjWQ-LbRa-CRE', 'S
 tilde_encoding['length'] = tilde_encoding['error'].apply(lambda x: len(x))
 tilde_encoding = tilde_encoding.sort_values(['length', 'error'], ascending=(False, False))[['error', 'encoding']].values.tolist()
 tilde_encoding = [(re.escape(m), n if n is not None else '') for m, n in tilde_encoding]
+samizdat_people['name_form_without_encoding'] = samizdat_people['name_form']
 
 for ind, elem in enumerate(tilde_encoding):
     print(str(ind+1) + '/' + str(len(tilde_encoding)))
@@ -654,6 +655,66 @@ samizdat_people['name_form'] = samizdat_people['name_form'].apply(lambda x: peop
 samizdat_people['index'] = samizdat_people.index+1
 
 test = cSplit(samizdat_people, 'index', 'name_form_id', '|')
+
+name_and_id = samizdat_people[['name_form', 'id_osoby']]
+
+
+
+
+
+for i, row in test.iterrows():
+    print(f"{i+1}/{len(test)}")
+    source = row['name_form_id'].split('-')[0]
+    record_id = int(row['name_form_id'].split('-')[1])
+    field = row['name_form_id'].split('-')[-2]
+    subfield = row['name_form_id'].split('-')[-1]
+    if source == 'bn_books':
+        original_field = bn_books[bn_books['id'] == record_id][field].to_list()[0].split('|')
+        for element in original_field:
+            if f"{subfield}{row['name_form_without_encoding'].split(' ')[0]}" in element:
+                original_field = element
+        test.at[i, 'source'] = source
+        test.at[i, 'field'] = field
+        test.at[i, 'subfield'] = subfield
+        test.at[i, 'original field'] = original_field
+    elif source == 'cz_articles':
+        original_field = cz_articles[cz_articles['id'] == record_id][field].to_list()[0].split('|')
+        for element in original_field:
+            if f"{subfield}{row['name_form_without_encoding'].split(' ')[0]}" in element:
+                original_field = element
+        test.at[i, 'source'] = source
+        test.at[i, 'field'] = field
+        test.at[i, 'subfield'] = subfield
+        if type(original_field) == list:
+            original_field = original_field[0]    
+        test.at[i, 'original field'] = original_field
+    elif source == 'cz_books':
+        original_field = cz_books[cz_books['id'] == record_id][field].to_list()[0].split('|')
+        for element in original_field:
+            if f"{subfield}{row['name_form_without_encoding'].split(' ')[0]}" in element:
+                original_field = element
+        test.at[i, 'source'] = source
+        test.at[i, 'field'] = field
+        test.at[i, 'subfield'] = subfield
+        test.at[i, 'original field'] = original_field
+    elif source == 'pbl_articles':
+        field = row['name_form_id'].split('-')[2][:4]
+        original_field = row['name_form']
+        test.at[i, 'source'] = source
+        test.at[i, 'field'] = field
+        test.at[i, 'subfield'] = subfield
+        test.at[i, 'original field'] = original_field
+    elif source == 'pbl_books':
+        field = row['name_form_id'].split('-')[2][:4]
+        original_field = row['name_form']
+        test.at[i, 'source'] = source
+        test.at[i, 'field'] = field
+        test.at[i, 'subfield'] = subfield
+        test.at[i, 'original field'] = original_field
+
+
+
+
 for i, row in test.iterrows():
     print(f"{i+1}/{len(test)}")
     location = '-'.join(row['name_form_id'].split('-')[-2:])
@@ -661,8 +722,20 @@ for i, row in test.iterrows():
     
 
 
-# bn books 100, 700, 701
+
+
+df_final = pd.DataFrame()
+for i, row in test.iterrows():
+    df = test.iloc[[i]]
+
+# wziąć każdy wiersz testu i dla niego zrobić merge bo źródle, polu i id
+    # może być kilka wierszy, ale to potem będę jeszcze filtrował
+
 people_bn_100 = marc_parser_1_field(bn_books, 'id', 'X100', '%', '|')
+for column in people_bn_100.iloc[:,2:]:
+    people_bn_100[column] = people_bn_100[column].str.strip()
+
+# bn books 100, 700, 701
 people_bn_100['location'] = 'bn_X100'
 people_bn_700 = marc_parser_1_field(bn_books, 'id', 'X700', '%', '|')
 people_bn_700['location'] = 'bn_X700'
@@ -677,13 +750,6 @@ people_cz_700 = marc_parser_1_field(pd.concat([cz_books, cz_articles]), 'id', 'X
 people_cz_700['location'] = 'cz_X700'
 
 all_people = pd.concat([people_bn_100, people_bn_700, people_bn_701, people_cz_100, people_cz_600, people_cz_700])
-
-df_final = pd.DataFrame()
-for i, row in test.iterrows():
-    df = test.iloc[[i]]
-
-# wziąć każdy wiersz testu i dla niego zrobić merge bo źródle, polu i id
-    # może być kilka wierszy, ale to potem będę jeszcze filtrował
 
 
 
