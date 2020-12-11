@@ -763,24 +763,54 @@ oclc_other_languages = oclc_other_languages[oclc_other_languages['nature_of_cont
 oclc_other_languages['type of record + bibliographic level'] = oclc_other_languages['LDR'].apply(lambda x: x[6:8])
 oclc_other_languages['fiction_type'] = oclc_other_languages['008'].apply(lambda x: x[33])
 
+#11.12.2020
+
+#general approach
 
 fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
+
+df_languages = oclc_other_languages[(oclc_other_languages['type of record + bibliographic level'] == 'am') &
+                                    (oclc_other_languages['041'].str.contains('\$hcz')) &
+                                    (oclc_other_languages['fiction_type'].isin(fiction_types))]
+df_languages.to_excel("all_languages_first_positive.xlsx", index=False)
+count_041 = marc_parser_1_field(df, '001', '041', '\$')
+count_041 = count_041['$a'].value_counts().to_frame()
+count_041['language'] = count_041.index
+count_041.reset_index(drop=True,inplace=True)
+count_041.to_excel('count_languages_041a_from_all_positive.xlsx', index=False)
+
+viaf_positives = marc_parser_1_field(df, '001', '100', '\$')['$1'].drop_duplicates().to_list()
+viaf_positives = [re.findall('\d+', l)[0] for l in viaf_positives if l] #849 vs. 809 vs. 754 in authority table
+
+
+#detailed approach
+fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
 languages = ['pol', 'swe', 'ita', 'eng']
+viaf_positives = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1')['viaf_positive'].drop_duplicates().to_list()
+viaf_positives = [f"http://viaf.org/viaf/{l}" for l in viaf_positives if l]
 
 for language in languages:
     df = oclc_other_languages[(oclc_other_languages['language'] == language)]
-    df_language_materials_monograhps = df[df['type of record + bibliographic level'] == 'am']
-    df_other_types = df[~df['001'].isin(df_language_materials_monograhps['001'])]
+    df_language_materials_monographs = df[df['type of record + bibliographic level'] == 'am']
+    df_other_types = df[~df['001'].isin(df_language_materials_monographs['001'])]
     df_other_types.to_excel(f"oclc_{language}_other_types_(first_negative).xlsx", index=False)
-    df_ok = df_language_materials_monograhps[(df_language_materials_monograhps['041'].str.contains('\$hcz')) &
-                                             (df_language_materials_monograhps['fiction_type'].isin(fiction_types))]
+    df_ok = df_language_materials_monographs[(df_language_materials_monographs['041'].str.contains('\$hcz')) &
+                                             (df_language_materials_monographs['fiction_type'].isin(fiction_types))]
     df_ok.to_excel(f"oclc_{language}_positive.xlsx", index=False)
-    df_no = df_language_materials_monograhps[~df_language_materials_monograhps['001'].isin(df_ok['001'])]
+    df_second_positive = df_language_materials_monographs[~df_language_materials_monographs['001'].isin(df_ok['001'])]
+    df_second_positive = marc_parser_1_field(df_second_positive, '001', '100', '\$')[['001', '$1']]
+    df_second_positive = df_second_positive[df_second_positive['$1'].isin(viaf_positives)]
+    df_second_positive = df_language_materials_monographs[(~df_language_materials_monographs['001'].isin(df_ok['001'])) &
+                                                          (df_language_materials_monographs['001'].isin(df_second_positive['001']))]
+    df_second_positive.to_excel(f"oclc_{language}_second_positive.xlsx", index=False)
+    df_no = df_language_materials_monographs[(~df_language_materials_monographs['001'].isin(df_ok['001'])) &
+                                             (~df_language_materials_monographs['001'].isin(df_second_positive['001']))]
     df_no.to_excel(f"oclc_{language}_negative.xlsx", index=False)
     print(f"Total records in {language}: {len(df)}")
-    print(f"Total language material + monograph records in {language}: {len(df_language_materials_monograhps)}")
+    print(f"Total language material + monograph records in {language}: {len(df_language_materials_monographs)}")
     print(f"Total records with other types in {language}: {len(df_other_types)}")
-    print(f"Total positive records in {language}: {len(df_ok)}")
+    print(f"Total first positive records in {language}: {len(df_ok)}")
+    print(f"Total second positive records (by VIAF) in {language}: {len(df_second_positive)}")
     print(f"Total negative records in {language}: {len(df_no)}")
     print("_______________________________________")
     
