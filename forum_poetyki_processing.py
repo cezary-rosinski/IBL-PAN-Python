@@ -9,12 +9,13 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 import fp_credentials
 import time
-from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, NoAlertPresentException
+from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, NoAlertPresentException, SessionNotCreatedException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import numpy as np
+import sys
 
 pd.options.display.max_colwidth = 10000
 
@@ -85,7 +86,15 @@ for i, row in aktualny_numer.iterrows():
 
 #wprowadzanie nowych wpisów
         
-browser = webdriver.Chrome()
+# =============================================================================
+# try:
+#     browser = webdriver.Chrome()
+#     browser = webdriver.Firefox()
+# except SessionNotCreatedException:
+#     print('UWAGA!\n\nNieaktualna wersja oprogramowania ChromeDriver\n\nSprawdź wersję przeglądarki Google Chrome\n\nOdwiedź stronę: https://chromedriver.chromium.org/ i pobierz właściwy plik\n\nWypakuj go tutaj: C:\\bin')
+# =============================================================================
+    
+browser = webdriver.Firefox()    
 browser.get("http://fp.amu.edu.pl/admin")    
 browser.implicitly_wait(5)
 username_input = browser.find_element_by_id('user_login')
@@ -93,13 +102,15 @@ password_input = browser.find_element_by_id('user_pass')
 
 username = fp_credentials.wordpress_username
 password = fp_credentials.wordpress_password
-
+time.sleep(1)
 username_input.send_keys(username)
 password_input.send_keys(password)
 
 login_button = browser.find_element_by_id('wp-submit').click()
 
 for index, row in aktualny_numer.iterrows():
+    index = 2
+    row = aktualny_numer.iloc[index]
     if row['język'] == 'pl':
       
         browser.get('http://fp.amu.edu.pl/wp-admin/post-new.php')
@@ -238,8 +249,13 @@ for index, row in aktualny_numer.iterrows():
                 tag_autor_orcid_line = f"""<h4><a href="http://fp.amu.edu.pl/tag/{t}">{a}</a></h4>\n"""
                 sekcja_autorstwa += tag_autor_orcid_line
                 
-            abstrakt = aktualny_numer.at[index+1, 'abstrakt']
+            oryginal_biblio = aktualny_numer.at[index+1, 'abstrakt']
+            
+            abstrakt = f"""
+            <p style="text-align: justify;"><span style="color: #000000;">We publish</span> <a href="http://fp.amu.edu.pl/{aktualny_numer.at[index, 'odnosnik']}">Polish translation</a> <span style="color: #000000;">of the fragment of {a}'s {oryginal_biblio.split('|')[0]}</span></p>
+<p style="text-align: justify;"><a href="{oryginal_biblio.split('|')[1]}"><span id="result_box" class="short_text" lang="en"><span class="hps">See</span> <span class="hps">the original text.</span></span></a></p>"""
                 
+
             body = f"""{sekcja_autorstwa}
             <hr />
             
@@ -256,7 +272,11 @@ for index, row in aktualny_numer.iterrows():
             <div><strong><strong>ORCID:</strong></strong> <a href="https://orcid.org/{o}">{o}</a></div>\n"""
                 sekcja_autorstwa += tag_autor_orcid_line
                 
-            abstrakt = aktualny_numer.at[index+1, 'abstrakt']
+            oryginal_biblio = aktualny_numer.at[index+1, 'abstrakt']
+            
+            abstrakt = f"""
+            <p style="text-align: justify;"><span style="color: #000000;">We publish</span> <a href="http://fp.amu.edu.pl/{aktualny_numer.at[index, 'odnosnik']}">Polish translation</a> <span style="color: #000000;">of the fragment of {a}'s {oryginal_biblio.split('|')[0]}</span></p>
+<p style="text-align: justify;"><a href="{oryginal_biblio.split('|')[1]}"><span id="result_box" class="short_text" lang="en"><span class="hps">See</span> <span class="hps">the original text.</span></span></a></p>"""
                 
             body = f"""{sekcja_autorstwa}
             <hr />

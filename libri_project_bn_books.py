@@ -143,8 +143,11 @@ for i, year in enumerate(years):
     bn_new_column_names = bn_books_marc.columns.to_list()
     bn_new_column_names = [column.replace('X', '') for column in bn_new_column_names]
     bn_books_marc.columns = bn_new_column_names
-    bn_books_marc['240'] = bn_books_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' in x else np.nan)
-    bn_books_marc['246'] = bn_books_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' not in x else np.nan)
+    
+    x = '1\$iTytuł oryginału:$aNychterides :$bdiīgīmata,$f2006'
+    
+    bn_books_marc['240'] = bn_books_marc['246'].apply(lambda x: x if pd.notnull(x) and any(v in x for v in ('Tyt. oryg.:', 'Tytuł oryginału:', 'Tytuł oryginalny')) else np.nan)
+    bn_books_marc['246'] = bn_books_marc['246'].apply(lambda x: x if pd.notnull(x) and not any(v in x for v in ('Tyt. oryg.:', 'Tytuł oryginału:', 'Tytuł oryginalny')) else np.nan)
     bn_books_marc['995'] = '\\\\$aPBL 2013-2019: książki'
     
     bn_books_marc_total = bn_books_marc_total.append(bn_books_marc)
