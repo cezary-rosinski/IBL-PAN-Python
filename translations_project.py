@@ -8,13 +8,14 @@ import numpy as np
 import pymarc
 import io
 from bs4 import BeautifulSoup
-from my_functions import cosine_sim_2_elem, marc_parser_1_field, gsheet_to_df, xml_to_mrk, cSplit, f, df_to_mrc, mrc_to_mrk, mrk_to_df, xml_to_mrk, mrk_to_mrc
+from my_functions import cosine_sim_2_elem, marc_parser_1_field, gsheet_to_df, xml_to_mrk, cSplit, f, df_to_mrc, mrc_to_mrk, mrk_to_df, xml_to_mrk, mrk_to_mrc, get_cosine_result
 import glob
 import regex
 import unidecode
 import pandasql
 import time
 from xml.sax import SAXParseException
+import openpyxl
 
 ### def
 
@@ -750,7 +751,7 @@ oclc_other_languages.to_csv('oclc_other_languages.csv', index=False)
 # 01.12.2020
 
 oclc_lang = pd.read_csv('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv')
-oclc_viaf = pd.read_excel('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.xlsx')
+oclc_viaf = pd.read_excel('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.xlsx', engine='openpyxl')
 
 oclc_full = pd.concat([oclc_lang, oclc_viaf])
 
@@ -773,13 +774,13 @@ df_languages = oclc_other_languages[(oclc_other_languages['type of record + bibl
                                     (oclc_other_languages['041'].str.contains('\$hcz')) &
                                     (oclc_other_languages['fiction_type'].isin(fiction_types))]
 df_languages.to_excel("all_languages_first_positive.xlsx", index=False)
-count_041 = marc_parser_1_field(df, '001', '041', '\$')
+count_041 = marc_parser_1_field(df_languages, '001', '041', '\$')
 count_041 = count_041['$a'].value_counts().to_frame()
 count_041['language'] = count_041.index
 count_041.reset_index(drop=True,inplace=True)
 count_041.to_excel('count_languages_041a_from_all_positive.xlsx', index=False)
 
-viaf_positives = marc_parser_1_field(df, '001', '100', '\$')['$1'].drop_duplicates().to_list()
+viaf_positives = marc_parser_1_field(df_languages, '001', '100', '\$')['$1'].drop_duplicates().to_list()
 viaf_positives = [re.findall('\d+', l)[0] for l in viaf_positives if l] #849 vs. 809 vs. 754 in authority table
 
 
@@ -814,11 +815,66 @@ for language in languages:
     print(f"Total negative records in {language}: {len(df_no)}")
     print("_______________________________________")
     
+
+# 18.12.2020    
+# new viafs
     
-    
-    
-    
-    
+new_viafs = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'viaf_positive')
+new_viafs = new_viafs[new_viafs['?'] == '#N/A']['viaf id'].to_list() 
+new_viafs = [f"http://viaf.org/viaf/{l}" for l in new_viafs if l]   
+
+test100 = marc_parser_1_field(df_languages, '001', '100', '\$')[['001', '$1']]
+test100 = test100[test100['$1'].isin(new_viafs)]
+test = df_languages[df_languages['001'].isin(test100['001'])]    
+test.to_excel("strange_positives.xlsx", index=False)
+
+# all names from positive viafs in negatives
+
+fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
+
+positive_viafs = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1')['viaf_positive'].to_list()
+positive_viafs = [f"http://viaf.org/viaf/{l}" for l in positive_viafs if l]
+positive_viafs = list(set(positive_viafs))
+
+negative = oclc_other_languages[oclc_other_languages['type of record + bibliographic level'] == 'am']
+
+first_positive = negative[(negative['041'].str.contains('\$hcz')) &
+                          (negative['fiction_type'].isin(fiction_types))]
+
+negative = negative[~negative['001'].isin(first_positive['001'])]
+
+second_positive = marc_parser_1_field(negative, '001', '100', '\$')[['001', '$1']]
+second_positive = second_positive[second_positive['$1'].isin(positive_viafs)]
+
+negative = negative[~negative['001'].isin(second_positive['001'])].reset_index(drop=True)
+
+positive_viafs_names = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1')
+positive_viafs_names = positive_viafs_names[positive_viafs_names['viaf_positive'] != ''][['viaf_positive', 'all_names']]
+positive_viafs_names = cSplit(positive_viafs_names, 'viaf_positive', 'all_names', '❦')
+positive_viafs_names['all_names'] = positive_viafs_names['all_names'].apply(lambda x: re.sub('(.*?)(\$a.*?)(\$0.*$)', r'\2', x) if pd.notnull(x) else np.nan)
+positive_viafs_names = positive_viafs_names[positive_viafs_names['all_names'].notnull()].drop_duplicates()
+
+first_negative_to_check = "select * from negative a join positive_viafs_names b on a.'100' like '%'||b.all_names||'%'"
+first_negative_to_check = pandasql.sqldf(first_negative_to_check)
+
+first_negative_to_check.to_excel("oclc_negative_with_names_from_viaf.xlsx", index=False)
+
+negative = negative[~negative['001'].isin(first_negative_to_check['001'])].reset_index(drop=True)
+
+positive_viafs_diacritics = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1')
+positive_viafs_diacritics = positive_viafs_diacritics[positive_viafs_diacritics['viaf_positive'] != ''][['viaf_positive', 'cz_name']]
+
+positive_viafs_diacritics['cz_name'] = positive_viafs_diacritics['cz_name'].apply(lambda x: unidecode.unidecode(x))
+
+second_negative_to_check = "select * from negative a join positive_viafs_diacritics b on a.'100' like '%'||b.cz_name||'%'"
+second_negative_to_check = pandasql.sqldf(second_negative_to_check)
+
+second_negative_to_check.to_excel("oclc_negative_with_no_diacritics.xlsx", index=False)
+
+negative['viaf_positive']
+
+
+ 
 # notatki
 
 

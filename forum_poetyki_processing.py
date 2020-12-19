@@ -109,8 +109,6 @@ password_input.send_keys(password)
 login_button = browser.find_element_by_id('wp-submit').click()
 
 for index, row in aktualny_numer.iterrows():
-    index = 2
-    row = aktualny_numer.iloc[index]
     if row['język'] == 'pl':
       
         browser.get('http://fp.amu.edu.pl/wp-admin/post-new.php')
@@ -248,12 +246,9 @@ for index, row in aktualny_numer.iterrows():
             for t, a in zip(tagi_autorow, autorzy):
                 tag_autor_orcid_line = f"""<h4><a href="http://fp.amu.edu.pl/tag/{t}">{a}</a></h4>\n"""
                 sekcja_autorstwa += tag_autor_orcid_line
-                
-            oryginal_biblio = aktualny_numer.at[index+1, 'abstrakt']
             
             abstrakt = f"""
-            <p style="text-align: justify;"><span style="color: #000000;">We publish</span> <a href="http://fp.amu.edu.pl/{aktualny_numer.at[index, 'odnosnik']}">Polish translation</a> <span style="color: #000000;">of the fragment of {a}'s {oryginal_biblio.split('|')[0]}</span></p>
-<p style="text-align: justify;"><a href="{oryginal_biblio.split('|')[1]}"><span id="result_box" class="short_text" lang="en"><span class="hps">See</span> <span class="hps">the original text.</span></span></a></p>"""
+            <p style="text-align: justify;"><span style="color: #000000;">We publish</span> <a href="http://fp.amu.edu.pl/{aktualny_numer.at[index, 'odnosnik']}">Polish translation</a> <span style="color: #000000;">of the fragment of {a}'s {aktualny_numer.at[index+1, 'abstrakt']}</span></p>"""
                 
 
             body = f"""{sekcja_autorstwa}
@@ -271,12 +266,9 @@ for index, row in aktualny_numer.iterrows():
                 tag_autor_orcid_line = f"""<h4><a href="http://fp.amu.edu.pl/tag/{t}">{a}</a></h4>
             <div><strong><strong>ORCID:</strong></strong> <a href="https://orcid.org/{o}">{o}</a></div>\n"""
                 sekcja_autorstwa += tag_autor_orcid_line
-                
-            oryginal_biblio = aktualny_numer.at[index+1, 'abstrakt']
             
             abstrakt = f"""
-            <p style="text-align: justify;"><span style="color: #000000;">We publish</span> <a href="http://fp.amu.edu.pl/{aktualny_numer.at[index, 'odnosnik']}">Polish translation</a> <span style="color: #000000;">of the fragment of {a}'s {oryginal_biblio.split('|')[0]}</span></p>
-<p style="text-align: justify;"><a href="{oryginal_biblio.split('|')[1]}"><span id="result_box" class="short_text" lang="en"><span class="hps">See</span> <span class="hps">the original text.</span></span></a></p>"""
+            <p style="text-align: justify;"><span style="color: #000000;">We publish</span> <a href="http://fp.amu.edu.pl/{aktualny_numer.at[index, 'odnosnik']}">Polish translation</a> <span style="color: #000000;">of the fragment of {a}'s {aktualny_numer.at[index+1, 'abstrakt']}</span></p>"""
                 
             body = f"""{sekcja_autorstwa}
             <hr />
