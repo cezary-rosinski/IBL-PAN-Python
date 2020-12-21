@@ -871,7 +871,13 @@ second_negative_to_check = pandasql.sqldf(second_negative_to_check)
 
 second_negative_to_check.to_excel("oclc_negative_with_no_diacritics.xlsx", index=False)
 
-negative['viaf_positive']
+
+
+
+
+
+
+
 
 
  
