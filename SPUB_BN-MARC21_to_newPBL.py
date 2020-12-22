@@ -222,6 +222,7 @@ Book_headings_heading_name_06 = cSplit(Book_headings_heading_name_06, '001', '65
 query = "select * from Book_headings_heading_name_06 a join mapowanie_650 b on a.'650' like '%'||b.'650'||'%'"
 Book_headings_heading_name_06 = pandasql.sqldf(query)
 Book_headings_heading_name_06 = Book_headings_heading_name_06[['001', 'PBL']].rename(columns={'PBL': 'Book.headings.heading.name'})
+Book_headings_heading_name_06 = cSplit(Book_headings_heading_name_06, '001', 'Book.headings.heading.name', '❦')
 
 mapowanie_655 = gsheet_to_df('1JQy98r4K7yTZixACxujH2kWY3D39rG1kFlIppNlZnzQ', 'deskryptory_655')
 mapowanie_655 = mapowanie_655[mapowanie_655['decyzja'] == 'zmapowane'][['X655', 'dzial_PBL_1', 'dzial_PBL_2', 'dzial_PBL_3', 'dzial_PBL_4', 'dzial_PBL_5', 'haslo_przedmiotowe_PBL_1', 'haslo_przedmiotowe_PBL_2', 'haslo_przedmiotowe_PBL_3', 'haslo_przedmiotowe_PBL_4', 'haslo_przedmiotowe_PBL_5']].reset_index(drop=True)
@@ -237,6 +238,8 @@ Book_headings_heading_name_07 = cSplit(Book_headings_heading_name_07, '001', '65
 query = "select * from Book_headings_heading_name_07 a join mapowanie_655_BN_PBL b on a.'655' like '%'||b.'655'||'%'"
 Book_headings_heading_name_07 = pandasql.sqldf(query)
 Book_headings_heading_name_07 = Book_headings_heading_name_07[['001', 'PBL']].rename(columns={'PBL': 'Book.headings.heading.name'})
+Book_headings_heading_name_07 = cSplit(Book_headings_heading_name_07, '001', 'Book.headings.heading.name', '❦')
+
 
 # do końca Book.headings.heading.name brakuje jeszcze 730
 
