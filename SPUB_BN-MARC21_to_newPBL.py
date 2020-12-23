@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from my_functions import marc_parser_1_field, gsheet_to_df, mrk_to_df, df_to_gsheet, cSplit, df_to_mrc, mrc_to_mrk
-import re
+import regex as re
 import pandasql
 import json
 import requests
@@ -80,7 +80,7 @@ Book_recordTypes_03['test'] = Book_recordTypes_03.apply(lambda x: x['fraza do sz
 Book_recordTypes_03 = Book_recordTypes_03[Book_recordTypes_03['test'] == True][['001', 'gatunki PBL']].rename(columns={'gatunki PBL': 'Book.recordTypes'})
 
 Book_recordTypes = pd.concat([Book_recordTypes_01, Book_recordTypes_02, Book_recordTypes_03])
-Book_recordTypes['Book.recordTypes'] = Book_recordTypes.groupby('001')['Book_recordTypes'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+Book_recordTypes['Book.recordTypes'] = Book_recordTypes.groupby('001')['Book.recordTypes'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
 Book_recordTypes = Book_recordTypes.drop_duplicates().reset_index(drop=True)
 Book_recordTypes['Book.recordTypes'] = Book_recordTypes['Book.recordTypes'].str.replace('inne❦', '')
 
@@ -170,6 +170,8 @@ Book_linkedEvents_names_name['Book.linkedEvents.names.name'] = Book_linkedEvents
 
 Book_linkedEvents_names_name = Book_linkedEvents_names_name.drop_duplicates().reset_index(drop=True)
 
+# dać Biblę. Apokryfy do działów z apokryfami w PBL
+
 Book_headings_heading_name_01 = marc_parser_1_field(df, '001', '130', '\$').drop_duplicates().reset_index(drop=True)
 
 dzialy_biblijne_PBL = gsheet_to_df('1FxAxWONxY81LSEOo_TItNxKA0efjV0Hp7SPxuI5dikg', 'Arkusz1')
@@ -240,20 +242,185 @@ Book_headings_heading_name_07 = pandasql.sqldf(query)
 Book_headings_heading_name_07 = Book_headings_heading_name_07[['001', 'PBL']].rename(columns={'PBL': 'Book.headings.heading.name'})
 Book_headings_heading_name_07 = cSplit(Book_headings_heading_name_07, '001', 'Book.headings.heading.name', '❦').drop_duplicates().reset_index(drop=True)
 
+Book_headings_heading_name_08 = marc_parser_1_field(df, '001', '730', '\$').drop_duplicates().reset_index(drop=True)
+query = "select * from Book_headings_heading_name_08 a join dzialy_biblijne_PBL b on a.'$p' like '%'||b.'dział PBL'||'%'"
+Book_headings_heading_name_08 = pandasql.sqldf(query)
+Book_headings_heading_name_08 = Book_headings_heading_name_08[['001', 'dział PBL']].rename(columns={'dział PBL': 'Book.headings.heading.name'})
 
-# do końca Book.headings.heading.name brakuje jeszcze 730
+Book_headings_heading_name_09 = marc_parser_1_field(df, '001', '730', '\$').drop_duplicates().reset_index(drop=True)
+Book_headings_heading_name_09 = Book_headings_heading_name_09[~Book_headings_heading_name_09['001'].isin(Book_headings_heading_name_08['001'])]
+Book_headings_heading_name_09['Book.headings.heading.name'] = Book_headings_heading_name_09['$p'].apply(lambda x: dzial_biblijny(x))
+Book_headings_heading_name_09 = Book_headings_heading_name_09[Book_headings_heading_name_09['Book.headings.heading.name'].notnull()][['001', 'Book.headings.heading.name']]
 
+Book_headings_heading_name = pd.concat([Book_headings_heading_name_01, Book_headings_heading_name_02, Book_headings_heading_name_03, Book_headings_heading_name_04, Book_headings_heading_name_05, Book_headings_heading_name_06, Book_headings_heading_name_07, Book_headings_heading_name_08, Book_headings_heading_name_09]).drop_duplicates().reset_index(drop=True)
 
+Book_headings_heading_name['Book.headings.heading.name'] = Book_headings_heading_name.groupby('001')['Book.headings.heading.name'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+Book_headings_heading_name = Book_headings_heading_name.drop_duplicates().reset_index(drop=True)
 
+book_headings_bible = pd.concat([Book_headings_heading_name_01, Book_headings_heading_name_02, Book_headings_heading_name_04, Book_headings_heading_name_05, Book_headings_heading_name_08, Book_headings_heading_name_09]).drop_duplicates().reset_index(drop=True)['001'].to_list()
 
+#trzeba będzie będzie powiązać z konkretnymi zapisami PBL
+Book_linkedCreativeWorks_titles_title_01 = marc_parser_1_field(df, '001', '130', '\$').drop_duplicates().reset_index(drop=True)
+Book_linkedCreativeWorks_titles_title_01 = Book_linkedCreativeWorks_titles_title_01[~Book_linkedCreativeWorks_titles_title_01['001'].isin(book_headings_bible)][['001', '$a']].rename(columns={'$a': 'Book.linkedCreativeWorks.titles.title'})
 
+Book_linkedCreativeWorks_titles_title_02 = marc_parser_1_field(df, '001', '630', '\$').drop_duplicates().reset_index(drop=True)
+Book_linkedCreativeWorks_titles_title_02 = Book_linkedCreativeWorks_titles_title_02[~Book_linkedCreativeWorks_titles_title_02['001'].isin(book_headings_bible)][['001', '$a', '$n', '$p']].replace(r'^\s*$', np.nan, regex=True)
+Book_linkedCreativeWorks_titles_title_02['Book.linkedCreativeWorks.titles.title'] = Book_linkedCreativeWorks_titles_title_02[Book_linkedCreativeWorks_titles_title_02.columns[1:]].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+Book_linkedCreativeWorks_titles_title_02 = Book_linkedCreativeWorks_titles_title_02[['001', 'Book.linkedCreativeWorks.titles.title']]
 
+Book_linkedCreativeWorks_titles_title_03 = marc_parser_1_field(df, '001', '730', '\$').drop_duplicates().reset_index(drop=True)
+Book_linkedCreativeWorks_titles_title_03 = Book_linkedCreativeWorks_titles_title_03[(~Book_linkedCreativeWorks_titles_title_03['001'].isin(book_headings_bible)) &
+                                         (~Book_linkedCreativeWorks_titles_title_03['$a'].str.contains('Katalog wystawy|Program teatralny'))][['001', '$a', '$p']].replace(r'^\s*$', np.nan, regex=True)
+Book_linkedCreativeWorks_titles_title_03['Book.linkedCreativeWorks.titles.title'] = Book_linkedCreativeWorks_titles_title_03[Book_linkedCreativeWorks_titles_title_03.columns[1:]].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+Book_linkedCreativeWorks_titles_title_03 = Book_linkedCreativeWorks_titles_title_03[['001', 'Book.linkedCreativeWorks.titles.title']]
 
+Book_linkedCreativeWorks_titles_title = pd.concat([Book_linkedCreativeWorks_titles_title_01, Book_linkedCreativeWorks_titles_title_02, Book_linkedCreativeWorks_titles_title_03]).drop_duplicates().reset_index(drop=True)
 
+Book_linkedCreativeWorks_titles_title['Book.linkedCreativeWorks.titles.title'] = Book_linkedCreativeWorks_titles_title.groupby('001')['Book.linkedCreativeWorks.titles.title'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+Book_linkedCreativeWorks_titles_title = Book_linkedCreativeWorks_titles_title.drop_duplicates().reset_index(drop=True)
 
+#są błędy, bo BN nie dał $a
+Book_titles_title_original = marc_parser_1_field(df, '001', '240', '\$').drop_duplicates().reset_index(drop=True)
+Book_titles_title_original = Book_titles_title_original[Book_titles_title_original['$i'].str.contains('oryg')][['001', '$a', '$b', '$p', '$n']].replace(r'^\s*$', np.nan, regex=True)  
+Book_titles_title_original['$a'] = Book_titles_title_original[Book_titles_title_original.columns[1:3]].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+Book_titles_title_original['$p'] = Book_titles_title_original[Book_titles_title_original.columns[3:5]].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+Book_titles_title_original = Book_titles_title_original.replace(r'^\s*$', np.nan, regex=True)[['001', '$a', '$p']]
+Book_titles_title_original = Book_titles_title_original[Book_titles_title_original['$a'].notnull()]
+Book_titles_title_original['Book.titles.title'] = Book_titles_title_original[Book_titles_title_original.columns[1:]].apply(lambda x: ' '.join(x.dropna().astype(str)) if x['$a'][-1] in ['.', '!', '?'] else '. '.join(x.dropna().astype(str)), axis=1)
+Book_titles_title_original = Book_titles_title_original[['001', 'Book.titles.title']].drop_duplicates().reset_index(drop=True)
+Book_titles_title_original['Book.titles.type'] = 'tytuł oryginału'
 
+#do ogarnięcia 245$c
 
+Book_titles_title_basic = marc_parser_1_field(df, '001', '245', '\$').drop_duplicates().reset_index(drop=True).replace(' {0,}\/$', '', regex=True)[['001', '$a', '$b', '$p', '$n']].replace(r'^\s*$', np.nan, regex=True)  
+Book_titles_title_basic['$a'] = Book_titles_title_basic[Book_titles_title_basic.columns[1:3]].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+Book_titles_title_basic['$p'] = Book_titles_title_basic[Book_titles_title_basic.columns[3:5]].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+Book_titles_title_basic = Book_titles_title_basic.replace(r'^\s*$', np.nan, regex=True)[['001', '$a', '$p']]
+Book_titles_title_basic = Book_titles_title_basic[Book_titles_title_basic['$a'].notnull()]
+Book_titles_title_basic['Book.titles.title'] = Book_titles_title_basic[Book_titles_title_basic.columns[1:]].apply(lambda x: ' '.join(x.dropna().astype(str)) if x['$a'][-1] in ['.', '!', '?'] else '. '.join(x.dropna().astype(str)), axis=1)
+Book_titles_title_basic = Book_titles_title_basic[['001', 'Book.titles.title']].drop_duplicates().reset_index(drop=True)
+Book_titles_title_basic['Book.titles.type'] = 'tytuł podstawowy'
 
+Book_titles_title = pd.concat([Book_titles_title_basic, Book_titles_title_original])
+Book_titles_title['Book.titles.type'] = Book_titles_title.groupby('001')['Book.titles.type'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+Book_titles_title['Book.titles.type'] = Book_titles_title.groupby('001')['Book.titles.type'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+Book_titles_title = Book_titles_title.drop_duplicates().reset_index(drop=True)
+
+Book_edition = marc_parser_1_field(df, '001', '250', '\$').drop_duplicates().reset_index(drop=True).replace(' {0,}\/$', '', regex=True)[['001', '$a']].rename(columns={'$a': 'Book.edition'})
+
+publication = df.copy()[['001', '264']]
+publication = publication[publication['264'].notnull()].drop_duplicates().reset_index(drop=True)
+publication['podpola'] = publication['264'].apply(lambda x: ''.join(re.findall('(?<=\$)[a,b]', x)))
+publication['podpola'] = publication['podpola'].apply(lambda x: re.sub('([^a]*a[^a]+)', r'\1❦', x)).str.replace('^❦', '').str.replace('❦$', '')
+
+def indeksy(x):
+    podpola = list(x['podpola'])
+    podpole_indeks = 0
+    val = []
+    for podpole in podpola:
+        try:
+            podpole_indeks = x['264'].index(f"${podpole}", podpole_indeks)
+            val.append(str(podpole_indeks))
+        except ValueError:
+            val.append('')
+    val = [int(val[i+1]) if v == '' else v for i, v in enumerate(val)]
+    ile_heder = 0
+    for i, p in zip(val, podpola):
+        if p == '❦':
+            i += ile_heder
+            x['264'] = x['264'][:i] + '❦' + x['264'][i:]
+            ile_heder += 1
+    return x['264']
+
+publication['264'] = publication.apply(lambda x: indeksy(x), axis=1)
+
+publication = cSplit(publication, '001', '264', '❦')
+publication['podpola'] = publication['264'].apply(lambda x: ''.join(re.findall('(?<=\$)[a,b]', x)))
+
+def adres_wydawniczy(x):
+    if x['podpola'].count('a') == 1 and x['podpola'].count('b') == 1:
+        final_value = x['264']
+    elif x['podpola'].count('a') == 1 and x['podpola'].count('b') > 1:
+        grupa_a = re.findall('(\$a.*?)(?=\$b)', x['264'])[0]
+        podpola_b = re.sub('([^b]*b)', r'❦\1', x['podpola'])
+        podpola_b = list(re.sub('^❦', '', podpola_b))
+        podpole_indeks = 0
+        val = []
+        for podpole in podpola_b:
+            try:
+                podpole_indeks = x['264'].index(f"${podpole}", podpole_indeks)
+                val.append(str(podpole_indeks))
+            except ValueError:
+                val.append('')  
+                podpole_indeks += 1
+        val = [int(val[i+1]) if v == '' else int(v) for i, v in enumerate(val)]
+        ile_heder = 0
+        for i, p in zip(val, podpola_b):
+            if p == '❦':
+                i += ile_heder
+                x['264'] = x['264'][:i] + '❦' + x['264'][i:]
+                ile_heder += 1    
+        final_value = x['264'].replace('❦', grupa_a)
+    elif x['podpola'].count('a') > 1 and x['podpola'].count('b') == 1:
+        final_value = re.sub('(\s+\W\$a)', ', ', x['264'])
+    elif x['podpola'].count('a') > 1 and x['podpola'].count('b') > 1:
+        x['264'] = re.sub('(\s+\W\$a)', ', ', x['264'])
+        grupa_a = re.findall('(\$a.*?)(?=\$b)', x['264'])[0]
+        podpola_b = re.sub('([^b]*b)', r'❦\1', x['podpola'])
+        podpola_b = list(re.sub('^❦', '', podpola_b))
+        podpole_indeks = 0
+        val = []
+        for podpole in podpola_b:
+            try:
+                podpole_indeks = x['264'].index(f"${podpole}", podpole_indeks)
+                val.append(str(podpole_indeks))
+            except ValueError:
+                val.append('')  
+                podpole_indeks += 1
+        val = [int(val[i+1]) if v == '' else int(v) for i, v in enumerate(val)]
+        ile_heder = 0
+        for i, p in zip(val, podpola_b):
+            if p == '❦':
+                i += ile_heder
+                x['264'] = x['264'][:i] + '❦' + x['264'][i:]
+                ile_heder += 1    
+        final_value = x['264'].replace('❦', grupa_a)
+    else:
+        final_value = x['264']
+    return final_value
+                
+publication['264'] = publication.apply(lambda x: adres_wydawniczy(x), axis=1)
+publication['264'] = publication['264'].str.replace('(\s+\W)(\$a)', r'\1❦\2', regex=True)
+publication['index'] = publication.index+1
+publication = cSplit(publication, 'index', '264', '❦')
+
+publication_parsed = marc_parser_1_field(publication, 'index', '264', '\$').replace(' {0,}[:;]$', '', regex=True)
+publication_parsed = pd.merge(publication_parsed, publication[['index', '001']], how='left', on='index').drop_duplicates().reset_index(drop=True)
+
+Book_publishingHouses_places_name = publication_parsed[['001', '$a']].rename(columns={'$a': 'Book.publishingHouses.places.name'})
+Book_publishingHouses_places_name['Book.publishingHouses.places.name'] = Book_publishingHouses_places_name.groupby('001')['Book.publishingHouses.places.name'].transform(lambda x: '❦'.join(x.astype(str)))
+Book_publishingHouses_places_name = Book_publishingHouses_places_name.drop_duplicates().reset_index(drop=True)
+
+Book_publishingHouses_institution_history_names_name = publication_parsed[['001', '$b']].rename(columns={'$b': 'Book.publishingHouses.institution.history.names.name'})
+Book_publishingHouses_institution_history_names_name['Book.publishingHouses.institution.history.names.name'] = Book_publishingHouses_institution_history_names_name.groupby('001')['Book.publishingHouses.institution.history.names.name'].transform(lambda x: '❦'.join(x.astype(str)))
+Book_publishingHouses_institution_history_names_name = Book_publishingHouses_institution_history_names_name.drop_duplicates().reset_index(drop=True)
+
+Book_publicationYear_year = publication_parsed[['001', '$c']].rename(columns={'$c': 'Book.publicationYear.year'})
+Book_publicationYear_year = Book_publicationYear_year[Book_publicationYear_year['Book.publicationYear.year'] != ''].drop_duplicates().reset_index(drop=True).replace('\.$', '', regex=True)
+Book_publicationYear_year['Book.publicationYear.yearType.name'] = Book_publicationYear_year['Book.publicationYear.year'].apply(lambda x: 'rok copyright' if x[:4] in ['cop.', '[cop'] else 'rok wydania')
+
+# except, bo w pewnym miejscu są "Katowice" - jak reagować na błędy BN?
+def publication_year(x):
+    try:
+        val = re.findall('\d+(?!.*\d+)', x)[0]
+    except IndexError:
+        val = np.nan
+    return val
+
+Book_publicationYear_year['Book.publicationYear.year'] = Book_publicationYear_year['Book.publicationYear.year'].apply(lambda x: publication_year(x))
+Book_publicationYear_year = Book_publicationYear_year[Book_publicationYear_year['Book.publicationYear.year'].notnull()] 
+
+# teraz Book.physicalDescription.description
 
 
 
