@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from my_functions import marc_parser_1_field, gsheet_to_df, mrk_to_df, df_to_gsheet, cSplit, df_to_mrc, mrc_to_mrk
+from my_functions import marc_parser_1_field, gsheet_to_df, mrk_to_df, df_to_gsheet, cSplit, df_to_mrc, mrc_to_mrk, get_cosine_result
 import regex as re
 import pandasql
 import json
@@ -9,6 +9,8 @@ import io
 import itertools
 import openpyxl
 import roman
+import xml.etree.ElementTree as et
+import requests
 
 # def
 def unique_subfields(x):
@@ -136,9 +138,8 @@ def roman_numerals(x):
     return val
 
 Book_authors_person_names_name_02['czy numeracja'] = Book_authors_person_names_name_02['$b'].apply(lambda x: roman_numerals(x))
-
-Book_authors_person_names_name_02 = Book_authors_person_names_name_02[(Book_authors_person_names_name_02['czy numeracja'] == True) | (Book_authors_person_names_name_02['$b'] == '')].drop(columns='czy numeracja')
-Book_authors_person_names_name_02 = Book_authors_person_names_name_02.replace(r'^\s*$', np.nan, regex=True)
+Book_authors_person_names_name_02['$b'] = Book_authors_person_names_name_02.apply(lambda x: '' if x['czy numeracja'] == False else x['$b'], axis=1)
+Book_authors_person_names_name_02 = Book_authors_person_names_name_02.drop(columns='czy numeracja').replace(r'^\s*$', np.nan, regex=True)
 Book_authors_person_names_name_02['Book.authors.person.names.name'] = Book_authors_person_names_name_02[Book_authors_person_names_name_02.columns[1:]].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
 Book_authors_person_names_name_02 = Book_authors_person_names_name_02[['001', 'Book.authors.person.names.name']]
 
@@ -252,7 +253,21 @@ Book_headings_heading_name_09 = Book_headings_heading_name_09[~Book_headings_hea
 Book_headings_heading_name_09['Book.headings.heading.name'] = Book_headings_heading_name_09['$p'].apply(lambda x: dzial_biblijny(x))
 Book_headings_heading_name_09 = Book_headings_heading_name_09[Book_headings_heading_name_09['Book.headings.heading.name'].notnull()][['001', 'Book.headings.heading.name']]
 
-Book_headings_heading_name = pd.concat([Book_headings_heading_name_01, Book_headings_heading_name_02, Book_headings_heading_name_03, Book_headings_heading_name_04, Book_headings_heading_name_05, Book_headings_heading_name_06, Book_headings_heading_name_07, Book_headings_heading_name_08, Book_headings_heading_name_09]).drop_duplicates().reset_index(drop=True)
+# teraz z 600 wydobywamy wszystkie osoby, docelowo - dział dostaną tylko ludzie PBL
+Book_headings_heading_name_10 = marc_parser_1_field(df, '001', '600', '\$').drop_duplicates().reset_index(drop=True)[['001', '$a', '$b']]
+Book_headings_heading_name_10['czy numeracja'] = Book_headings_heading_name_10['$b'].apply(lambda x: roman_numerals(x))
+Book_headings_heading_name_10['$b'] = Book_headings_heading_name_10.apply(lambda x: '' if x['czy numeracja'] == False else x['$b'], axis=1)
+Book_headings_heading_name_10 = Book_headings_heading_name_10.drop(columns='czy numeracja').replace(r'^\s*$', np.nan, regex=True)
+Book_headings_heading_name_10['Book.headings.heading.name'] = Book_headings_heading_name_10[Book_headings_heading_name_10.columns[1:]].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+Book_headings_heading_name_10 = Book_headings_heading_name_10[['001', 'Book.headings.heading.name']]
+
+# teraz z 610 wydobywamy wszystkie instytucje, docelowo - dział dostaną tylko instytucje PBL
+
+Book_headings_heading_name_11 = marc_parser_1_field(df, '001', '610', '\$').drop_duplicates().reset_index(drop=True)[['001', '$a', '$b']].replace(r'^\s*$', np.nan, regex=True)
+Book_headings_heading_name_11['Book.headings.heading.name'] = Book_headings_heading_name_11[Book_headings_heading_name_11.columns[1:]].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+Book_headings_heading_name_11 = Book_headings_heading_name_11[['001', 'Book.headings.heading.name']]
+
+Book_headings_heading_name = pd.concat([Book_headings_heading_name_01, Book_headings_heading_name_02, Book_headings_heading_name_03, Book_headings_heading_name_04, Book_headings_heading_name_05, Book_headings_heading_name_06, Book_headings_heading_name_07, Book_headings_heading_name_08, Book_headings_heading_name_09, Book_headings_heading_name_10], Book_headings_heading_name_11).drop_duplicates().reset_index(drop=True)
 
 Book_headings_heading_name['Book.headings.heading.name'] = Book_headings_heading_name.groupby('001')['Book.headings.heading.name'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
 Book_headings_heading_name = Book_headings_heading_name.drop_duplicates().reset_index(drop=True)
@@ -313,7 +328,7 @@ publication = publication[publication['264'].notnull()].drop_duplicates().reset_
 publication['podpola'] = publication['264'].apply(lambda x: ''.join(re.findall('(?<=\$)[a,b]', x)))
 publication['podpola'] = publication['podpola'].apply(lambda x: re.sub('([^a]*a[^a]+)', r'\1❦', x)).str.replace('^❦', '').str.replace('❦$', '')
 
-def indeksy(x):
+def podpola_264(x):
     podpola = list(x['podpola'])
     podpole_indeks = 0
     val = []
@@ -332,7 +347,7 @@ def indeksy(x):
             ile_heder += 1
     return x['264']
 
-publication['264'] = publication.apply(lambda x: indeksy(x), axis=1)
+publication['264'] = publication.apply(lambda x: podpola_264(x), axis=1)
 
 publication = cSplit(publication, '001', '264', '❦')
 publication['podpola'] = publication['264'].apply(lambda x: ''.join(re.findall('(?<=\$)[a,b]', x)))
@@ -421,6 +436,109 @@ Book_publicationYear_year['Book.publicationYear.year'] = Book_publicationYear_ye
 Book_publicationYear_year = Book_publicationYear_year[Book_publicationYear_year['Book.publicationYear.year'].notnull()] 
 
 # teraz Book.physicalDescription.description
+
+Book_physicalDescription_description_01 = marc_parser_1_field(df, '001', '300', '\$').drop_duplicates().reset_index(drop=True)[['001', '$a', '$b', '$e']].replace(r'^\s*$', np.nan, regex=True).replace('\s+[;:]$', '', regex=True)
+Book_physicalDescription_description_01['Book.physicalDescription.description'] = Book_physicalDescription_description_01[Book_physicalDescription_description_01.columns[1:]].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+Book_physicalDescription_description_01 = Book_physicalDescription_description_01[['001', 'Book.physicalDescription.description']]
+
+#wybrać tylko te frazy, które mają pseudonim, resztę wyrzucić
+
+Book_physicalDescription_description_02 = marc_parser_1_field(df, '001', '500', '\$').drop_duplicates().reset_index(drop=True)[['001', '$a']].replace(r'^\s*$', np.nan, regex=True).replace('\s+[;:]$', '', regex=True)
+Book_physicalDescription_description_02 = Book_physicalDescription_description_02[(Book_physicalDescription_description_02['$a'].str.contains('pseud')) &
+                                        (Book_physicalDescription_description_02['$a'].notnull())].rename(columns={'$a': 'Book.physicalDescription.description'})
+
+Book_physicalDescription_description = pd.concat([Book_physicalDescription_description_01, Book_physicalDescription_description_02])
+Book_physicalDescription_description['Book.physicalDescription.description'] = Book_physicalDescription_description.groupby('001')['Book.physicalDescription.description'].transform(lambda x: ', '.join(x.drop_duplicates().astype(str)))
+Book_physicalDescription_description = Book_physicalDescription_description.drop_duplicates().reset_index(drop=True)
+
+# ogarnąć później 045, 388 i 648
+
+Book_belongingToSeries_series_principalTitle_01 = marc_parser_1_field(df, '001', '490', '\$').drop_duplicates().reset_index(drop=True).replace(' {0,}\/$', '', regex=True)[['001', '$a', '$b', '$p', '$v']].replace(r'^\s*$', np.nan, regex=True).replace('\s+[\/].*?$', '', regex=True).replace('\s+[;:]$', '', regex=True)
+Book_belongingToSeries_series_principalTitle_01['Book.belongingToSeries.series.principalTitle'] = Book_belongingToSeries_series_principalTitle_01[['$a', '$b']].apply(lambda x: ', '.join(x.dropna().astype(str)), axis=1)
+    
+Book_belongingToSeries_series_principalTitle_02 = marc_parser_1_field(df, '001', '800', '\$').drop_duplicates().reset_index(drop=True).replace(' {0,}\/$', '', regex=True)[['001', '$t', '$v']].replace(r'^\s*$', np.nan, regex=True).replace('\s+[\/].*?$', '', regex=True).replace('\s+[;:]$', '', regex=True)
+Book_belongingToSeries_series_principalTitle_02 = Book_belongingToSeries_series_principalTitle_02[~Book_belongingToSeries_series_principalTitle_02['001'].isin(Book_belongingToSeries_series_principalTitle_01['001'])]
+Book_belongingToSeries_series_principalTitle_02['Book.belongingToSeries.series.principalTitle'] = Book_belongingToSeries_series_principalTitle_02['$t']
+
+Book_belongingToSeries_series_principalTitle_03 = marc_parser_1_field(df, '001', '830', '\$').drop_duplicates().reset_index(drop=True).replace(' {0,}\/$', '', regex=True)[['001', '$a', '$p', '$v']].replace(r'^\s*$', np.nan, regex=True).replace('\s+[\/].*?$', '', regex=True).replace('\s+[;:]$', '', regex=True)
+Book_belongingToSeries_series_principalTitle_03 = Book_belongingToSeries_series_principalTitle_03[(~Book_belongingToSeries_series_principalTitle_03['001'].isin(Book_belongingToSeries_series_principalTitle_01['001'])) &
+                                                (~Book_belongingToSeries_series_principalTitle_03['001'].isin(Book_belongingToSeries_series_principalTitle_02['001']))]
+Book_belongingToSeries_series_principalTitle_03['Book.belongingToSeries.series.principalTitle'] = Book_belongingToSeries_series_principalTitle_03['$a']
+
+Book_belongingToSeries_series_principalTitle = pd.concat([Book_belongingToSeries_series_principalTitle_01[['001', 'Book.belongingToSeries.series.principalTitle']], Book_belongingToSeries_series_principalTitle_02[['001', 'Book.belongingToSeries.series.principalTitle']], Book_belongingToSeries_series_principalTitle_03[['001', 'Book.belongingToSeries.series.principalTitle']]])
+
+Book_belongingToSeries_seriesSubtitle = pd.concat([Book_belongingToSeries_series_principalTitle_01[['001', '$p']], Book_belongingToSeries_series_principalTitle_03[['001', '$p']]]).rename(columns={'$p': 'Book_belongingToSeries_seriesSubtitle'})
+Book_belongingToSeries_seriesSubtitle = Book_belongingToSeries_seriesSubtitle[Book_belongingToSeries_seriesSubtitle['Book_belongingToSeries_seriesSubtitle'].notnull()]
+
+Book_belongingToSeries_seriesNumber = pd.concat([Book_belongingToSeries_series_principalTitle_01[['001', '$v']], Book_belongingToSeries_series_principalTitle_02[['001', '$v']], Book_belongingToSeries_series_principalTitle_03[['001', '$v']]]).rename(columns={'$v': 'Book.belongingToSeries.seriesNumber'})
+Book_belongingToSeries_seriesNumber = Book_belongingToSeries_seriesNumber[Book_belongingToSeries_seriesNumber['Book.belongingToSeries.seriesNumber'].notnull()]
+
+#czy można to inaczej zrobić (parsować)?
+
+Book_annotations_01 = df[['001', '505']]
+Book_annotations_01 = Book_annotations_01[Book_annotations_01['505'].notnull()].rename(columns={'505': 'Book.annotations'})
+Book_annotations_01['Book.annotations'] = Book_annotations_01['Book.annotations'].str.replace('^..', '', regex=True).str.replace('\$.', '', regex=True)
+
+Book_annotations_02 = marc_parser_1_field(df, '001', '700', '\$')[['001', '$a', '$t']].replace(r'^\s*$', np.nan, regex=True)
+Book_annotations_02 = Book_annotations_02[Book_annotations_02['$t'].notnull()].drop_duplicates().reset_index(drop=True)
+Book_annotations_02['$a'] = Book_annotations_02['$a'].apply(lambda x: re.sub('(?<=\p{Ll})\.$', '', x))
+Book_annotations_02['Book.annotations'] = Book_annotations_02[['$a', '$t']].apply(lambda x: ': '.join(x.dropna().astype(str)), axis=1)
+Book_annotations_02 = Book_annotations_02[['001', 'Book.annotations']]
+
+# co zrobić ze zdublowanymi danymi w polach 505 i 700?
+
+Book_annotations = pd.concat([Book_annotations_01, Book_annotations_02])
+Book_annotations['Book.annotations'] = Book_annotations.groupby('001')['Book.annotations'].transform(lambda x: '. '.join(x.drop_duplicates().astype(str))).str.replace('\.{2}', '.', regex=True)
+Book_annotations = Book_annotations.drop_duplicates().reset_index(drop=True)
+
+# nie idzie w BN znaleźć kategorii dla 651a, więc nie wiadomo, kiedy miasto, kiedy państwo - do podziału i przypisania na później
+
+bn_700 = marc_parser_1_field(df, '001', '700', '\$').drop_duplicates().reset_index(drop=True)
+bn_700 = bn_700[(~bn_700['001'].isin(Book_authors_person_names_name_02['001'])) &
+                (~bn_700['001'].isin(Book_annotations_02['001']))]
+
+test = bn_700['$e'].drop_duplicates().to_list()
+test = [t for t in test if '.' in t and '❦' not in t]
+
+
+
+
+
+# =============================================================================
+# places_651 = marc_parser_1_field(df, '001', '651', '\$')['$a'].drop_duplicates().to_list()
+# 
+# ns = '{http://www.loc.gov/MARC21/slim}'
+# total_df = pd.DataFrame()
+# for i, nazwa in enumerate(places_651):
+#     print(f"{i+1}/{len(places_651)}")
+#     url = f"https://data.bn.org.pl/api/authorities.xml?jurisdiction=Wsie%7CMiasta%7CPa%C5%84stwa&limit=100&boolean=true&marc=151a+{nazwa}"
+#     response = requests.get(url)
+#     with open('test.xml', 'wb') as file:
+#         file.write(response.content)
+#     tree = et.parse('test.xml')
+#     root = tree.getroot()
+#     place_id = [t.text for t in root.findall('.//id')]
+#     subject = [t.text for t in root.findall('.//subject')]
+#     jurisdiction = [t.text for t in root.findall('.//jurisdiction')]
+#     pole_151 = [t for t in root.findall(f'.//{ns}datafield') if t.attrib['tag'] == '151']
+#     place = []
+#     for x in pole_151:
+#         x = x.getchildren()
+#         for y in x:
+#             place.append(y.text)
+#     total_data = list(zip(place_id, subject, jurisdiction, place))
+#     total_data = [list(t) for t in total_data]
+#     for l in total_data:
+#         l.insert(0, nazwa)
+#     df_iter = pd.DataFrame(total_data, columns=['search name', 'id', 'BN name', 'category', '151'])
+#     total_df = total_df.append(df_iter)    
+# =============================================================================
+
+
+
+
+
+
 
 
 
