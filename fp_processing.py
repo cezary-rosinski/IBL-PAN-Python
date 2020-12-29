@@ -1,6 +1,6 @@
 from my_functions import gsheet_to_df, df_to_gsheet
 import pandas as pd
-import re
+import regex as re
 import regex
 import glob
 from unidecode import unidecode
@@ -16,6 +16,15 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import numpy as np
 import sys
+import io
+
+def jest_autor(x):
+    try:
+        re.findall('(, \p{Lu})|(^-+|^—+|^–+)', x)[0]
+        val = x
+    except IndexError:
+        val = ''
+    return val
 
 pd.options.display.max_colwidth = 10000
 
@@ -72,12 +81,18 @@ for i, row in aktualny_numer.iterrows():
         try:
             sciezka_jpg = [e for e in jpg_eng if nazwisko in e and slowo_z_tytulu in e.lower()][0]
         except IndexError:
-            sciezka_jpg = [e for e in jpg_eng if nazwisko in e][0]
+            try:
+                sciezka_jpg = [e for e in jpg_eng if nazwisko in e][0]
+            except IndexError:
+                pass
         sciezka_jpg = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_jpg)
         try:
             sciezka_pdf = [e for e in pdf_eng if nazwisko in e and slowo_z_tytulu in e.lower()][0]
         except IndexError:
-            sciezka_pdf = [e for e in pdf_eng if nazwisko in e][0]
+            try:
+                sciezka_pdf = [e for e in pdf_eng if nazwisko in e][0]
+            except IndexError:
+                pass
         sciezka_pdf = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_pdf)
         aktualny_numer.at[i, 'link do pdf'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_pdf}"
         aktualny_numer.at[i, 'link do jpg'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_jpg}"
@@ -318,6 +333,8 @@ for i, row in aktualny_numer.iterrows():
     aktualny_numer.at[i, 'spis treści'] = body
 
 #wprowadzanie tagów
+    
+aktualny_numer.fillna("",inplace=True)
 
 tagi_osob = []
 for i, row in aktualny_numer.iterrows():
@@ -348,10 +365,6 @@ nowe_tagi_df = nowe_tagi_df.drop_duplicates().reset_index(drop=True)
 aktualny_numer['biogram'] = nowe_tagi_df['biogram']
 
 print('Tagi na wordpressie wprowadzone')
-
-#uzupełnienie tabeli artykułów na dysku google
-
-df_to_gsheet(aktualny_numer, gs_table, 'artykuły po pętli')
 
 #przygotowanie spisu treści
 
@@ -492,8 +505,6 @@ for index, row in strona_numeru.iterrows():
         url_edycji = browser.current_url
         strona_numeru.at[index+1, 'url_edycji'] = url_edycji
        
-df_to_gsheet(strona_numeru, gs_table, 'strona po pętli')
-
 print('Strona numeru na wordpressie opublikowana')
 
 #pressto - dodawanie numeru
@@ -550,6 +561,8 @@ print('Strona numeru na pressto opublikowana')
 #pressto dodawanie artykułów
 
 for i, row in aktualny_numer.iterrows():
+    i = 0
+    row = aktualny_numer.iloc[16,:]
     if row['język'] == 'pl':
         nowe_zgloszenie = browser.get('https://pressto.amu.edu.pl/index.php/fp/management/importexport/plugin/QuickSubmitPlugin')
         dzial_fp = row['kategoria']
@@ -574,28 +587,37 @@ for i, row in aktualny_numer.iterrows():
             slowa_kluczowe_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[2].send_keys(s, Keys.TAB)
         for s in aktualny_numer.at[i+1, 'słowa kluczowe'].split(', '):
             slowa_kluczowe_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[3].send_keys(s, Keys.TAB)
+            
+        if len(row['bibliografia']) > 0:
 
-        bibliografia_df = pd.DataFrame(row['bibliografia'].split('\n'), columns=['bibliografia'])
-        bibliografia_df = bibliografia_df[bibliografia_df['bibliografia'] != '']
-        bibliografia_df['autor pozycji'] = bibliografia_df['bibliografia'].apply(lambda x: re.sub('(^.+?)(\..+$)', r'\1', x))
-        bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].replace('-+|—+|–+', np.nan, regex=True).ffill()       
-        bibliografia_df['pozycja'] = bibliografia_df['bibliografia'].apply(lambda x: re.sub('(^.+?)(\..+$)', r'\2', x))
-        bibliografia_df['id'] = bibliografia_df.index+1
-        bibliografia_df['id'] = bibliografia_df['id'].astype(str) + '. '
-        bibliografia_df = bibliografia_df['id'] + bibliografia_df['autor pozycji'] + bibliografia_df['pozycja'] + '\n' 
-
-        bibliografia = browser.find_element_by_name('citations').send_keys(bibliografia_df, Keys.BACK_SPACE)
+            bibliografia_df = pd.DataFrame(row['bibliografia'].split('\n'), columns=['bibliografia'])
+            bibliografia_df = bibliografia_df[bibliografia_df['bibliografia'] != '']
+            bibliografia_df['autor pozycji'] = bibliografia_df['bibliografia'].apply(lambda x: re.sub('(^.+?)(\..+$)', r'\1', x))
+            bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].apply(lambda x: jest_autor(x))
+            bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].replace('-+|—+|–+', np.nan, regex=True).ffill()       
+            bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: re.sub(f"{x['autor pozycji']}.", '', x['bibliografia']).strip(), axis=1)
+            bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: x['bibliografia'] if x['pozycja'] == '' else x['pozycja'], axis=1)
+            bibliografia_df['pozycja'] = bibliografia_df['pozycja'].str.replace('-+|—+|–+', '', regex=True)
+            bibliografia_df['id'] = bibliografia_df.index+1
+            bibliografia_df['id'] = bibliografia_df['id']
+            bibliografia_df = bibliografia_df.replace(r'^\s*$', np.nan, regex=True)
+            bibliografia_df['bibliografia'] =  bibliografia_df[['id', 'autor pozycji', 'pozycja']].apply(lambda x: '. '.join(x.dropna().astype(str)), axis=1)
+            bibliografia_df = '\n'.join(bibliografia_df['bibliografia'].str.replace('(\. )+', '. ', regex=True).to_list())
+            
+            bibliografia = browser.find_element_by_name('citations').send_keys(bibliografia_df, Keys.BACK_SPACE)
         
         for a, o, af, b in zip(row['autor'].split('❦'), row['ORCID'].split('❦'), row['afiliacja'].split('❦'), row['biogram'].split('❦')):
             wspolautor_dodaj = browser.find_element_by_xpath("//a[@title = 'Dodaj autora']").click()
             autor_imie = re.findall('.+(?= (?!.* ))', a)[0]
+            time.sleep(2)
             wprowadz_imie = browser.find_element_by_name('givenName[pl_PL]').send_keys(autor_imie)
             autor_nazwisko = re.findall('(?<= (?!.* )).+', a)[0]
             wprowadz_nazwisko = browser.find_element_by_name('familyName[pl_PL]').send_keys(autor_nazwisko)
             kontakt = browser.find_element_by_name('email').send_keys('pressto@amu.edu.pl')
             kraj = browser.find_element_by_xpath("//select[@id = 'country']/option[text()='Polska']").click()
-            orcid = f"https://orcid.org/{o}"
-            wprowadz_orcid = browser.find_element_by_name('orcid').send_keys(orcid)
+            if len(o) > 0:
+                orcid = f"https://orcid.org/{o}"
+                wprowadz_orcid = browser.find_element_by_name('orcid').send_keys(orcid)
             afiliacja = browser.find_element_by_xpath("//input[@name='affiliation[pl_PL]']").send_keys(af)
             biogram = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[-2].click()
             biogram = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(b)
@@ -603,7 +625,8 @@ for i, row in aktualny_numer.iterrows():
             kliknij_poza_biogram = browser.find_element_by_name('orcid').click()
             rola_autora = browser.find_element_by_xpath("//input[@name='userGroupId' and @value='14']").click()
             zapisz_autora = browser.find_elements_by_xpath("//button[@class = 'pkp_button submitFormButton']")[-1].click()
-            
+        
+        time.sleep(2)    
         dodaj_plik_pl = browser.find_element_by_xpath("//a[@title='Dodaj plik do publikacji']").click()
         time.sleep(2)
         etykieta = browser.find_element_by_xpath("//input[@class='field text required' and @name = 'label']").send_keys('PDF')
@@ -621,7 +644,7 @@ for i, row in aktualny_numer.iterrows():
         zewnetrzny_url = browser.find_element_by_name('remoteURL').send_keys(aktualny_numer.at[i+1, 'link do pdf'])
         zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
         zapisz[-1].click()
-        
+        time.sleep(2)
         zaplanuj_do_publikacji = browser.find_element_by_id('articlePublished').click()
         time.sleep(2)
         publikuj_w = browser.find_element_by_xpath(f"//select[@id = 'issueId']/option[text()='{nazwa_numeru}']").click()
@@ -636,6 +659,7 @@ for i, row in aktualny_numer.iterrows():
         
         wzoc_do_zgloszenia = browser.find_element_by_xpath("//a[contains(text(),'Go to Submission')]").click()
         metadane = browser.find_element_by_xpath("//a[@title = 'Wyświetl metadane zgłoszenia']").click()
+        time.sleep(2)
         identyfikatory = browser.find_element_by_xpath("//a[@name = 'catalog' and @class = 'ui-tabs-anchor']").click()
         doi_artykulu = browser.find_element_by_xpath("//p[contains(text(), 'fp')]").text
         
@@ -664,6 +688,14 @@ for i, row in aktualny_numer.iterrows():
 print('Artykuły na pressto opublikowane i dodane DOI na wordpressie')
 
 browser.close()
+
+#uzupełnienie tabeli artykułów na dysku google
+
+df_to_gsheet(aktualny_numer, gs_table, 'artykuły po pętli')
+
+#uzupełnienie tabeli numeru na dysku google
+
+df_to_gsheet(strona_numeru, gs_table, 'strona po pętli')
 
 print('Done')
 

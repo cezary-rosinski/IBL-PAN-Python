@@ -1,3 +1,8 @@
+# wygenerować raz jeszcze i sprawdzić wszystkie nan
+# połączyć wszystkie wersje tytułów z typami tytułów
+# dać jeden typ tytułu dla tytułu i języka tytułu
+# szczegółowo przyjrzeć się przypisywanym automatycznie działom
+
 import pandas as pd
 import numpy as np
 from my_functions import marc_parser_1_field, gsheet_to_df, mrk_to_df, df_to_gsheet, cSplit, df_to_mrc, mrc_to_mrk, get_cosine_result
@@ -11,6 +16,7 @@ import openpyxl
 import roman
 import xml.etree.ElementTree as et
 import requests
+from functools import reduce
 
 # def
 def unique_subfields(x):
@@ -267,7 +273,7 @@ Book_headings_heading_name_11 = marc_parser_1_field(df, '001', '610', '\$').drop
 Book_headings_heading_name_11['Book.headings.heading.name'] = Book_headings_heading_name_11[Book_headings_heading_name_11.columns[1:]].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
 Book_headings_heading_name_11 = Book_headings_heading_name_11[['001', 'Book.headings.heading.name']]
 
-Book_headings_heading_name = pd.concat([Book_headings_heading_name_01, Book_headings_heading_name_02, Book_headings_heading_name_03, Book_headings_heading_name_04, Book_headings_heading_name_05, Book_headings_heading_name_06, Book_headings_heading_name_07, Book_headings_heading_name_08, Book_headings_heading_name_09, Book_headings_heading_name_10], Book_headings_heading_name_11).drop_duplicates().reset_index(drop=True)
+Book_headings_heading_name = pd.concat([Book_headings_heading_name_01, Book_headings_heading_name_02, Book_headings_heading_name_03, Book_headings_heading_name_04, Book_headings_heading_name_05, Book_headings_heading_name_06, Book_headings_heading_name_07, Book_headings_heading_name_08, Book_headings_heading_name_09, Book_headings_heading_name_10, Book_headings_heading_name_11]).drop_duplicates().reset_index(drop=True)
 
 Book_headings_heading_name['Book.headings.heading.name'] = Book_headings_heading_name.groupby('001')['Book.headings.heading.name'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
 Book_headings_heading_name = Book_headings_heading_name.drop_duplicates().reset_index(drop=True)
@@ -496,9 +502,85 @@ Book_annotations = Book_annotations.drop_duplicates().reset_index(drop=True)
 bn_700 = marc_parser_1_field(df, '001', '700', '\$').drop_duplicates().reset_index(drop=True)
 bn_700 = bn_700[(~bn_700['001'].isin(Book_authors_person_names_name_02['001'])) &
                 (~bn_700['001'].isin(Book_annotations_02['001']))]
+bn_700['index'] = bn_700.index+1
+bn_700 = cSplit(bn_700, 'index', '$e', '❦')
 
-test = bn_700['$e'].drop_duplicates().to_list()
-test = [t for t in test if '.' in t and '❦' not in t]
+MARC_wspoltworcy = gsheet_to_df('1FlDXlbPmVfRXu382QxqJ63FnHWlXx91hvv5ztcl0dpA', 'Arkusz1')
+MARC_wspoltworcy['index'] = MARC_wspoltworcy.index+1
+MARC_wspoltworcy['BN'] = MARC_wspoltworcy[['rodzaje współpracy', 'określenie współpracy', 'BN skrót']].apply(lambda x: '❦'.join(x.drop_duplicates().dropna().astype(str)), axis=1)
+MARC_wspoltworcy = cSplit(MARC_wspoltworcy[['index', 'PBL java', 'PBL funkcja', 'BN']], 'index', 'BN', '❦').drop(columns='index')
+
+query = "select * from bn_700 a join MARC_wspoltworcy b on a.'$e' like '%'||b.'BN'||'%'"
+bn_700 = pandasql.sqldf(query).drop(columns='BN').drop_duplicates().reset_index(drop=True).replace(r'^\s*$', np.nan, regex=True)
+
+bn_700['PBL funkcja'] = bn_700['PBL funkcja'].apply(lambda x: 'inni' if pd.isna(x) else x)
+bn_700['$a'] = bn_700[['$a', '$b']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
+bn_700 = bn_700[['001', '$a', 'PBL java', 'PBL funkcja']].rename(columns={'PBL funkcja': 'Book.coCreations.coCreationTypes'})
+
+for i, row in bn_700.iterrows():
+    bn_700.at[i, row['PBL java']] = row['$a']
+    
+Book_mailingParts_addressee_authors_person_names_name = bn_700[bn_700['Book.mailingParts.addressee.authors.person.names.name'].notnull()][['001', 'Book.mailingParts.addressee.authors.person.names.name']]
+
+# ogarnąć podział między pytającym i odpowiadającym w wywiadzie (vide: b0000005481278 i Olga Tokarczuk z dwoma funkcjami)
+
+Book_interviewParts_interviewer_authors_person_names_name = bn_700[bn_700['Book.interviewParts.interviewer.authors.person.names.name'].notnull()][['001', 'Book.interviewParts.interviewer.authors.person.names.name']]
+
+Book_interviewParts_interlocutor_authors_person_names_name = bn_700[bn_700['Book.interviewParts.interlocutor.authors.person.names.name'].notnull()][['001', 'Book.interviewParts.interlocutor.authors.person.names.name']]
+
+Book_coCreations_coCreators = bn_700[bn_700['Book.coCreations.coCreators'].notnull()][['001', 'Book.coCreations.coCreators', 'Book.coCreations.coCreationTypes']]
+
+#na później
+# Book_linkedRecords = marc_parser_1_field(df, '001', '787', '\$').drop_duplicates().reset_index(drop=True)
+
+# na później - dla książek nie mamy odnośników do pełnych tekstów
+# Book_externalLinks_url = marc_parser_1_field(df, '001', '856', '\$').drop_duplicates().reset_index(drop=True)
+
+dfs = [book_id,
+       Book_publishingHouses_places_country_name,
+       Book_recordTypes,
+       Book_languages,
+       Book_titles_language,
+       Book_remarks,
+       Book_authors_person_names_name,
+       Book_triggerInstitutions_history_names_name,
+       Book_linkedEvents_names_name,
+       Book_headings_heading_name,
+       Book_linkedCreativeWorks_titles_title,
+       Book_titles_title,
+       Book_edition,
+       Book_publishingHouses_places_name,
+       Book_publishingHouses_institution_history_names_name,
+       Book_publicationYear_year,
+       Book_physicalDescription_description,
+       Book_belongingToSeries_series_principalTitle,
+       Book_belongingToSeries_seriesSubtitle,
+       Book_belongingToSeries_seriesNumber,
+       Book_annotations,
+       Book_mailingParts_addressee_authors_person_names_name,
+       Book_interviewParts_interviewer_authors_person_names_name,
+       Book_interviewParts_interlocutor_authors_person_names_name,
+       Book_coCreations_coCreators]
+
+pbl_ibl_waw_pl = reduce(lambda left,right: pd.merge(left,right,on='001', how='outer'), dfs)
+  
+pbl_ibl_waw_pl.to_excel('pbl_ibl_waw_pl.xlsx', index=False)
+
+
+
+
+
+pbl_marc_books['LDR'] = LDR
+pbl_marc_books['040'] = X040
+del pbl_marc_books['rekord_id']
+columns_list = pbl_marc_books.columns.tolist()
+columns_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+pbl_marc_books = pbl_marc_books.reindex(columns=columns_list)
+
+pbl_marc_books.to_excel('pbl_marc_books.xlsx', index=False)
+
+
+
 
 
 
