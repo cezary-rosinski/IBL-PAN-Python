@@ -1,3 +1,8 @@
+# wybiera się zły obrazek dla strony numeru - naprawić
+# dopisać sprawdzenie, czy wszystkie pola w pliku wsadowym są wypełnione
+# w pressto dla przekładów dodawać tylko jedną wersję
+# w pressto dodawać tłumaczy także dla polskich tekstów
+
 from my_functions import gsheet_to_df, df_to_gsheet
 import pandas as pd
 import regex as re
