@@ -1,11 +1,17 @@
 # przygotowanie książek do importu
 import pandas as pd
-from my_functions import marc_parser_1_field, unique_elem_from_column_split, cSplit, replacenth, gsheet_to_df, df_to_gsheet
-import regex
-import re
+from my_functions import marc_parser_1_field, unique_elem_from_column_split, cSplit, replacenth, gsheet_to_df, df_to_gsheet, get_cosine_result
+import regex as re
 from functools import reduce
 import numpy as np
 import copy
+import requests
+from bs4 import BeautifulSoup
+from SPARQLWrapper import SPARQLWrapper, JSON
+from urllib.error import HTTPError
+from http.client import RemoteDisconnected
+import time
+import xml.etree.ElementTree as et
 
 bn_books = pd.read_csv("F:/Cezary/Documents/IBL/Samizdat/bn_books.csv", sep=';')
 bn_books.iloc[142, 18] = '%fWspomnienia 1939-1945 : (fragmenty) %bPużak Kazimierz %ss. 58-130 %z1|%fPolitycy i żołnierze %bGarliński Józef %ss. 131-147 %z2|%aZawiera : "Proces szesnastu" w Moskwie : (wspomnienia osobiste) / K.      Bagiński. Wspomnienia 1939-1945 : (fragmenty) / K. Pużak. Politycy i      żołnierze / J. Garliński %bBagiński Kazimierz %f"Proces szesnastu" w      Moskwie %ss. 3-57 %z0'
@@ -657,6 +663,214 @@ samizdat_people['index'] = samizdat_people.index+1
 test = cSplit(samizdat_people, 'index', 'name_form_id', '|')
 
 name_and_id = samizdat_people[['name_form', 'id_osoby']]
+
+#04.01.2021 - samizdat people  
+
+samizdat_people = gsheet_to_df('1HE-bKfnISmtFqSGci7OvG2wzcpZE9A5SYoYBnPPHQJ0', 'Arkusz1').drop_duplicates()[['Project_ID', 'Index_Name', 'Other_Name_Form']]
+samizdat_people['Project_ID'] = samizdat_people['Project_ID'].astype(int)
+samizdat_people_other_names = cSplit(samizdat_people[['Project_ID', 'Other_Name_Form']], 'Project_ID', 'Other_Name_Form', '; ')
+samizdat_people_other_names = samizdat_people_other_names[samizdat_people_other_names['Other_Name_Form'].notnull()].rename(columns={'Other_Name_Form': 'Index_Name'})
+samizdat_people = pd.concat([samizdat_people[['Project_ID', 'Index_Name']], samizdat_people_other_names]).sort_values('Project_ID').drop_duplicates().reset_index(drop=True)
+
+# viaf
+samizdat_viaf = pd.DataFrame()
+for index, row in samizdat_people.iterrows():
+
+    search_name = row['Index_Name']
+    
+    print(str(index+1) + '/' + str(len(samizdat_people)))
+    connection_no = 1
+    while True:
+        try:
+            people_links = []
+            while len(people_links) == 0 and len(search_name) > 0:
+                url = re.sub('\s+', '%20', f"http://viaf.org/viaf/search?query=local.personalNames%20all%20%22{search_name}%22&sortKeys=holdingscount&recordSchema=BriefVIAF")
+                response = requests.get(url)
+                response.encoding = 'UTF-8'
+                soup = BeautifulSoup(response.text, 'html.parser')
+                people_links = soup.findAll('a', attrs={'href': re.compile("viaf/\d+")})
+                if len(people_links) == 0:
+                    search_name = ' '.join(search_name.split(' ')[:-1])
+                
+            if len(people_links) > 0:
+                viaf_people = []
+                for people in people_links:
+                    person_name = re.split('â\x80\x8e|\u200e ', re.sub('\s+', ' ', people.text).strip())
+                    person_link = re.sub(r'(.+?)(\#.+$)', r'http://viaf.org\1viaf.xml', people['href'].strip())
+                    person_link = [person_link] * len(person_name)
+# =============================================================================
+#                     libraries = str(people).split('<br/>')
+#                     libraries = [re.sub('(.+)(\<span.*+$)', r'\2', s.replace('\n', ' ')) for s in libraries if 'span' in s]
+#                     single_record = list(zip(person_name, person_link, libraries))
+#                     viaf_people += single_record
+#                 viaf_people = pd.DataFrame(viaf_people, columns=['viaf name', 'viaf', 'libraries'])
+# =============================================================================
+                    single_record = list(zip(person_name, person_link))
+                    viaf_people += single_record
+                viaf_people = pd.DataFrame(viaf_people, columns=['viaf name', 'viaf'])
+                viaf_people['Project_ID'] = row['Project_ID']
+                viaf_people['Index_Name'] = row['Index_Name']
+                viaf_people['search name'] = search_name
+                for ind, vname in viaf_people.iterrows():
+                    viaf_people.at[ind, 'cosine'] = get_cosine_result(vname['viaf name'], vname['search name'])
+        
+                if viaf_people['cosine'].max() >= 0.5:
+                    viaf_people = viaf_people[viaf_people['cosine'] >= 0.5]
+                else:
+                    viaf_people = viaf_people[viaf_people['cosine'] == viaf_people['cosine'].max()]
+
+# czy informacja o nazwie z polskiej biblioteki jest istotna?                
+# =============================================================================
+#                 viaf_people['polish library'] = viaf_people['libraries'].apply(lambda x: True if re.findall('Biblioteka Narodowa \(Polska\)|NUKAT \(Polska\)|National Library of Poland|NUKAT Center of Warsaw University Library', x) else False)
+#                 viaf_people = viaf_people.drop(columns=['libraries', 'search name', 'cosine'])
+#                 viaf_people['viaf name'] = viaf_people.groupby(['viaf', 'Project_ID'])['viaf name'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+# =============================================================================
+                    
+                viaf_people = viaf_people.drop(columns='search name').drop_duplicates().reset_index(drop=True) 
+            
+                samizdat_viaf = samizdat_viaf.append(viaf_people)
+            else:
+                viaf_people = pd.DataFrame({'viaf name': ['brak'], 'viaf': ['brak'], 'Project_ID': [row['Project_ID']], 'Index_Name': [row['Index_Name']]})
+                samizdat_viaf = samizdat_viaf.append(viaf_people)
+        except (IndexError, KeyError):
+            pass
+        except requests.exceptions.ConnectionError:
+            print(connection_no)
+            connection_no += 1
+            time.sleep(300)
+            continue
+        break
+
+samizdat_viaf = samizdat_viaf[samizdat_viaf['viaf name'] != 'brak']
+for column in samizdat_viaf.drop(columns=['viaf', 'Project_ID']):
+    samizdat_viaf[column] = samizdat_viaf.groupby(['viaf', 'Project_ID'])[column].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+samizdat_viaf = samizdat_viaf.drop_duplicates().reset_index(drop=True) 
+
+df_to_gsheet(samizdat_viaf, '1HE-bKfnISmtFqSGci7OvG2wzcpZE9A5SYoYBnPPHQJ0', 'match with viaf')
+
+# wikidata enrichment
+
+samizdat_viaf = gsheet_to_df('1HE-bKfnISmtFqSGci7OvG2wzcpZE9A5SYoYBnPPHQJ0', 'match with viaf')
+sparql = SPARQLWrapper("https://query.wikidata.org/sparql")
+
+samizdat_wikidata = pd.DataFrame()
+for i, row in samizdat_viaf.iterrows():
+    print(f"{i+1}/{len(samizdat_viaf)}")
+    try:
+        viaf = re.findall('\d+', row['viaf'])[0]
+        sparql_query = f"""PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+        SELECT distinct ?autor ?autorLabel ?birthplaceLabel ?deathplaceLabel ?birthdate ?deathdate ?sexLabel ?pseudonym ?occupationLabel WHERE {{ 
+          ?autor wdt:P214 "{viaf}" ;
+          wdt:P19 ?birthplace ;
+          wdt:P569 ?birthdate ;
+          wdt:P570  ?deathdate ; 
+          optional {{ ?autor wdt:P20 ?deathplace . }}
+          optional {{ ?autor wdt:P21 ?sex . }}
+          optional {{ ?autor wdt:P106 ?occupation . }}
+          optional {{ ?autor wdt:P742 ?pseudonym . }}
+        SERVICE wikibase:label {{ bd:serviceParam wikibase:language "pl". }}}}"""    
+        sparql.setQuery(sparql_query)
+        sparql.setReturnFormat(JSON)
+        results = sparql.query().convert()
+    
+        results_df = pd.io.json.json_normalize(results['results']['bindings'])
+        results_df['viaf'] = viaf
+    
+        for column in results_df.drop(columns='viaf'):
+            results_df[column] = results_df.groupby('viaf')[column].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+        results_df = results_df.drop_duplicates().reset_index(drop=True)   
+        
+        samizdat_wikidata = samizdat_wikidata.append(results_df)
+    except (HTTPError, RemoteDisconnected):
+        time.sleep(61)
+        continue
+        
+
+samizdat_wikidata = samizdat_wikidata[['viaf', 'autor.value', 'birthdate.value', 'deathdate.value', 'birthplaceLabel.value', 'deathplaceLabel.value', 'sexLabel.value', 'pseudonym.value', 'occupationLabel.value']]
+samizdat_viaf['viaf'] = samizdat_viaf['viaf'].apply(lambda x: re.findall('\d+', x)[0])
+samizdat_wikidata = pd.merge(samizdat_viaf, samizdat_wikidata, how='left', on='viaf').drop_duplicates().reset_index(drop=True)
+
+df_to_gsheet(samizdat_wikidata, '1HE-bKfnISmtFqSGci7OvG2wzcpZE9A5SYoYBnPPHQJ0', 'wikidata enrichment')
+
+# viaf enrichment
+
+samizdat_viaf = gsheet_to_df('1HE-bKfnISmtFqSGci7OvG2wzcpZE9A5SYoYBnPPHQJ0', 'match with viaf')
+ns = '{http://viaf.org/viaf/terms#}'
+
+samizdat_viaf_enrichment = pd.DataFrame()
+for i, row in samizdat_viaf.iterrows():
+    print(f"{i+1}/{len(samizdat_viaf)}")
+    url = row['viaf']
+    
+    response = requests.get(url)
+    with open('viaf.xml', 'wb') as file:
+        file.write(response.content)
+    tree = et.parse('viaf.xml')
+    root = tree.getroot()
+    birth_date = root.findall(f'.//{ns}birthDate')
+    birth_date = '❦'.join([t.text for t in birth_date])
+    death_date = root.findall(f'.//{ns}deathDate')
+    death_date = '❦'.join([t.text for t in death_date])
+    occupation = root.findall(f'.//{ns}occupation/{ns}data/{ns}text')
+    occupation = '❦'.join([t.text for t in occupation])
+    gender = root.findall(f'.//{ns}gender')
+    gender = '❦'.join([t.text for t in gender])
+    viaf_record = [url, birth_date, death_date, occupation, gender]
+    samizdat_viaf_enrichment = samizdat_viaf_enrichment.append(viaf_record)
+
+samizdat_viaf_enrichment = pd.merge(samizdat_viaf, samizdat_viaf_enrichment, how='left', on='viaf')
+
+df_to_gsheet(samizdat_viaf_enrichment, '1HE-bKfnISmtFqSGci7OvG2wzcpZE9A5SYoYBnPPHQJ0', 'viaf enrichment')
+
+
+
+
+for index, row in X100.iterrows():
+    print(str(index) + '/' + str(len(X100)))
+    try:
+       
+
+                for i, line in viaf_people.iterrows():
+                    url = line['viaf']
+                    response = requests.get(url)
+                    with open('viaf.xml', 'wb') as file:
+                        file.write(response.content)
+                    tree = et.parse('viaf.xml')
+                    root = tree.getroot()
+                    viaf_id = root.findall(f'.//{ns}viafID')[0].text
+                    IDs = root.findall(f'.//{ns}mainHeadings/{ns}data/{ns}sources/{ns}sid')
+                    IDs = '❦'.join([t.text for t in IDs])
+                    nationality = root.findall(f'.//{ns}nationalityOfEntity/{ns}data/{ns}text')
+                    nationality = '❦'.join([t.text for t in nationality])
+                    occupation = root.findall(f'.//{ns}occupation/{ns}data/{ns}text')
+                    occupation = '❦'.join([t.text for t in occupation])
+                    language = root.findall(f'.//{ns}languageOfEntity/{ns}data/{ns}text')
+                    language = '❦'.join([t.text for t in language])
+                    names = root.findall(f'.//{ns}x400/{ns}datafield')
+                    sources = root.findall(f'.//{ns}x400/{ns}sources')
+                    name_source = []
+                    for (name, source) in zip(names, sources):   
+                        person_name = ' '.join([child.text for child in name.getchildren() if child.tag == f'{ns}subfield' and child.attrib['code'].isalpha()])
+                        library = '~'.join([child.text for child in source.getchildren() if child.tag == f'{ns}sid'])
+                        name_source.append([person_name, library])   
+                    for i, elem in enumerate(name_source):
+                        name_source[i] = '‽'.join(name_source[i])
+                    name_source = '❦'.join(name_source)
+                    
+                    person = [row['index'], row['$$a'], row['$$d'], viaf_id, IDs, nationality, occupation, language, name_source]
+                    viaf_enrichment.append(person)
+            except (KeyError, IndexError):
+                person = [row['index'], row['$$a'], row['$$d'], '', '', '', '', '', '']
+                viaf_enrichment.append(person)
+    except IndexError:
+        error = [row['index'], row['$$a'], row['$$d']]
+        viaf_errors.append(error)       
+
+
+
+
+
+
 
 
 
