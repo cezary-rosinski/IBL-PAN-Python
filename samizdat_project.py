@@ -794,6 +794,8 @@ df_to_gsheet(samizdat_wikidata, '1HE-bKfnISmtFqSGci7OvG2wzcpZE9A5SYoYBnPPHQJ0', 
 
 # viaf enrichment
 
+# wpisać try catch dla ConnectionError
+
 samizdat_viaf = gsheet_to_df('1HE-bKfnISmtFqSGci7OvG2wzcpZE9A5SYoYBnPPHQJ0', 'match with viaf')
 ns = '{http://viaf.org/viaf/terms#}'
 
