@@ -794,35 +794,46 @@ df_to_gsheet(samizdat_wikidata, '1HE-bKfnISmtFqSGci7OvG2wzcpZE9A5SYoYBnPPHQJ0', 
 
 # viaf enrichment
 
-# wpisać try catch dla ConnectionError
-
 samizdat_viaf = gsheet_to_df('1HE-bKfnISmtFqSGci7OvG2wzcpZE9A5SYoYBnPPHQJ0', 'match with viaf')
 ns = '{http://viaf.org/viaf/terms#}'
 
 samizdat_viaf_enrichment = pd.DataFrame()
 for i, row in samizdat_viaf.iterrows():
-    print(f"{i+1}/{len(samizdat_viaf)}")
-    url = row['viaf']
-    
-    response = requests.get(url)
-    with open('viaf.xml', 'wb') as file:
-        file.write(response.content)
-    tree = et.parse('viaf.xml')
-    root = tree.getroot()
-    birth_date = root.findall(f'.//{ns}birthDate')
-    birth_date = '❦'.join([t.text for t in birth_date])
-    death_date = root.findall(f'.//{ns}deathDate')
-    death_date = '❦'.join([t.text for t in death_date])
-    occupation = root.findall(f'.//{ns}occupation/{ns}data/{ns}text')
-    occupation = '❦'.join([t.text for t in occupation])
-    gender = root.findall(f'.//{ns}gender')
-    gender = '❦'.join([t.text for t in gender])
-    viaf_record = [url, birth_date, death_date, occupation, gender]
-    samizdat_viaf_enrichment = samizdat_viaf_enrichment.append(viaf_record)
+    try:
+        print(f"{i+1}/{len(samizdat_viaf)}")
+        connection_no = 1
+        viaf = row['viaf']
+        
+        response = requests.get(viaf)
+        with open('viaf.xml', 'wb') as file:
+            file.write(response.content)
+        tree = et.parse('viaf.xml')
+        root = tree.getroot()
+        birth_date = root.findall(f'.//{ns}birthDate')
+        birth_date = '❦'.join([t.text for t in birth_date])
+        death_date = root.findall(f'.//{ns}deathDate')
+        death_date = '❦'.join([t.text for t in death_date])
+        occupation = root.findall(f'.//{ns}occupation/{ns}data/{ns}text')
+        occupation = '❦'.join([t.text for t in occupation])
+        gender = root.findall(f'.//{ns}gender')
+        gender = '❦'.join([t.text for t in gender])
+        viaf_record = [viaf, birth_date, death_date, occupation, gender]
+        viaf_record = pd.DataFrame([viaf_record], columns=['viaf', 'birth_date', 'death_date', 'occupation', 'gender'])
+        samizdat_viaf_enrichment = samizdat_viaf_enrichment.append(viaf_record)
+    except requests.exceptions.ConnectionError:
+        print(connection_no)
+        connection_no += 1
+        time.sleep(61)
+        continue
+        break
 
 samizdat_viaf_enrichment = pd.merge(samizdat_viaf, samizdat_viaf_enrichment, how='left', on='viaf')
 
 df_to_gsheet(samizdat_viaf_enrichment, '1HE-bKfnISmtFqSGci7OvG2wzcpZE9A5SYoYBnPPHQJ0', 'viaf enrichment')
+
+
+
+
 
 
 

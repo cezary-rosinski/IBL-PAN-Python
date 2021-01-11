@@ -871,6 +871,77 @@ second_negative_to_check = pandasql.sqldf(second_negative_to_check)
 
 second_negative_to_check.to_excel("oclc_negative_with_no_diacritics.xlsx", index=False)
 
+# 05.01.2021 
+# oclc pl and pl harvesting comparison
+
+oclc_pl_files = ['C:/Users/Cezary/Documents/IBL-PAN-Python/oclc_pol_positive.xlsx', 'C:/Users/Cezary/Documents/IBL-PAN-Python/oclc_pol_second_positive.xlsx']
+
+oclc_pl = pd.DataFrame()
+for path in oclc_pl_files:
+    df = pd.read_excel(path, engine='openpyxl')
+    oclc_pl = oclc_pl.append(df)
+    
+ 
+
+oclc_pl = oclc_pl[['001', '008', '100', '245', '260', '300']]
+oclc_pl['year'] = oclc_pl['008'].apply(lambda x: x[7:11])
+oclc_pl['join column'] = oclc_pl[['245', '260', '300']].apply(lambda x: unidecode.unidecode('❦'.join(x.dropna().astype(str)).lower().replace(' ', '')), axis=1)
+    
+bn_pl = pd.read_excel('C:/Users/Cezary/Documents/IBL-PAN-Python/pol_data_clean.xlsx', engine='openpyxl')
+bn_pl = bn_pl[bn_pl['language'] == 'pol'][['id', '008', '009', '100', '245', '260', '300']]
+bn_pl['year'] = bn_pl['008'].apply(lambda x: x[7:11])
+bn_pl['join column'] = bn_pl[['245', '260', '300']].apply(lambda x: unidecode.unidecode('❦'.join(x.dropna().astype(str)).lower().replace(' ', '')), axis=1)
+
+
+test1 = oclc_pl[(oclc_pl['100'].notnull()) & (oclc_pl['100'].str.contains('Hašek'))].reset_index(drop=True)
+test2 = bn_pl[(bn_pl['100'].notnull()) & (bn_pl['100'].str.contains('Hašek'))].reset_index(drop=True)
+
+type(test2['join column'])
+
+record = oclc_pl[oclc_pl['001'] == 836286406]
+
+query = "select * from test1 a join test2 b on a.'join column' like b.'join column'"
+test_merged = pandasql.sqldf(query)
+
+test_merged = pd.merge(test1, test2, how='outer', on='join column')
+
+'š' == 'š'
+
+t_oclc = test1.iloc[41,:]
+t_bn = test2.iloc[40,:]
+
+o = '10$aprzygodydobregowojakaszwejkapodczaswojnyswiatowej.$nt.1,$pszwejknatylach/$cjaroslavhasek;[autoryz.przekl.zczes.p.hulki-laskowskiego].\\$a[warszawa]:$btowarzystwowydawnicze"roj",$c1929$e(warszawa:$f"rola").\\$a287,[1]s.;$c19cm.'
+
+b = '10$aprzygodydobregowojakaszwejkapodczaswojnyswiatowej.$nt.1,$pszwejknatylach/$cjaroslavhasek;[autoryz.przekl.zczes.p.hulki-laskowskiego].\\$a[warszawa]:$btowarzystwowydawnicze"roj",$c1929$e(warszawa:$f"rola").\\$a287,[1]s.;$c19cm.'
+
+o == b
+
+#oclc
+oclc245 = unidecode.unidecode('10$aPrzygody dobrego wojaka Szwejka podczas wojny światowej.$nT. 1,$pSzwejk na tyłach /$cJaroslav Hašek ; [autoryz. przekł. z czes. P. Hulki-Laskowskiego].').replace(' ', '')
+
+oclc260 = '\\$a[Warszawa] :$bTowarzystwo Wydawnicze "Rój",$c1929$e(Warszawa :$f"Rola").'
+
+oclc300 = '\\$a287, [1] s. ;$c19 cm.'
+
+#bn
+
+bn245 = unidecode.unidecode('10$aPrzygody dobrego wojaka Szwejka podczas wojny światowej. $nT. 1,$pSzwejk na tyłach /$cJaroslav Hašek ; [autoryz. przekł. z czes. P. Hulki-Laskowskiego].').replace(' ', '')
+
+oclc245 == bn245
+
+\\$a[Warszawa] :$bTowarzystwo Wydawnicze "Rój",$c1929$e(Warszawa :$f"Rola").
+
+\\$a287, [1] s. ;$c19 cm.
+
+#unidecode, remove spaces, lowercase, preserve only letters and numbers
+
+
+
+
+
+
+
+
 
 
 
