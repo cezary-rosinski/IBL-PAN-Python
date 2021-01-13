@@ -760,9 +760,9 @@ for i, row in samizdat_viaf.iterrows():
         sparql_query = f"""PREFIX wdt: <http://www.wikidata.org/prop/direct/>
         SELECT distinct ?autor ?autorLabel ?birthplaceLabel ?deathplaceLabel ?birthdate ?deathdate ?sexLabel ?pseudonym ?occupationLabel WHERE {{ 
           ?autor wdt:P214 "{viaf}" ;
-          wdt:P19 ?birthplace ;
-          wdt:P569 ?birthdate ;
-          wdt:P570  ?deathdate ; 
+          optional {{ ?autor wdt:P19 ?birthplace . }}
+          optional {{ ?autor wdt:P569 ?birthdate . }}
+          optional {{ ?autor wdt:P570 ?deathdate . }}
           optional {{ ?autor wdt:P20 ?deathplace . }}
           optional {{ ?autor wdt:P21 ?sex . }}
           optional {{ ?autor wdt:P106 ?occupation . }}
@@ -863,6 +863,38 @@ for id, group in wikidata_grouped:
         wikidata_to_check = wikidata_to_check.append(group)
 
 df_to_gsheet(wikidata_ok, '1STLQEAowxJOL_WpwWs-6gnexRCyf-9qFAqovVxO8Mcw', 'wikidata_ok')
+
+wikidata_to_check.reset_index(drop=True, inplace=True)
+
+ns = '{http://viaf.org/viaf/terms#}'
+for i, row in wikidata_to_check.iterrows():
+    try:
+        print(f"{i+1}/{len(wikidata_to_check)}")
+        connection_no = 1
+        viaf = row['viaf']
+        url = f"http://viaf.org/viaf/{viaf}/viaf.xml"
+        response = requests.get(url)
+        with open('viaf.xml', 'wb') as file:
+            file.write(response.content)
+        tree = et.parse('viaf.xml')
+        root = tree.getroot()
+        works = root.findall(f'.//{ns}title')
+        works = '❦'.join([t.text for t in works])
+        publishers = root.findall(f'.//{ns}publishers/{ns}data/{ns}text')
+        publishers = '❦'.join([t.text for t in publishers])
+        wikidata_to_check.at[i, 'works'] = works
+        wikidata_to_check.at[i, 'publishers'] = publishers
+    except requests.exceptions.ConnectionError:
+        print(connection_no)
+        connection_no += 1
+        time.sleep(61)
+        continue
+        break
+
+for column in wikidata_to_check:
+    if wikidata_to_check[column].dtype == object:
+        wikidata_to_check[column] = wikidata_to_check[column].str.slice(0,50000)
+
 df_to_gsheet(wikidata_to_check, '1STLQEAowxJOL_WpwWs-6gnexRCyf-9qFAqovVxO8Mcw', 'wikidata_to_check')
 
 no_wikidata = no_wikidata.iloc[:,1:5]
@@ -927,6 +959,15 @@ for index, (osoba, link) in enumerate(encysol):
 encysol_df = pd.DataFrame(encysol, columns=['osoba', 'url', 'bio', 'data_urodzenia', 'data_smierci'])
 
 df_to_gsheet(encysol_df, '1jd2hlTyRbyhozCRXVH5_VOT2WBOz-NVJ0VtmuhJ548g')
+
+
+
+
+
+
+
+
+
 
 
 
