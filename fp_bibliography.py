@@ -20,7 +20,8 @@ import requests
 from bs4 import BeautifulSoup
 import pandasql
 import Levenshtein as lev
-from itertools import combinations
+import itertools
+import docx
 
 # local files
 
@@ -198,13 +199,94 @@ df_to_gsheet(test, '1PRoGI6mpOIrWiKs9AF87IMcTsGeBHUx5JNsZJwMnsDI', 'połączone'
 df_to_gsheet(fp_merged, '1PRoGI6mpOIrWiKs9AF87IMcTsGeBHUx5JNsZJwMnsDI', 'metadane')
 df_to_gsheet(local_df, '1PRoGI6mpOIrWiKs9AF87IMcTsGeBHUx5JNsZJwMnsDI', 'bibliografia załącznikowa')
 
+# 14.01.2021
 
+bibliography = gsheet_to_df('1PRoGI6mpOIrWiKs9AF87IMcTsGeBHUx5JNsZJwMnsDI', 'połączone').iloc[:,0:8]
+bibliography_metadata = gsheet_to_df('1PRoGI6mpOIrWiKs9AF87IMcTsGeBHUx5JNsZJwMnsDI', 'metadane')
 
+bibliography = pd.merge(bibliography, bibliography_metadata, how='left', left_on='metadane index', right_on='index').sort_values(['metadane index', 'rozszerzenie']).reset_index(drop=True)
 
+for i, row in bibliography.iterrows():
+    if row['rozszerzenie'] == 'docx':
+        bibliography.at[i, 'ścieżka do bibliografii'] = row['total']
+    elif row['rozszerzenie'] == 'pdf':
+        bibliography.at[i-1, 'ścieżka do pdf'] = row['total']
+        
+bibliography = bibliography[bibliography['ścieżka do bibliografii'].notnull()]
 
+# tytuł numeru	język	wstęp	folder lokalny	numer	rok	spis treści	link do pdf	link do jpg	jpg	odnosnik	url_edycji
 
+# lp	autor	ORCID	tytuł artykułu	kategoria	język	tytuł numeru	tag numeru	abstrakt	folder lokalny	afiliacja	biogram	bibliografia	słowa kluczowe	strony	tłumacz	tag autora	link do pdf	link do jpg	pdf	jpg	odnosnik	url_edycji	spis treści
 
+bibliography_articles = bibliography[['autor', 'tytuł artykułu', 'kategoria', 'język artykułu', 'tytuł numeru', 'tag numeru', 'total', 'www edycji artykułu', 'ścieżka do pdf', 'ścieżka do bibliografii']].rename(columns={'język artykułu':'język', 'total':'folder lokalny', 'www edycji artykułu':'url_edycji'})
 
+bibliography_articles['pdf'] = bibliography_articles['ścieżka do pdf'].apply(lambda x: re.split('(\\\\|\/)(?!.*(\\\\|\/))', x)[-1]).str.replace('\.pdf$', '', regex=True)
+
+numbers_order = ['lato 2015',
+ 'summer 2015',
+ 'jesień 2015',
+ 'fall 2015',
+ 'zima 2016',
+ 'winter 2016',
+ 'wiosna/lato 2016',
+ 'spring/summer 2016',
+ 'jesień 2016',
+ 'fall 2016',
+ 'zima 2017',
+ 'winter 2017',
+ 'wiosna/lato 2017',
+ 'spring/summer 2017',
+ 'jesień 2017',
+ 'fall 2017',
+ 'zima/wiosna 2018',
+ 'winter/spring 2018',
+ 'lato 2018',
+ 'summer 2018',
+ 'jesień 2018',
+ 'fall 2018',  
+ 'winter/spring 2019',
+ 'zima/wiosna 2019']
+
+categories_order = ['Teorie',
+ 'Przekłady',
+ 'Praktyki',
+ 'Słownik poetologiczny',
+ 'Archiwum poetologiczne',
+ 'Krytyki',
+ 'Polemiki']
+
+combinations = list(itertools.product(numbers_order, categories_order))
+
+bibliography_articles['sort'] = bibliography_articles[['tag numeru', 'kategoria']].apply(lambda x: (x['tag numeru'], x['kategoria']), axis=1).astype('category')
+bibliography_articles['sort'] = bibliography_articles['sort'].cat.set_categories(combinations, ordered=True)
+bibliography_articles = bibliography_articles.sort_values('sort').drop(columns='sort').reset_index(drop=True)
+
+# później jeszcze sortować po stronach, gdy Gerard je doda
+
+bibliography_articles['lp'] = None
+bibliography_articles['ORCID'] = None
+bibliography_articles['abstrakt'] = None
+bibliography_articles['afiliacja'] = None
+bibliography_articles['biogram'] = None
+
+def getText(filename):
+    doc = docx.Document(filename)
+    fullText = []
+    for para in doc.paragraphs:
+        fullText.append(para.text)
+    return '\n'.join(fullText)
+
+for i, row in bibliography_articles.iterrows():
+    print(f"{i+1}/{len(bibliography_articles)}")
+    path = re.sub('\\\\', '/', row['ścieżka do bibliografii'])
+    bibliography_articles.at[i, 'bibliografia'] = getText(path).strip()
+    
+bibliography_articles['słowa kluczowe'] = None
+bibliography_articles['strony'] = None
+bibliography_articles['tłumacz'] = None
+#bibliography_articles['długość bibliografii'] = bibliography_articles['bibliografia'].map(len)
+
+df_to_gsheet(bibliography_articles, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły')
 
 
 
