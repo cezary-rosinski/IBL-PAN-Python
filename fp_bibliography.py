@@ -288,11 +288,36 @@ bibliography_articles['tłumacz'] = None
 
 df_to_gsheet(bibliography_articles, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły')
 
+# ORCID enrichment
 
+fp_autorzy = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły')['autor'].drop_duplicates().to_list()
 
-
-
-
+browser = webdriver.Firefox()  
+final_output = []
+for i, autor in enumerate(fp_autorzy):
+    print(f"{i+1}/{len(fp_autorzy)}")
+    url = f"https://orcid.org/orcid-search/search?searchQuery={autor}"
+    imie = ' '.join(autor.split(' ')[:-1])
+    nazwisko = autor.split(' ')[-1]
+      
+    browser.get(url)
+    time.sleep(5)
+    orcid_id = [t.text for t in browser.find_elements_by_css_selector('#main a')]
+    orcid_url = [t.get_attribute('href') for t in browser.find_elements_by_css_selector('#main a')]
+    first_name = [t.text for t in browser.find_elements_by_css_selector('.orcid-id-column+ td')]
+    last_name = [t.text for t in browser.find_elements_by_css_selector('td:nth-child(3)')]
+    affiliations = [t.text for t in browser.find_elements_by_css_selector('td:nth-child(5)')]
+    total = list(zip(orcid_id, orcid_url, first_name, last_name, affiliations, itertools.repeat(autor)))[:5]
+    final_output += total
+    
+browser.close()
+        
+df = pd.DataFrame(final_output, columns=['orcid id', 'orcid url', 'first name', 'last name', 'affiliations', 'nazwa autora fp'])
+    
+df_to_gsheet(df, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'orcid')    
+    
+    
+    
 
 
 

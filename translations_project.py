@@ -8,7 +8,7 @@ import numpy as np
 import pymarc
 import io
 from bs4 import BeautifulSoup
-from my_functions import cosine_sim_2_elem, marc_parser_1_field, gsheet_to_df, xml_to_mrk, cSplit, f, df_to_mrc, mrc_to_mrk, mrk_to_df, xml_to_mrk, mrk_to_mrc, get_cosine_result
+from my_functions import cosine_sim_2_elem, marc_parser_1_field, gsheet_to_df, xml_to_mrk, cSplit, f, df_to_mrc, mrc_to_mrk, mrk_to_df, xml_to_mrk, mrk_to_mrc, get_cosine_result, df_to_gsheet
 import glob
 import regex
 import unidecode
@@ -934,6 +934,115 @@ oclc245 == bn245
 \\$a287, [1] s. ;$c19 cm.
 
 #unidecode, remove spaces, lowercase, preserve only letters and numbers
+
+# 15.01.2021
+
+oclc_lang = pd.read_csv('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv')
+oclc_viaf = pd.read_excel('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.xlsx', engine='openpyxl')
+oclc_full = pd.concat([oclc_lang, oclc_viaf])
+oclc_full['language'] = oclc_full['008'].apply(lambda x: x[35:38])
+oclc_other_languages = oclc_full[oclc_full['language'] != 'cze']
+oclc_other_languages['nature_of_contents'] = oclc_other_languages['008'].apply(lambda x: x[24:27])
+oclc_other_languages = oclc_other_languages[oclc_other_languages['nature_of_contents'].isin(['\\\\\\', '6\\\\', '\\6\\', '\\\\6'])]
+oclc_other_languages['type of record + bibliographic level'] = oclc_other_languages['LDR'].apply(lambda x: x[6:8])
+oclc_other_languages['fiction_type'] = oclc_other_languages['008'].apply(lambda x: x[33])
+
+fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
+languages = ['pol']
+viaf_positives = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1')['viaf_positive'].drop_duplicates().to_list()
+viaf_positives = [f"http://viaf.org/viaf/{l}" for l in viaf_positives if l]
+
+positive_viafs_names = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1')
+positive_viafs_names = positive_viafs_names[positive_viafs_names['viaf_positive'] != ''][['viaf_positive', 'all_names']]
+positive_viafs_names = cSplit(positive_viafs_names, 'viaf_positive', 'all_names', '❦')
+positive_viafs_names['all_names'] = positive_viafs_names['all_names'].apply(lambda x: re.sub('(.*?)(\$a.*?)(\$0.*$)', r'\2', x) if pd.notnull(x) else np.nan)
+positive_viafs_names = positive_viafs_names[positive_viafs_names['all_names'].notnull()].drop_duplicates()
+
+positive_viafs_diacritics = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'Sheet1')
+positive_viafs_diacritics = positive_viafs_diacritics[positive_viafs_diacritics['viaf_positive'] != ''][['viaf_positive', 'cz_name']]
+positive_viafs_diacritics['cz_name'] = positive_viafs_diacritics['cz_name'].apply(lambda x: unidecode.unidecode(x))
+
+for language in languages:
+    df = oclc_other_languages[(oclc_other_languages['language'] == language)]
+    df_language_materials_monographs = df[df['type of record + bibliographic level'] == 'am']
+    negative = df_language_materials_monographs.copy()
+    df_other_types = df[~df['001'].isin(df_language_materials_monographs['001'])]
+    #df_other_types.to_excel(f"oclc_{language}_other_types_(first_negative).xlsx", index=False)
+    df_first_positive = df_language_materials_monographs[(df_language_materials_monographs['041'].str.contains('\$hcz')) &
+                                                         (df_language_materials_monographs['fiction_type'].isin(fiction_types))]
+    negative = negative[~negative['001'].isin(df_first_positive['001'])]
+    #df_first_positive.to_excel(f"oclc_{language}_positive.xlsx", index=False)
+    df_second_positive = marc_parser_1_field(negative, '001', '100', '\$')[['001', '$1']]
+    df_second_positive = df_second_positive[df_second_positive['$1'].isin(viaf_positives)]
+    df_second_positive = negative[negative['001'].isin(df_second_positive['001'])]
+    #df_second_positive.to_excel(f"oclc_{language}_second_positive.xlsx", index=False)
+    negative = negative[~negative['001'].isin(df_second_positive['001'])].reset_index(drop=True)
+    
+    df_third_positive = "select * from negative a join positive_viafs_names b on a.'100' like '%'||b.all_names||'%'"
+    df_third_positive = pandasql.sqldf(df_third_positive)
+    
+    negative = negative[~negative['001'].isin(df_third_positive['001'])].reset_index(drop=True)
+
+    df_fourth_positive = "select * from negative a join positive_viafs_diacritics b on a.'100' like '%'||b.cz_name||'%'"
+    df_fourth_positive = pandasql.sqldf(df_fourth_positive)
+
+    negative = negative[~negative['001'].isin(df_fourth_positive['001'])].reset_index(drop=True)
+    #negative.to_excel(f"oclc_{language}_negative.xlsx", index=False)
+    
+    df_all_positive = pd.concat([df_first_positive, df_second_positive, df_third_positive, df_fourth_positive])
+    #df_all_positive.to_excel(f"oclc_{language}_df_all_positive.xlsx", index=False)
+
+
+# oclc pl and pl harvesting comparison
+
+oclc_pl = df_all_positive.copy().reset_index(drop=True)
+
+#unidecode, remove spaces, lowercase, preserve only letters and numbers
+
+def simplify_string(x):
+    x = pd.Series([e[2:] for e in x if type(e) == str])
+    x = unidecode.unidecode('❦'.join(x.dropna().astype(str)).lower().replace(' ', ''))
+    final_string = ''
+    for letter in x:
+        if letter.isalnum():
+            final_string += letter
+    return final_string
+
+oclc_pl['260'] = oclc_pl[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
+oclc_pl['join column'] = oclc_pl[['245', '260', '300']].apply(lambda x: simplify_string(x), axis=1)
+oclc_pl['100_unidecode'] = oclc_pl['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
+   
+bn_pl = pd.read_excel('C:/Users/Cezary/Documents/IBL-PAN-Python/pol_data_clean.xlsx', engine='openpyxl')
+bn_pl = bn_pl[bn_pl['language'] == 'pol']
+#bn_pl['260'] = bn_pl[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
+bn_pl['join column'] = bn_pl[['245', '260', '300']].apply(lambda x: simplify_string(x), axis=1)
+bn_pl['100_unidecode'] = bn_pl['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
+
+authors = [('Hasek', '1-5embBUrzXP05EPK5LuyY9gv_885O-WQ9XqBNz-nZ_0'), 
+           ('Hrabal', '1Y7598g6yba5e4ZgxbX8qzhEwSIGPRxLPgrIyf8wfVHc'), 
+           ('Capek', '1dcTAq-qVQsPNvuc-4lopmc1bSGbwn3NFg645CKsuxqk')]
+
+for author, link in authors:
+    df_oclc = oclc_pl[(oclc_pl['100_unidecode'].notnull()) & (oclc_pl['100_unidecode'].str.contains(author.lower()))].reset_index(drop=True)
+    df_bn = bn_pl[(bn_pl['100_unidecode'].notnull()) & (bn_pl['100_unidecode'].str.contains(author.lower()))].reset_index(drop=True)
+      
+    merged_sources = pd.merge(df_oclc, df_bn, how='outer', on='join column')
+    join_column_index = merged_sources.columns.get_loc("join column")
+    oclc_to_check = merged_sources[(merged_sources['001_x'].notnull()) & (merged_sources['001_y'].isnull())].iloc[:,:join_column_index]
+    bn_to_check = merged_sources[(merged_sources['001_x'].isnull()) & (merged_sources['001_y'].notnull())].iloc[:,join_column_index+2:]
+    print(f"Records for {author} in OCLC: {len(df_oclc)}")
+    print(f"Records for {author} in BN: {len(df_bn)}")
+    print(f"Records for {author} merged automatically: {len(merged_sources) - len(oclc_to_check) - len(bn_to_check)}")
+    print(f"Unmerged records for {author} in OCLC: {len(oclc_to_check)}")
+    print(f"Unmerged records for {author} in BN: {len(bn_to_check)}")
+    print("_______________________________________")
+    
+    df_to_gsheet(oclc_to_check, link, 'oclc')
+    df_to_gsheet(bn_to_check, link, 'bn')
+
+
+
+
 
 
 
