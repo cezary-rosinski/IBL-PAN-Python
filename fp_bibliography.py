@@ -316,9 +316,51 @@ df = pd.DataFrame(final_output, columns=['orcid id', 'orcid url', 'first name', 
     
 df_to_gsheet(df, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'orcid')    
     
-    
-    
+# wordpress bios
 
+browser = webdriver.Firefox()    
+browser.get("http://fp.amu.edu.pl/admin")    
+browser.implicitly_wait(5)
+username_input = browser.find_element_by_id('user_login')
+password_input = browser.find_element_by_id('user_pass')
+
+username = fp_credentials.wordpress_username
+password = fp_credentials.wordpress_password
+time.sleep(1)
+username_input.send_keys(username)
+password_input.send_keys(password)
+
+login_button = browser.find_element_by_id('wp-submit').click()
+
+browser.get('http://fp.amu.edu.pl/wp-admin/edit-tags.php?taxonomy=post_tag')
+
+total_no_of_pages = int(browser.find_element_by_css_selector('.total-pages').text)
+
+fp_bios = []        
+no_of_pages = 1 
+
+while no_of_pages <= total_no_of_pages:
+    print(f"{no_of_pages}/{total_no_of_pages}")
+    people = [p.get_attribute('href') for p in browser.find_elements_by_css_selector('.row-title')]
+    list_url = browser.current_url
+    for person in people:
+        browser.get(person)
+        name = browser.find_element_by_id('name').get_attribute('value')
+        tag = browser.find_element_by_id('slug').get_attribute('value')
+        bio = browser.find_element_by_id('description').get_attribute('value')
+        person_info = [name, tag, bio]
+        fp_bios.append(person_info)
+    no_of_pages += 1
+    try:
+        browser.get(list_url)
+        next_page = browser.find_element_by_css_selector('.next-page')
+        next_page.click()
+    except NoSuchElementException:
+        pass
+
+fp_bios_df = pd.DataFrame(fp_bios, columns=['name', 'tag', 'bio']) 
+    
+df_to_gsheet(fp_bios_df, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'bio')
 
 
 

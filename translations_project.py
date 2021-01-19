@@ -1037,8 +1037,9 @@ for author, link in authors:
     print(f"Unmerged records for {author} in BN: {len(bn_to_check)}")
     print("_______________________________________")
     
-    df_to_gsheet(oclc_to_check, link, 'oclc')
-    df_to_gsheet(bn_to_check, link, 'bn')
+    df_to_gsheet(merged_sources, link, 'all merged')
+    # df_to_gsheet(oclc_to_check, link, 'oclc')
+    # df_to_gsheet(bn_to_check, link, 'bn')
 
 
 
