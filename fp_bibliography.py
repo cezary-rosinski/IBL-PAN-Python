@@ -22,6 +22,14 @@ import pandasql
 import Levenshtein as lev
 import itertools
 import docx
+from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
+from pdfminer.converter import TextConverter
+from pdfminer.layout import LAParams
+from pdfminer.pdfpage import PDFPage
+from io import StringIO
+from pdfminer.pdfdocument import PDFDocument
+import PyPDF2
+
 
 # local files
 
@@ -361,6 +369,189 @@ while no_of_pages <= total_no_of_pages:
 fp_bios_df = pd.DataFrame(fp_bios, columns=['name', 'tag', 'bio']) 
     
 df_to_gsheet(fp_bios_df, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'bio')
+
+
+# wordpress abstracts
+
+browser = webdriver.Firefox()    
+browser.get("http://fp.amu.edu.pl/admin")    
+browser.implicitly_wait(5)
+username_input = browser.find_element_by_id('user_login')
+password_input = browser.find_element_by_id('user_pass')
+
+username = fp_credentials.wordpress_username
+password = fp_credentials.wordpress_password
+time.sleep(1)
+username_input.send_keys(username)
+password_input.send_keys(password)
+
+login_button = browser.find_element_by_id('wp-submit').click()
+
+url = 'http://fp.amu.edu.pl/wp-admin/edit.php'
+browser.get(url)
+total_no_of_pages = int(browser.find_element_by_css_selector('.total-pages').text)
+
+fp_articles = []        
+no_of_pages = 1 
+
+while no_of_pages <= total_no_of_pages:
+    print(f"{no_of_pages}/{total_no_of_pages}")
+    titles = browser.find_elements_by_css_selector('.row-title')
+    languages = browser.find_elements_by_css_selector('.column-language div')
+    for ti, la in zip(titles, languages):
+        fp_articles.append([ti.text, ti.get_attribute('href'), la.text])
+    no_of_pages += 1
+    try:
+        next_page = browser.find_element_by_css_selector('.next-page')
+        next_page.click()
+    except NoSuchElementException:
+        pass
+
+for i, l in enumerate(fp_articles):
+    if l[-1][:2] == 'pl':
+        fp_articles[i][-1] = 'pl'
+    else:
+        fp_articles[i][-1] = 'eng'
+    
+for index, article in enumerate(fp_articles):
+    print(f"{index+1}/{len(fp_articles)}")
+    browser.get(article[1])
+    content = browser.find_element_by_id('content').get_attribute('value')
+    fp_articles[index].append(content)
+    
+browser.close()
+
+fp_articles_df = pd.DataFrame(fp_articles, columns=['tytuł artykułu', 'www edycji artykułu', 'język artykułu', 'abstrakt'])
+
+fp_articles_df['abstrakt'] = fp_articles_df['abstrakt'].apply(lambda x: x.strip())
+
+test = fp_articles_df.copy()[fp_articles_df['abstrakt'].str.contains('Abstrakt|Abstract|A b s t r a k t|A b s t r a c t')]
+test['abstrakt index'] = test['abstrakt'].apply(lambda x: [(m.start(0), m.end(0)) for m in re.finditer('Abstrakt|Abstract|A b s t r a k t|A b s t r a c t', x)])
+test['abstrakt index'] = test['abstrakt index'].apply(lambda x: x[-1][-1])
+
+def bar_index(x):
+    try: 
+        val = x.rfind('<hr />')
+    except (ValueError, IndexError):
+        val = None
+    return val
+
+test['bar index'] = test['abstrakt'].apply(lambda x: bar_index(x))
+
+def cut_abstract(x):
+    if x['abstrakt index'] < x['bar index']:
+        val = x['abstrakt'][int(x['abstrakt index']):x['bar index']]
+    else:
+        val = x['abstrakt'][int(x['abstrakt index']):]
+    return val
+
+test['abstrakt 2'] = test[['abstrakt index', 'bar index', 'abstrakt']].apply(lambda x: cut_abstract(x), axis=1)
+
+def bar_index2(x):
+    try: 
+        val = x.index('<hr')
+    except (ValueError, IndexError):
+        val = None
+    return val
+
+test['bar index'] = test['abstrakt 2'].apply(lambda x: bar_index2(x))
+
+test['abstrakt 2'] = test[['bar index', 'abstrakt 2']].apply(lambda x: x['abstrakt 2'][:int(x['bar index'])] if pd.notnull(x['bar index']) else x['abstrakt 2'], axis=1)
+test['abstrakt 2'] = test['abstrakt 2'].str.replace(' :</span></h4>', '', regex=False).str.replace(':</span></h4>', '', regex=False).str.replace(':</span></h3>', '', regex=False).str.replace('</span></h4>', '', regex=False).str.replace('</span></strong>', '', regex=False).str.replace('</div>', '', regex=False).str.replace('<div>', '', regex=False).str.replace('<div id="ftn34">', '', regex=False).str.strip()
+
+test = test[['tytuł artykułu', 'www edycji artykułu', 'język artykułu', 'abstrakt 2']]
+
+df_to_gsheet(test, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'abstrakty')
+
+# automatyczne wydobycie słów kluczowych z pdf
+
+df = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły')
+df = df.replace('test', '')
+
+def convert_pdf_to_txt(path):
+    rsrcmgr = PDFResourceManager()
+    retstr = StringIO()
+    codec = 'utf-8'
+    laparams = LAParams()
+    device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
+    fp = open(path, 'rb')
+    interpreter = PDFPageInterpreter(rsrcmgr, device)
+    password = ""
+    maxpages = 0
+    caching = True
+    pagenos=set()
+
+    for page in PDFPage.get_pages(fp, pagenos, maxpages=maxpages, password=password,caching=caching, check_extractable=True):
+        interpreter.process_page(page)
+
+    text = retstr.getvalue()
+
+    fp.close()
+    device.close()
+    retstr.close()
+    return text
+
+for i, row in df.iterrows():
+    print(f"{i+1}/{len(df)}")
+    df.at[i, 'text'] = convert_pdf_to_txt(row['ścieżka do pdf'])
+    
+def get_keywords(x):
+    try:
+        if x['język'] == 'pl':
+            pattern = re.escape('Słowa kluczowe | Abstrakt | Nota o autorze')
+        else:
+            pattern = re.escape('Keywords | Abstrakt | Note on the author')
+        val = [(m.start(0), m.end(0)) for m in re.finditer(pattern.lower(), x['text'].lower())]
+        val = val[-1][-1]
+        result = x['text'][int(val):]
+    except IndexError:
+        result = None
+    return result
+
+df['text'] = df.apply(lambda x: get_keywords(x), axis=1)
+   
+df_to_gsheet(df, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'keywords')
+
+# automatyczne wydobycie numerów stron
+
+def ranges(i):
+    for a, b in itertools.groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
+        b = list(b)
+        yield f"{b[0][1]}-{b[-1][1]}"
+            
+            
+df = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły')
+
+for ind, row in df.iterrows():
+    print(f"{ind+1}/{len(df)}")
+    try:
+        path = row['ścieżka do pdf']
+
+        read_pdf = PyPDF2.PdfFileReader(path) 
+    
+        pages_range = [] 
+        for i in range(read_pdf.getNumPages()): 
+            page = read_pdf.getPage(i) 
+            page_content = page.extractText()#.encode('UTF-8') 
+            page_no = int(re.findall('^\d+', str(page_content).split('\n')[0])[0])
+            pages_range.append(page_no)
+        pages_range = ''.join(ranges(pages_range))
+        df.at[ind, 'strony automatycznie'] = pages_range
+    except IndexError:
+        print(str(page_content).split('\n')[0])
+        
+df = df[['url_edycji', 'strony automatycznie']]
+
+df_to_gsheet(df, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'strony automatycznie')
+
+
+
+
+
+
+
+
+
 
 
 
