@@ -92,6 +92,8 @@ pbl_indeks_osobowy_bez_viaf.to_csv('pbl_index_without_viaf.csv', index=False)
 
 # PHASE 3 - joining names without viaf with viaf names
 
+# przeanalizować, czy rekord nie odnosi się tylko do jednej biblioteki (najprawdopodobniej BN PL), jeśli tak, to znaleźć inne rekordy dla tej osoby, zestawić z kwerendą w wikidacie i oddać rekord powiązany z wikidatą (czy skoro nie ma BN PL i nazwy polskiej to brać nazewnictwo z wikidaty?)
+
 #wczytać wartości z dysku google dla unique_viaf i plik pbl_indeks_osobowy_bez_viaf
 
 unique_viaf = pbl_indeks_osobowy[['viaf', 'viaf name']].drop_duplicates()
