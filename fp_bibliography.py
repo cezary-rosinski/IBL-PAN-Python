@@ -500,7 +500,7 @@ def get_keywords(x):
         if x['język'] == 'pl':
             pattern = re.escape('Słowa kluczowe | Abstrakt | Nota o autorze')
         else:
-            pattern = re.escape('Keywords | Abstrakt | Note on the author')
+            pattern = re.escape('Keywords | Abstract | Note on the author')
         val = [(m.start(0), m.end(0)) for m in re.finditer(pattern.lower(), x['text'].lower())]
         val = val[-1][-1]
         result = x['text'][int(val):]
