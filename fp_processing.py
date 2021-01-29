@@ -568,8 +568,6 @@ print('Strona numeru na pressto opublikowana')
 #pressto dodawanie artykułów
 
 for i, row in aktualny_numer.iterrows():
-    i = 0
-    row = aktualny_numer.iloc[16,:]
     if row['język'] == 'pl':
         nowe_zgloszenie = browser.get('https://pressto.amu.edu.pl/index.php/fp/management/importexport/plugin/QuickSubmitPlugin')
         dzial_fp = row['kategoria']

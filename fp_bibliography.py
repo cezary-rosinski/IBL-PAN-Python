@@ -75,12 +75,13 @@ fp_issues = []
 for url in urls:
     browser.get(url)  
     fp_issues_selector = browser.find_elements_by_css_selector('.row-title')
-    for issue in fp_issues_selector:
-        fp_issues.append([issue.text, issue.get_attribute('href')])
+    fp_issues_dates = browser.find_elements_by_css_selector('abbr')
+    for issue, date in zip(fp_issues_selector, fp_issues_dates):
+        fp_issues.append([issue.text, issue.get_attribute('href'), date.text])
         
 fp_issues = [l for l in fp_issues if any(v in l[0] for v in ('Forum Poetyki', 'Forum of Poetics'))]
 
-for index, (issue, url) in enumerate(fp_issues):
+for index, (issue, url, date) in enumerate(fp_issues):
     print(f"{index+1}/{len(fp_issues)}")
     browser.get(url)
     whole_link = browser.find_element_by_id('edit-slug-buttons').click()
@@ -93,6 +94,45 @@ for index, (issue, url) in enumerate(fp_issues):
     except NoSuchElementException:
         language = 'eng'
     fp_issues[index] += [f"http://fp.amu.edu.pl/{direct_link}", content, language]
+
+fp_issues_df = pd.DataFrame(fp_issues, columns=['tytuł numeru', 'www edycji numeru', 'data publikacji', 'www numeru', 'wstęp', 'język numeru'])  
+
+numbers_order = ['lato 2015',
+ 'summer 2015',
+ 'jesień 2015',
+ 'fall 2015',
+ 'zima 2016',
+ 'winter 2016',
+ 'wiosna/lato 2016',
+ 'spring/summer 2016',
+ 'jesień 2016',
+ 'fall 2016',
+ 'zima 2017',
+ 'winter 2017',
+ 'wiosna/lato 2017',
+ 'spring/summer 2017',
+ 'jesień 2017',
+ 'fall 2017',
+ 'zima/wiosna 2018',
+ 'winter/spring 2018',
+ 'lato 2018',
+ 'summer 2018',
+ 'jesień 2018',
+ 'fall 2018',  
+ 'winter/spring 2019',
+ 'zima/wiosna 2019']
+
+fp_issues_df = fp_issues_df[fp_issues_df['tytuł numeru'].str.contains('|'.join(numbers_order), regex=True)]
+fp_issues_df['data publikacji'] = pd.to_datetime(fp_issues_df['data publikacji'].astype(str), format='%d.%m.%Y')
+fp_issues_df = fp_issues_df.sort_values('data publikacji')
+fp_issues_df['data publikacji'] = fp_issues_df['data publikacji'].astype(str)
+fp_issues_df['wstęp'] = fp_issues_df['wstęp'].apply(lambda x: re.split('<h3', x)[0].strip())
+fp_issues_df['rok'] = fp_issues_df['tytuł numeru'].apply(lambda x: re.findall('\d+', x)[0])
+fp_issues_df['numer'] = [i for i in range(1, int(len(numbers_order)/2+1)) for _ in range(2)]
+fp_issues_df = fp_issues_df.sort_values(['numer', 'język numeru'], ascending=[True,False])
+    
+# odnośniki do okładek dodane manualnie w arkuszu google
+df_to_gsheet(fp_issues_df, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'strona')
  
 # collecting FP articles
 
@@ -135,7 +175,6 @@ for index, article in enumerate(fp_articles):
     
 browser.close()
 
-fp_issues_df = pd.DataFrame(fp_issues, columns=['tytuł numeru', 'www edycji numeru', 'www numeru', 'wstęp', 'język numeru'])
 fp_articles_df = pd.DataFrame(fp_articles, columns=['tytuł artykułu', 'www edycji artykułu', 'kategoria', 'tagi', 'język artykułu', 'www numeru', 'abstrakt'])
 
 fp_articles_df['abstrakt'] = fp_articles_df['abstrakt'].apply(lambda x: x.strip())
@@ -229,31 +268,6 @@ bibliography = bibliography[bibliography['ścieżka do bibliografii'].notnull()]
 bibliography_articles = bibliography[['autor', 'tytuł artykułu', 'kategoria', 'język artykułu', 'tytuł numeru', 'tag numeru', 'total', 'www edycji artykułu', 'ścieżka do pdf', 'ścieżka do bibliografii']].rename(columns={'język artykułu':'język', 'total':'folder lokalny', 'www edycji artykułu':'url_edycji'})
 
 bibliography_articles['pdf'] = bibliography_articles['ścieżka do pdf'].apply(lambda x: re.split('(\\\\|\/)(?!.*(\\\\|\/))', x)[-1]).str.replace('\.pdf$', '', regex=True)
-
-numbers_order = ['lato 2015',
- 'summer 2015',
- 'jesień 2015',
- 'fall 2015',
- 'zima 2016',
- 'winter 2016',
- 'wiosna/lato 2016',
- 'spring/summer 2016',
- 'jesień 2016',
- 'fall 2016',
- 'zima 2017',
- 'winter 2017',
- 'wiosna/lato 2017',
- 'spring/summer 2017',
- 'jesień 2017',
- 'fall 2017',
- 'zima/wiosna 2018',
- 'winter/spring 2018',
- 'lato 2018',
- 'summer 2018',
- 'jesień 2018',
- 'fall 2018',  
- 'winter/spring 2019',
- 'zima/wiosna 2019']
 
 categories_order = ['Teorie',
  'Przekłady',
@@ -543,6 +557,246 @@ for ind, row in df.iterrows():
 df = df[['url_edycji', 'strony automatycznie']]
 
 df_to_gsheet(df, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'strony automatycznie')
+
+
+numery = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'strona')
+numery['sort numer'] = numery['numer'].apply(lambda x: int(x.split('-')[0]))
+artykuly = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły')
+artykuly = pd.merge(artykuly, numery[['tytuł numeru', 'numer']], on='tytuł numeru', how='left')
+artykuly['sort numer'] = artykuly['numer'].apply(lambda x: int(x.split('-')[0]))
+
+pages_order = range(1,1000)
+combinations = list(itertools.product(numbers_order, categories_order, pages_order))
+
+artykuly['sort'] = artykuly[['tag numeru', 'kategoria', 'strony']].apply(lambda x: (x['tag numeru'], x['kategoria'], int(x['strony'].split('-')[0])), axis=1).astype('category')
+artykuly['sort'] = artykuly['sort'].cat.set_categories(combinations, ordered=True)
+artykuly = artykuly.sort_values('sort').drop(columns='sort').reset_index(drop=True)
+
+artykuly_grouped = artykuly.groupby(['numer'])
+artykuly_grouped = artykuly.groupby(['sort numer'])
+
+final_artykuly = pd.DataFrame()
+
+for name, group in artykuly_grouped:
+    for i, row in group.iterrows():
+        if row['język'] == 'pl':
+            final_artykuly = final_artykuly.append(row)
+            eng_df = group[(group['autor']==row['autor']) & (group['język']=='eng')]
+            final_artykuly = final_artykuly.append(eng_df)
+final_artykuly = final_artykuly.reindex(columns=artykuly.columns.values).reset_index(drop=True)           
+        
+df_to_gsheet(final_artykuly, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły do pressto')
+
+#ręcznie usunąć błędne wiersze
+
+# publishing everything at PRESSto
+
+artykuly = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły do pressto')
+numery = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'strona')
+numery['sort numer'] = numery['numer'].apply(lambda x: int(x.split('-')[0]))
+
+#pressto - logowanie
+
+def jest_autor(x):
+    try:
+        re.findall('(, \p{Lu})|(^-+|^—+|^–+)', x)[0]
+        val = x
+    except IndexError:
+        val = ''
+    return val
+
+browser.get("https://pressto.amu.edu.pl/index.php/index/login") 
+browser.implicitly_wait(5)
+username_input = browser.find_element_by_id('login-username')
+password_input = browser.find_element_by_id('login-password')
+
+username = fp_credentials.pressto_username
+password = fp_credentials.pressto_password
+
+username_input.send_keys(username)
+password_input.send_keys(password)
+
+login_button = browser.find_element_by_css_selector('.btn-primary').click()
+
+#pressto - dodawanie numeru
+
+lista_numerow = '1, 2, 3, 4-5, 6, 7, 8-9, 10, 11-12, 13, 14, 15-16'.split(', ')
+
+for numer in lista_numerow:
+    print(f"{numer}/{lista_numerow[-1]}")
+    strona_numeru = numery.copy()[numery['numer'] == numer].reset_index(drop=True)
+    aktualny_numer = artykuly.copy()[artykuly['numer'] == numer].reset_index(drop=True)
+
+    browser.get("https://pressto.amu.edu.pl/index.php/fp/manageIssues#futureIssues")
+    
+    utworz_numer = browser.find_element_by_css_selector('.pkp_linkaction_icon_add_category').click()
+    time.sleep(1)
+    odznacz_numer = browser.find_element_by_id('showNumber').click()
+    
+    tom = browser.find_element_by_xpath("//input[@name='volume']").send_keys(strona_numeru.at[0, 'numer'])
+    rok = browser.find_element_by_xpath("//input[@name='year']").send_keys(strona_numeru.at[0, 'rok'])
+    tytul_pl = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[0, 'tytuł numeru']).strip()
+    
+    nazwa_numeru = f"Tom {strona_numeru.at[0, 'numer']} ({strona_numeru.at[0, 'rok']}): {tytul_pl}"
+    
+    tytul_pl = browser.find_element_by_xpath("//input[@name='title[pl_PL]']").send_keys(tytul_pl)
+    tytul_eng = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[1, 'tytuł numeru']).strip()
+    tytul_eng = browser.find_element_by_xpath("//input[@name='title[en_US]']").send_keys(tytul_eng)
+    
+    wstep_pl_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[0].click()
+    wstep_pl_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(strona_numeru.at[0, 'wstęp'])
+    wstep_pl_ok = browser.find_element_by_xpath("//span[contains(text(),'Ok')]").click()
+    
+    wstep_eng_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[1].click()
+    wstep_eng_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(strona_numeru.at[1, 'wstęp'])
+    wstep_eng_ok = browser.find_element_by_xpath("//span[contains(text(),'Ok')]").click()
+    
+    okladka_na_dysku = strona_numeru.at[0, 'jpg']
+    przeslij_okladke = browser.find_element_by_xpath("//input[@type='file']").send_keys(okladka_na_dysku)
+    time.sleep(2)
+    zapisz_numer = browser.find_element_by_xpath("//button[@class='pkp_button submitFormButton']").click()
+    time.sleep(1)
+    numer_strzalka = browser.find_element_by_xpath("//a[@class='show_extras']").click()
+    opublikuj_numer = browser.find_element_by_xpath("//a[@title='Opublikuj numer']").click()
+    odznacz_mail = browser.find_element_by_id('sendIssueNotification').click()
+    opublikuj_numer_ok = browser.find_element_by_xpath("//button[@class='pkp_button submitFormButton']").click()
+    
+    print(f'Strona numeru {numer} na pressto opublikowana')
+
+#pressto dodawanie artykułów
+
+    for i, row in aktualny_numer.iterrows():
+        if row['język'] == 'pl':
+            nowe_zgloszenie = browser.get('https://pressto.amu.edu.pl/index.php/fp/management/importexport/plugin/QuickSubmitPlugin')
+            dzial_fp = row['kategoria']
+            dzial = browser.find_element_by_xpath(f"//select[@id = 'sectionId']/option[text()='{dzial_fp}']").click()
+            time.sleep(1)
+            pressto_tytul_art_pl = row['tytuł artykułu'].replace('<i>', '').replace('</i>', '')
+            pressto_tytul_art_pl = browser.find_element_by_xpath("//input[@name='title[pl_PL]']").send_keys(pressto_tytul_art_pl)
+            pressto_tytul_art_eng = aktualny_numer.at[i+1, 'tytuł artykułu'].replace('<i>', '').replace('</i>', '')
+            pressto_tytul_art_eng = browser.find_element_by_xpath("//input[@name='title[en_US]']").send_keys(pressto_tytul_art_eng)
+            
+            abstrakt_pl_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[0].click()
+            abstrakt_pl_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(row['abstrakt'])
+            abstrakt_pl_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1].click()
+            abstrakt_eng_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[1].click()
+            abstrakt_eng_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(aktualny_numer.at[i+1, 'abstrakt'])
+            abstrakt_eng_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1].click()
+            kliknij_poza_abstrakt = browser.find_element_by_xpath("//input[@name='title[pl_PL]']").click()
+            
+            metadane_jezyk_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[0].send_keys('pl')
+            metadane_jezyk_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[1].send_keys('en') 
+            for s in row['słowa kluczowe'].split(', '):
+                slowa_kluczowe_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[2].send_keys(s, Keys.TAB)
+            for s in aktualny_numer.at[i+1, 'słowa kluczowe'].split(', '):
+                slowa_kluczowe_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[3].send_keys(s, Keys.TAB)
+                
+            if len(row['bibliografia']) > 0:
+    
+                bibliografia_df = pd.DataFrame(row['bibliografia'].split('\n'), columns=['bibliografia'])
+                bibliografia_df = bibliografia_df[bibliografia_df['bibliografia'] != '']
+                bibliografia_df['autor pozycji'] = bibliografia_df['bibliografia'].apply(lambda x: re.sub('(^.+?)(\..+$)', r'\1', x))
+                bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].apply(lambda x: jest_autor(x))
+                bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].replace('-+|—+|–+', np.nan, regex=True).ffill()       
+                bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: re.sub(f"{x['autor pozycji']}.", '', x['bibliografia']).strip(), axis=1)
+                bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: x['bibliografia'] if x['pozycja'] == '' else x['pozycja'], axis=1)
+                bibliografia_df['pozycja'] = bibliografia_df['pozycja'].str.replace('-+|—+|–+', '', regex=True)
+                bibliografia_df['id'] = bibliografia_df.index+1
+                bibliografia_df['id'] = bibliografia_df['id']
+                bibliografia_df = bibliografia_df.replace(r'^\s*$', np.nan, regex=True)
+                bibliografia_df['bibliografia'] =  bibliografia_df[['id', 'autor pozycji', 'pozycja']].apply(lambda x: '. '.join(x.dropna().astype(str)), axis=1)
+                bibliografia_df = '\n'.join(bibliografia_df['bibliografia'].str.replace('(\. )+', '. ', regex=True).to_list())
+                
+                bibliografia = browser.find_element_by_name('citations').send_keys(bibliografia_df, Keys.BACK_SPACE)
+            
+            for a, o, af, b in zip(row['autor'].split('❦'), row['ORCID'].split('❦'), row['afiliacja'].split('❦'), row['biogram'].split('❦')):
+                wspolautor_dodaj = browser.find_element_by_xpath("//a[@title = 'Dodaj autora']").click()
+                autor_imie = re.findall('.+(?= (?!.* ))', a)[0]
+                time.sleep(2)
+                wprowadz_imie = browser.find_element_by_name('givenName[pl_PL]').send_keys(autor_imie)
+                autor_nazwisko = re.findall('(?<= (?!.* )).+', a)[0]
+                wprowadz_nazwisko = browser.find_element_by_name('familyName[pl_PL]').send_keys(autor_nazwisko)
+                kontakt = browser.find_element_by_name('email').send_keys('pressto@amu.edu.pl')
+                kraj = browser.find_element_by_xpath("//select[@id = 'country']/option[text()='Polska']").click()
+                if len(o) > 0:
+                    orcid = f"https://orcid.org/{o}"
+                    wprowadz_orcid = browser.find_element_by_name('orcid').send_keys(orcid)
+                afiliacja = browser.find_element_by_xpath("//input[@name='affiliation[pl_PL]']").send_keys(af)
+                biogram = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[-2].click()
+                biogram = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(b)
+                biogram_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1].click()
+                kliknij_poza_biogram = browser.find_element_by_name('orcid').click()
+                rola_autora = browser.find_element_by_xpath("//input[@name='userGroupId' and @value='14']").click()
+                zapisz_autora = browser.find_elements_by_xpath("//button[@class = 'pkp_button submitFormButton']")[-1].click()
+            
+            time.sleep(2)    
+            dodaj_plik_pl = browser.find_element_by_xpath("//a[@title='Dodaj plik do publikacji']").click()
+            time.sleep(2)
+            etykieta = browser.find_element_by_xpath("//input[@class='field text required' and @name = 'label']").send_keys('PDF')
+            jezyk_publikacji = browser.find_element_by_xpath("//select[@id = 'galleyLocale']/option[text()='Język Polski']").click()
+            
+            zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
+            zapisz[-1].click()
+            time.sleep(2)
+            
+            element_artykulu = browser.find_element_by_xpath("//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
+            przeslij_pdf = browser.find_element_by_xpath("//input[@type='file']").send_keys(row['ścieżka do pdf'])
+            time.sleep(2)
+            kontunuuj_button = browser.find_element_by_id('continueButton').click()
+            time.sleep(2)
+            kontunuuj_button = browser.find_element_by_id('continueButton').click()
+            time.sleep(2)
+            potwierdz_button = browser.find_element_by_id('continueButton').click()
+            time.sleep(2)
+            dodaj_plik_eng = browser.find_element_by_xpath("//a[@title='Dodaj plik do publikacji']").click()
+            time.sleep(2)
+            etykieta = browser.find_element_by_xpath("//input[@class='field text required' and @name = 'label']").send_keys('PDF')
+            jezyk_publikacji = browser.find_element_by_xpath("//select[@id = 'galleyLocale']/option[text()='English']").click()
+            
+            zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
+            zapisz[-1].click()
+            time.sleep(2)
+            
+            element_artykulu = browser.find_element_by_xpath("//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
+            przeslij_pdf = browser.find_element_by_xpath("//input[@type='file']").send_keys(aktualny_numer.at[i+1, 'ścieżka do pdf'])
+            time.sleep(2)
+            kontunuuj_button = browser.find_element_by_id('continueButton').click()
+            time.sleep(2)
+            kontunuuj_button = browser.find_element_by_id('continueButton').click()
+            time.sleep(2)
+            potwierdz_button = browser.find_element_by_id('continueButton').click()
+            
+            time.sleep(2)
+            zaplanuj_do_publikacji = browser.find_element_by_id('articlePublished').click()
+            time.sleep(2)
+            publikuj_w = browser.find_element_by_xpath(f"//select[@id = 'issueId']/option[text()='{nazwa_numeru}']").click()
+            publikuj_strony = browser.find_element_by_name('pages').send_keys(row['strony'])
+            
+            opublikowany_data = browser.find_element_by_name('datePublished-removed').send_keys(strona_numeru.at[0,'data publikacji'],Keys.ESCAPE)
+            prawa_autorskie = browser.find_element_by_name('copyrightHolder[pl_PL]').send_keys(row['autor'])
+            rok_praw = browser.find_element_by_name('copyrightYear').send_keys(strona_numeru.at[0,'data publikacji'].split('-')[0])        
+            
+            zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
+            zapisz[-1].click()
+            
+            wroc_do_zgloszenia = browser.find_element_by_xpath("//a[contains(text(),'Go to Submission')]").click()
+            time.sleep(2)
+            metadane = browser.find_element_by_xpath("//a[@title = 'Wyświetl metadane zgłoszenia']").click()
+            time.sleep(2)
+            identyfikatory = browser.find_element_by_xpath("//a[@name = 'catalog' and @class = 'ui-tabs-anchor']").click()
+            doi_artykulu = browser.find_element_by_xpath("//p[contains(text(), 'fp')]").text
+            
+            aktualny_numer.at[i, 'DOI'] = doi_artykulu
+            
+    print(f'Artykuły numeru {numer} na pressto opublikowane')
+
+browser.close()
+
+df_to_gsheet(aktualny_numer, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły + DOI')
+
+
+
+
 
 
 
