@@ -589,7 +589,7 @@ df_to_gsheet(final_artykuly, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'ar
 
 #ręcznie usunąć błędne wiersze
 
-# publishing everything at PRESSto
+# publishing everything at PRESSto - final part of the code
 
 artykuly = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły do pressto')
 numery = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'strona')
@@ -604,7 +604,7 @@ def jest_autor(x):
     except IndexError:
         val = ''
     return val
-
+browser = webdriver.Firefox() 
 browser.get("https://pressto.amu.edu.pl/index.php/index/login") 
 browser.implicitly_wait(5)
 username_input = browser.find_element_by_id('login-username')
@@ -661,7 +661,7 @@ for numer in lista_numerow:
     odznacz_mail = browser.find_element_by_id('sendIssueNotification').click()
     opublikuj_numer_ok = browser.find_element_by_xpath("//button[@class='pkp_button submitFormButton']").click()
     
-    print(f'Strona numeru {numer} na pressto opublikowana')
+    print(f'Strona numeru {numer} opublikowana na pressto')
 
 #pressto dodawanie artykułów
 
@@ -788,7 +788,7 @@ for numer in lista_numerow:
             
             aktualny_numer.at[i, 'DOI'] = doi_artykulu
             
-    print(f'Artykuły numeru {numer} na pressto opublikowane')
+    print(f'Artykuły numeru {numer} opublikowane na pressto')
 
 browser.close()
 

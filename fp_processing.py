@@ -3,7 +3,7 @@
 # w pressto dla przekładów dodawać tylko jedną wersję
 # w pressto dodawać tłumaczy także dla polskich tekstów
 # dla bibliografii w pressto odwiedzić ją jeszcze raz i zaakceptować - wtedy linki będą działały
-# zastanowić się, czy na pressto załączać odrębne pliki, czy ciągle odnosić do strony domowej
+# zastanowić się, czy na pressto załączać odrębne pliki, czy ciągle odnosić do strony domowej - załączać pliki!!! (kod w fp_bibliography)
 
 from my_functions import gsheet_to_df, df_to_gsheet
 import pandas as pd
