@@ -533,13 +533,13 @@ browser.get("https://pressto.amu.edu.pl/index.php/fp/manageIssues#futureIssues")
 
 utworz_numer = browser.find_element_by_css_selector('.pkp_linkaction_icon_add_category').click()
 time.sleep(1)
-odznacz_numer = browser.find_element_by_id('showNumber').click()
-
-tom = browser.find_element_by_xpath("//input[@name='volume']").send_keys(strona_numeru.at[0, 'numer'])
+odznacz_tom = browser.find_element_by_id('showVolume').click()
+    
+wprowadz_numer = browser.find_element_by_xpath("//input[@name='number']").send_keys(strona_numeru.at[0, 'numer'])
 rok = browser.find_element_by_xpath("//input[@name='year']").send_keys(strona_numeru.at[0, 'rok'])
 tytul_pl = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[0, 'tytuł numeru']).strip()
 
-nazwa_numeru = f"Tom {strona_numeru.at[0, 'numer']} ({strona_numeru.at[0, 'rok']}): {tytul_pl}"
+nazwa_numeru = f"Nr {strona_numeru.at[0, 'numer']} ({strona_numeru.at[0, 'rok']}): {tytul_pl}"
 
 tytul_pl = browser.find_element_by_xpath("//input[@name='title[pl_PL]']").send_keys(tytul_pl)
 tytul_eng = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[1, 'tytuł numeru']).strip()
@@ -589,8 +589,10 @@ for i, row in aktualny_numer.iterrows():
         metadane_jezyk_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[0].send_keys('pl')
         metadane_jezyk_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[1].send_keys('en') 
         for s in row['słowa kluczowe'].split(', '):
+            s = re.sub(',+', ',', s)
             slowa_kluczowe_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[2].send_keys(s, Keys.TAB)
         for s in aktualny_numer.at[i+1, 'słowa kluczowe'].split(', '):
+            s = re.sub(',+', ',', s)
             slowa_kluczowe_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[3].send_keys(s, Keys.TAB)
             
         if len(row['bibliografia']) > 0:
@@ -599,10 +601,10 @@ for i, row in aktualny_numer.iterrows():
             bibliografia_df = bibliografia_df[bibliografia_df['bibliografia'] != '']
             bibliografia_df['autor pozycji'] = bibliografia_df['bibliografia'].apply(lambda x: re.sub('(^.+?)(\..+$)', r'\1', x))
             bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].apply(lambda x: jest_autor(x))
-            bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].replace('-+|—+|–+', np.nan, regex=True).ffill()       
+            bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].replace('-{2,}|—{2,}|–{2,}', np.nan, regex=True).ffill()       
             bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: re.sub(f"{x['autor pozycji']}.", '', x['bibliografia']).strip(), axis=1)
             bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: x['bibliografia'] if x['pozycja'] == '' else x['pozycja'], axis=1)
-            bibliografia_df['pozycja'] = bibliografia_df['pozycja'].str.replace('-+|—+|–+', '', regex=True)
+            bibliografia_df['pozycja'] = bibliografia_df['pozycja'].str.replace('-{2,}|—{2,}|–{2,}', '', regex=True)
             bibliografia_df['id'] = bibliografia_df.index+1
             bibliografia_df['id'] = bibliografia_df['id']
             bibliografia_df = bibliografia_df.replace(r'^\s*$', np.nan, regex=True)

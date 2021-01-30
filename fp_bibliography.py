@@ -8,7 +8,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 import fp_credentials
 import time
-from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, NoAlertPresentException, SessionNotCreatedException, TimeoutException
+from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, NoAlertPresentException, SessionNotCreatedException, TimeoutException, ElementClickInterceptedException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -597,6 +597,8 @@ numery['sort numer'] = numery['numer'].apply(lambda x: int(x.split('-')[0]))
 
 #pressto - logowanie
 
+browser = webdriver.Firefox() 
+
 def jest_autor(x):
     try:
         re.findall('(, \p{Lu})|(^-+|^—+|^–+)', x)[0]
@@ -604,7 +606,7 @@ def jest_autor(x):
     except IndexError:
         val = ''
     return val
-browser = webdriver.Firefox() 
+
 browser.get("https://pressto.amu.edu.pl/index.php/index/login") 
 browser.implicitly_wait(5)
 username_input = browser.find_element_by_id('login-username')
@@ -622,7 +624,7 @@ login_button = browser.find_element_by_css_selector('.btn-primary').click()
 
 lista_numerow = '1, 2, 3, 4-5, 6, 7, 8-9, 10, 11-12, 13, 14, 15-16'.split(', ')
 
-for numer in lista_numerow:
+for numer in lista_numerow[7:]:
     print(f"{numer}/{lista_numerow[-1]}")
     strona_numeru = numery.copy()[numery['numer'] == numer].reset_index(drop=True)
     aktualny_numer = artykuly.copy()[artykuly['numer'] == numer].reset_index(drop=True)
@@ -631,13 +633,13 @@ for numer in lista_numerow:
     
     utworz_numer = browser.find_element_by_css_selector('.pkp_linkaction_icon_add_category').click()
     time.sleep(1)
-    odznacz_numer = browser.find_element_by_id('showNumber').click()
+    odznacz_tom = browser.find_element_by_id('showVolume').click()
     
-    tom = browser.find_element_by_xpath("//input[@name='volume']").send_keys(strona_numeru.at[0, 'numer'])
+    wprowadz_numer = browser.find_element_by_xpath("//input[@name='number']").send_keys(strona_numeru.at[0, 'numer'])
     rok = browser.find_element_by_xpath("//input[@name='year']").send_keys(strona_numeru.at[0, 'rok'])
     tytul_pl = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[0, 'tytuł numeru']).strip()
     
-    nazwa_numeru = f"Tom {strona_numeru.at[0, 'numer']} ({strona_numeru.at[0, 'rok']}): {tytul_pl}"
+    nazwa_numeru = f"Nr {strona_numeru.at[0, 'numer']} ({strona_numeru.at[0, 'rok']}): {tytul_pl}"
     
     tytul_pl = browser.find_element_by_xpath("//input[@name='title[pl_PL]']").send_keys(tytul_pl)
     tytul_eng = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[1, 'tytuł numeru']).strip()
@@ -650,12 +652,12 @@ for numer in lista_numerow:
     wstep_eng_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[1].click()
     wstep_eng_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(strona_numeru.at[1, 'wstęp'])
     wstep_eng_ok = browser.find_element_by_xpath("//span[contains(text(),'Ok')]").click()
-    
+    time.sleep(2)
     okladka_na_dysku = strona_numeru.at[0, 'jpg']
     przeslij_okladke = browser.find_element_by_xpath("//input[@type='file']").send_keys(okladka_na_dysku)
     time.sleep(2)
     zapisz_numer = browser.find_element_by_xpath("//button[@class='pkp_button submitFormButton']").click()
-    time.sleep(1)
+    time.sleep(2)
     numer_strzalka = browser.find_element_by_xpath("//a[@class='show_extras']").click()
     opublikuj_numer = browser.find_element_by_xpath("//a[@title='Opublikuj numer']").click()
     odznacz_mail = browser.find_element_by_id('sendIssueNotification').click()
@@ -687,8 +689,10 @@ for numer in lista_numerow:
             metadane_jezyk_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[0].send_keys('pl')
             metadane_jezyk_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[1].send_keys('en') 
             for s in row['słowa kluczowe'].split(', '):
+                s = re.sub(',+', ',', s)
                 slowa_kluczowe_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[2].send_keys(s, Keys.TAB)
             for s in aktualny_numer.at[i+1, 'słowa kluczowe'].split(', '):
+                s = re.sub(',+', ',', s)
                 slowa_kluczowe_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[3].send_keys(s, Keys.TAB)
                 
             if len(row['bibliografia']) > 0:
@@ -697,10 +701,10 @@ for numer in lista_numerow:
                 bibliografia_df = bibliografia_df[bibliografia_df['bibliografia'] != '']
                 bibliografia_df['autor pozycji'] = bibliografia_df['bibliografia'].apply(lambda x: re.sub('(^.+?)(\..+$)', r'\1', x))
                 bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].apply(lambda x: jest_autor(x))
-                bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].replace('-+|—+|–+', np.nan, regex=True).ffill()       
+                bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].replace('-{2,}|—{2,}|–{2,}', np.nan, regex=True).ffill()       
                 bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: re.sub(f"{x['autor pozycji']}.", '', x['bibliografia']).strip(), axis=1)
                 bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: x['bibliografia'] if x['pozycja'] == '' else x['pozycja'], axis=1)
-                bibliografia_df['pozycja'] = bibliografia_df['pozycja'].str.replace('-+|—+|–+', '', regex=True)
+                bibliografia_df['pozycja'] = bibliografia_df['pozycja'].str.replace('-{2,}|—{2,}|–{2,}', '', regex=True)
                 bibliografia_df['id'] = bibliografia_df.index+1
                 bibliografia_df['id'] = bibliografia_df['id']
                 bibliografia_df = bibliografia_df.replace(r'^\s*$', np.nan, regex=True)
@@ -728,8 +732,8 @@ for numer in lista_numerow:
                 kliknij_poza_biogram = browser.find_element_by_name('orcid').click()
                 rola_autora = browser.find_element_by_xpath("//input[@name='userGroupId' and @value='14']").click()
                 zapisz_autora = browser.find_elements_by_xpath("//button[@class = 'pkp_button submitFormButton']")[-1].click()
+                time.sleep(2) 
             
-            time.sleep(2)    
             dodaj_plik_pl = browser.find_element_by_xpath("//a[@title='Dodaj plik do publikacji']").click()
             time.sleep(2)
             etykieta = browser.find_element_by_xpath("//input[@class='field text required' and @name = 'label']").send_keys('PDF')
@@ -748,27 +752,46 @@ for numer in lista_numerow:
             time.sleep(2)
             potwierdz_button = browser.find_element_by_id('continueButton').click()
             time.sleep(2)
-            dodaj_plik_eng = browser.find_element_by_xpath("//a[@title='Dodaj plik do publikacji']").click()
-            time.sleep(2)
-            etykieta = browser.find_element_by_xpath("//input[@class='field text required' and @name = 'label']").send_keys('PDF')
-            jezyk_publikacji = browser.find_element_by_xpath("//select[@id = 'galleyLocale']/option[text()='English']").click()
             
-            zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
-            zapisz[-1].click()
-            time.sleep(2)
+            if row['kategoria'] != 'Przekłady':
             
-            element_artykulu = browser.find_element_by_xpath("//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
-            przeslij_pdf = browser.find_element_by_xpath("//input[@type='file']").send_keys(aktualny_numer.at[i+1, 'ścieżka do pdf'])
-            time.sleep(2)
-            kontunuuj_button = browser.find_element_by_id('continueButton').click()
-            time.sleep(2)
-            kontunuuj_button = browser.find_element_by_id('continueButton').click()
-            time.sleep(2)
-            potwierdz_button = browser.find_element_by_id('continueButton').click()
+                while True:
+                    try:
+                        dodaj_plik_eng = browser.find_element_by_xpath("//a[@title='Dodaj plik do publikacji']").click()
+                        time.sleep(2)
+                    except ElementClickInterceptedException:
+                        potwierdz_button = browser.find_element_by_id('continueButton').click()
+                        time.sleep(2)
+                        continue
+                    break
+                    
+                etykieta = browser.find_element_by_xpath("//input[@class='field text required' and @name = 'label']").send_keys('PDF')
+                jezyk_publikacji = browser.find_element_by_xpath("//select[@id = 'galleyLocale']/option[text()='English']").click()
+                
+                zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
+                zapisz[-1].click()
+                time.sleep(2)
+                
+                element_artykulu = browser.find_element_by_xpath("//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
+                przeslij_pdf = browser.find_element_by_xpath("//input[@type='file']").send_keys(aktualny_numer.at[i+1, 'ścieżka do pdf'])
+                time.sleep(2)
+                kontunuuj_button = browser.find_element_by_id('continueButton').click()
+                time.sleep(2)
+                kontunuuj_button = browser.find_element_by_id('continueButton').click()
+                time.sleep(2)
+                potwierdz_button = browser.find_element_by_id('continueButton').click()
+                time.sleep(2)
             
-            time.sleep(2)
-            zaplanuj_do_publikacji = browser.find_element_by_id('articlePublished').click()
-            time.sleep(2)
+            while True:
+                try:
+                    breakzaplanuj_do_publikacji = browser.find_element_by_id('articlePublished').click()
+                    time.sleep(2)
+                except ElementClickInterceptedException:
+                    potwierdz_button = browser.find_element_by_id('continueButton').click()
+                    time.sleep(2)
+                    continue
+                break
+            
             publikuj_w = browser.find_element_by_xpath(f"//select[@id = 'issueId']/option[text()='{nazwa_numeru}']").click()
             publikuj_strony = browser.find_element_by_name('pages').send_keys(row['strony'])
             
@@ -779,20 +802,22 @@ for numer in lista_numerow:
             zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
             zapisz[-1].click()
             
-            wroc_do_zgloszenia = browser.find_element_by_xpath("//a[contains(text(),'Go to Submission')]").click()
-            time.sleep(2)
-            metadane = browser.find_element_by_xpath("//a[@title = 'Wyświetl metadane zgłoszenia']").click()
-            time.sleep(2)
-            identyfikatory = browser.find_element_by_xpath("//a[@name = 'catalog' and @class = 'ui-tabs-anchor']").click()
-            doi_artykulu = browser.find_element_by_xpath("//p[contains(text(), 'fp')]").text
-            
-            aktualny_numer.at[i, 'DOI'] = doi_artykulu
+# =============================================================================
+#             wroc_do_zgloszenia = browser.find_element_by_xpath("//a[contains(text(),'Go to Submission')]").click()
+#             time.sleep(2)
+#             metadane = browser.find_element_by_xpath("//a[@title = 'Wyświetl metadane zgłoszenia']").click()
+#             time.sleep(2)
+#             identyfikatory = browser.find_element_by_xpath("//a[@name = 'catalog' and @class = 'ui-tabs-anchor']").click()
+#             doi_artykulu = browser.find_element_by_xpath("//p[contains(text(), 'fp')]").text
+#             
+#             aktualny_numer.at[i, 'DOI'] = doi_artykulu
+# =============================================================================
             
     print(f'Artykuły numeru {numer} opublikowane na pressto')
 
 browser.close()
 
-df_to_gsheet(aktualny_numer, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły + DOI')
+#df_to_gsheet(aktualny_numer, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły + DOI')
 
 
 
