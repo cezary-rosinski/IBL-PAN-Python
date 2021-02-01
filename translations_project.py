@@ -1108,10 +1108,11 @@ def simplify(x):
     return final_string
 
 authors = [('Hasek', '18eydmu6oNbHFLyywr2ixNoy2v9OX6W-c3MWR_9l80SU'), 
-           ('Hrabal', ''), 
-           ('Capek', '')]
+           ('Hrabal', '1xnZXr3huY4eKYSO3QhVa1rnRhtBlyOCD0GszzsbFPSY'), 
+           ('Capek', '1t_-_cxUzvRG2iYyKN6WMXmk7wxC9imnrFfowYJ8oIWo')]
 
-for author, link in authors[:1]:
+for index, (author, link) in enumerate(authors[1:]):
+    print(f"{index+1}/{len(authors)}")
     
     #all
     
@@ -1121,7 +1122,10 @@ for author, link in authors[:1]:
     
     #duplicates
     
-    title = marc_parser_1_field(df_oclc, '001', '245', '\$')[['001', '$a', '$b', '$n', '$p']].replace(r'^\s*$', np.nan, regex=True)
+    try:
+        title = marc_parser_1_field(df_oclc, '001', '245', '\$')[['001', '$a', '$b', '$n', '$p']].replace(r'^\s*$', np.nan, regex=True)
+    except KeyError:
+        title = marc_parser_1_field(df_oclc, '001', '245', '\$')[['001', '$a', '$b']].replace(r'^\s*$', np.nan, regex=True)
     title['title'] = title[title.columns[1:]].apply(lambda x: simplify(x), axis=1)    
     title = title[['001', 'title']]
     df_oclc = pd.merge(df_oclc, title, how='left', on='001')
@@ -1136,21 +1140,21 @@ for author, link in authors[:1]:
     
     # give up the pages???
     
-    # pages = marc_parser_1_field(df_oclc, '001', '300', '\$')[['001', '$a']].rename(columns={'$a':'pages'})
-    # pages['pages'] = pages['pages'].apply(lambda x: max([int(e) for e in re.findall('\d+', x)]) if re.findall('\d+', x) else '')
-    # pages['pages range'] = pages['pages'].apply(lambda x: range(int((98 * x) / 100), int((102 * x) / 100)) if x!="" else x)
+    pages = marc_parser_1_field(df_oclc, '001', '300', '\$')[['001', '$a']].rename(columns={'$a':'pages'})
+    pages['pages'] = pages['pages'].apply(lambda x: max([int(e) for e in re.findall('\d+', x)]) if re.findall('\d+', x) else '')
+    pages['pages range'] = pages['pages'].apply(lambda x: range(int((98 * x) / 100), int((102 * x) / 100)) if x!="" else x)
     
-    # for i, row in pages.iterrows():
-    #     print(f"{i+1}/{len(pages)}")
-    #     if row['pages'] != '':
-    #         matches = []
-    #         for ind, row2 in pages.iterrows():
-    #             if row2['pages range'] != '':
-    #                 if row2['pages range'][0] <= row['pages'] <= row2['pages range'][-1] and ind != i:
-    #                     matches.append(row2['001'])    
-    #         pages.at[i, 'matches'] = ','.join(str(x) for x in matches)
+    for i, row in pages.iterrows():
+        print(f"{i+1}/{len(pages)}")
+        if row['pages'] != '':
+            matches = []
+            for ind, row2 in pages.iterrows():
+                if row2['pages range'] != '':
+                    if row2['pages range'][0] <= row['pages'] <= row2['pages range'][-1] and ind != i:
+                        matches.append(row2['001'])    
+            pages.at[i, 'matches'] = ','.join(str(x) for x in matches)
     
-    # df_oclc = pd.merge(df_oclc, pages, how='left', on='001')
+    df_oclc = pd.merge(df_oclc, pages, how='left', on='001')
     
     df_oclc_duplicates = pd.DataFrame()
     df_oclc_grouped = df_oclc.groupby(['title', 'place', 'year'])
@@ -1158,48 +1162,95 @@ for author, link in authors[:1]:
         if len(group) > 1:
             group['groupby'] = str(name)
             df_oclc_duplicates = df_oclc_duplicates.append(group)
+    df_oclc_duplicates['pages range'] = df_oclc_duplicates['pages range'].astype(str)
+    df_oclc_duplicates = df_oclc_duplicates.drop_duplicates()
             
     df_to_gsheet(df_oclc_duplicates, link, 'duplicates')
     
     #de-duplication
-    #wybierać najdłuższe pola, czy po prostu dodać do siebie wszystko?
-
-
-
-
-
-
-
-
-
-
     
-    df_bn = bn_pl[(bn_pl['100_unidecode'].notnull()) & (bn_pl['100_unidecode'].str.contains(author.lower()))].reset_index(drop=True)
-      
-    merged_sources = pd.merge(df_oclc, df_bn, how='outer', on='join column')
-    join_column_index = merged_sources.columns.get_loc("join column")
-    oclc_to_check = merged_sources[(merged_sources['001_x'].notnull()) & (merged_sources['001_y'].isnull())].iloc[:,:join_column_index]
-    bn_to_check = merged_sources[(merged_sources['001_x'].isnull()) & (merged_sources['001_y'].notnull())].iloc[:,join_column_index+2:]
-    print(f"Records for {author} in OCLC: {len(df_oclc)}")
-    print(f"Records for {author} in BN: {len(df_bn)}")
-    print(f"Records for {author} merged automatically: {len(merged_sources) - len(oclc_to_check) - len(bn_to_check)}")
-    print(f"Unmerged records for {author} in OCLC: {len(oclc_to_check)}")
-    print(f"Unmerged records for {author} in BN: {len(bn_to_check)}")
-    print("_______________________________________")
+    oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
+    df_oclc_duplicates_grouped = df_oclc_duplicates.groupby(['title', 'place', 'year'])
     
-    df_to_gsheet(merged_sources, link, 'all merged')
-    # df_to_gsheet(oclc_to_check, link, 'oclc')
-    # df_to_gsheet(bn_to_check, link, 'bn')
+    df_oclc_deduplicated = pd.DataFrame()
+    for name, group in df_oclc_duplicates_grouped:
+        group_ids = ','.join([str(e) for e in group['001'].to_list()])
+        group['group_ids'] = group_ids
+        for column in group:
+            group[column] = group[column].astype(str).max()
+        df_oclc_deduplicated = df_oclc_deduplicated.append(group)
     
+    df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates()
+    df_to_gsheet(df_oclc_deduplicated, link, 'de-duplication')
     
-x = 843
-print(x)
-x = range(int((98 * x)/100.0), int((102 * x)/100.0))
-print(int((102 * x)/100.0))
-  
-x = range(3, 4)  
-x[0]   
-x[-1]
+    # all de-duplicated
+    
+    df_oclc = df_oclc[~df_oclc['001'].isin(oclc_duplicates_list)]
+    df_oclc = pd.concat([df_oclc, df_oclc_deduplicated])
+    df_oclc['pages range'] = df_oclc['pages range'].astype(str)
+    df_to_gsheet(df_oclc, link, 'all de-duplicated')
+    
+    # multiple volumes
+    
+    df_oclc = gsheet_to_df(link, 'all')
+    
+    title = marc_parser_1_field(df_oclc, '001', '245', '\$')[['001', '$a']].replace(r'^\s*$', np.nan, regex=True)
+    title['title'] = title[title.columns[1:]].apply(lambda x: simplify(x), axis=1)    
+    title = title[['001', 'title']]
+    df_oclc = pd.merge(df_oclc, title, how='left', on='001')
+    
+    place = marc_parser_1_field(df_oclc, '001', '260', '\$')[['001', '$a']].rename(columns={'$a':'place'})
+    place['place'] = place['place'].apply(lambda x: simplify(x))
+    df_oclc = pd.merge(df_oclc, place, how='left', on='001')
+    
+    year = df_oclc[['001', '008']].rename(columns={'008':'year'})
+    year['year'] = year['year'].apply(lambda x: x[7:11])
+    df_oclc = pd.merge(df_oclc, year, how='left', on='001')
+    
+    df_oclc_grouped = df_oclc.groupby(['title', 'place', 'year'])
+        
+    df_oclc_multiple_volumes = pd.DataFrame()
+
+    for name, group in df_oclc_grouped:
+        if len(group[group['245'].str.contains('\$n', regex=True)]):
+            group['groupby'] = str(name)
+            df_oclc_multiple_volumes = df_oclc_multiple_volumes.append(group)
+            
+    df_to_gsheet(df_oclc_multiple_volumes, link, 'multiple volumes')
+    
+    if len(df_oclc_multiple_volumes) > 0:
+        df_oclc_multiple_volumes_grouped = df_oclc_multiple_volumes.groupby(['title', 'place', 'year'])
+    
+        df_oclc_multiple_volumes_deduplicated = pd.DataFrame()
+        df_oclc_multiple_volumes_without_deduplication = pd.DataFrame()
+        
+        for name, group in df_oclc_multiple_volumes_grouped:
+            if len(group[~group['245'].str.contains('\$n', regex=True)]) == 1:
+                df = group[~group['245'].str.contains('\$n', regex=True)]
+                df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(df)
+            else:
+                df_oclc_multiple_volumes_without_deduplication = df_oclc_multiple_volumes_without_deduplication.append(group)
+        
+        df_to_gsheet(df_oclc_multiple_volumes_deduplicated, link, 'volumes de-duplicated')        
+        df_to_gsheet(df_oclc_multiple_volumes_without_deduplication, link, 'volumes not de-duplicated')
+    
+    df_simple = gsheet_to_df(link, 'all de-duplicated')[['001', '080', '100', '245', '240', '260', '650', '655', '700', 'language', 'fiction_type']]
+    df_to_gsheet(df_simple, link, 'simple')
+
+        
+        
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
