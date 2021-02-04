@@ -16,6 +16,8 @@ import pandasql
 import time
 from xml.sax import SAXParseException
 import openpyxl
+import Levenshtein as lev
+from difflib import SequenceMatcher  
 
 ### def
 
@@ -1237,14 +1239,39 @@ for index, (author, link) in enumerate(authors[1:]):
     df_simple = gsheet_to_df(link, 'all de-duplicated')[['001', '080', '100', '245', '240', '260', '650', '655', '700', 'language', 'fiction_type']]
     df_to_gsheet(df_simple, link, 'simple')
 
-        
-        
+
+#%% test string similarity - 04.02.2021  
+      
+test1a = unidecode.unidecode("Przygody dobrego wojaka Szwejka").lower()
+test1b = unidecode.unidecode("Przygody dobrego wojanka szwejka").lower()
+test1a = "Przygody dobrego wojaka Szwejka"
+test1b = "Przygody dobrego wojanka szwejka"
 
 
+test2a = unidecode.unidecode("Opowieści o piesku i kotce jak razem gospodarzyli i jeszcze innych rzeczach").lower()
+test2b = unidecode.unidecode("Opowieści o piesku i kotce jak razem gospodarzyli i jeszcze o różnych innych rzeczach").lower()
+
+test3a = 'Przygody dobrego wojaka Szwejka :$bpodczas wojny światowej'
+test3b = 'Przygody dobrego wojaka Szwejka podczas wojny światowej'
 
 
+#lev
+print("Levenshtein")
+print(lev.distance(test1a, test1b))
+print(lev.distance(test2a, test2b))
+print(lev.distance(test3a, test3b))
 
+#cosine
+print("cosine")
+print(get_cosine_result(test1a, test1b))
+print(get_cosine_result(test2a, test2b))
+print(get_cosine_result(test3a, test3b))
 
+#divlib
+print("SequenceMatcher")
+print(SequenceMatcher(a=test1a, b=test1b).ratio())
+print(SequenceMatcher(a=test2a, b=test2b).ratio())
+print(SequenceMatcher(a=test3a, b=test3b).ratio())
 
 
 

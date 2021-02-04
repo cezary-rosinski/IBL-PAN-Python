@@ -526,7 +526,7 @@ df['text'] = df.apply(lambda x: get_keywords(x), axis=1)
    
 df_to_gsheet(df, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'keywords')
 
-# automatyczne wydobycie numerów stron
+#%% automatyczne wydobycie numerów stron
 
 def ranges(i):
     for a, b in itertools.groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
@@ -588,8 +588,7 @@ final_artykuly = final_artykuly.reindex(columns=artykuly.columns.values).reset_i
 df_to_gsheet(final_artykuly, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły do pressto')
 
 #ręcznie usunąć błędne wiersze
-
-# publishing everything at PRESSto - final part of the code
+#%% publishing everything at PRESSto - final part of the code
 
 artykuly = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły do pressto')
 numery = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'strona')
@@ -624,7 +623,7 @@ login_button = browser.find_element_by_css_selector('.btn-primary').click()
 
 lista_numerow = '1, 2, 3, 4-5, 6, 7, 8-9, 10, 11-12, 13, 14, 15-16'.split(', ')
 
-for numer in lista_numerow[7:]:
+for numer in lista_numerow:
     print(f"{numer}/{lista_numerow[-1]}")
     strona_numeru = numery.copy()[numery['numer'] == numer].reset_index(drop=True)
     aktualny_numer = artykuly.copy()[artykuly['numer'] == numer].reset_index(drop=True)
@@ -820,7 +819,7 @@ browser.close()
 #df_to_gsheet(aktualny_numer, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły + DOI')
 
 
-
+#%%
 
 
 
