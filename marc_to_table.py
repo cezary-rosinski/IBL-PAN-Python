@@ -1,10 +1,9 @@
 import pandas as pd
 import io
-from my_functions import f
+from my_functions import f, mrc_to_mrk
 import re
 import numpy as np
 import glob
-from my_functions import mrc_to_mrk
 from dask import delayed, dataframe as dd
 
 def year(row, field):
@@ -24,8 +23,15 @@ for i, file_path in enumerate(files):
     mrc_to_mrk(file_path, path_mrk)
 
 # BN
-    
-path = 'E:/Cezary/Documents/IBL/Migracja z BN/bn_all/'
+#mrc to mrk 
+path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/2021-02-08/'
+files = [f for f in glob.glob(path + '*.mrc', recursive=True)]
+for i, file_path in enumerate(files):
+    print(str(i) + '/' + str(len(files)))
+    path_mrk = file_path.replace('.mrc', '.mrk')
+    mrc_to_mrk(file_path, path_mrk)
+#mrk to table    
+
 files = [f for f in glob.glob(path + '*.mrk8', recursive=True)]
 
 encoding = 'utf-8'

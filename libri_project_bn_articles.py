@@ -1,33 +1,28 @@
+#%% import
 import pandas as pd
 import numpy as np
-from my_functions import marc_parser_1_field
-import re
+from my_functions import marc_parser_1_field, cSplit, df_to_mrc, gsheet_to_df, mrc_to_mrk, f
 import pandasql
-from my_functions import cSplit
 import json
 import requests
-from my_functions import df_to_mrc
 import io
-from my_functions import gsheet_to_df
 import cx_Oracle
-import regex
+import regex as re
 from functools import reduce
 import glob
-from my_functions import f
 from json.decoder import JSONDecodeError
-from my_functions import mrc_to_mrk
 
-# def
+#%% def
 
 def dziedzina_PBL(x):
     try:
-        if bool(regex.search('(?<=\$a|:|\[|\+|\()(82)', x)):
+        if bool(re.search('(?<=\$a|:|\[|\+|\()(82)', x)):
             val = 'ukd_lit'
-        elif bool(regex.search('(?<=\$a|:|\[|\+)(791)', x)) or bool(regex.search('(?<=\$a|:)(792)', x)) or bool(regex.search('\$a7\.09', x)):
+        elif bool(re.search('(?<=\$a|:|\[|\+)(791)', x)) or bool(re.search('(?<=\$a|:)(792)', x)) or bool(re.search('\$a7\.09', x)):
             val = 'ukd_tfrtv'
-        elif bool(regex.search('(?<=\$a01)(\(|\/|2|4|5|9)', x)) or bool(regex.search('(?<=\$a|\[])(050)', x)) or bool(regex.search('(?<=\$a|:|\[|\+|\()(811\.162)', x)):
+        elif bool(re.search('(?<=\$a01)(\(|\/|2|4|5|9)', x)) or bool(re.search('(?<=\$a|\[])(050)', x)) or bool(re.search('(?<=\$a|:|\[|\+|\()(811\.162)', x)):
             val = 'ukd_biblio'
-        elif bool(regex.search('\$a002', x)) or bool(regex.search('(?<=\$a|:)(305)', x)) or bool(regex.search('(?<=\$a39|:39)(\(438\)|8\.2)', x)) or bool(regex.search('(?<=\$a|:)(929[^\.]051)', x)) or bool(regex.search('(?<=\$a|:)(929[^\.]052)', x)):
+        elif bool(re.search('\$a002', x)) or bool(re.search('(?<=\$a|:)(305)', x)) or bool(re.search('(?<=\$a39|:39)(\(438\)|8\.2)', x)) or bool(re.search('(?<=\$a|:)(929[^\.]051)', x)) or bool(re.search('(?<=\$a|:)(929[^\.]052)', x)):
             val = 'ukd_pogranicze'
         else:
             val = 'bez_ukd_PBL'
@@ -68,9 +63,12 @@ def rodzaj_zapisu(x):
     else:
         val = 'podmiotowy'
     return val
+#%%mode
 #with people OR without people
+# preferable = without people
 mode = input('Enter the mode: ')
 
+#%% download of the list of journals
 # trzeba zwrócić uwagę, czy po 25.01.2021 nie były przeprowadzane update'y mapowania czasopism między PBL i BN
 
 bn_magazines_spreadsheets = ['Sheet1', 'update 25.01.2021']
@@ -82,58 +80,65 @@ for sheet in bn_magazines_spreadsheets:
 
 bn_magazines = bn_magazines[bn_magazines['decyzja'] == 'tak']['bn_magazine'].tolist()
 
-# path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/'
-path = 'C:/Users/User/Documents/bn_all/'
-files = [f for f in glob.glob(path + '*.mrk8', recursive=True)]
+#%% BN data extraction
+
+path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/2021-02-08/'
+#path = 'C:/Users/User/Documents/bn_all/'
+files = [file for file in glob.glob(path + '*.mrk', recursive=True)]
 
 encoding = 'utf-8'
-marc_df = pd.DataFrame()
+new_list = []
 for i, file_path in enumerate(files):
-    print(str(i) + '/' + str(len(files)))
+    print(f"{i+1}/{len(files)}")
     marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
-    marc_list = list(filter(None, marc_list))  
-    df = pd.DataFrame(marc_list, columns = ['test'])
-    df['field'] = df['test'].replace(r'(^.)(...)(.+?$)', r'\2', regex = True)
-    df['content'] = df['test'].replace(r'(^.)(.....)(.+?$)', r'\3', regex = True)
-    df['help'] = df.apply(lambda x: f(x, 'LDR'), axis=1)
-    df['help'] = df['help'].ffill()
-    df['magazine'] = df.apply(lambda x: f(x, '773'), axis=1)
-    df['magazine'] = df.groupby('help')['magazine'].ffill().bfill()
-    df = df[df['magazine'].notnull()]
-    try:
-        df['index'] = df.index + 1
-        df_field = marc_parser_1_field(df, 'index', 'magazine', '\$')[['index', '$t']]
-        df_field.columns = ['index', 'title']
-        df = pd.merge(df, df_field, how='left', on='index')
-        df = df[df['title'].isin(bn_magazines)].drop(columns=['magazine', 'index', 'title'])
-    except AttributeError:
-        pass
-    if len(df) > 0:
-        df['id'] = df.apply(lambda x: f(x, '009'), axis = 1)
-        df['id'] = df.groupby('help')['id'].ffill().bfill()
-        df = df[['id', 'field', 'content']]
-        df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
-        df = df.drop_duplicates().reset_index(drop=True)
-        df_wide = df.pivot(index = 'id', columns = 'field', values = 'content')
-        marc_df = marc_df.append(df_wide)
- 
+
+    mrk_list = []
+    for row in marc_list:
+        if row.startswith('=LDR'):
+            mrk_list.append([row])
+        else:
+            if row:
+                mrk_list[-1].append(row)
+                
+    for sublist in mrk_list:
+        try:
+            year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
+            if year in range(2004,2021):
+                for el in sublist:
+                    if el.startswith('=773'):
+                        val = re.search('(\$t)(.+?)(\$|$)', el).group(2)
+                        if val in bn_magazines:
+                            new_list.append(sublist)
+        except (ValueError, AttributeError):
+            pass
+
+final_list = []
+for lista in new_list:
+    slownik = {}
+    for el in lista:
+        if el[1:4] in slownik:
+            slownik[el[1:4]] += f"❦{el[6:]}"
+        else:
+            slownik[el[1:4]] = el[6:]
+    final_list.append(slownik)
+
+marc_df = pd.DataFrame(final_list)
 fields = marc_df.columns.tolist()
 fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
 marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
-
 fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-marc_df = marc_df.reindex(columns=fields)       
-marc_df.to_csv('bn_articles.csv', index=False)
-        
-# SQL connection
+marc_df = marc_df.reindex(columns=fields)
+
+#%% PBL SQL connection
 
 dsn_tns = cx_Oracle.makedsn('pbl.ibl.poznan.pl', '1521', service_name='xe')
 connection = cx_Oracle.connect(user='IBL_SELECT', password='CR333444', dsn=dsn_tns, encoding='windows-1250')
 
+#%% processing
+
 bn_cz_mapping = pd.read_excel('F:/Cezary/Documents/IBL/Pliki python/bn_cz_mapping.xlsx')
-bn_articles = pd.read_csv('F:/Cezary/Documents/IBL/Migracja z BN/bn_articles.csv')  
-bn_articles = bn_articles[bn_articles['773'].notnull()].reset_index(drop=True) 
-bn_articles['id'] = bn_articles['009']
+bn_articles = marc_df.copy()  
+bn_articles['id'] = bn_articles['001']
 bn_articles['005'] = bn_articles['005'].astype(str)
 bn_articles['LDR'] = bn_articles['LDR'].apply(lambda x: x.replace('naa', 'nab') if x[5:8] == 'naa' else x)
 
@@ -161,7 +166,7 @@ if mode == "with people":
     X100 = marc_parser_1_field(bn_articles, 'id', '100', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
     X100['name'] = X100[['$a', '$d', '$c']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
     X100 = X100[['id', 'name']]
-    X100['name'] = X100['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
+    X100['name'] = X100['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: re.sub('(\p{Ll})(\.$)', r'\1', x))
     X100 = pd.merge(X100, pbl_viaf, how='inner', left_on='name', right_on='BN_name')[['id', 'name', 'pbl_id']]
     X100 = pd.merge(X100, tworca_i_dzial, how='left', on='pbl_id')[['id', 'osoba_pbl_dzial_id_name']]
     X100['osoba_bn_autor'] = X100.groupby('id')['osoba_pbl_dzial_id_name'].transform(lambda x: '❦'.join(x.astype(str)))
@@ -170,7 +175,7 @@ if mode == "with people":
     X600 = marc_parser_1_field(bn_articles, 'id', '600', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
     X600['name'] = X600[['$a', '$d', '$c']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
     X600 = X600[['id', 'name']]
-    X600['name'] = X600['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
+    X600['name'] = X600['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: re.sub('(\p{Ll})(\.$)', r'\1', x))
     X600 = pd.merge(X600, pbl_viaf, how='inner', left_on='name', right_on='BN_name')[['id', 'name', 'pbl_id']]
     X600 = pd.merge(X600, tworca_i_dzial, how='left', on='pbl_id')[['id', 'osoba_pbl_dzial_id_name']]
     X600['osoba_bn_temat'] = X600.groupby('id')['osoba_pbl_dzial_id_name'].transform(lambda x: '❦'.join(x.astype(str)))
@@ -234,16 +239,14 @@ bn_articles = pd.merge(bn_articles, dobre, 'left', 'id')
 # bn_articles = pd.read_excel('bn_magazines_to_statistics.xlsx')
 # =============================================================================
 
-years = [str(i) for i in range(2004, 2021)]
-bn_articles['year'] = bn_articles['008'].apply(lambda x: x[7:11])
-bn_articles = bn_articles[(bn_articles['decision'] == 'OK') &
-                          (bn_articles['year'].isin(years))]
+bn_articles = bn_articles[bn_articles['decision'] == 'OK']
 
 fields_to_remove = bn_cz_mapping[bn_cz_mapping['cz'] == 'del']['bn'].to_list()
 fields_to_remove = [x[1:] if x[0] == 'X' else x for x in fields_to_remove]
 
 bn_articles = bn_articles.loc[:, ~bn_articles.columns.isin(fields_to_remove)]
 
+#UKD
 bn_articles['czy_ma_ukd'] = bn_articles['080'].apply(lambda x: 'tak' if pd.notnull(x) else 'nie')   
 bn_articles['dash_position'] = bn_articles['080'].apply(lambda x: position_of_dash(x))
 bn_articles['091_position'] = bn_articles['080'].apply(lambda x: position_of_091(x))
@@ -307,7 +310,7 @@ przedmiotowe = przedmiotowe[przedmiotowe['rodzaj'] == 'przedmiotowy']
 X600 = marc_parser_1_field(przedmiotowe, 'id', '600', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
 X600['name'] = X600[['$a', '$d', '$c']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
 X600 = X600[['id', 'name']]
-X600['name'] = X600['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
+X600['name'] = X600['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: re.sub('(\p{Ll})(\.$)', r'\1', x))
 X600 = pd.merge(X600, pbl_viaf, how='inner', left_on='name', right_on='BN_name')[['id', 'name', 'pbl_id']]
 X600['pbl_id'] = X600['pbl_id'].astype(np.int64)
 X600 = pd.merge(X600, tworca_i_dzial, how='left', left_on='pbl_id', right_on='TW_TWORCA_ID')[['id', 'DZ_NAZWA']]
@@ -374,7 +377,7 @@ przedmiotowe = pd.concat([X600, X655, X650])
 # imports_655['DZ_NAZWA'] = imports_655['DZ_NAZWA'].str.replace(' - .$', '')
 # imports_655 = imports_655[imports_655['X655'].notnull()]
 # imports_655['X655'] = imports_655['X655'].str.replace(r'\7|', '',regex=False).str.replace('\$2DBN', '').str.replace("\$.|\|", " ").str.replace(" ", ".*").str.replace('(\.\*)+', '.*').str.replace('(\.)+', '.')
-# imports_655['X655'] = imports_655['X655'].apply(lambda x: regex.sub("[^\p{L}\d\*\.\-\s]", "", x)).apply(lambda x: regex.sub('^', '.*', x)).str.replace('(\.\*)+', '.*')
+# imports_655['X655'] = imports_655['X655'].apply(lambda x: re.sub("[^\p{L}\d\*\.\-\s]", "", x)).apply(lambda x: re.sub('^', '.*', x)).str.replace('(\.\*)+', '.*')
 # imports_655['test'] = imports_655.index+1
 # imports_655 = imports_655.groupby(['X655', 'DZ_NAZWA']).count().reset_index(level=['X655', 'DZ_NAZWA']).groupby('X655').max().reset_index(level=['X655']).sort_values(['X655'])
 # imports_655 = imports_655[imports_655['X655'].ne(imports_655['X655'].shift())]
@@ -386,7 +389,6 @@ przedmiotowe = pd.concat([X600, X655, X650])
 # test = test[['655', 'test']]
 # =============================================================================
 
-
 # podmiotowe
 podmiotowe = bn_articles.copy()
 podmiotowe = podmiotowe[podmiotowe['rodzaj'] == 'podmiotowy']  
@@ -394,7 +396,7 @@ podmiotowe = podmiotowe[podmiotowe['rodzaj'] == 'podmiotowy']
 X100 = marc_parser_1_field(podmiotowe, 'id', '100', '\$')[['id', '$a', '$c', '$d']].replace(r'^\s*$', np.NaN, regex=True)
 X100['name'] = X100[['$a', '$d', '$c']].apply(lambda x: ' '.join(x.dropna().astype(str)), axis=1)
 X100 = X100[['id', 'name']]
-X100['name'] = X100['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: regex.sub('(\p{Ll})(\.$)', r'\1', x))
+X100['name'] = X100['name'].str.replace("(\))(\.$)", r"\1").apply(lambda x: re.sub('(\p{Ll})(\.$)', r'\1', x))
 X100 = pd.merge(X100, pbl_viaf, how='inner', left_on='name', right_on='BN_name')[['id', 'name', 'pbl_id']]
 X100['pbl_id'] = X100['pbl_id'].astype(np.int64)
 X100 = pd.merge(X100, tworca_i_dzial, how='left', left_on='pbl_id', right_on='TW_TWORCA_ID')[['id', 'DZ_NAZWA']]
@@ -503,7 +505,7 @@ bn_articles_marc = pbl_enrichment_full.combine_first(bn_articles_marc)
 merge_500s = [col for col in bn_articles_marc.columns if re.findall('^5', col) and col != '505']
 bn_articles_marc['500'] = bn_articles_marc[merge_500s].apply(lambda x: '❦'.join(x.dropna().astype(str)), axis = 1)
 merge_500s = [x for x in merge_500s if x != '500']
-bn_articles_marc = bn_articles_marc.loc[:, ~bn_articles_marc.columns.isin(merge_500s)]
+bn_articles_marc = bn_articles_marc.loc[:, ~bn_articles_marc.columns.isin(merge_500s)].drop(columns='264')
 bn_articles_marc.rename(columns={'260':'264'}, inplace=True)
 
 # =============================================================================
@@ -531,7 +533,7 @@ bn_articles_marc['246'] = bn_articles_marc['246'].apply(lambda x: x if pd.notnul
 bn_articles_marc['008'] = bn_articles_marc['008'].str.replace('\\', ' ')
 if bn_articles_marc['009'].dtype == np.float64:
         bn_articles_marc['009'] = bn_articles_marc['009'].astype(np.int64)
-bn_articles_marc['995'] = '\\\\$aPBL 2004-2019: czasopisma'
+bn_articles_marc['995'] = '\\\\$aPBL 2004-2020: czasopisma'
 bn_articles_marc = bn_articles_marc.drop_duplicates().reset_index(drop=True).dropna(how='all', axis=1)
 
 # linki do pełnych tekstów i relacje
@@ -542,9 +544,7 @@ bn_relations = gsheet_to_df('1WPhir3CwlYre7pw4e76rEnJq5DPvVZs3_828c_Mqh9c', 'rel
 
 X856 = pd.concat([bn_art_full_text, bn_relations])
 X856['856'] = X856.groupby('001')['856'].transform(lambda x: '❦'.join(x))
-X856 = X856[X856['856'].notnull()].drop_duplicates()
-
-del bn_articles_marc['856']
+X856 = X856[X856['856'].notnull()].drop_duplicates().drop(columns='856')
 
 bn_articles_marc = pd.merge(bn_articles_marc, X856, on='001', how='left')
 
@@ -553,9 +553,59 @@ field_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', 
 bn_articles_marc = bn_articles_marc.reindex(columns=field_list)
 bn_articles_marc = bn_articles_marc.reset_index(drop=True)
 
-bn_articles_marc.to_excel('bn_books_marc.xlsx', index=False)
+#%% Nikodem - dzielenie wierszy
+
+multiple_poems = bn_articles_marc[(bn_articles_marc['245'].str.contains(' ;$b', regex=False)) &
+                                  (bn_articles_marc['245'].notnull()) &
+                                  (bn_articles_marc['655'].str.lower().str.contains('poezja', regex=False)) &
+                                  (bn_articles_marc['505'].isnull())]
+
+bn_articles_marc = bn_articles_marc[~bn_articles_marc['001'].isin(multiple_poems['001'])]
+
+field_245 = marc_parser_1_field(multiple_poems, '001', '245', '\$')
+field_245['titles'] = [' '.join((a, b)).replace(' /', '') for a, b in zip(field_245['$a'], field_245['$b'])]
+field_245['titles'] = field_245['titles'].str.split(' ; ')
+field_245 = field_245.explode("titles").reset_index(drop=True)
+field_245['new_245'] = '10$a' + field_245['titles'] + ' /$c' + field_245['$c']
+field_245 = field_245[['001', 'new_245']].rename(columns={'new_245':'245'})
+
+multiple_poems = pd.merge(field_245, multiple_poems.drop(columns='245'), on='001')
+
+def remove_wrong_700(x):
+    try:
+        val = x['700'].split('❦')
+        result = ''
+        for elem in val:
+            if '$t' not in x['700']:
+                result += elem  
+        if result == '':
+            result = np.nan
+    except AttributeError: 
+        result = np.nan
+    return result
+
+multiple_poems['700'] = multiple_poems[['245', '700']].apply(lambda x: remove_wrong_700(x), axis=1)
+multiple_poems['idx'] = multiple_poems.groupby('001').cumcount()+1
+multiple_poems['001'] = multiple_poems[['idx', '001']].apply(lambda x: x['001'][0] + '{:02d}'.format(x['idx']) + x['001'][3:], axis=1)
+multiple_poems = multiple_poems.drop(columns='idx')
+
+bn_articles_marc = pd.concat([bn_articles_marc, multiple_poems]).reset_index(drop=True).sort_values('001')
+
+identifiers_freq = bn_articles_marc['001'].value_counts()
+
+bn_articles_marc.to_excel('bn_articles_marc.xlsx', index=False)
 df_to_mrc(bn_articles_marc, '❦', 'libri_marc_bn_articles.mrc')
 mrc_to_mrk('libri_marc_bn_articles.mrc', 'libri_marc_bn_articles.mrk')
+
+
+
+
+#dodać linki od HUBARA między BN i BAZHUM
+
+
+
+
+
 
 
 
