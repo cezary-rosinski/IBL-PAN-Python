@@ -278,14 +278,14 @@ def mrk_to_mrc(path_in, path_out, field_with_id):
         outputfile.write(pymarc_record.as_marc())     
     outputfile.close()
     
-def df_to_mrc(df, delimiter, path_out):
+def df_to_mrc(df, delimiter, path_out, txt_error_file):
     mrc_errors = []
     df = df.replace(r'^\s*$', np.nan, regex=True)
     outputfile = open(path_out, 'wb')
-    errorfile = io.open('marc_errors.txt', 'wt', encoding='UTF-8')
+    errorfile = io.open(txt_error_file, 'wt', encoding='UTF-8')
     for index, row in enumerate(df.iterrows()):
         try: 
-            print(str(index) + '/' + str(len(df)))
+            print(str(index+1) + '/' + str(len(df)))
             table_row = df.iloc[[index]].dropna(axis=1)
             for column in table_row:
                 table_row[column] = table_row[column].astype(str).str.split(delimiter)

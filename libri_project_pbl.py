@@ -13,6 +13,14 @@ import re
 from functools import reduce
 import pandasql
 from urllib.parse import urlparse
+import datetime
+import ast
+import io
+
+now = datetime.datetime.now()
+year = now.year
+month = now.month
+day = now.day
 
 # def
 def date_to_string(x):
@@ -674,11 +682,36 @@ columns_list = pbl_marc_books.columns.tolist()
 columns_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 pbl_marc_books = pbl_marc_books.reindex(columns=columns_list)
 
+#usunięcie nan$
+pbl_marc_books = pbl_marc_books.replace('nan\$', '$', regex=True)
+
 pbl_marc_books.to_excel('pbl_marc_books.xlsx', index=False)
 # pbl_marc_books = pd.read_excel('pbl_marc_books.xlsx')
 
-df_to_mrc(pbl_marc_books, '❦', 'pbl_marc_books.mrc')
-mrc_to_mrk('pbl_marc_books.mrc', 'pbl_marc_books.mrk')
+df_to_mrc(pbl_marc_books, '❦', f'pbl_marc_books_{year}-{month}-{day}.mrc', f'pbl_marc_books_{year}-{month}-{day}.txt')
+mrc_to_mrk(f'pbl_marc_books_{year}-{month}-{day}.mrc', f'pbl_marc_books_{year}-{month}-{day}.mrk')
+
+#errors
+errors_txt = io.open(f'pbl_marc_books_{year}-{month}-{day}.txt', 'rt', encoding='UTF-8').read().splitlines()
+errors_txt = [e for e in errors_txt if e]
+
+new_list = []
+
+for sublist in errors_txt:
+    sublist = ast.literal_eval(sublist)
+    di = {x:y for x,y in sublist}
+    new_list.append(di)
+    
+for dictionary in new_list:
+    for key in dictionary.keys():
+        dictionary[key] = '❦'.join([e for e in dictionary[key] if e])
+
+df = pd.DataFrame(new_list)
+df['LDR'] = '-----nam---------4u-----'
+#investigate the file thoroughly if more errors
+
+df_to_mrc(df, '❦', f'pbl_marc_books__vol_2{year}-{month}-{day}.mrc', f'pbl_marc_books__vol_2{year}-{month}-{day}.txt')
+mrc_to_mrk(f'pbl_marc_books__vol_2{year}-{month}-{day}.mrc', f'pbl_marc_books__vol_2{year}-{month}-{day}.mrk')
 
 # PBL articles
 
@@ -899,12 +932,35 @@ columns_list = pbl_marc_articles.columns.tolist()
 columns_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 pbl_marc_articles = pbl_marc_articles.reindex(columns=columns_list)
 
+#usunięcie nan$
+pbl_marc_articles = pbl_marc_articles.replace('nan\$', '$', regex=True)
+
 pbl_marc_articles.to_excel('pbl_marc_articles.xlsx', index=False)
 
-df_to_mrc(pbl_marc_articles, '❦', 'pbl_marc_articles.mrc')
-mrc_to_mrk('pbl_marc_articles.mrc', 'pbl_marc_articles.mrk')
+df_to_mrc(pbl_marc_articles, '❦', f'pbl_marc_articles{year}-{month}-{day}.mrc', f'pbl_marc_articles{year}-{month}-{day}.txt')
+mrc_to_mrk(f'pbl_marc_articles{year}-{month}-{day}.mrc', f'pbl_marc_articles{year}-{month}-{day}.mrk')
 
+#errors
+errors_txt = io.open(f'pbl_marc_articles{year}-{month}-{day}.txt', 'rt', encoding='UTF-8').read().splitlines()
+errors_txt = [e for e in errors_txt if e]
 
+new_list = []
+
+for sublist in errors_txt:
+    sublist = ast.literal_eval(sublist)
+    di = {x:y for x,y in sublist}
+    new_list.append(di)
+    
+for dictionary in new_list:
+    for key in dictionary.keys():
+        dictionary[key] = '❦'.join([e for e in dictionary[key] if e])
+
+df = pd.DataFrame(new_list)
+df['LDR'] = '-----nab---------4u-----'
+#investigate the file thoroughly if more errors
+
+df_to_mrc(df, '❦', f'pbl_marc_articles_vol_2{year}-{month}-{day}.mrc', f'pbl_marc_articles_vol_2{year}-{month}-{day}.txt')
+mrc_to_mrk(f'pbl_marc_articles_vol_2{year}-{month}-{day}.mrc', f'pbl_marc_articles_vol_2{year}-{month}-{day}.mrk')
 
 
 

@@ -4,16 +4,20 @@ import pandas as pd
 import io
 import re
 import numpy as np
-from my_functions import cSplit
-from my_functions import df_to_mrc
-import regex
+from my_functions import cSplit, gsheet_to_df, df_to_mrc, mrc_to_mrk
+import regex as re
 import requests
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
-from my_functions import gsheet_to_df
-from my_functions import mrc_to_mrk
+import datetime
+import ast
+
+now = datetime.datetime.now()
+year = now.year
+month = now.month
+day = now.day
 
 # def
 def f(row, id_field):
@@ -261,24 +265,30 @@ for i, column in enumerate(bar_catalog):
         
 bar_catalog.to_excel('bar_catalog.xlsx', index=False)
 
-df_to_mrc(bar_catalog, '❦', 'bar_catalog.mrc')
-mrc_to_mrk('bar_catalog.mrc', 'bar_catalog.mrk')
+df_to_mrc(bar_catalog, '❦', f'bar_catalog{year}-{month}-{day}.mrc', f'bar_catalog{year}-{month}-{day}.txt')
+mrc_to_mrk(f'bar_catalog{year}-{month}-{day}.mrc', f'bar_catalog{year}-{month}-{day}.mrk')
 
-# =============================================================================
-# kod zwrócił 100 błędów
-# w kolejnej iteracji przyjrzeć się tym rekordom
-# 
-# reader = io.open('marc_errors_bar.txt', 'rt').read().splitlines()[0]
-# 
-# for i, elem in enumerate(reader):
-#     reader[i] = re.split('(?<=\)), (?=\()', reader[i])
-#     for j, field in enumerate(reader[i]):
-#         reader[i][j] = re.sub('(?<=\))\]+$', '', re.sub('^\[+', '', reader[i][j])).replace("', '", '|') 
-#         reader[i][j] = list(reader[i][j])
-#         reader[i][j][1] = '❦'.join(reader[i][j][1]) 
-# =============================================================================
+#errors
+errors_txt = io.open(f'bar_catalog{year}-{month}-{day}.txt', 'rt', encoding='UTF-8').read().splitlines()
+errors_txt = [e for e in errors_txt if e]
 
+new_list = []
 
+for sublist in errors_txt:
+    sublist = ast.literal_eval(sublist)
+    di = {x:y for x,y in sublist}
+    new_list.append(di)
+    
+for dictionary in new_list:
+    for key in dictionary.keys():
+        dictionary[key] = '❦'.join([e for e in dictionary[key] if e])
+
+df = pd.DataFrame(new_list)
+df['LDR'] = '-----nab---------4u-----'
+#investigate the file thoroughly if more errors
+
+df_to_mrc(df, '❦', f'bar_catalog_vol_2{year}-{month}-{day}.mrc', f'bar_catalog_vol_2{year}-{month}-{day}.txt')
+mrc_to_mrk(f'bar_catalog_vol_2{year}-{month}-{day}.mrc', f'bar_catalog_vol_2{year}-{month}-{day}.mrk')
 
 
 

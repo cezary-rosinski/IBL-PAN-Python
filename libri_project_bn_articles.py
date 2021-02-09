@@ -11,6 +11,10 @@ import regex as re
 from functools import reduce
 import glob
 from json.decoder import JSONDecodeError
+from urllib.parse import urlparse
+import datetime
+import ast
+
 
 #%% def
 
@@ -527,7 +531,7 @@ bn_articles_marc.rename(columns={'260':'264'}, inplace=True)
 #     full_text.at[i, 'rights'] = rights
 # =============================================================================
 
-bn_articles_marc.drop(['852', 'id'], axis = 1, inplace=True) 
+bn_articles_marc.drop(['852', 'id', '856'], axis = 1, inplace=True) 
 bn_articles_marc['240'] = bn_articles_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' in x else np.nan)
 bn_articles_marc['246'] = bn_articles_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' not in x else np.nan)
 bn_articles_marc['008'] = bn_articles_marc['008'].str.replace('\\', ' ')
@@ -537,14 +541,20 @@ bn_articles_marc['995'] = '\\\\$aPBL 2004-2020: czasopisma'
 bn_articles_marc = bn_articles_marc.drop_duplicates().reset_index(drop=True).dropna(how='all', axis=1)
 
 # linki do pełnych tekstów i relacje
+
+bazhum_links = gsheet_to_df('1KUoEQTYCrspK1t2gFvGOQPgSodv8ikzZt8f-oNzZe5g', 'Main')
+bazhum_links['is_link'] = bazhum_links['full_text'].apply(lambda x: urlparse(x)[0])
+bazhum_links = bazhum_links[bazhum_links['is_link'] == 'http'].drop(columns='is_link').rename(columns={'full_text':'856'})
+bazhum_links['856'] = bazhum_links['856'].apply(lambda x: f"40$u{x}$yonline$4N")
+
 bn_art_full_text = gsheet_to_df('1ewU50T08ZVNUP-U3dTTrb5VDDfWqT4TeYrMLrYns7c8', 'Sheet1')
 bn_art_full_text = bn_art_full_text[(bn_art_full_text['rights'].notnull()) & (bn_art_full_text['rights'] != 'brak praw')][['001', '856']]
 
 bn_relations = gsheet_to_df('1WPhir3CwlYre7pw4e76rEnJq5DPvVZs3_828c_Mqh9c', 'relacje_rev_book').drop(columns='typ').rename(columns={'id':'001'})
 
-X856 = pd.concat([bn_art_full_text, bn_relations])
+X856 = pd.concat([bn_art_full_text, bn_relations, bazhum_links])
 X856['856'] = X856.groupby('001')['856'].transform(lambda x: '❦'.join(x))
-X856 = X856[X856['856'].notnull()].drop_duplicates().drop(columns='856')
+X856 = X856[X856['856'].notnull()].drop_duplicates()
 
 bn_articles_marc = pd.merge(bn_articles_marc, X856, on='001', how='left')
 
@@ -594,13 +604,52 @@ bn_articles_marc = pd.concat([bn_articles_marc, multiple_poems]).reset_index(dro
 identifiers_freq = bn_articles_marc['001'].value_counts()
 
 bn_articles_marc.to_excel('bn_articles_marc.xlsx', index=False)
-df_to_mrc(bn_articles_marc, '❦', 'libri_marc_bn_articles.mrc')
-mrc_to_mrk('libri_marc_bn_articles.mrc', 'libri_marc_bn_articles.mrk')
+
+now = datetime.datetime.now()
+year = now.year
+month = now.month
+day = now.day
+
+df_to_mrc(bn_articles_marc, '❦', f'libri_marc_bn_articles_{year}-{month}-{day}.mrc', f'libri_bn_articles_errors_{year}-{month}-{day}.txt')
+mrc_to_mrk(f'libri_marc_bn_articles_{year}-{month}-{day}.mrc', f'libri_marc_bn_articles_{year}-{month}-{day}.mrk')
+
+#errors
+errors_txt = io.open(f'libri_bn_articles_errors_{year}-{month}-{day}.txt', 'rt', encoding='UTF-8').read().splitlines()
+errors_txt = [e for e in errors_txt if e]
+
+new_list = []
+
+for sublist in errors_txt:
+    sublist = ast.literal_eval(sublist)
+    di = {x:y for x,y in sublist}
+    new_list.append(di)
+    
+for dictionary in new_list:
+    for key in dictionary.keys():
+        dictionary[key] = '❦'.join([e for e in dictionary[key] if e])
+
+df = pd.DataFrame(new_list)
+df['LDR'] = '-----nab---------4u-----'
+#investigate the file thoroughly if more errors
+
+df_to_mrc(df, '❦', f'libri_marc_bn_articles_vol_2_{year}-{month}-{day}.mrc', f'libri_marc_bn_articles_vol_2_{year}-{month}-{day}.txt')
+mrc_to_mrk(f'libri_marc_bn_articles_vol_2_{year}-{month}-{day}.mrc', f'libri_marc_bn_articles_vol_2_{year}-{month}-{day}.mrk')
 
 
 
 
-#dodać linki od HUBARA między BN i BAZHUM
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

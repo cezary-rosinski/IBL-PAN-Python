@@ -124,7 +124,54 @@ for rok in years:
     part_df.to_csv('bn_ks_' + rok + '.csv', index=False)
     
     
-    
+#%% new approach
+
+path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/2021-02-08/'
+#path = 'C:/Users/User/Documents/bn_all/'
+files = [file for file in glob.glob(path + '*.mrk', recursive=True)]
+
+encoding = 'utf-8'
+new_list = []
+for i, file_path in enumerate(files):
+    print(f"{i+1}/{len(files)}")
+    marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+
+    mrk_list = []
+    for row in marc_list:
+        if row.startswith('=LDR'):
+            mrk_list.append([row])
+        else:
+            if row:
+                mrk_list[-1].append(row)
+                
+    for sublist in mrk_list:
+        try:
+            year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
+            if year in range(2004,2021):
+                for el in sublist:
+                    if el.startswith('=773'):
+                        val = re.search('(\$t)(.+?)(\$|$)', el).group(2)
+                        if val in bn_magazines:
+                            new_list.append(sublist)
+        except (ValueError, AttributeError):
+            pass
+
+final_list = []
+for lista in new_list:
+    slownik = {}
+    for el in lista:
+        if el[1:4] in slownik:
+            slownik[el[1:4]] += f"❦{el[6:]}"
+        else:
+            slownik[el[1:4]] = el[6:]
+    final_list.append(slownik)
+
+marc_df = pd.DataFrame(final_list)
+fields = marc_df.columns.tolist()
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+marc_df = marc_df.reindex(columns=fields)    
     
     
     

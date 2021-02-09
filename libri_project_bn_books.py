@@ -1,14 +1,14 @@
 import pandas as pd
 import numpy as np
-from my_functions import marc_parser_1_field, gsheet_to_df
-import re
+from my_functions import marc_parser_1_field, gsheet_to_df, cSplit, df_to_mrc, mrc_to_mrk
+import regex as re
 import pandasql
-from my_functions import cSplit
 import json
 import requests
-from my_functions import df_to_mrc
 import io
-from my_functions import mrc_to_mrk
+import openpyxl
+import datetime
+import ast
 
 bn_relations = gsheet_to_df('1WPhir3CwlYre7pw4e76rEnJq5DPvVZs3_828c_Mqh9c', 'relacje_rev_book').drop(columns='typ').rename(columns={'id':'001'})
 
@@ -60,8 +60,6 @@ years = range(2013,2020)
 # bn_full_text.to_excel('bn_full_text.xlsx', index=False)
 # =============================================================================
     
-
-
 bn_books_marc_total = pd.DataFrame()
 
 for i, year in enumerate(years):
@@ -166,10 +164,36 @@ if bn_books_marc_total['009'].dtype == np.float64:
 
 bn_books_marc_total.to_excel('bn_books_marc.xlsx', index=False)
 
-df_to_mrc(bn_books_marc_total, '❦', 'libri_marc_bn_books.mrc')
-mrc_to_mrk('libri_marc_bn_books.mrc', 'libri_marc_bn_books.mrk')
+now = datetime.datetime.now()
+year = now.year
+month = now.month
+day = now.day
+
+df_to_mrc(bn_books_marc_total, '❦', f'libri_marc_bn_books_{year}-{month}-{day}.mrc', f'libri_bn_books_errors_{year}-{month}-{day}.txt')
+mrc_to_mrk(f'libri_marc_bn_books_{year}-{month}-{day}.mrc', f'libri_marc_bn_books_{year}-{month}-{day}.mrk')
 
 print('Done')
+
+errors_txt = io.open(f'libri_bn_books_errors_{year}-{month}-{day}.txt', 'rt', encoding='UTF-8').read().splitlines()
+errors_txt = [e for e in errors_txt if e]
+
+new_list = []
+
+for sublist in errors_txt:
+    sublist = ast.literal_eval(sublist)
+    di = {x:y for x,y in sublist}
+    new_list.append(di)
+    
+for dictionary in new_list:
+    for key in dictionary.keys():
+        dictionary[key] = '❦'.join([e for e in dictionary[key] if e])
+
+df = pd.DataFrame(new_list)
+df['LDR'] = '-----nam---------4u-----'
+#investigate the file thoroughly if more errors
+
+df_to_mrc(df, '❦', f'libri_marc_bn_books_vol_2_{year}-{month}-{day}.mrc', f'libri_bn_books_errors_vol_2_{year}-{month}-{day}.txt')
+mrc_to_mrk(f'libri_marc_bn_books_vol_2_{year}-{month}-{day}.mrc', f'libri_marc_bn_books_vol_2_{year}-{month}-{day}.mrk')
 
 
 # nadpisać główny plik
@@ -182,6 +206,8 @@ print('Done')
 # 100 d - usunąć nawiasy
 # 830 usunąć v
 # =============================================================================
+
+
 
 
 
