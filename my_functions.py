@@ -202,7 +202,7 @@ def xml_to_mrk(path_in, path_out):
     
 def mrc_to_mrk(path_in, path_out):
     reader = pymarc.MARCReader(open(path_in, 'rb'), to_unicode=True, force_utf8=True)
-    writer = pymarc.TextWriter(io.open(path_out, 'wt', encoding="UTF-*"))
+    writer = pymarc.TextWriter(io.open(path_out, 'wt', encoding="UTF-8"))
     for record in reader:
         writer.write(record)
     writer.close()

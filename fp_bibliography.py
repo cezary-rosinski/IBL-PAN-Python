@@ -29,6 +29,7 @@ from pdfminer.pdfpage import PDFPage
 from io import StringIO
 from pdfminer.pdfdocument import PDFDocument
 import PyPDF2
+import docx2txt
 
 
 # local files
@@ -819,21 +820,16 @@ browser.close()
 #df_to_gsheet(aktualny_numer, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły + DOI')
 
 
-#%%
+#%% poprawki z wydobyciem bibliografii z docx
 
+df = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły do pressto')
 
+for i, row in df.iterrows():
+    print(f"{i+1}/{len(df)}")
+    path = re.sub('\\\\', '/', row['ścieżka do bibliografii'])
+    df.at[i, 'nowa bibliografia'] = docx2txt.process(path)
 
-
-
-
-
-
-
-
-
-
-
-
+df_to_gsheet(df, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły 10.02.2021')
 
 
 

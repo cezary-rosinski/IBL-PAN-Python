@@ -251,25 +251,22 @@ fields_order = bar_catalog.columns.tolist()
 fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 bar_catalog = bar_catalog.reindex(columns=fields_order)
 
-for i, column in enumerate(bar_catalog):
-    print(str(i) + '/' + str(len(bar_catalog.columns)))
-    for ind, elem in enumerate(bar_encoding):
-        print('    ' + str(ind) + '/' + str(len(bar_encoding)))
-        bar_catalog[column] = bar_catalog[column].str.replace(elem[0], elem[1], regex=True)
-        
-for i, column in enumerate(bar_catalog):
-    print(str(i) + '/' + str(len(bar_catalog.columns)))
-    for ind, elem in enumerate(bar_encoding2):
-        print('    ' + str(ind) + '/' + str(len(bar_encoding2)))
-        bar_catalog[column] = bar_catalog[column].str.replace(elem[0], elem[1], regex=True)
-        
+
+for ind, elem in enumerate(bar_encoding):
+    print(f"{ind+1}/{len(bar_encoding)}")
+    bar_catalog = bar_catalog.replace(elem[0], elem[1], regex=True)
+    
+for ind, elem in enumerate(bar_encoding2):
+    print(f"{ind+1}/{len(bar_encoding2)}")
+    bar_catalog = bar_catalog.replace(elem[0], elem[1], regex=True)    
+
 bar_catalog.to_excel('bar_catalog.xlsx', index=False)
 
-df_to_mrc(bar_catalog, '❦', f'bar_catalog{year}-{month}-{day}.mrc', f'bar_catalog{year}-{month}-{day}.txt')
-mrc_to_mrk(f'bar_catalog{year}-{month}-{day}.mrc', f'bar_catalog{year}-{month}-{day}.mrk')
+df_to_mrc(bar_catalog, '❦', f'bar_catalog_{year}-{month}-{day}.mrc', f'bar_catalog_{year}-{month}-{day}.txt')
+mrc_to_mrk(f'bar_catalog_{year}-{month}-{day}.mrc', f'bar_catalog_{year}-{month}-{day}.mrk')
 
 #errors
-errors_txt = io.open(f'bar_catalog{year}-{month}-{day}.txt', 'rt', encoding='UTF-8').read().splitlines()
+errors_txt = io.open(f'bar_catalog_{year}-{month}-{day}.txt', 'rt', encoding='UTF-8').read().splitlines()
 errors_txt = [e for e in errors_txt if e]
 
 new_list = []
@@ -287,8 +284,35 @@ df = pd.DataFrame(new_list)
 df['LDR'] = '-----nab---------4u-----'
 #investigate the file thoroughly if more errors
 
-df_to_mrc(df, '❦', f'bar_catalog_vol_2{year}-{month}-{day}.mrc', f'bar_catalog_vol_2{year}-{month}-{day}.txt')
-mrc_to_mrk(f'bar_catalog_vol_2{year}-{month}-{day}.mrc', f'bar_catalog_vol_2{year}-{month}-{day}.mrk')
+def indicator_600(x):
+    x = x.split('❦')
+    for i, el in enumerate(x):
+        if el[:3] != '14':
+            x[i] = '14' + ''.join(re.split('(\$)', el)[1:])
+    val = '❦'.join(x)
+    return val
+
+df['600'] = df['600'].apply(lambda x: indicator_600(x))
+    
+df_to_mrc(df, '❦', f'bar_catalog_vol_2_{year}-{month}-{day}.mrc', f'bar_catalog_vol_2_{year}-{month}-{day}.txt')
+mrc_to_mrk(f'bar_catalog_vol_2_{year}-{month}-{day}.mrc', f'bar_catalog_vol_2_{year}-{month}-{day}.mrk')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
