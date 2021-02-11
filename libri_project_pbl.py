@@ -1,5 +1,5 @@
 # dodać dask.dataframe przy każdym groupby
-# zmienić , nan$ na $
+# w zapytaniu dla Oracle'a dostać pseudonimy i inne formy autorskie, bo potem $a jest puste
 import cx_Oracle
 import pandas as pd
 from my_functions import gsheet_to_df, df_to_mrc, cosine_sim_2_elem, mrc_to_mrk, cSplit

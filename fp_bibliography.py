@@ -32,7 +32,7 @@ import PyPDF2
 import docx2txt
 
 
-# local files
+#%% local files
 
 extentions = ('*.pdf', '*.docx')
 local_files = []
@@ -830,6 +830,105 @@ for i, row in df.iterrows():
     df.at[i, 'nowa bibliografia'] = docx2txt.process(path)
 
 df_to_gsheet(df, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły 10.02.2021')
+
+#%% bibliography update
+
+artykuly = gsheet_to_df('15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły 10.02.2021')
+
+#pressto - logowanie
+
+browser = webdriver.Firefox() 
+
+def jest_autor(x):
+    try:
+        re.findall('(, \p{Lu})|(^-+|^—+|^–+)', x)[0]
+        val = x
+    except IndexError:
+        val = ''
+    return val
+
+browser.get("https://pressto.amu.edu.pl/index.php/index/login") 
+browser.implicitly_wait(5)
+username_input = browser.find_element_by_id('login-username')
+password_input = browser.find_element_by_id('login-password')
+
+username = fp_credentials.pressto_username
+password = fp_credentials.pressto_password
+
+username_input.send_keys(username)
+password_input.send_keys(password)
+
+login_button = browser.find_element_by_css_selector('.btn-primary').click()
+
+browser.get('https://pressto.amu.edu.pl/index.php/fp/submissions')
+time.sleep(1)
+archiwum = browser.find_element_by_name('archives')
+archiwum.click()
+
+liczba_widocznych = int(re.findall('\d+', browser.find_elements_by_class_name('pkpListPanel__count')[-1].text)[-1])
+liczba = int(re.findall('\d+', browser.find_elements_by_class_name('pkpListPanel__count')[-1].text)[0])
+
+while liczba != liczba_widocznych:
+    zaladuj_wiecej = browser.find_element_by_css_selector('.pkpListPanel__loadMoreButton')
+    zaladuj_wiecej.click()
+    time.sleep(1)
+    liczba = int(re.findall('\d+', browser.find_elements_by_class_name('pkpListPanel__count')[-1].text)[0])
+    
+ids = browser.find_elements_by_css_selector('.pkpListPanelItem--submission__id')
+autor = browser.find_elements_by_css_selector('.pkpListPanelItem--submission__author')
+tytul = browser.find_elements_by_css_selector('.pkpListPanelItem--submission__title')
+
+pressto = []
+for i, a, t in zip(ids,autor,tytul):
+    pressto.append((i.text, a.text, t.text, f'https://pressto.amu.edu.pl/index.php/fp/workflow/index/{i.text}/5'))
+    
+pressto = pd.DataFrame(pressto, columns=['id', 'autor', 'tytuł artykułu', 'link'])
+
+artykuly_biblio = artykuly.copy()[artykuly['język'] == 'pl'][['autor', 'tytuł artykułu', 'nowa bibliografia']]
+artykuly_biblio['autor'] = artykuly_biblio['autor'].str.replace('❦', ', ', regex=False)
+artykuly_biblio['tytuł artykułu'] = artykuly_biblio['tytuł artykułu'].str.replace('<i>','').str.replace('</i>','')
+
+df = pd.merge(artykuly_biblio, pressto, how='left', on=['autor', 'tytuł artykułu'])
+
+for ind, row in df.iterrows():
+    print(f"{ind+1}/{len(df)}")   
+    browser.get(row['link'])
+    time.sleep(1)
+    metadane = browser.find_element_by_css_selector('.pkp_linkaction_icon_information')
+    metadane.click()
+    time.sleep(1)
+    bibliografia_tab = browser.find_element_by_name('citations')
+    bibliografia_tab.click()
+    bibliografia = browser.find_element_by_xpath("//textarea[@class=' ']")
+    stara_bibliografia = bibliografia.text
+    df.at[ind, 'stara bibliografia'] = stara_bibliografia
+    bibliografia.clear()
+    bibliografia_df = pd.DataFrame([e.strip() for e in row['nowa bibliografia'].split('\n')], columns=['bibliografia'])
+    bibliografia_df = bibliografia_df[bibliografia_df['bibliografia'] != '']
+    bibliografia_df['autor pozycji'] = bibliografia_df['bibliografia'].apply(lambda x: re.sub('(^.+?)(\..+$)', r'\1', x))
+    bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].apply(lambda x: jest_autor(x))
+    bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].replace('-{2,}|—{2,}|–{2,}', np.nan, regex=True).ffill()       
+    bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: re.sub(f"{x['autor pozycji']}.", '', x['bibliografia']).strip(), axis=1)
+    bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: x['bibliografia'] if x['pozycja'] == '' else x['pozycja'], axis=1)
+    bibliografia_df['pozycja'] = bibliografia_df['pozycja'].str.replace('-{2,}|—{2,}|–{2,}', '', regex=True)
+    bibliografia_df['pozycja'] = bibliografia_df['pozycja'].str.replace('(http)([^ ]+?)(\/|\-|\_)( )', r'\1\2\3', regex=True)
+    bibliografia_df['id'] = bibliografia_df.index+1
+    bibliografia_df['id'] = bibliografia_df['id']
+    bibliografia_df = bibliografia_df.replace(r'^\s*$', np.nan, regex=True)
+    bibliografia_df['bibliografia'] =  bibliografia_df[['id', 'autor pozycji', 'pozycja']].apply(lambda x: '. '.join(x.dropna().astype(str)), axis=1)
+    bibliografia_df = '\n'.join(bibliografia_df['bibliografia'].str.replace('(\. )+', '. ', regex=True).to_list())
+    
+    bibliografia.send_keys(bibliografia_df, Keys.BACK_SPACE)
+    time.sleep(1)
+    zapisz_bibliografie = browser.find_element_by_id('parse')
+    zapisz_bibliografie.click()
+    
+df_to_gsheet(df, '15O0yOBJ-pEWo8iOsyxwtivtgHawQNGnFnB75wx_3pao', 'artykuły 11.02.2021')
+browser.close()
+
+
+
+
 
 
 
