@@ -34,7 +34,7 @@ def unique_subfields(x):
 
 #books
 
-reader = io.open('F:/Cezary/Documents/IBL/Libri/Iteracja 10.2020/libri_marc_bn_books.mrk', 'rt', encoding = 'UTF-8').read().splitlines()     
+reader = io.open('F:/Cezary/Documents/IBL/Libri/Iteracja 2021-02/libri_marc_bn_books_2021-2-9.mrk', 'rt', encoding = 'UTF-8').read().splitlines()     
 
 bn_field_subfield = []        
 for i, l in enumerate(reader):

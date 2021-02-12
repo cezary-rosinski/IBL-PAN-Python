@@ -18,6 +18,17 @@ from xml.sax import SAXParseException
 import openpyxl
 import Levenshtein as lev
 from difflib import SequenceMatcher  
+from google_drive_research_folders import cr_projects
+import gspread_pandas as gp
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+from google_drive_credentials import gc, credentials
+import datetime
+
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()
+
+drive = GoogleDrive(gauth)
 
 ### def
 
@@ -1038,7 +1049,10 @@ for author, link in authors:
     # df_to_gsheet(bn_to_check, link, 'bn')
 
 
-# data from OCLC only - 27.01.2021
+#%% data from OCLC only - 12.02.2021
+    
+file_list = drive.ListFile({'q': f"'{cr_projects}' in parents and trashed=false"}).GetList() 
+translation_folder = [file['id'] for file in file_list if file['title'] == 'Vimr Project'][0]
 
 oclc_lang = pd.read_csv('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv')
 oclc_viaf = pd.read_excel('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.xlsx', engine='openpyxl')
@@ -1098,6 +1112,7 @@ for language in languages:
     
 oclc_pl = df_all_positive.copy().reset_index(drop=True)
 oclc_pl['260'] = oclc_pl[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
+oclc_pl['240'] = oclc_pl[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)
 oclc_pl['100_unidecode'] = oclc_pl['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
 
 def simplify(x):
@@ -1109,10 +1124,23 @@ def simplify(x):
             final_string += letter
     return final_string
 
-authors = [('Hasek', '18eydmu6oNbHFLyywr2ixNoy2v9OX6W-c3MWR_9l80SU'), 
-           ('Hrabal', '1xnZXr3huY4eKYSO3QhVa1rnRhtBlyOCD0GszzsbFPSY'), 
-           ('Capek', '1t_-_cxUzvRG2iYyKN6WMXmk7wxC9imnrFfowYJ8oIWo')]
+authors = ['Hasek', 
+           'Hrabal', 
+           'Capek']
 
+now = datetime.datetime.now()
+year = now.year
+month = now.month
+day = now.day
+
+for i, author in enumerate(authors):
+    sheet = gc.create(f'{author}_{year}-{month}-{day}', translation_folder)
+    s = gp.Spread(sheet.id, creds=credentials)
+    authors[i] = [authors[i]]
+    authors[i].append([sheet.id, s])
+
+#przesyłać dane na dysk zgodnie z nową metodą
+    
 for index, (author, link) in enumerate(authors[1:]):
     print(f"{index+1}/{len(authors)}")
     
@@ -1289,7 +1317,7 @@ print(SequenceMatcher(a=test3a, b=test3b).ratio())
 
 
  
-# notatki
+#%% notatki
 
 
 oclc_cz_from_all = oclc_full[oclc_full['language'] == 'cze']
