@@ -36,7 +36,7 @@ for record in records:
     forum_poetyki_list_of_dicts.append(forum_poetyki_dict)
 
 df = pd.DataFrame(forum_poetyki_list_of_dicts)
-df = df[df['relation'].notnull()].reset_index(drop=True)
+df = df[(df['relation'].notnull()) & (df['relation'].str.contains('❦'))].reset_index(drop=True)
 
 #os.mkdir('/forum_poetyki_txt')
 for i, row in df.iterrows():
