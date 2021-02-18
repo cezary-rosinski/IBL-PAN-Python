@@ -1254,7 +1254,8 @@ for index, (author, g_id, g_sheet) in enumerate(authors):
             if len(group[~group['245'].str.contains('\$n', regex=True)]) == 1:
                 for column in group:
                     if column in ['fiction_type', '490', '500', '650', '655']:
-                        group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))                    
+                        group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))  
+                # dodać wzbogacenie z odrzucanych rekordów
                 df = group[~group['245'].str.contains('\$n', regex=True)]
                 df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(df)
             else:
@@ -1347,8 +1348,10 @@ for index, (author, g_id, g_sheet) in enumerate(authors):
     dfs = [identifiers, udc, marc_author, title, original_title, contributor]
     df_oclc_final = reduce(lambda left,right: pd.merge(left,right,on='001'), dfs).drop_duplicates()
     g_sheet.df_to_sheet(df_oclc_final, sheet='final shape', index=0)
+    #!!!!!!!
+    #dodać to: df_oclc[['001', '650', '655', 'language', 'fiction_type', year]]
     
-    
+    #dodać wydanie - 250
     
     
 

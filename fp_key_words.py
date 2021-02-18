@@ -68,7 +68,9 @@ for i, row in df.iterrows():
         
 
 
-
+# dla każdego pliku zbudować słownik z kluczem takim jak nazwa pliku, a w środku wartości: słowa kluczowe, abstrakt i data
+        # eksport do jsona
+        # https://www.geeksforgeeks.org/how-to-convert-python-dictionary-to-json/
 
 
 
