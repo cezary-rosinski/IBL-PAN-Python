@@ -12,7 +12,7 @@ sickle = Sickle(oai_url)
 records = sickle.ListRecords(metadataPrefix='oai_dc')
 
 # tree_pretty = lxml.etree.parse('test.xml')
-# pretty = lxml.etree.tostring(tree, encoding="unicode", pretty_print=True)
+# pretty = lxml.etree.tostring(tree_pretty, encoding="unicode", pretty_print=True)
 
 forum_poetyki_list_of_dicts = []
 for record in records:

@@ -9,6 +9,8 @@ import numpy as np
 import pymarc
 import os
 import io
+import difflib
+import statistics
 
 # parser kolumny marc
 def marc_parser_1_field(df, field_id, field_data, subfield_code, delimiter='❦'):
@@ -360,3 +362,55 @@ def mrk_to_df(path_in, field_with_id, encoding='UTF-8'):
     fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
     full_df = full_df.reindex(columns=fields_order)
     return full_df, errors
+
+
+def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8):
+    list_of_matrixes = []
+    for i, column in enumerate(list_of_columns):
+        series = [str(e) for e in df[column].to_list()]
+        matrix = pd.DataFrame(index=pd.Index(series), columns=series)
+        
+        for index_row in range(matrix.shape[0]):
+            for index_column in range(matrix.shape[1]):
+                m_row = matrix.index[index_row]
+                m_col = matrix.columns[index_column]
+                matrix.iloc[index_row,index_column] = difflib.SequenceMatcher(a=m_row,b=m_col).ratio()
+        list_of_matrixes.append(matrix)
+    ids = df[column_with_ids].to_list()            
+    matrix = pd.DataFrame(index=pd.Index(ids), columns=ids) 
+    
+    for index_row in range(matrix.shape[0]):
+        for index_column in range(matrix.shape[1]):
+            list_of_values = []
+            for matrix_df in list_of_matrixes:
+                list_of_values.append(matrix_df.iloc[index_row,index_column])
+            mean_value = statistics.mean(list_of_values)
+            matrix.iloc[index_row,index_column] = mean_value
+                
+    matrix = pd.DataFrame(np.tril(matrix.to_numpy(), 0), index=matrix.index, columns=matrix.columns)
+            
+    clusters = {}
+    for column in matrix:     
+        series = matrix[column]
+        series = series[series >= similarity_lvl].index.to_list()
+        clusters[column] = series
+        
+    clusters = {k:v for (k, v) in clusters.items() if len(v) > 1}
+    
+    group_df = pd.DataFrame.from_dict(clusters, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'group', 0:column_with_ids})
+    
+    df = df.merge(group_df, on=column_with_ids, how='left')
+    df['group'] = df[[column_with_ids, 'group']].apply(lambda x: x['group'] if pd.notnull(x['group']) else x[column_with_ids], axis=1).astype('int64')
+    
+    return df
+
+
+
+
+
+
+
+
+
+
+
