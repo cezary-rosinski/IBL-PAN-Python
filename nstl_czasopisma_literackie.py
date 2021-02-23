@@ -125,8 +125,8 @@ worksheet.set_basic_filter()
 #df = df[(df['relation'].notnull()) & (df['relation'].str.contains('❦'))].reset_index(drop=True)
 
 
-#dorzucić "najważniejsze" do puli
-#wyrzucić nazwy własne ze słów kluczowych
+#1. dorzucić "najważniejsze" do puli
+#2. wyrzucić nazwy własne ze słów kluczowych? lepiej nie - bo bachtiny, derridy
 #clustrować podobieństwo
 
 
