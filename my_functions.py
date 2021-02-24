@@ -404,7 +404,18 @@ def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8):
     
     return df
 
-
+def cluster_strings(strings, similarity_level):
+    clusters = {}
+    for string in (x.strip() for x in strings):
+        if string in clusters:
+            clusters[string].append(string)
+        else:
+            match = difflib.get_close_matches(string, clusters.keys(), cutoff=similarity_level)
+            if match:
+                clusters[match[0]].append(string)
+            else:
+                clusters[string] = [string]
+    return clusters
 
 
 

@@ -8,7 +8,7 @@ import numpy as np
 import pymarc
 import io
 from bs4 import BeautifulSoup
-from my_functions import cosine_sim_2_elem, marc_parser_1_field, gsheet_to_df, xml_to_mrk, cSplit, f, df_to_mrc, mrc_to_mrk, mrk_to_df, xml_to_mrk, mrk_to_mrc, get_cosine_result, df_to_gsheet
+from my_functions import cosine_sim_2_elem, marc_parser_1_field, gsheet_to_df, xml_to_mrk, cSplit, f, df_to_mrc, mrc_to_mrk, mrk_to_df, xml_to_mrk, mrk_to_mrc, get_cosine_result, df_to_gsheet, cluster_strings
 import glob
 import regex
 import unidecode
@@ -51,19 +51,6 @@ def year2word(x):
     except ValueError:
         pass
     return x
-
-def cluster_strings(strings, similarity_level):
-    clusters = {}
-    for string in (x.strip() for x in strings):
-        if string in clusters:
-            clusters[string].append(string)
-        else:
-            match = difflib.get_close_matches(string, clusters.keys(), cutoff=similarity_level)
-            if match:
-                clusters[match[0]].append(string)
-            else:
-                clusters[string] = [string]
-    return clusters
 
 ### code
     
