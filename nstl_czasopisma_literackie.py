@@ -15,6 +15,8 @@ from my_functions import cSplit, cluster_strings
 import datetime
 import regex as re
 from collections import OrderedDict
+import difflib
+import spacy
 
 now = datetime.datetime.now()
 year = now.year
@@ -219,18 +221,112 @@ for level in similarity_levels:
 # =============================================================================
 
 
+#%% word embedding
+texts = open("word_embedding_test.txt", encoding='utf8').read().splitlines()
+
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.preprocessing import Normalizer, FunctionTransformer
+from sklearn.cluster import AgglomerativeClustering
+from sklearn.pipeline import make_pipeline
+model = make_pipeline(
+    CountVectorizer(), 
+    Normalizer(), 
+    FunctionTransformer(lambda x: x.todense(), accept_sparse=True),
+    AgglomerativeClustering(distance_threshold=1.0, n_clusters=None),
+)
+clusters = model.fit_predict(texts)
+print(clusters)  # [0 0 0 1 1]
+
+import spacy
+import numpy as np
+nlp = spacy.load('pl_core_news_lg')
+
+model = make_pipeline(
+    FunctionTransformer(lambda x: np.stack([nlp(t).vector for t in x])),
+    Normalizer(), 
+    AgglomerativeClustering(distance_threshold=0.5, n_clusters=None),
+)
+clusters = model.fit_predict(texts)
+print(clusters)  # [2 0 2 0 1]
+
+from laserembeddings import Laser
+laser = Laser()
+
+model = make_pipeline(
+    FunctionTransformer(lambda x: laser.embed_sentences(x, lang='en')),
+    Normalizer(), 
+    AgglomerativeClustering(distance_threshold=0.8, n_clusters=None),
+)
+clusters = model.fit_predict(texts)
+print(clusters)  # [1 1 1 0 0]
 
 
+#results for each model
+from collections import defaultdict
+cluster2words = defaultdict(list)
+for text, cluster in zip(texts, clusters):
+    for word in text.split():
+        if word not in cluster2words[cluster]:
+            cluster2words[cluster].append(word)
+            
+            
+test = [wordlist for wordlist in cluster2words.values()]
+result = [' '.join(wordlist) for wordlist in cluster2words.values()]
+print(result)  # ['yellow color looks like bright', 'red color okay blood']
 
 
+#_____________________________________________________________
+
+import numpy as np
+from sklearn.cluster import AffinityPropagation
+import distance
+    
+words = open("word_embedding_test.txt", encoding='utf8').read().splitlines()
+words = np.asarray(words) #So that indexing with a list will work
+lev_similarity = -1*np.array([[distance.levenshtein(w1,w2) for w1 in words] for w2 in words])
+
+affprop = AffinityPropagation(affinity="precomputed", damping=0.5)
+affprop.fit(lev_similarity)
+slownik = {}
+for cluster_id in np.unique(affprop.labels_):
+    exemplar = words[affprop.cluster_centers_indices_[cluster_id]]
+    cluster = np.unique(words[np.nonzero(affprop.labels_==cluster_id)])
+    cluster_str = ", ".join(cluster)
+    slownik[exemplar] = cluster_str
+    print(" - *%s:* %s" % (exemplar, cluster_str))
 
 
+# =============================================================================
+# from string_grouper import group_similar_strings
+# test = group_similar_strings(texts)
+# =============================================================================
 
+from gensim.models import Word2Vec
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+sentences = open("word_embedding_test.txt", encoding='utf8').read().splitlines()
+sentences = [s.split(' ') for s in sentences]
+sentences = [[e.strip() for e in s] for s in sentences]
+model = Word2Vec(sentences, min_count=1)
+print (model.most_similar(positive=['intertekstualność'], negative=[], topn=2))
+print(model[model.wv.vocab])
+print(list(model.wv.vocab))
 
+vocab = list(model.wv.vocab)
+X = model[vocab]
+tsne = TSNE(n_components=2)
+X_tsne = tsne.fit_transform(X)
+df = pd.DataFrame(X_tsne, index=vocab, columns=['x', 'y'])
 
+fig = plt.figure()
+ax = fig.add_subplot(1, 1, 1)
 
+ax.scatter(df['x'], df['y'])
 
+for word, pos in df.iterrows():
+    ax.annotate(word, pos)
 
+fig.savefig('test.jpg')
 
 
 
