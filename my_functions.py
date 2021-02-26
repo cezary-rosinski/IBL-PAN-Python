@@ -376,6 +376,7 @@ def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8):
                 m_col = matrix.columns[index_column]
                 matrix.iloc[index_row,index_column] = difflib.SequenceMatcher(a=m_row,b=m_col).ratio()
         list_of_matrixes.append(matrix)
+        
     ids = df[column_with_ids].to_list()            
     matrix = pd.DataFrame(index=pd.Index(ids), columns=ids) 
     
