@@ -1156,6 +1156,9 @@ for i, author in enumerate(authors):
 #przesyłać dane na dysk zgodnie z nową metodą
     
 for index, (author, g_id, g_sheet) in enumerate(authors):
+    author = authors[0][0]
+    g_id = authors[0][1]
+    g_sheet = authors[0][2]
     print(f"{index+1}/{len(authors)}")
     
     #all
@@ -1191,6 +1194,8 @@ for index, (author, g_id, g_sheet) in enumerate(authors):
     for name, group in df_oclc_grouped:
         if len(group) > 1:
             group['groupby'] = str(name)
+            group_ids = '❦'.join([str(e) for e in group['001'].to_list()])
+            group['group_ids'] = group_ids
             df_oclc_duplicates = df_oclc_duplicates.append(group)
     df_oclc_duplicates = df_oclc_duplicates.drop_duplicates()
     
@@ -1199,8 +1204,6 @@ for index, (author, g_id, g_sheet) in enumerate(authors):
     
     df_oclc_deduplicated = pd.DataFrame()
     for name, group in df_oclc_duplicates_grouped:
-        group_ids = ','.join([str(e) for e in group['001'].to_list()])
-        group['group_ids'] = group_ids
         for column in group:
             if column in ['fiction_type', '490', '500', '650', '655']:
                 group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
@@ -1209,6 +1212,7 @@ for index, (author, g_id, g_sheet) in enumerate(authors):
         df_oclc_deduplicated = df_oclc_deduplicated.append(group)
     
     df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+    df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(int)
     
     df_oclc = df_oclc[~df_oclc['001'].isin(oclc_duplicates_list)]
     df_oclc = pd.concat([df_oclc, df_oclc_deduplicated]).drop(columns='title')
@@ -1219,30 +1223,32 @@ for index, (author, g_id, g_sheet) in enumerate(authors):
     title = marc_parser_1_field(df_oclc, '001', '245', '\$')[['001', '$a']].replace(r'^\s*$', np.nan, regex=True)
     title['title'] = title[title.columns[1:]].apply(lambda x: simplify(x), axis=1)    
     title = title[['001', 'title']]
-    df_oclc = pd.merge(df_oclc, title, how='left', on='001')    
+    df_oclc = pd.merge(df_oclc, title, how='left', on='001')  
     
     df_oclc_grouped = df_oclc.groupby(['title', 'place', 'year'])
         
     df_oclc_multiple_volumes = pd.DataFrame()
-
     for name, group in df_oclc_grouped:
         if len(group[group['245'].str.contains('\$n', regex=True)]):
             group['groupby'] = str(name)
+            group_ids = '❦'.join(set([str(e) for e in group['001'].to_list() + group['group_ids'].to_list() if pd.notnull(e)]))
+            group['group_ids'] = group_ids
             df_oclc_multiple_volumes = df_oclc_multiple_volumes.append(group)
             
     if len(df_oclc_multiple_volumes) > 0:
         oclc_multiple_volumes_list = df_oclc_multiple_volumes['001'].drop_duplicates().tolist()
-           
         df_oclc_multiple_volumes_grouped = df_oclc_multiple_volumes.groupby(['title', 'place', 'year'])
     
         df_oclc_multiple_volumes_deduplicated = pd.DataFrame()
-        
         for name, group in df_oclc_multiple_volumes_grouped:
             if len(group[~group['245'].str.contains('\$n', regex=True)]) == 1:
                 for column in group:
                     if column in ['fiction_type', '490', '500', '650', '655']:
                         group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))  
-                # dodać wzbogacenie z odrzucanych rekordów
+                    elif column in ['001', '245']:
+                        pass
+                    else:
+                        group[column] = group[column].dropna().astype(str).max()
                 df = group[~group['245'].str.contains('\$n', regex=True)]
                 df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(df)
             else:
@@ -1263,6 +1269,8 @@ for index, (author, g_id, g_sheet) in enumerate(authors):
                 df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(group)
                     
         df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+        df_oclc_multiple_volumes_deduplicated['001'] = df_oclc_multiple_volumes_deduplicated['001'].astype(int)
+        
         df_oclc = df_oclc[~df_oclc['001'].isin(oclc_multiple_volumes_list)]
         df_oclc = pd.concat([df_oclc, df_oclc_multiple_volumes_deduplicated]).drop_duplicates().reset_index(drop=True)
         g_sheet.df_to_sheet(df_oclc, sheet='after removing multiple volumes', index=0)
@@ -1328,12 +1336,11 @@ for index, (author, g_id, g_sheet) in enumerate(authors):
     original_title = marc_parser_1_field(df_oclc, '001', '240', '\$').replace(r'^\s*$', np.nan, regex=True)[['001', '$a']].rename(columns={'$a':'original title'})
     place_of_publication = marc_parser_1_field(df_oclc, '001', '260', '\$').replace(r'^\s*$', np.nan, regex=True)[['001', '$a']].rename(columns={'$a':'place of publication'})
     #$e as alternative place of publication?
-    df_oclc[['001', '650', '655', 'language', 'fiction_type']]
     contributor = marc_parser_1_field(df_oclc, '001', '700', '\$').replace(r'^\s*$', np.nan, regex=True)[['001', '$a', '$d', '$e', '$1']].rename(columns={'$a':'contributor name', '$d':'contributor birth and death', '$1':'contributor viaf id', '$e':'contributor role'})
     contributor['contributor role'] = contributor['contributor role'].apply(lambda x: x if pd.notnull(x) else 'unknown')
     
-    dfs = [identifiers, udc, marc_author, title, original_title, contributor]
-    df_oclc_final = reduce(lambda left,right: pd.merge(left,right,on='001'), dfs).drop_duplicates()
+    dfs = [identifiers, udc, marc_author, title, original_title, contributor, df_oclc[['001', '650', '655', 'language', 'fiction_type', 'year']]]
+    df_oclc_final = reduce(lambda left,right: pd.merge(left,right,on='001', how='outer'), dfs).drop_duplicates()
     g_sheet.df_to_sheet(df_oclc_final, sheet='final shape', index=0)
     #!!!!!!!
     #dodać to: df_oclc[['001', '650', '655', 'language', 'fiction_type', year]]
