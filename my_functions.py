@@ -11,6 +11,7 @@ import os
 import io
 import difflib
 import statistics
+import unidecode
 
 # parser kolumny marc
 def marc_parser_1_field(df, field_id, field_data, subfield_code, delimiter='❦'):
@@ -365,6 +366,10 @@ def mrk_to_df(path_in, field_with_id, encoding='UTF-8'):
 
 
 def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8):
+    try:
+        df.drop(columns='cluster',inplace=True)
+    except KeyError:
+        pass
     list_of_matrixes = []
     for i, column in enumerate(list_of_columns):
         series = [str(e) for e in df[column].to_list()]
@@ -389,19 +394,26 @@ def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8):
             matrix.iloc[index_row,index_column] = mean_value
                 
     matrix = pd.DataFrame(np.tril(matrix.to_numpy(), 0), index=matrix.index, columns=matrix.columns)
-            
-    clusters = {}
-    for column in matrix:     
-        series = matrix[column]
-        series = series[series >= similarity_lvl].index.to_list()
-        clusters[column] = series
-        
-    clusters = {k:v for (k, v) in clusters.items() if len(v) > 1}
     
-    group_df = pd.DataFrame.from_dict(clusters, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'group', 0:column_with_ids})
+    stacked_matrix = matrix.stack().reset_index()
+    stacked_matrix = stacked_matrix[stacked_matrix[0] >= similarity_lvl].rename(columns={'level_0':column_with_ids, 'level_1':'cluster'})
+    stacked_matrix = stacked_matrix.groupby('cluster').filter(lambda x: len(x) > 1)
+    stacked_matrix = stacked_matrix[stacked_matrix[column_with_ids] != stacked_matrix['cluster']].sort_values(0, ascending=False).drop(columns=0)
+    tuples = [tuple(x) for x in stacked_matrix.to_numpy()]
+    
+    clusters = {}
+    for t_id, t_cluster in tuples:
+        if t_cluster in clusters and t_cluster in [e for e in clusters.values() for e in e] and t_id not in [e for e in clusters.values() for e in e]:
+            clusters[t_cluster].append(t_id)
+        elif t_cluster in clusters and t_cluster in [e for e in clusters.values() for e in e] and t_id not in [e for e in clusters.values() for e in e]:
+           clusters[[k for k, v in clusters.items() if t_cluster in v][0]].append(t_id)
+        elif t_id not in [e for e in clusters.values() for e in e]:
+            clusters[t_cluster] = [t_id, t_cluster]
+
+    group_df = pd.DataFrame.from_dict(clusters, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster', 0:column_with_ids})
     
     df = df.merge(group_df, on=column_with_ids, how='left')
-    df['group'] = df[[column_with_ids, 'group']].apply(lambda x: x['group'] if pd.notnull(x['group']) else x[column_with_ids], axis=1).astype('int64')
+    df['cluster'] = df[[column_with_ids, 'cluster']].apply(lambda x: x['cluster'] if pd.notnull(x['cluster']) else x[column_with_ids], axis=1).astype('int64')
     
     return df
 
@@ -417,6 +429,45 @@ def cluster_strings(strings, similarity_level):
             else:
                 clusters[string] = [string]
     return clusters
+
+def simplify_string(x, with_spaces=True, nodiacritics=True):
+    x = pd.Series([e for e in x if type(e) == str])
+    if with_spaces and nodiacritics:
+        x = unidecode.unidecode('❦'.join(x.dropna().astype(str)).lower())
+    elif nodiacritics:
+        x = unidecode.unidecode('❦'.join(x.dropna().astype(str)).lower().replace(' ', ''))
+    elif with_spaces:
+        x = '❦'.join(x.dropna().astype(str)).lower()
+    else:
+        x = '❦'.join(x.dropna().astype(str))
+    final_string = ''
+    for letter in x:
+        if letter.isalnum() or letter == ' ':
+            final_string += letter
+    return final_string
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
