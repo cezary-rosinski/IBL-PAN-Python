@@ -405,7 +405,7 @@ def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8):
     for t_id, t_cluster in tuples:
         if t_cluster in clusters and t_cluster in [e for e in clusters.values() for e in e] and t_id not in [e for e in clusters.values() for e in e]:
             clusters[t_cluster].append(t_id)
-        elif t_cluster in clusters and t_cluster in [e for e in clusters.values() for e in e] and t_id not in [e for e in clusters.values() for e in e]:
+        elif t_cluster not in clusters and t_cluster in [e for e in clusters.values() for e in e] and t_id not in [e for e in clusters.values() for e in e]:
            clusters[[k for k, v in clusters.items() if t_cluster in v][0]].append(t_id)
         elif t_id not in [e for e in clusters.values() for e in e]:
             clusters[t_cluster] = [t_id, t_cluster]

@@ -1109,11 +1109,16 @@ positive_viafs_diacritics = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GB
 positive_viafs_diacritics = positive_viafs_diacritics[positive_viafs_diacritics['viaf_positive'] != ''][['viaf_positive', 'cz_name']]
 positive_viafs_diacritics['cz_name'] = positive_viafs_diacritics['cz_name'].apply(lambda x: unidecode.unidecode(x))
 
+# oclc_other_languages['language'].drop_duplicates().sort_values().to_list()
+
 fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
-languages = ['pol']
+languages = ['pol', 'swe', 'ita', 'spa']
 #languages = ['ita']
 
+now = datetime.datetime.now()
+
 for language in languages:
+    print(language)
     df = oclc_other_languages[(oclc_other_languages['language'] == language)]
     df_language_materials_monographs = df[df['type of record + bibliographic level'] == 'am']
     negative = df_language_materials_monographs.copy()
@@ -1143,6 +1148,279 @@ for language in languages:
     df_all_positive = pd.concat([df_first_positive, df_second_positive, df_third_positive, df_fourth_positive])
     #df_all_positive.to_excel(f"oclc_{language}_df_all_positive.xlsx", index=False)
     
+    df_all_positive['260'] = df_all_positive[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
+    df_all_positive['240'] = df_all_positive[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)
+    df_all_positive['100_unidecode'] = df_all_positive['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
+    
+    authors = ['Hasek', 
+               'Hrabal', 
+               'Capek']
+    
+    year = now.year
+    month = now.month
+    day = now.day
+
+    
+    for i, author in enumerate(authors):
+        sheet = gc.create(f'{author}_{language}_{year}-{month}-{day}', translation_folder)
+        s = gp.Spread(sheet.id, creds=credentials)
+        authors[i] = [authors[i]]
+        authors[i] += [sheet.id, s]
+    
+    for index, (author, g_id, g_sheet) in enumerate(authors):
+        # author = authors[0][0]
+        # g_id = authors[0][1]
+        # g_sheet = authors[0][2]
+        print(f"{index+1}/{len(authors)}")
+        
+        #all
+        
+        df_oclc = df_all_positive[(df_all_positive['100_unidecode'].notnull()) &       
+                                  (df_all_positive['100_unidecode'].str.contains(author.lower()))].reset_index(drop=True)
+        df_oclc['001'] = df_oclc['001'].astype(int)
+        sh = gc.open_by_key(g_id)
+        wsh = sh.get_worksheet(0)
+        wsh.update_title('all')
+        g_sheet.df_to_sheet(df_oclc, sheet='all', index=0)
+        
+        #de-duplication 1: duplicates
+        try:
+            title = marc_parser_1_field(df_oclc, '001', '245', '\$')[['001', '$a', '$b', '$n', '$p']].replace(r'^\s*$', np.nan, regex=True)
+        except KeyError:
+            title = marc_parser_1_field(df_oclc, '001', '245', '\$')[['001', '$a', '$b']].replace(r'^\s*$', np.nan, regex=True)
+        title['title'] = title[title.columns[1:]].apply(lambda x: simplify_string(x, with_spaces=False), axis=1)    
+        title = title[['001', 'title']]
+        df_oclc = pd.merge(df_oclc, title, how='left', on='001')
+        
+        place = marc_parser_1_field(df_oclc, '001', '260', '\$')[['001', '$a']].rename(columns={'$a':'place'})
+        place = place[place['place'] != '']
+        place['place'] = place['place'].apply(lambda x: simplify_string(x, with_spaces=False))
+        df_oclc = pd.merge(df_oclc, place, how='left', on='001')
+        
+        publisher = marc_parser_1_field(df_oclc, '001', '260', '\$')[['001', '$b']].rename(columns={'$b':'publisher'})
+        publisher = publisher.groupby('001').head(1).reset_index(drop=True)
+        publisher['publisher'] = publisher['publisher'].apply(lambda x: simplify_string(x, with_spaces=False))
+        df_oclc = pd.merge(df_oclc, publisher, how='left', on='001')
+        
+        
+        year = df_oclc.copy()[['001', '008']].rename(columns={'008':'year'})
+        year['year'] = year['year'].apply(lambda x: x[7:11])
+        df_oclc = pd.merge(df_oclc, year, how='left', on='001')
+        
+        df_oclc_duplicates = pd.DataFrame()
+        df_oclc_grouped = df_oclc.groupby(['title', 'place', 'year'])
+        for name, group in df_oclc_grouped:
+            if len(group) > 1:
+                group['groupby'] = str(name)
+                group_ids = '❦'.join([str(e) for e in group['001'].to_list()])
+                group['group_ids'] = group_ids
+                df_oclc_duplicates = df_oclc_duplicates.append(group)
+        df_oclc_duplicates = df_oclc_duplicates.drop_duplicates()
+        
+        oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
+        df_oclc_duplicates_grouped = df_oclc_duplicates.groupby(['title', 'place', 'year'])
+        
+        df_oclc_deduplicated = pd.DataFrame()
+        for name, group in df_oclc_duplicates_grouped:
+            for column in group:
+                if column in ['fiction_type', '490', '500', '650', '655']:
+                    group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
+                else:
+                    group[column] = group[column].dropna().astype(str).max()
+            df_oclc_deduplicated = df_oclc_deduplicated.append(group)
+        
+        df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+        df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(int)
+        
+        df_oclc = df_oclc[~df_oclc['001'].isin(oclc_duplicates_list)]
+        df_oclc = pd.concat([df_oclc, df_oclc_deduplicated]).drop(columns='title')
+        df_oclc['group_ids'] = df_oclc['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+        g_sheet.df_to_sheet(df_oclc, sheet='after_removing_duplicates', index=0)
+        
+        #de-duplication 2: multiple volumes
+        
+        title = marc_parser_1_field(df_oclc, '001', '245', '\$')[['001', '$a']].replace(r'^\s*$', np.nan, regex=True)
+        title['title'] = title[title.columns[1:]].apply(lambda x: simplify_string(x, with_spaces=False), axis=1)    
+        title = title[['001', 'title']]
+        df_oclc = pd.merge(df_oclc, title, how='left', on='001')  
+        
+        df_oclc_grouped = df_oclc.groupby(['title', 'place', 'year'])
+            
+        df_oclc_multiple_volumes = pd.DataFrame()
+        for name, group in df_oclc_grouped:
+            if len(group[group['245'].str.contains('\$n', regex=True)]):
+                group['groupby'] = str(name)
+                group_ids = '❦'.join(set([str(e) for e in group['001'].to_list() + group['group_ids'].to_list() if pd.notnull(e)]))
+                group['group_ids'] = group_ids
+                df_oclc_multiple_volumes = df_oclc_multiple_volumes.append(group)
+                
+        if df_oclc_multiple_volumes.shape[0] > 0:
+            oclc_multiple_volumes_list = df_oclc_multiple_volumes['001'].drop_duplicates().tolist()
+            df_oclc_multiple_volumes_grouped = df_oclc_multiple_volumes.groupby(['title', 'place', 'year'])
+        
+            df_oclc_multiple_volumes_deduplicated = pd.DataFrame()
+            for name, group in df_oclc_multiple_volumes_grouped:
+                if len(group[~group['245'].str.contains('\$n', regex=True)]) == 1:
+                    for column in group:
+                        if column in ['fiction_type', '490', '500', '650', '655']:
+                            group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))  
+                        elif column in ['001', '245']:
+                            pass
+                        else:
+                            group[column] = group[column].dropna().astype(str).max()
+                    df = group[~group['245'].str.contains('\$n', regex=True)]
+                    df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(df)
+                else:
+                    for column in group:
+                        if column in ['fiction_type', '490', '500', '650', '655']:
+                            group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
+                        elif column == '245':
+                            field_245 = marc_parser_1_field(group, '001', '245', '\$').replace(r'^\s*$', np.nan, regex=True)
+                            field_245 = field_245.iloc[:, lambda x: x.columns.isin(['001', '$a', '$b', '$c'])]
+                            field_245['245'] = field_245[field_245.columns[1:]].apply(lambda x: ''.join(x.dropna().astype(str)), axis=1)
+                            field_245 = field_245[['001', '245']]
+                            field_245['245'] = '10' + field_245['245']
+                            group = pd.merge(group.drop(columns='245'), field_245, how='left', on='001')
+                            group[column] = group[column].dropna().astype(str).max()
+                        else:
+                            group[column] = group[column].dropna().astype(str).max()
+                    group = group.drop_duplicates().reset_index(drop=True)
+                    df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(group)
+                        
+            df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+            df_oclc_multiple_volumes_deduplicated['001'] = df_oclc_multiple_volumes_deduplicated['001'].astype(int)
+            
+            df_oclc = df_oclc[~df_oclc['001'].isin(oclc_multiple_volumes_list)]
+            df_oclc = pd.concat([df_oclc, df_oclc_multiple_volumes_deduplicated]).drop_duplicates().reset_index(drop=True)
+            df_oclc['group_ids'] = df_oclc['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+            g_sheet.df_to_sheet(df_oclc, sheet='after_removing_multiple_volumes', index=0)
+            
+        #de-duplication 3: fuzzyness
+        df_oclc.drop(columns='title', inplace=True)
+        field_245 = marc_parser_1_field(df_oclc, '001', '245', '\$').replace(r'^\s*$', np.nan, regex=True)
+        field_245['$a'] = field_245.apply(lambda x: x['$a'] if pd.notnull(x['$a']) else x['indicator'][2:].split('.', 1)[0], axis=1)
+        field_245 = field_245.iloc[:, lambda x: x.columns.isin(['001', '$a', '$b'])]
+        field_245['title'] = field_245[field_245.columns[1:]].apply(lambda x: simplify_string(x), axis=1)  
+        field_245 = field_245[['001', 'title']]
+        df_oclc = pd.merge(df_oclc, field_245, how='left', on='001')
+        
+        #similarity level == 0.85 | columns == ['title', 'publisher', 'year'] | same 'year'
+        df_oclc_clusters = cluster_records(df_oclc, '001', ['title', 'publisher', 'year'], 0.85)    
+        df_oclc_clusters = df_oclc_clusters[df_oclc_clusters['publisher'] != '']
+        df_oclc_duplicates = df_oclc_clusters.groupby(['cluster', 'year']).filter(lambda x: len(x) > 1)
+        
+        if df_oclc_duplicates.shape[0] > 0:
+     
+            if df_oclc_duplicates['001'].value_counts().max() > 1:
+                sys.exit('ERROR!!!\nclustering problem!!!')
+        
+            oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
+            df_oclc_duplicates = df_oclc_duplicates.groupby('cluster')
+            
+            df_oclc_deduplicated = pd.DataFrame()
+            for name, group in df_oclc_duplicates:
+                group_ids = '❦'.join(set([str(e) for e in group['001'].to_list() + group['group_ids'].to_list() if pd.notnull(e)]))
+                group['group_ids'] = group_ids
+                for column in group:
+                    if column in ['fiction_type', '490', '500', '650', '655']:
+                        group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
+                    elif column == '245':
+                        group[column] = group[column][group[column].str.contains('$', regex=False)]
+                        group[column] = group[column].dropna().astype(str).max()
+                    else:
+                        group[column] = group[column].dropna().astype(str).max()
+                df_oclc_deduplicated = df_oclc_deduplicated.append(group)
+                
+            df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+            df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(int)
+            df_oclc = df_oclc[~df_oclc['001'].isin(oclc_duplicates_list)]
+            df_oclc = pd.concat([df_oclc, df_oclc_deduplicated])
+            df_oclc['group_ids'] = df_oclc['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+            g_sheet.df_to_sheet(df_oclc, sheet='after_fuzzy_duplicates_0.85_tit_pub_year', index=0)
+            
+    # =============================================================================
+    #     #similarity level == 0.8 | columns == ['title', 'publisher'] | same 'year'
+    #     df_oclc.drop(columns='cluster', inplace=True)
+    #     df_oclc_clusters = cluster_records(df_oclc, '001', ['title', 'place', 'publisher', 'year'], 0.85) 
+    #     df_oclc_duplicates = df_oclc_clusters.groupby(['cluster', 'year']).filter(lambda x: len(x) > 1)
+    #     
+    #     df_oclc_duplicates[['001', '245', 'year', '260']].to_excel('test_oclc1.xlsx', index=False)
+    #     
+    #     if df_oclc_duplicates.shape[0] > 0:
+    #     
+    #         if df_oclc_duplicates['001'].value_counts().max() > 1:
+    #             sys.exit('ERROR!!!\nclustering problem!!!')
+    #     
+    #         oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
+    #         df_oclc_duplicates = df_oclc_duplicates.groupby('cluster')
+    #         
+    #         df_oclc_deduplicated = pd.DataFrame()
+    #         for name, group in df_oclc_duplicates:
+    #             group_ids = '❦'.join(set([str(e) for e in group['001'].to_list() + group['group_ids'].to_list() if pd.notnull(e)]))
+    #             group['group_ids'] = group_ids
+    #             for column in group:
+    #                 if column in ['fiction_type', '490', '500', '650', '655']:
+    #                     group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
+    #                 elif column == '245':
+    #                     group[column] = group[column][group[column].str.contains('$', regex=False)]
+    #                     group[column] = group[column].dropna().astype(str).max()
+    #                 else:
+    #                     group[column] = group[column].dropna().astype(str).max()
+    #             df_oclc_deduplicated = df_oclc_deduplicated.append(group)
+    #             
+    #         df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+    #         df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(int)
+    #         df_oclc = df_oclc[~df_oclc['001'].isin(oclc_duplicates_list)]
+    #         df_oclc = pd.concat([df_oclc, df_oclc_deduplicated])
+    #         df_oclc['group_ids'] = df_oclc['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+    #         g_sheet.df_to_sheet(df_oclc, sheet='after_fuzzy_duplicates_0.85_tit_pub_year', index=0)
+    # =============================================================================
+        
+        #editions counter
+        edition_clusters = cluster_strings(df_oclc['title'], 0.7)
+        edition_clusters_df = pd.DataFrame()
+        for k, v in edition_clusters.items():
+            df = df_oclc.copy()[df_oclc['title'].str.strip().isin(v)]
+            df['edition_cluster'] = k
+            edition_clusters_df = edition_clusters_df.append(df)
+        edition_clusters_df['edition_index'] = edition_clusters_df.groupby('edition_cluster').cumcount()+1
+        df_oclc = edition_clusters_df.copy()
+        g_sheet.df_to_sheet(df_oclc, sheet='final_marc21_with_editions_counters', index=0)
+           
+        #simplify the records
+        df_oclc = df_oclc[['001', '080', '100', '245', '240', '260', '650', '655', '700', 'language', 'fiction_type', 'place', 'year', 'edition_cluster', 'edition_index']]
+        df_oclc['001'] = df_oclc['001'].astype(int)
+        
+        identifiers = df_oclc[['001']]
+        udc = marc_parser_1_field(df_oclc, '001', '080', '\$')[['001', '$a']].rename(columns={'$a':'universal decimal classification'})
+        udc['universal decimal classification'] = udc.groupby('001')['universal decimal classification'].transform(lambda x: '❦'.join(x.dropna().drop_duplicates().astype(str)))
+        udc = udc.drop_duplicates().reset_index(drop=True)
+        marc_author = marc_parser_1_field(df_oclc, '001', '100', '\$')[['001', '$a', '$d', '$1']].rename(columns={'$a':'author name', '$d':'author birth and death', '$1':'author viaf id'})
+        for column in marc_author.columns[1:]:
+            marc_author[column] = marc_author.groupby('001')[column].transform(lambda x: '❦'.join(x.dropna().drop_duplicates().astype(str)))
+        marc_author = marc_author.drop_duplicates().reset_index(drop=True)
+        title = marc_parser_1_field(df_oclc, '001', '245', '\$').replace(r'^\s*$', np.nan, regex=True)
+        title['$a'] = title.apply(lambda x: x['245'] if pd.isnull(x['$a']) else x['$a'], axis=1)
+        title = title.iloc[:, lambda x: x.columns.isin(['001', '$a', '$b'])]
+        title['title'] = title[title.columns[1:]].apply(lambda x: ''.join(x.dropna().astype(str)), axis=1)
+        title = title[['001', 'title']]
+        original_title = marc_parser_1_field(df_oclc, '001', '240', '\$').replace(r'^\s*$', np.nan, regex=True)[['001', '$a']].rename(columns={'$a':'original title'})
+        place_of_publication = marc_parser_1_field(df_oclc, '001', '260', '\$').replace(r'^\s*$', np.nan, regex=True)[['001', '$a']].rename(columns={'$a':'place of publication'})
+        #$e as alternative place of publication?
+        try:
+            contributor = marc_parser_1_field(df_oclc, '001', '700', '\$').replace(r'^\s*$', np.nan, regex=True)[['001', '$a', '$d', '$e', '$1']].rename(columns={'$a':'contributor name', '$d':'contributor birth and death', '$1':'contributor viaf id', '$e':'contributor role'})
+            contributor['contributor role'] = contributor['contributor role'].apply(lambda x: x if pd.notnull(x) else 'unknown')
+        except KeyError:
+            contributor['contributor role'] = 'unknown'
+            
+        dfs = [identifiers, udc, marc_author, title, original_title, contributor, df_oclc[['001', '650', '655', 'language', 'fiction_type', 'place', 'year', 'edition_cluster', 'edition_index']]]
+        df_oclc_final = reduce(lambda left,right: pd.merge(left,right,on='001', how='outer'), dfs).drop_duplicates()
+        g_sheet.df_to_sheet(df_oclc_final, sheet='simplified shape', index=0)
+        time.sleep(60)
+
+
+#SystemExit przy drugim autorze - dlaczego???
+    
 oclc_pl = df_all_positive.copy().reset_index(drop=True)
 oclc_pl['260'] = oclc_pl[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
 oclc_pl['240'] = oclc_pl[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)
@@ -1150,276 +1428,7 @@ oclc_pl['100_unidecode'] = oclc_pl['100'].apply(lambda x: unidecode.unidecode(x)
 
 #oclc_pl.to_excel('oclc_pl_test.xlsx', index=False)
 
-oclc_pl = pd.read_excel('oclc_pl_test.xlsx')
-
-authors = ['Hasek', 
-           'Hrabal', 
-           'Capek']
-
-now = datetime.datetime.now()
-year = now.year
-month = now.month
-day = now.day
-
-for i, author in enumerate(authors):
-    sheet = gc.create(f'{author}_pl_{year}-{month}-{day}', translation_folder)
-    s = gp.Spread(sheet.id, creds=credentials)
-    authors[i] = [authors[i]]
-    authors[i] += [sheet.id, s]
-
-#przesyłać dane na dysk zgodnie z nową metodą
-    
-for index, (author, g_id, g_sheet) in enumerate(authors):
-    # author = authors[0][0]
-    # g_id = authors[0][1]
-    # g_sheet = authors[0][2]
-    print(f"{index+1}/{len(authors)}")
-    
-    #all
-    
-    df_oclc = oclc_pl[(oclc_pl['100_unidecode'].notnull()) &       
-                      (oclc_pl['100_unidecode'].str.contains(author.lower()))].reset_index(drop=True)
-    df_oclc['001'] = df_oclc['001'].astype(int)
-    sh = gc.open_by_key(g_id)
-    wsh = sh.get_worksheet(0)
-    wsh.update_title('all')
-    g_sheet.df_to_sheet(df_oclc, sheet='all', index=0)
-    
-    #de-duplication 1: duplicates
-    try:
-        title = marc_parser_1_field(df_oclc, '001', '245', '\$')[['001', '$a', '$b', '$n', '$p']].replace(r'^\s*$', np.nan, regex=True)
-    except KeyError:
-        title = marc_parser_1_field(df_oclc, '001', '245', '\$')[['001', '$a', '$b']].replace(r'^\s*$', np.nan, regex=True)
-    title['title'] = title[title.columns[1:]].apply(lambda x: simplify_string(x, with_spaces=False), axis=1)    
-    title = title[['001', 'title']]
-    df_oclc = pd.merge(df_oclc, title, how='left', on='001')
-    
-    place = marc_parser_1_field(df_oclc, '001', '260', '\$')[['001', '$a']].rename(columns={'$a':'place'})
-    place = place[place['place'] != '']
-    place['place'] = place['place'].apply(lambda x: simplify_string(x, with_spaces=False))
-    df_oclc = pd.merge(df_oclc, place, how='left', on='001')
-    
-    publisher = marc_parser_1_field(df_oclc, '001', '260', '\$')[['001', '$b']].rename(columns={'$b':'publisher'})
-    publisher = publisher.groupby('001').head(1).reset_index(drop=True)
-    publisher['publisher'] = publisher['publisher'].apply(lambda x: simplify_string(x, with_spaces=False))
-    df_oclc = pd.merge(df_oclc, publisher, how='left', on='001')
-    
-    
-    year = df_oclc.copy()[['001', '008']].rename(columns={'008':'year'})
-    year['year'] = year['year'].apply(lambda x: x[7:11])
-    df_oclc = pd.merge(df_oclc, year, how='left', on='001')
-    
-    df_oclc_duplicates = pd.DataFrame()
-    df_oclc_grouped = df_oclc.groupby(['title', 'place', 'year'])
-    for name, group in df_oclc_grouped:
-        if len(group) > 1:
-            group['groupby'] = str(name)
-            group_ids = '❦'.join([str(e) for e in group['001'].to_list()])
-            group['group_ids'] = group_ids
-            df_oclc_duplicates = df_oclc_duplicates.append(group)
-    df_oclc_duplicates = df_oclc_duplicates.drop_duplicates()
-    
-    oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
-    df_oclc_duplicates_grouped = df_oclc_duplicates.groupby(['title', 'place', 'year'])
-    
-    df_oclc_deduplicated = pd.DataFrame()
-    for name, group in df_oclc_duplicates_grouped:
-        for column in group:
-            if column in ['fiction_type', '490', '500', '650', '655']:
-                group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
-            else:
-                group[column] = group[column].dropna().astype(str).max()
-        df_oclc_deduplicated = df_oclc_deduplicated.append(group)
-    
-    df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
-    df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(int)
-    
-    df_oclc = df_oclc[~df_oclc['001'].isin(oclc_duplicates_list)]
-    df_oclc = pd.concat([df_oclc, df_oclc_deduplicated]).drop(columns='title')
-    df_oclc['group_ids'] = df_oclc['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
-    g_sheet.df_to_sheet(df_oclc, sheet='after_removing_duplicates', index=0)
-    
-    #de-duplication 2: multiple volumes
-    
-    title = marc_parser_1_field(df_oclc, '001', '245', '\$')[['001', '$a']].replace(r'^\s*$', np.nan, regex=True)
-    title['title'] = title[title.columns[1:]].apply(lambda x: simplify_string(x, with_spaces=False), axis=1)    
-    title = title[['001', 'title']]
-    df_oclc = pd.merge(df_oclc, title, how='left', on='001')  
-    
-    df_oclc_grouped = df_oclc.groupby(['title', 'place', 'year'])
-        
-    df_oclc_multiple_volumes = pd.DataFrame()
-    for name, group in df_oclc_grouped:
-        if len(group[group['245'].str.contains('\$n', regex=True)]):
-            group['groupby'] = str(name)
-            group_ids = '❦'.join(set([str(e) for e in group['001'].to_list() + group['group_ids'].to_list() if pd.notnull(e)]))
-            group['group_ids'] = group_ids
-            df_oclc_multiple_volumes = df_oclc_multiple_volumes.append(group)
-            
-    if df_oclc_multiple_volumes.shape[0] > 0:
-        oclc_multiple_volumes_list = df_oclc_multiple_volumes['001'].drop_duplicates().tolist()
-        df_oclc_multiple_volumes_grouped = df_oclc_multiple_volumes.groupby(['title', 'place', 'year'])
-    
-        df_oclc_multiple_volumes_deduplicated = pd.DataFrame()
-        for name, group in df_oclc_multiple_volumes_grouped:
-            if len(group[~group['245'].str.contains('\$n', regex=True)]) == 1:
-                for column in group:
-                    if column in ['fiction_type', '490', '500', '650', '655']:
-                        group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))  
-                    elif column in ['001', '245']:
-                        pass
-                    else:
-                        group[column] = group[column].dropna().astype(str).max()
-                df = group[~group['245'].str.contains('\$n', regex=True)]
-                df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(df)
-            else:
-                for column in group:
-                    if column in ['fiction_type', '490', '500', '650', '655']:
-                        group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
-                    elif column == '245':
-                        field_245 = marc_parser_1_field(group, '001', '245', '\$').replace(r'^\s*$', np.nan, regex=True)
-                        field_245 = field_245.iloc[:, lambda x: x.columns.isin(['001', '$a', '$b', '$c'])]
-                        field_245['245'] = field_245[field_245.columns[1:]].apply(lambda x: ''.join(x.dropna().astype(str)), axis=1)
-                        field_245 = field_245[['001', '245']]
-                        field_245['245'] = '10' + field_245['245']
-                        group = pd.merge(group.drop(columns='245'), field_245, how='left', on='001')
-                        group[column] = group[column].dropna().astype(str).max()
-                    else:
-                        group[column] = group[column].dropna().astype(str).max()
-                group = group.drop_duplicates().reset_index(drop=True)
-                df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(group)
-                    
-        df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
-        df_oclc_multiple_volumes_deduplicated['001'] = df_oclc_multiple_volumes_deduplicated['001'].astype(int)
-        
-        df_oclc = df_oclc[~df_oclc['001'].isin(oclc_multiple_volumes_list)]
-        df_oclc = pd.concat([df_oclc, df_oclc_multiple_volumes_deduplicated]).drop_duplicates().reset_index(drop=True)
-        df_oclc['group_ids'] = df_oclc['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
-        g_sheet.df_to_sheet(df_oclc, sheet='after_removing_multiple_volumes', index=0)
-        
-    #de-duplication 3: fuzzyness
-    df_oclc.drop(columns='title', inplace=True)
-    field_245 = marc_parser_1_field(df_oclc, '001', '245', '\$').replace(r'^\s*$', np.nan, regex=True)
-    field_245['$a'] = field_245.apply(lambda x: x['$a'] if pd.notnull(x['$a']) else x['indicator'][2:].split('.', 1)[0], axis=1)
-    field_245 = field_245.iloc[:, lambda x: x.columns.isin(['001', '$a', '$b'])]
-    field_245['title'] = field_245[field_245.columns[1:]].apply(lambda x: simplify_string(x), axis=1)  
-    field_245 = field_245[['001', 'title']]
-    df_oclc = pd.merge(df_oclc, field_245, how='left', on='001')
-    
-    #similarity level == 0.85 | columns == ['title', 'publisher', 'year'] | same 'year'
-    df_oclc_clusters = cluster_records(df_oclc, '001', ['title', 'publisher', 'year'], 0.85)    
-    df_oclc_clusters = df_oclc_clusters[df_oclc_clusters['publisher'] != '']
-    df_oclc_duplicates = df_oclc_clusters.groupby(['cluster', 'year']).filter(lambda x: len(x) > 1)
-    
-    if df_oclc_duplicates.shape[0] > 0:
- 
-        if df_oclc_duplicates['001'].value_counts().max() > 1:
-            sys.exit('ERROR!!!\nclustering problem!!!')
-    
-        oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
-        df_oclc_duplicates = df_oclc_duplicates.groupby('cluster')
-        
-        df_oclc_deduplicated = pd.DataFrame()
-        for name, group in df_oclc_duplicates:
-            group_ids = '❦'.join(set([str(e) for e in group['001'].to_list() + group['group_ids'].to_list() if pd.notnull(e)]))
-            group['group_ids'] = group_ids
-            for column in group:
-                if column in ['fiction_type', '490', '500', '650', '655']:
-                    group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
-                elif column == '245':
-                    group[column] = group[column][group[column].str.contains('$', regex=False)]
-                    group[column] = group[column].dropna().astype(str).max()
-                else:
-                    group[column] = group[column].dropna().astype(str).max()
-            df_oclc_deduplicated = df_oclc_deduplicated.append(group)
-            
-        df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
-        df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(int)
-        df_oclc = df_oclc[~df_oclc['001'].isin(oclc_duplicates_list)]
-        df_oclc = pd.concat([df_oclc, df_oclc_deduplicated])
-        df_oclc['group_ids'] = df_oclc['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
-        g_sheet.df_to_sheet(df_oclc, sheet='after_fuzzy_duplicates_0.85_tit_pub_year', index=0)
-        
-# =============================================================================
-#     #similarity level == 0.8 | columns == ['title', 'publisher'] | same 'year'
-#     df_oclc.drop(columns='cluster', inplace=True)
-#     df_oclc_clusters = cluster_records(df_oclc, '001', ['title', 'place', 'publisher', 'year'], 0.85) 
-#     df_oclc_duplicates = df_oclc_clusters.groupby(['cluster', 'year']).filter(lambda x: len(x) > 1)
-#     
-#     df_oclc_duplicates[['001', '245', 'year', '260']].to_excel('test_oclc1.xlsx', index=False)
-#     
-#     if df_oclc_duplicates.shape[0] > 0:
-#     
-#         if df_oclc_duplicates['001'].value_counts().max() > 1:
-#             sys.exit('ERROR!!!\nclustering problem!!!')
-#     
-#         oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
-#         df_oclc_duplicates = df_oclc_duplicates.groupby('cluster')
-#         
-#         df_oclc_deduplicated = pd.DataFrame()
-#         for name, group in df_oclc_duplicates:
-#             group_ids = '❦'.join(set([str(e) for e in group['001'].to_list() + group['group_ids'].to_list() if pd.notnull(e)]))
-#             group['group_ids'] = group_ids
-#             for column in group:
-#                 if column in ['fiction_type', '490', '500', '650', '655']:
-#                     group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
-#                 elif column == '245':
-#                     group[column] = group[column][group[column].str.contains('$', regex=False)]
-#                     group[column] = group[column].dropna().astype(str).max()
-#                 else:
-#                     group[column] = group[column].dropna().astype(str).max()
-#             df_oclc_deduplicated = df_oclc_deduplicated.append(group)
-#             
-#         df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
-#         df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(int)
-#         df_oclc = df_oclc[~df_oclc['001'].isin(oclc_duplicates_list)]
-#         df_oclc = pd.concat([df_oclc, df_oclc_deduplicated])
-#         df_oclc['group_ids'] = df_oclc['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
-#         g_sheet.df_to_sheet(df_oclc, sheet='after_fuzzy_duplicates_0.85_tit_pub_year', index=0)
-# =============================================================================
-    
-    #editions counter
-    edition_clusters = cluster_strings(df_oclc['title'], 0.7)
-    edition_clusters_df = pd.DataFrame()
-    for k, v in edition_clusters.items():
-        df = df_oclc.copy()[df_oclc['title'].str.strip().isin(v)]
-        df['edition_cluster'] = k
-        edition_clusters_df = edition_clusters_df.append(df)
-    edition_clusters_df['edition_index'] = edition_clusters_df.groupby('edition_cluster').cumcount()+1
-    df_oclc = edition_clusters_df.copy()
-    g_sheet.df_to_sheet(df_oclc, sheet='final_marc21_with_editions_counters', index=0)
-       
-    #simplify the records
-    df_oclc = df_oclc[['001', '080', '100', '245', '240', '260', '650', '655', '700', 'language', 'fiction_type', 'year', 'edition_cluster', 'edition_index']]
-    df_oclc['001'] = df_oclc['001'].astype(int)
-    
-    identifiers = df_oclc[['001']]
-    udc = marc_parser_1_field(df_oclc, '001', '080', '\$')[['001', '$a']].rename(columns={'$a':'universal decimal classification'})
-    udc['universal decimal classification'] = udc.groupby('001')['universal decimal classification'].transform(lambda x: '❦'.join(x.dropna().drop_duplicates().astype(str)))
-    udc = udc.drop_duplicates().reset_index(drop=True)
-    marc_author = marc_parser_1_field(df_oclc, '001', '100', '\$')[['001', '$a', '$d', '$1']].rename(columns={'$a':'author name', '$d':'author birth and death', '$1':'author viaf id'})
-    for column in marc_author.columns[1:]:
-        marc_author[column] = marc_author.groupby('001')[column].transform(lambda x: '❦'.join(x.dropna().drop_duplicates().astype(str)))
-    marc_author = marc_author.drop_duplicates().reset_index(drop=True)
-    title = marc_parser_1_field(df_oclc, '001', '245', '\$').replace(r'^\s*$', np.nan, regex=True)
-    title['$a'] = title.apply(lambda x: x['245'] if pd.isnull(x['$a']) else x['$a'], axis=1)
-    title = title.iloc[:, lambda x: x.columns.isin(['001', '$a', '$b'])]
-    title['title'] = title[title.columns[1:]].apply(lambda x: ''.join(x.dropna().astype(str)), axis=1)
-    title = title[['001', 'title']]
-    original_title = marc_parser_1_field(df_oclc, '001', '240', '\$').replace(r'^\s*$', np.nan, regex=True)[['001', '$a']].rename(columns={'$a':'original title'})
-    place_of_publication = marc_parser_1_field(df_oclc, '001', '260', '\$').replace(r'^\s*$', np.nan, regex=True)[['001', '$a']].rename(columns={'$a':'place of publication'})
-    #$e as alternative place of publication?
-    contributor = marc_parser_1_field(df_oclc, '001', '700', '\$').replace(r'^\s*$', np.nan, regex=True)[['001', '$a', '$d', '$e', '$1']].rename(columns={'$a':'contributor name', '$d':'contributor birth and death', '$1':'contributor viaf id', '$e':'contributor role'})
-    contributor['contributor role'] = contributor['contributor role'].apply(lambda x: x if pd.notnull(x) else 'unknown')
-    
-    dfs = [identifiers, udc, marc_author, title, original_title, contributor, df_oclc[['001', '650', '655', 'language', 'fiction_type', 'year', 'edition_cluster', 'edition_index']]]
-    df_oclc_final = reduce(lambda left,right: pd.merge(left,right,on='001', how='outer'), dfs).drop_duplicates()
-    g_sheet.df_to_sheet(df_oclc_final, sheet='simplified shape', index=0)
-
-
-#SystemExit przy drugim autorze - dlaczego???
-    
-    
+oclc_pl = pd.read_excel('oclc_pl_test.xlsx')    
     
     
     
