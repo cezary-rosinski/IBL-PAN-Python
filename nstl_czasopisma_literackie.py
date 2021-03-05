@@ -220,6 +220,84 @@ for level in similarity_levels:
 #         file.write(str(record))
 # =============================================================================
 
+#%% klastrowanie - stemming
+file_list = drive.ListFile({'q': "'103h2kWIAKDBG2D6KydU4NjTyldBfxBAK' in parents and trashed=false"}).GetList() 
+#[print(e['title'], e['id']) for e in file_list]
+nstl_folder = [file['id'] for file in file_list if file['title'] == 'STL'][0]
+file_list = drive.ListFile({'q': f"'{nstl_folder}' in parents and trashed=false"}).GetList() 
+#[print(e['title'], e['id']) for e in file_list]
+nstl_sheet = [file['id'] for file in file_list if file['title'] == 'nstl_key_words_2021-2-24'][0]
+key_words_sheet = gp.Spread(nstl_sheet, creds=credentials)
+key_words_sheet.sheets
+df_clusters_stemming = key_words_sheet.sheet_to_df(sheet='klucze klastrów', index=0)
+df_key_words_stats = key_words_sheet.sheet_to_df(sheet='słowa kluczowe - statystyki', index=0)
+ 
+clusters_stemming = [e.strip().lower() for e in df_clusters_stemming['hasła'].to_list()]
+key_words_list = [e.split(' ') for e in df_key_words_stats['słowo kluczowe'].to_list()]
+clusters = {}
+for word in clusters_stemming:
+    key_elements = word.split('|')
+    for key_element in key_elements:
+        for one_keyword_list in key_words_list:
+            for k_word in one_keyword_list:
+                if re.search(f"^{key_element}", k_word.lower()):
+                    if word in clusters:
+                        clusters[word].append(' '.join(one_keyword_list))
+                    else:
+                        clusters[word] = [' '.join(one_keyword_list)]
+
+missing_keys = list(set(clusters_stemming) - set(clusters.keys()))
+key_words_list = df_key_words_stats['słowo kluczowe'].to_list()
+for word in missing_keys:
+    for one_keyword in key_words_list:
+        if re.search(word, one_keyword.lower()):
+            if word in clusters:
+                clusters[word].append(one_keyword)
+            else:
+                clusters[word] = [one_keyword]       
+                                                                       
+clusters_stemming - clusters.keys()
+
+clusters = dict(sorted(clusters.items(), key = lambda item : len(item[1]), reverse=True))
+
+with open("nstl_clusters.json", 'w', encoding='utf-8') as f: 
+    json.dump(clusters, f, ensure_ascii=False, indent=4)
+    
+clusters_df = pd.DataFrame.from_dict(clusters, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster', 0:'słowo kluczowe'}).reset_index(drop=True)
+
+df_key_words_stats = df_key_words_stats.merge(clusters_df, how='left', on='słowo kluczowe')
+
+cluster_frequency = {}
+for cluster in clusters:
+    frequence = df_key_words_stats[df_key_words_stats['cluster'] == cluster]['frekwencja'].astype(int).sum()
+    cluster_frequency[cluster] = frequence
+    
+cluster_frequency_df = pd.DataFrame.from_dict(cluster_frequency, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster', 0:'frekwencja'}).reset_index(drop=True).sort_values('frekwencja', ascending=False)
+
+key_words_sheet.df_to_sheet(cluster_frequency_df, sheet='frekwencja klastrów', index=0)
+    
+#liczba artykułów suma + bez słów kluczowych + słowa kluczowe
+articles_oai_pmh = key_words_sheet.sheet_to_df(sheet='oai-pmh', index=0)
+articles_oai_pmh = articles_oai_pmh[articles_oai_pmh['identifier'] != ''][['tytuł czasopisma', 'subject❦pl']]
+czasopisma = articles_oai_pmh['tytuł czasopisma'].drop_duplicates().to_list()
+liczba_artykulow = articles_oai_pmh['tytuł czasopisma'].value_counts().reset_index().rename(columns={'index':'tytuł czasopisma', 'tytuł czasopisma':'liczba artykulow'})
+liczba_artykulow_bez_slow_kluczowych = articles_oai_pmh[articles_oai_pmh['subject❦pl'] == ''].groupby(['tytuł czasopisma']).size().reset_index(name='liczba artykulow bez slow kluczowych')
+liczba_artykulow = liczba_artykulow.merge(liczba_artykulow_bez_slow_kluczowych, on='tytuł czasopisma', how='left').reset_index(drop=True)
+liczba_artykulow['liczba artykulow bez slow kluczowych'] = liczba_artykulow['liczba artykulow bez slow kluczowych'].apply(lambda x: 0 if pd.isnull(x) else x)
+liczba_artykulow['liczba artykulow ze slowami kluczowymi'] = liczba_artykulow['liczba artykulow'] - liczba_artykulow['liczba artykulow bez slow kluczowych']
+
+key_words_sheet.df_to_sheet(liczba_artykulow, sheet='czasopisma - statystyka słów kluczowych', index=0)
+
+
+
+
+
+
+
+
+
+
+  
 
 #%% word embedding
 texts = open("word_embedding_test.txt", encoding='utf8').read().splitlines()
