@@ -17,6 +17,7 @@ import regex as re
 from collections import OrderedDict
 import difflib
 import spacy
+from collections import Counter
 
 now = datetime.datetime.now()
 year = now.year
@@ -231,6 +232,7 @@ key_words_sheet = gp.Spread(nstl_sheet, creds=credentials)
 key_words_sheet.sheets
 df_clusters_stemming = key_words_sheet.sheet_to_df(sheet='klucze klastrów', index=0)
 df_key_words_stats = key_words_sheet.sheet_to_df(sheet='słowa kluczowe - statystyki', index=0)
+df_key_words_for_article = key_words_sheet.sheet_to_df(sheet='słowa kluczowe dla artykułów', index=0)
  
 clusters_stemming = [e.strip().lower() for e in df_clusters_stemming['hasła'].to_list()]
 key_words_list = [e.split(' ') for e in df_key_words_stats['słowo kluczowe'].to_list()]
@@ -272,7 +274,33 @@ for cluster in clusters:
     frequence = df_key_words_stats[df_key_words_stats['cluster'] == cluster]['frekwencja'].astype(int).sum()
     cluster_frequency[cluster] = frequence
     
-cluster_frequency_df = pd.DataFrame.from_dict(cluster_frequency, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster', 0:'frekwencja'}).reset_index(drop=True).sort_values('frekwencja', ascending=False)
+cluster_frequency_df = pd.DataFrame.from_dict(cluster_frequency, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster', 0:'frekwencja w słowach kluczowych'}).reset_index(drop=True).sort_values('frekwencja w słowach kluczowych', ascending=False)
+
+for i, row in df_key_words_for_article.iterrows():
+    print(f"{i+1}/{df_key_words_for_article.shape[0]}")
+    list_of_keys = []
+    for k, v in clusters.items():
+        if any(word in row['subject❦pl'].lower().strip().split('❦') for word in v):
+            list_of_keys.append(k)
+    df_key_words_for_article.at[i,'clusters'] = list_of_keys
+    
+df_key_words_for_article['clusters'][0] = [df_key_words_for_article['clusters'][0]]
+    
+key_words_for_article = [e for sublist in df_key_words_for_article['clusters'] for e in sublist if e]
+key_words_for_article = pd.DataFrame.from_dict(Counter(key_words_for_article), orient='index').reset_index().rename(columns={'index':'cluster', 0:'frekwencja w artykułach'}).reset_index(drop=True).sort_values('frekwencja w artykułach', ascending=False)
+
+cluster_frequency_df = cluster_frequency_df.merge(key_words_for_article, how='left', on='cluster')
+
+for k, v in clusters.items():
+    v = '❦'.join(v)
+    clusters[k] = v
+clusters_grouped_df = pd.DataFrame.from_dict(clusters, orient='index').reset_index().rename(columns={'index':'cluster', 0:'zawartość'})
+
+for i, row in clusters_grouped_df.iterrows():
+    x = row['zawartość'].split('❦')
+    clusters_grouped_df.at[i, 'zawartość'] = x
+    
+cluster_frequency_df = cluster_frequency_df.merge(clusters_grouped_df, how='left', on='cluster')
 
 key_words_sheet.df_to_sheet(cluster_frequency_df, sheet='frekwencja klastrów', index=0)
     
@@ -288,12 +316,25 @@ liczba_artykulow['liczba artykulow ze slowami kluczowymi'] = liczba_artykulow['l
 
 key_words_sheet.df_to_sheet(liczba_artykulow, sheet='czasopisma - statystyka słów kluczowych', index=0)
 
+#inne dane
+articles_oai_pmh = key_words_sheet.sheet_to_df(sheet='oai-pmh', index=0)
 
+years_df = articles_oai_pmh[['tytuł czasopisma', 'source❦pl', 'date❦pl']]
 
+def pick_year(x):
+    try:
+        if x['date❦pl'] != '':
+            year = re.findall('\d{4}', x['date❦pl'])[0]
+        else:
+            year = re.findall('\d{4}', x['source❦pl'])[0]
+    except IndexError:
+        year = "no year"
+    return year
+years_df['year'] = years_df.apply(lambda x: pick_year(x), axis=1)
+years = years_df[years_df['year'] != 'no year']['year'].drop_duplicates().to_list()
+years = sorted(years)
 
-
-
-
+test = years_df[years_df['year'] == '2020']
 
 
 
