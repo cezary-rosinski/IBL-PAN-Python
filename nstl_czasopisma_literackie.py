@@ -17,7 +17,7 @@ import regex as re
 from collections import OrderedDict
 import difflib
 import spacy
-from collections import Counter
+from collections import Counter, OrderedDict
 
 now = datetime.datetime.now()
 year = now.year
@@ -336,7 +336,40 @@ years = sorted(years)
 
 test = years_df[years_df['year'] == '2020']
 
+#%% po spotkaniu 10.03.2021 - przygotowanie plików tekstowych: lista słów kluczowych + klastry
+file_list = drive.ListFile({'q': "'103h2kWIAKDBG2D6KydU4NjTyldBfxBAK' in parents and trashed=false"}).GetList() 
+#[print(e['title'], e['id']) for e in file_list]
+nstl_folder = [file['id'] for file in file_list if file['title'] == 'STL'][0]
+file_list = drive.ListFile({'q': f"'{nstl_folder}' in parents and trashed=false"}).GetList() 
+#[print(e['title'], e['id']) for e in file_list]
+nstl_sheet = [file['id'] for file in file_list if file['title'] == 'nstl_key_words_2021-2-24'][0]
+key_words_sheet = gp.Spread(nstl_sheet, creds=credentials)
 
+df_key_words = key_words_sheet.sheet_to_df(sheet='słowa kluczowe - statystyki', index=0).to_dict(orient='records')
+df_clusters = key_words_sheet.sheet_to_df(sheet='frekwencja klastrów', index=0).rename(columns={'cluster':'klaster'}).to_dict(orient='records')
+
+df_key_words = sorted(df_key_words, key=lambda k: k['słowo kluczowe'])
+with open("słowa_kluczowe_fekwencja.json", 'w', encoding='utf-8') as f: 
+    json.dump(df_key_words, f, ensure_ascii=False, indent=4)
+    
+with open("klastry_frekwencja_zawartość.json", 'w', encoding='utf-8') as f: 
+    json.dump(df_clusters, f, ensure_ascii=False, indent=4)
+
+
+
+
+#%% porównanie klastrów i haseł z STL
+
+# =============================================================================
+# with pdfplumber.open('C:/Users/Cezary/Downloads/A (1).pdf') as pdf:
+#     pl_txt = ''
+#     for page in pdf.pages:
+#         pl_txt += '\n' + page.extract_text()
+# txt = io.open("stl_a.txt", 'wt', encoding='UTF-8')
+# txt.write(pl_txt)
+# txt.close()
+# 
+# =============================================================================
 
   
 

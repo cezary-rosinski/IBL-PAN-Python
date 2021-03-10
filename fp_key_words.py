@@ -5,6 +5,7 @@ from sickle import Sickle
 import xml.etree.ElementTree as et
 import lxml.etree
 import pdfplumber
+import json
 
 oai_url = 'http://pressto.amu.edu.pl/index.php/fp/oai'
 sickle = Sickle(oai_url)
@@ -24,10 +25,10 @@ for record in records:
     forum_poetyki_dict = {}
     for node in article:
         try:
-            if (node.tag.split('}')[-1], [v for k,v in node.attrib.items()][0]) in forum_poetyki_dict:
-                forum_poetyki_dict[(node.tag.split('}')[-1], [v for k,v in node.attrib.items()][0])] += f"❦{node.text}"
+            if f"{node.tag.split('}')[-1]}❦{[v[:2] for k,v in node.attrib.items()][0]}" in forum_poetyki_dict:
+                forum_poetyki_dict[f"{node.tag.split('}')[-1]}❦{[v[:2] for k,v in node.attrib.items()][0]}"] += f"❦{node.text}"
             else:
-                forum_poetyki_dict[(node.tag.split('}')[-1], [v for k,v in node.attrib.items()][0])] = node.text
+                forum_poetyki_dict[f"{node.tag.split('}')[-1]}❦{[v[:2] for k,v in node.attrib.items()][0]}"] = node.text
         except IndexError:
             if node.tag.split('}')[-1] in forum_poetyki_dict:
                 forum_poetyki_dict[node.tag.split('}')[-1]] += f"❦{node.text}"
@@ -39,38 +40,48 @@ df = pd.DataFrame(forum_poetyki_list_of_dicts)
 df = df[(df['relation'].notnull()) & (df['relation'].str.contains('❦'))].reset_index(drop=True)
 
 #os.mkdir('/forum_poetyki_txt')
+fp_dictionary = {}
 for i, row in df.iterrows():
     print(f"{i+1}/{len(df)}")
     if len(row['relation'].split('❦')) == 2:
         pl_pdf = row['relation'].split('❦')[0].replace('article/view', 'article/download')
         r = requests.get(pl_pdf, stream=True)
-        with open('test.pdf', 'wb') as fd:
+        with open(f"forum_poetyki_pl_{i+1}.pdf", 'wb') as fd:
             fd.write(r.content)
-        with pdfplumber.open('test.pdf') as pdf:
+        with pdfplumber.open(f"forum_poetyki_pl_{i+1}.pdf") as pdf:
             pl_txt = ''
             for page in pdf.pages:
                 pl_txt += '\n' + page.extract_text()
         txt = io.open(f"forum_poetyki_pl_{i+1}.txt", 'wt', encoding='UTF-8')
         txt.write(pl_txt)
         txt.close()
+        try:
+            subject = row['subject❦pl'].split('❦')
+        except AttributeError:
+            subject = row['subject❦pl']
+        abstract = row['description❦pl']
+        fp_dictionary[f"forum_poetyki_pl_{i+1}.txt"] = {'subject':subject, 'abstract':abstract}
         
         eng_pdf = row['relation'].split('❦')[1].replace('article/view', 'article/download')
         r = requests.get(eng_pdf, stream=True)
-        with open('test.pdf', 'wb') as fd:
+        with open(f"forum_poetyki_eng_{i+1}.pdf", 'wb') as fd:
             fd.write(r.content)
-        with pdfplumber.open('test.pdf') as pdf:
+        with pdfplumber.open(f"forum_poetyki_eng_{i+1}.pdf") as pdf:
             eng_txt = ''
             for page in pdf.pages:
                 eng_txt += '\n' + page.extract_text()
         txt = io.open(f"forum_poetyki_eng_{i+1}.txt", 'wt', encoding='UTF-8')
         txt.write(eng_txt)
         txt.close()
+        try:
+            subject = row['subject❦en'].split('❦')
+        except AttributeError:
+            subject = row['subject❦en']
+        abstract = row['description❦en']
+        fp_dictionary[f"forum_poetyki_eng_{i+1}.txt"] = {'subject':subject, 'abstract':abstract}
         
-
-
-# dla każdego pliku zbudować słownik z kluczem takim jak nazwa pliku, a w środku wartości: słowa kluczowe, abstrakt i data
-        # eksport do jsona
-        # https://www.geeksforgeeks.org/how-to-convert-python-dictionary-to-json/
+with open("fp_keywords_abstracts.json", 'w', encoding='utf-8') as f: 
+    json.dump(fp_dictionary, f, ensure_ascii=False, indent=4)
 
 
 
