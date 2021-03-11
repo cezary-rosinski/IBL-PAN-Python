@@ -6,10 +6,9 @@ import xml.etree.ElementTree as et
 import lxml.etree
 import pdfplumber
 from google_drive_research_folders import PBL_folder
-import gspread_pandas as gp
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
-from google_drive_credentials import gc, credentials
+import gspread as gs
 import json
 from my_functions import cSplit, cluster_strings
 import datetime
@@ -18,17 +17,19 @@ from collections import OrderedDict
 import difflib
 import spacy
 from collections import Counter, OrderedDict
+from gspread_dataframe import set_with_dataframe, get_as_dataframe
 
 now = datetime.datetime.now()
 year = now.year
 month = now.month
 day = now.day
 
+#autoryzacja do tworzenia i edycji plików
+gc = gs.oauth()
+#autoryzacja do penetrowania dysku
 gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
-
 drive = GoogleDrive(gauth)
-
 
 #%% lista czasopism:
 # =============================================================================
@@ -71,9 +72,9 @@ nstl_folder = [file['id'] for file in file_list if file['title'] == 'STL'][0]
 file_list = drive.ListFile({'q': f"'{nstl_folder}' in parents and trashed=false"}).GetList() 
 #[print(e['title'], e['id']) for e in file_list]
 nstl_sheet = [file['id'] for file in file_list if file['title'] == 'biblioteki cyfrowe i repozytoria PL'][0]
-s_journals = gp.Spread(nstl_sheet, creds=credentials)
-s_journals.sheets
-journals_df = s_journals.sheet_to_df(sheet='Czasopisma', index=0)
+s_journals = gc.open_by_key(nstl_sheet)
+s_journals.worksheets()
+journals_df = get_as_dataframe(s_journals.worksheet('Czasopisma')).dropna(how='all').dropna(how='all', axis=1)
 journals_df = journals_df[journals_df['OAI-PMH'] != ''].reset_index(drop=True)
 
 list_of_dicts = []

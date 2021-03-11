@@ -6,6 +6,7 @@ import xml.etree.ElementTree as et
 import lxml.etree
 import pdfplumber
 import json
+from tqdm import tqdm
 
 oai_url = 'http://pressto.amu.edu.pl/index.php/fp/oai'
 sickle = Sickle(oai_url)
@@ -41,8 +42,8 @@ df = df[(df['relation'].notnull()) & (df['relation'].str.contains('❦'))].reset
 
 #os.mkdir('/forum_poetyki_txt')
 fp_dictionary = {}
-for i, row in df.iterrows():
-    print(f"{i+1}/{len(df)}")
+for i, row in tqdm(df.iterrows(), total=df.shape[0]):
+    #print(f"{i+1}/{len(df)}")
     if len(row['relation'].split('❦')) == 2:
         pl_pdf = row['relation'].split('❦')[0].replace('article/view', 'article/download')
         r = requests.get(pl_pdf, stream=True)
@@ -82,8 +83,6 @@ for i, row in df.iterrows():
         
 with open("fp_keywords_abstracts.json", 'w', encoding='utf-8') as f: 
     json.dump(fp_dictionary, f, ensure_ascii=False, indent=4)
-
-
 
 
 
