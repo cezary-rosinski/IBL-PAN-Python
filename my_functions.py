@@ -1,5 +1,5 @@
 from itertools import chain
-import re
+import regex as re
 import math
 from collections import Counter
 from itertools import combinations
@@ -12,6 +12,7 @@ import io
 import difflib
 import statistics
 import unidecode
+from tqdm import tqdm
 
 # parser kolumny marc
 def marc_parser_1_field(df, field_id, field_data, subfield_code, delimiter='❦'):
@@ -365,7 +366,7 @@ def mrk_to_df(path_in, field_with_id, encoding='UTF-8'):
     return full_df, errors
 
 
-def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8):
+def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8, show_time=False):
     try:
         df.drop(columns='cluster',inplace=True)
     except KeyError:
@@ -373,27 +374,45 @@ def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8):
     list_of_matrixes = []
     for i, column in enumerate(list_of_columns):
         series = [str(e) for e in df[column].to_list()]
-        matrix = pd.DataFrame(index=pd.Index(series), columns=series)
-        
-        for index_row in range(matrix.shape[0]):
-            for index_column in range(matrix.shape[1]):
-                m_row = matrix.index[index_row]
-                m_col = matrix.columns[index_column]
-                matrix.iloc[index_row,index_column] = difflib.SequenceMatcher(a=m_row,b=m_col).ratio()
+# =============================================================================
+#         matrix = pd.DataFrame(index=pd.Index(series), columns=series)
+#         
+#         for index_row in range(matrix.shape[0]):
+#             for index_column in range(matrix.shape[1]):
+#                 m_row = matrix.index[index_row]
+#                 m_col = matrix.columns[index_column]
+#                 matrix.iloc[index_row,index_column] = difflib.SequenceMatcher(a=m_row,b=m_col).ratio()
+#         list_of_matrixes.append(matrix)
+#         
+#     ids = df[column_with_ids].to_list()            
+#     matrix = pd.DataFrame(index=pd.Index(ids), columns=ids) 
+#     
+#     for index_row in range(matrix.shape[0]):
+#         for index_column in range(matrix.shape[1]):
+#             list_of_values = []
+#             for matrix_df in list_of_matrixes:
+#                 list_of_values.append(matrix_df.iloc[index_row,index_column])
+#             mean_value = statistics.mean(list_of_values)
+#             matrix.iloc[index_row,index_column] = mean_value
+#                 
+#     matrix = pd.DataFrame(np.tril(matrix.to_numpy(), 0), index=matrix.index, columns=matrix.columns)
+# =============================================================================
+        series_len = len(series)
+        matrix = np.zeros((series_len, series_len))
+        if show_time:
+            for i in tqdm(range(series_len)):
+                for j in range(series_len):
+                    matrix[i,j] = difflib.SequenceMatcher(a=series[i],b=series[j]).ratio()
+        else:                
+            for i in range(series_len):
+                for j in range(series_len):
+                    matrix[i,j] = difflib.SequenceMatcher(a=series[i],b=series[j]).ratio()
         list_of_matrixes.append(matrix)
         
-    ids = df[column_with_ids].to_list()            
-    matrix = pd.DataFrame(index=pd.Index(ids), columns=ids) 
-    
-    for index_row in range(matrix.shape[0]):
-        for index_column in range(matrix.shape[1]):
-            list_of_values = []
-            for matrix_df in list_of_matrixes:
-                list_of_values.append(matrix_df.iloc[index_row,index_column])
-            mean_value = statistics.mean(list_of_values)
-            matrix.iloc[index_row,index_column] = mean_value
-                
-    matrix = pd.DataFrame(np.tril(matrix.to_numpy(), 0), index=matrix.index, columns=matrix.columns)
+    matrix = np.mean(list_of_matrixes, axis=0)
+        
+    ids = df[column_with_ids].to_list()          
+    matrix = pd.DataFrame(np.tril(matrix, 0), index=pd.Index(ids), columns=ids)
     
     stacked_matrix = matrix.stack().reset_index()
     stacked_matrix = stacked_matrix[stacked_matrix[0] >= similarity_lvl].rename(columns={'level_0':column_with_ids, 'level_1':'cluster'})
