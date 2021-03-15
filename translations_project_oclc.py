@@ -1,32 +1,17 @@
 import pandas as pd
-import io
-import requests
-from sickle import Sickle
-import xml.etree.ElementTree as et
-import lxml.etree
-import pdfplumber
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 import gspread as gs
-import json
 import datetime
 import regex as re
 from collections import OrderedDict
-import difflib
-import spacy
-from collections import Counter, OrderedDict
 from gspread_dataframe import set_with_dataframe, get_as_dataframe
 import numpy as np
-import pymarc
-from bs4 import BeautifulSoup
 from my_functions import cosine_sim_2_elem, marc_parser_1_field, gsheet_to_df, xml_to_mrk, cSplit, f, df_to_mrc, mrc_to_mrk, mrk_to_df, xml_to_mrk, mrk_to_mrc, get_cosine_result, df_to_gsheet, cluster_strings, cluster_records, simplify_string
-import glob
 import unidecode
 import pandasql
 import time
-from xml.sax import SAXParseException
 from google_drive_research_folders import cr_projects
-import itertools
 from functools import reduce
 import sys
 import csv
@@ -56,7 +41,8 @@ cz_authority_spreadsheet.worksheets()
 
 #%% load data
 list_of_records = []
-with open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
+#with open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
+with open('C:/Users/User/Desktop/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
     reader = csv.reader(csv_file, delimiter=',')
     headers = next(reader)
     position_008 = headers.index('008')
@@ -66,7 +52,8 @@ with open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lan
             
 oclc_lang = pd.DataFrame(list_of_records, columns=headers)
 oclc_lang['language'] = oclc_lang['008'].apply(lambda x: x[35:38])
-oclc_viaf = pd.read_excel('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.xlsx')
+#oclc_viaf = pd.read_excel('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.xlsx')
+oclc_viaf = pd.read_excel('C:/Users/User/Desktop/oclc_viaf.xlsx')
 oclc_viaf['language'] = oclc_viaf['008'].apply(lambda x: x[35:38])
 oclc_viaf = oclc_viaf[oclc_viaf['language'] != 'cze']
 
