@@ -10,8 +10,10 @@ import os
 
 # vars
 
-savefile = 'F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/nkp_nkc.marc'
-logfile = 'F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/log.txt'
+# savefile = 'F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/nkp_nkc.marc'
+# logfile = 'F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/log.txt'
+savefile = 'C:/Users/User/Desktop/nkp_nkc.marc'
+logfile = 'C:/Users/User/Desktop/2021-03-18/log.txt'
 URL = 'https://aleph.nkp.cz/OAI'
 start_date = '2012-12-20 00:00:00'   # [YYYY-mm-dd HH:MM:SS]
 stop_date = datetime.now().replace(minute=0, hour=0, second=0, microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
