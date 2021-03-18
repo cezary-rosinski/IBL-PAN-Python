@@ -16,6 +16,7 @@ from functools import reduce
 import sys
 import csv
 from tqdm import tqdm
+import json
 
 now = datetime.datetime.now()
 year = now.year
@@ -41,8 +42,8 @@ cz_authority_spreadsheet.worksheets()
 
 #%% load data
 list_of_records = []
-#with open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
-with open('C:/Users/User/Desktop/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
+with open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
+#with open('C:/Users/User/Desktop/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
     reader = csv.reader(csv_file, delimiter=',')
     headers = next(reader)
     position_008 = headers.index('008')
@@ -52,8 +53,8 @@ with open('C:/Users/User/Desktop/oclc_lang.csv', 'r', encoding="utf8", errors="s
             
 oclc_lang = pd.DataFrame(list_of_records, columns=headers)
 oclc_lang['language'] = oclc_lang['008'].apply(lambda x: x[35:38])
-#oclc_viaf = pd.read_excel('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.xlsx')
-oclc_viaf = pd.read_excel('C:/Users/User/Desktop/oclc_viaf.xlsx')
+oclc_viaf = pd.read_excel('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.xlsx')
+#oclc_viaf = pd.read_excel('C:/Users/User/Desktop/oclc_viaf.xlsx')
 oclc_viaf['language'] = oclc_viaf['008'].apply(lambda x: x[35:38])
 oclc_viaf = oclc_viaf[oclc_viaf['language'] != 'cze']
 
@@ -64,18 +65,37 @@ oclc_other_languages = oclc_other_languages[oclc_other_languages['nature_of_cont
 oclc_other_languages['type of record + bibliographic level'] = oclc_other_languages['LDR'].apply(lambda x: x[6:8])
 oclc_other_languages['fiction_type'] = oclc_other_languages['008'].apply(lambda x: x[33])
 
-viaf_positives = get_as_dataframe(cz_authority_spreadsheet.worksheet('Sheet1')).dropna(how='all').dropna(how='all', axis=1)['viaf_positive'].drop_duplicates().to_list()
+cz_authority_df = get_as_dataframe(cz_authority_spreadsheet.worksheet('Sheet1'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+
+viaf_positives = cz_authority_df['viaf_positive'].drop_duplicates().dropna().to_list()
 viaf_positives = [f"http://viaf.org/viaf/{l}" for l in viaf_positives if l]
 
-positive_viafs_names = get_as_dataframe(cz_authority_spreadsheet.worksheet('Sheet1')).dropna(how='all').dropna(how='all', axis=1)
-positive_viafs_names = positive_viafs_names[positive_viafs_names['viaf_positive'] != ''][['viaf_positive', 'all_names']]
+positive_viafs_names = cz_authority_df[cz_authority_df['viaf_positive'].notnull()][['viaf_positive', 'all_names']]
 positive_viafs_names = cSplit(positive_viafs_names, 'viaf_positive', 'all_names', '❦')
 positive_viafs_names['all_names'] = positive_viafs_names['all_names'].apply(lambda x: re.sub('(.*?)(\$a.*?)(\$0.*$)', r'\2', x) if pd.notnull(x) else np.nan)
 positive_viafs_names = positive_viafs_names[positive_viafs_names['all_names'].notnull()].drop_duplicates()
 
-positive_viafs_diacritics = get_as_dataframe(cz_authority_spreadsheet.worksheet('Sheet1')).dropna(how='all').dropna(how='all', axis=1)
-positive_viafs_diacritics = positive_viafs_diacritics[positive_viafs_diacritics['viaf_positive'] != ''][['viaf_positive', 'cz_name']]
+positive_viafs_diacritics = cz_authority_df[cz_authority_df['viaf_positive'].notnull()][['viaf_positive', 'cz_name']]
 positive_viafs_diacritics['cz_name'] = positive_viafs_diacritics['cz_name'].apply(lambda x: unidecode.unidecode(x))
+
+viaf_positives_dict = {}
+for element in viaf_positives:
+    viaf_positives_dict[re.findall('\d+', element)[0]] = {'viaf id':element}
+for i, row in positive_viafs_names.iterrows():
+    if 'form of name' in viaf_positives_dict[row['viaf_positive']]:
+        viaf_positives_dict[row['viaf_positive']]['form of name'].append(row['all_names'])
+    else:
+        viaf_positives_dict[row['viaf_positive']].update({'form of name':[row['all_names']]})
+for i, row in positive_viafs_diacritics.iterrows():
+    if 'unidecode name' in viaf_positives_dict[row['viaf_positive']]:
+        viaf_positives_dict[row['viaf_positive']]['unidecode name'].append(row['cz_name'])
+    else:
+        viaf_positives_dict[row['viaf_positive']].update({'unidecode name':[row['cz_name']]})
+        
+viaf_positives_dict = dict(sorted(viaf_positives_dict.items(), key = lambda item : len(item[1]['unidecode name']), reverse=True))
+
+with open("viaf_positives_dict.json", 'w', encoding='utf-8') as file: 
+    json.dump(viaf_positives_dict, file, ensure_ascii=False, indent=4)
 
 # oclc_other_languages['language'].drop_duplicates().sort_values().to_list()
 
@@ -389,13 +409,80 @@ for language in languages:
         
         
 #%% clusters for original titles        
+fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
 
-df_original_titles = oclc_other_languages.copy()        
-df_original_titles['260'] = df_original_titles[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
-df_original_titles['240'] = df_original_titles[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)
-df_original_titles['100_unidecode'] = df_original_titles['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)        
-df_original_titles = df_original_titles.replace(r'^\s*$', np.nan, regex=True)    
-df_original_titles = df_original_titles[(df_original_titles['240'].notnull()) & (df_original_titles['100'].notnull())][['001', '100', '240']]
+df = oclc_other_languages.copy()
+df_language_materials_monographs = df[df['type of record + bibliographic level'] == 'am']
+negative = df_language_materials_monographs.copy()
+df_other_types = df[~df['001'].isin(df_language_materials_monographs['001'])]
+df_first_positive = df_language_materials_monographs[(df_language_materials_monographs['041'].str.contains('\$hcz')) &
+                                                     (df_language_materials_monographs['fiction_type'].isin(fiction_types))]
+negative = negative[~negative['001'].isin(df_first_positive['001'])]
+df_second_positive = marc_parser_1_field(negative, '001', '100', '\$')[['001', '$1']]
+df_second_positive = df_second_positive[df_second_positive['$1'].isin(viaf_positives)]
+df_second_positive = negative[negative['001'].isin(df_second_positive['001'])]
+
+negative = negative[~negative['001'].isin(df_second_positive['001'])].reset_index(drop=True)
+df_third_positive = "select * from negative a join positive_viafs_names b on a.'100' like '%'||b.all_names||'%'"
+df_third_positive = pandasql.sqldf(df_third_positive)
+
+negative = negative[~negative['001'].isin(df_third_positive['001'])].reset_index(drop=True)
+df_fourth_positive = "select * from negative a join positive_viafs_diacritics b on a.'100' like '%'||b.cz_name||'%'"
+df_fourth_positive = pandasql.sqldf(df_fourth_positive)
+
+negative = negative[~negative['001'].isin(df_fourth_positive['001'])].reset_index(drop=True)
+df_all_positive = pd.concat([df_first_positive, df_second_positive, df_third_positive, df_fourth_positive])
+
+df_all_positive['260'] = df_all_positive[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
+df_all_positive['240'] = df_all_positive[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)
+df_all_positive['100_unidecode'] = df_all_positive['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
+
+df_oclc_people = marc_parser_1_field(df_all_positive, '001', '100_unidecode', '\\$')[['001', '$a', '$d', '$1']].replace(r'^\s*$', np.nan, regex=True)  
+df_oclc_people['$ad'] = df_oclc_people[['$a', '$d']].apply(lambda x: '$d'.join(x.dropna().astype(str)) if pd.notnull(x['$d']) else x['$a'], axis=1)
+df_oclc_people['$ad'] = '$a' + df_oclc_people['$ad']
+df_oclc_people['simplify string'] = df_oclc_people['$a'].apply(lambda x: simplify_string(x))
+df_oclc_people['001'] = df_oclc_people['001'].astype(int)
+
+people_clusters = viaf_positives_dict.copy()
+for key in tqdm(people_clusters, total=len(people_clusters)):
+    viaf_id = people_clusters[key]['viaf id']
+    records = []
+    records_1 = df_oclc_people[df_oclc_people['$1'] == viaf_id]['001'].to_list()
+    records += records_1
+    try:
+        unidecode_lower_forms_of_names = [simplify_string(e) for e in people_clusters[key]['form of name']]
+        records_2 = df_oclc_people[df_oclc_people['$ad'].isin(unidecode_lower_forms_of_names)]['001'].to_list()
+        records += records_2
+    except KeyError:
+        pass
+    try:
+        unidecode_name = [simplify_string(e) for e in people_clusters[key]['unidecode name']]
+        records_3 = df_oclc_people[df_oclc_people['simplify string'].isin(unidecode_name)]['001'].to_list()
+        records += records_3
+    except KeyError:
+        pass
+    records = list(set(records))
+    people_clusters[key].update({'list of records':records})
+    
+people_clusters_records = {}
+for key in people_clusters:
+    people_clusters_records[key] = people_clusters[key]['list of records']
+    
+df_people_clusters = pd.DataFrame.from_dict(people_clusters_records, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster_viaf', 0:'001'})
+df_people_clusters['001'] = df_people_clusters['001'].astype('int64')
+df_all_positive['001'] = df_all_positive['001'].astype('int64')
+df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns=['all_names', 'cz_name', 'viaf_positive']).drop_duplicates().reset_index(drop=True)
+
+multiple_clusters = df_people_clusters['001'].value_counts().reset_index()
+multiple_clusters = multiple_clusters[multiple_clusters['001'] > 1]['index'].to_list()
+df_multiple_clusters = df_people_clusters[df_people_clusters['001'].isin(multiple_clusters)].sort_values('001')
+multiple_clusters_ids = df_multiple_clusters['001'].drop_duplicates().to_list()
+df_people_clusters = df_people_clusters[~df_people_clusters['001'].isin(multiple_clusters_ids)]
+df_multiple_clusters = df_multiple_clusters[df_multiple_clusters['cluster_viaf'] == '34454129']
+df_people_clusters = pd.concat([df_people_clusters, df_multiple_clusters])
+
+df_original_titles = df_people_clusters.replace(r'^\s*$', np.nan, regex=True)    
+df_original_titles = df_original_titles[(df_original_titles['240'].notnull()) & (df_original_titles['100'].notnull())][['001', '100', '240', 'cluster_viaf']]
 df_original_titles_100 = marc_parser_1_field(df_original_titles, '001', '100', '\\$')[['001', '$a', '$d', '$1']].rename(columns={'$a':'name', '$d':'dates', '$1':'viaf'})
 counter_100 = df_original_titles_100['001'].value_counts().reset_index()
 counter_100 = counter_100[counter_100['001'] == 1]['index'].to_list()
@@ -405,21 +492,24 @@ df_original_titles_240['original title'] = df_original_titles_240.apply(lambda x
 df_original_titles_240 = df_original_titles_240[['001', 'original title']]
 
 df_original_titles_simple = pd.merge(df_original_titles_100, df_original_titles_240, how='left', on='001')
+df_original_titles_simple = df_original_titles_simple.merge(df_original_titles[['001', 'cluster_viaf']]).reset_index(drop=True)
 df_original_titles_simple['001'] = df_original_titles_simple['001'].astype(int)
-df_original_titles_simple_grouped = df_original_titles_simple.groupby(['name', 'dates', 'viaf', 'original title'])
+df_original_titles_simple['index'] = df_original_titles_simple.index+1
+
+df_original_titles_simple_grouped = df_original_titles_simple.groupby('cluster_viaf')
 
 df_original_titles_simple = pd.DataFrame()
 for name, group in tqdm(df_original_titles_simple_grouped, total=len(df_original_titles_simple_grouped)):
-    ids = '❦'.join([str(e) for e in group['001'].to_list()])
-    group['ids'] = ids
-    df_original_titles_simple = df_original_titles_simple.append(group)
+    df = cluster_records(group, 'index', ['original title'])
+    df_original_titles_simple = df_original_titles_simple.append(df)
 
-df_original_titles_simple = df_original_titles_simple.drop(columns='001').drop_duplicates().reset_index(drop=True)
-df_original_titles_simple['index'] = df_original_titles_simple.index+1
+df_original_titles_simple = df_original_titles_simple.sort_values(['cluster_viaf', 'cluster'])    
+df_original_titles_simple.to_excel('cluster_original_titles_0.8_author_clusters.xlsx', index=False)
 
-test = cluster_records(df_original_titles_simple, 'index', ['name', 'original title'], show_time=True)
 
-test.to_excel('cluster_original_titles_0.8.xlsx', index=False)
+
+
+
 
 
 

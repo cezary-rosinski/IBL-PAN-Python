@@ -366,7 +366,7 @@ def mrk_to_df(path_in, field_with_id, encoding='UTF-8'):
     return full_df, errors
 
 
-def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8, show_time=False):
+def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8, how_to_organise='cluster_first', show_time=False):
     try:
         df.drop(columns='cluster',inplace=True)
     except KeyError:
@@ -417,7 +417,14 @@ def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8, sh
     stacked_matrix = matrix.stack().reset_index()
     stacked_matrix = stacked_matrix[stacked_matrix[0] >= similarity_lvl].rename(columns={'level_0':column_with_ids, 'level_1':'cluster'})
     stacked_matrix = stacked_matrix.groupby('cluster').filter(lambda x: len(x) > 1)
-    stacked_matrix = stacked_matrix[stacked_matrix[column_with_ids] != stacked_matrix['cluster']].sort_values(0, ascending=False).drop(columns=0)
+    if how_to_organise == 'cluster_first':
+        stacked_matrix = stacked_matrix[stacked_matrix[column_with_ids] != stacked_matrix['cluster']].sort_values(['cluster', 0], ascending=[True, False]).drop(columns=0)
+    elif how_to_organise == 'similarity_first':
+        stacked_matrix = stacked_matrix[stacked_matrix[column_with_ids] != stacked_matrix['cluster']].sort_values([0, 'cluster'], ascending=[False, True]).drop(columns=0)
+    else:
+        stacked_matrix = stacked_matrix[stacked_matrix[column_with_ids] != stacked_matrix['cluster']].sort_values(0).drop(columns=0)
+        print("Wrong 'how_to_organise' value!")
+
     tuples = [tuple(x) for x in stacked_matrix.to_numpy()]
     
     clusters = {}

@@ -1,11 +1,5 @@
-# wybiera się zły obrazek dla strony numeru - naprawić
-# dopisać sprawdzenie, czy wszystkie pola w pliku wsadowym są wypełnione
-# w pressto dla przekładów dodawać tylko jedną wersję
-# w pressto dodawać tłumaczy także dla polskich tekstów
-# dla bibliografii w pressto odwiedzić ją jeszcze raz i zaakceptować - wtedy linki będą działały
-# zastanowić się, czy na pressto załączać odrębne pliki, czy ciągle odnosić do strony domowej - załączać pliki!!! (kod w fp_bibliography)
+# https://pressto.amu.edu.pl/index.php/fp/article/view/27426 - czemu światło w biliografii?
 
-from my_functions import gsheet_to_df, df_to_gsheet
 import pandas as pd
 import regex as re
 import regex
@@ -16,7 +10,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 import fp_credentials
 import time
-from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, NoAlertPresentException, SessionNotCreatedException
+from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, NoAlertPresentException, SessionNotCreatedException, ElementClickInterceptedException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -24,7 +18,19 @@ from selenium.webdriver.support import expected_conditions as EC
 import numpy as np
 import sys
 import io
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+import gspread as gs
+from google_drive_research_folders import cr_projects
+from gspread_dataframe import set_with_dataframe, get_as_dataframe
 
+def get_bool(prompt):
+    while True:
+        try:
+           return {"true":True,"false":False}[input(prompt).lower()]
+        except KeyError:
+           print("Invalid input please enter True or False!")
+           
 def jest_autor(x):
     try:
         re.findall('(, \p{Lu})|(^-+|^—+|^–+)', x)[0]
@@ -33,19 +39,36 @@ def jest_autor(x):
         val = ''
     return val
 
+get_bool('Czy są zrobione pliki jpg dla artykułów? ')
+get_bool('Czy dodano pliki pdf do biblioteki wordpress (plików jpg nie dodawać)? ')
+get_bool('Czy nazwiska autorów w nazwach plików są poprawne? ')
+
+#autoryzacja do tworzenia i edycji plików
+gc = gs.oauth()
+#autoryzacja do penetrowania dysku
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()
+drive = GoogleDrive(gauth)
+
+file_list = drive.ListFile({'q': f"'{cr_projects}' in parents and trashed=false"}).GetList() 
+#[print(e['title'], e['id']) for e in file_list]
+fp_folder = [file['id'] for file in file_list if file['title'] == 'redakcja FP'][0]
+file_list = drive.ListFile({'q': f"'{fp_folder}' in parents and trashed=false"}).GetList() 
+last_number = max(file_list, key=lambda x: x['createdDate'])
+print(f"{last_number['title']}  |  {last_number['id']}")
+
 pd.options.display.max_colwidth = 10000
 
 now = datetime.datetime.now()
 year = now.year
-month = now.month
-day = now.day
+month = '{:02d}'.format(now.month)
+day = '{:02d}'.format(now.day)
 
+table_id = input('Podaj id arkusza bieżącego numeru: ')
+aktualny_numer_sheet = gc.open_by_key(table_id)
 
-table_url = input('Podaj link do arkusza bieżącego numeru: ')
-gs_table = re.findall('(?<=https:\/\/docs\.google\.com\/spreadsheets\/d\/).+(?=\/)', table_url)[0]
-
-aktualny_numer = gsheet_to_df(gs_table, 'artykuły')
-kategorie_wpisow = gsheet_to_df('1hPVa854YZ4DIajzVoWshXFotd3A7lHHz_d-GqEgn4BI', 'Arkusz1')
+aktualny_numer = get_as_dataframe(aktualny_numer_sheet.worksheet('artykuły'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+kategorie_wpisow = get_as_dataframe(gc.open_by_key('1hPVa854YZ4DIajzVoWshXFotd3A7lHHz_d-GqEgn4BI').worksheet('Arkusz1')).dropna(how='all').dropna(how='all', axis=1)
 
 foldery_lokalne = aktualny_numer['folder lokalny'].drop_duplicates().to_list()
 
@@ -55,7 +78,6 @@ for folder in foldery_lokalne:
     else:
         folder_eng = folder + '/'
         
-
 pdf_pl= [f for f in glob.glob(folder_pl + '*.pdf', recursive=True)]
 jpg_pl= [f for f in glob.glob(folder_pl + '*.jpg', recursive=True)]
 
@@ -71,14 +93,14 @@ for i, row in aktualny_numer.iterrows():
     slowo_z_tytulu = unidecode(max(tytul_art.split(' '), key=len)).lower()
     if row['język'] == 'pl':
         try:
-            sciezka_jpg = [e for e in jpg_pl if nazwisko in e and slowo_z_tytulu in e.lower()][0]
+            sciezka_jpg = [e for e in jpg_pl if nazwisko in unidecode(e) and slowo_z_tytulu in e.lower()][0]
         except IndexError:
-            sciezka_jpg = [e for e in jpg_pl if nazwisko in e][0]
+            sciezka_jpg = [e for e in jpg_pl if nazwisko in unidecode(e)][0]
         sciezka_jpg = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_jpg)
         try:
-            sciezka_pdf = [e for e in pdf_pl if nazwisko in e and slowo_z_tytulu in e.lower()][0]
+            sciezka_pdf = [e for e in pdf_pl if nazwisko in unidecode(e) and slowo_z_tytulu in e.lower()][0]
         except IndexError:
-            sciezka_pdf = [e for e in pdf_pl if nazwisko in e][0]
+            sciezka_pdf = [e for e in pdf_pl if nazwisko in unidecode(e)][0]
         sciezka_pdf = re.sub(r'(.+)(\\(?!.*\\))(.+)', r'\3', sciezka_pdf)
         aktualny_numer.at[i, 'link do pdf'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_pdf}"
         aktualny_numer.at[i, 'link do jpg'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_jpg}"
@@ -156,24 +178,38 @@ for index, row in aktualny_numer.iterrows():
         dodaj_tagi = browser.find_element_by_xpath("//input[@class = 'button tagadd']").click()
         
         wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
+        wybierz_pliki = browser.find_element_by_xpath("//input[starts-with(@id,'html5_')]")
+        wybierz_pliki.send_keys(f"{row['folder lokalny']}\\{row['jpg']}")
+        zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
+        zaakceptuj_obrazek.click()
         
+# =============================================================================
+#         while True:
+#             try:
+#                 search_box = browser.find_element_by_id('mla-media-search-input').clear()
+#                 search_box = browser.find_element_by_id('mla-media-search-input')
+#                 search_box.send_keys(row['jpg'][:-4])
+#                 search_button = browser.find_element_by_id('mla-search-submit').click()
+#                 time.sleep(2)
+#                 znajdz_obrazek = browser.find_element_by_css_selector('.thumbnail').click()
+#                 time.sleep(2)
+#                 zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']").click()
+#                 czy_obrazek = browser.find_element_by_xpath("//img[@class = 'attachment-post-thumbnail size-post-thumbnail']")
+#             except NoSuchElementException:
+#                 time.sleep(5)
+#                 continue
+#             break
+# =============================================================================
+
         while True:
             try:
-                search_box = browser.find_element_by_id('mla-media-search-input').clear()
-                search_box = browser.find_element_by_id('mla-media-search-input')
-                search_box.send_keys(row['jpg'])
-                search_button = browser.find_element_by_id('mla-search-submit').click()
-                time.sleep(2)
-                znajdz_obrazek = browser.find_element_by_css_selector('.thumbnail').click()
-                time.sleep(2)
-                zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']").click()
-                czy_obrazek = browser.find_element_by_xpath("//img[@class = 'attachment-post-thumbnail size-post-thumbnail']")
-            except NoSuchElementException:
+                zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
+                zaakceptuj_obrazek.click()
+                wybierz_pdf = browser.find_element_by_xpath("//select[@id = 'metakeyselect']/option[text()='pdf-url']").click()
+            except ElementClickInterceptedException:
                 time.sleep(5)
                 continue
             break
-
-        wybierz_pdf = browser.find_element_by_xpath("//select[@id = 'metakeyselect']/option[text()='pdf-url']").click()
         wprowadz_pdf_link = browser.find_element_by_id('metavalue').send_keys(row['link do pdf'])
         dodaj_pdf = browser.find_element_by_id("newmeta-submit").click()
         
@@ -238,24 +274,20 @@ for index, row in aktualny_numer.iterrows():
             pass
         
         wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
-        
+        wybierz_pliki = browser.find_element_by_xpath("//input[starts-with(@id,'html5_')]")
+        wybierz_pliki.send_keys(f"{aktualny_numer.at[index+1, 'folder lokalny']}\\{aktualny_numer.at[index+1, 'jpg']}")
+        zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
+        zaakceptuj_obrazek.click()
+
         while True:
             try:
-                search_box = browser.find_element_by_id('mla-media-search-input').clear()
-                search_box = browser.find_element_by_id('mla-media-search-input')
-                search_box.send_keys(aktualny_numer.at[index+1, 'jpg'])
-                search_button = browser.find_element_by_id('mla-search-submit').click()
-                time.sleep(2)
-                znajdz_obrazek = browser.find_element_by_css_selector('.thumbnail').click()
-                time.sleep(2)
-                zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']").click()
-                czy_obrazek = browser.find_element_by_xpath("//img[@class = 'attachment-post-thumbnail size-post-thumbnail']")
-            except NoSuchElementException:
+                zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
+                zaakceptuj_obrazek.click()
+                wybierz_pdf = browser.find_element_by_xpath("//select[@id = 'metakeyselect']/option[text()='pdf-url']").click()
+            except ElementClickInterceptedException:
                 time.sleep(5)
                 continue
             break
-        
-        wybierz_pdf = browser.find_element_by_xpath("//select[@id = 'metakeyselect']/option[text()='pdf-url']").click()
         wprowadz_pdf_link = browser.find_element_by_id('metavalue').send_keys(aktualny_numer.at[index+1, 'link do pdf'])
         dodaj_pdf = browser.find_element_by_id("newmeta-submit").click()
         
@@ -395,7 +427,7 @@ for i, row in aktualny_numer.iterrows():
         
 #wprowadzenie strony nowego numeru
 
-strona_numeru = gsheet_to_df(gs_table, 'strona')
+strona_numeru = get_as_dataframe(aktualny_numer_sheet.worksheet('strona'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
 strona_numeru['spis treści'] = strona_numeru.apply(lambda x: spis_tresci_pl if x['język'] == 'pl' else spis_tresci_eng, axis=1)
 
 for i, row in strona_numeru.iterrows():
@@ -430,22 +462,11 @@ for index, row in strona_numeru.iterrows():
         jezyk_pl_button = browser.find_element_by_id('xili_language_check_pl_pl').click()
         time.sleep(1)
         wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
-        
-        while True:
-            try:
-                search_box = browser.find_element_by_id('mla-media-search-input').clear()
-                search_box = browser.find_element_by_id('mla-media-search-input')
-                search_box.send_keys(row['jpg'])
-                search_button = browser.find_element_by_id('mla-search-submit').click()
-                time.sleep(2)
-                znajdz_obrazek = browser.find_element_by_css_selector('.thumbnail').click()
-                time.sleep(2)
-                zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']").click()
-                czy_obrazek = browser.find_element_by_xpath("//img[@class = 'attachment-post-thumbnail size-post-thumbnail']")
-            except NoSuchElementException:
-                time.sleep(5)
-                continue
-            break
+        wybierz_pliki = browser.find_element_by_xpath("//input[starts-with(@id,'html5_')]")
+        wybierz_pliki.send_keys(f"{row['folder lokalny']}\\{row['jpg']}")
+        time.sleep(10)
+        zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
+        zaakceptuj_obrazek.click()
         
         body = f"""<a href="{row['link do pdf']}"><img class="alignleft wp-image-3823" src="{row['link do jpg']}" alt="" width="166" height="235" /></a>{row['wstęp']}
 
@@ -477,22 +498,11 @@ for index, row in strona_numeru.iterrows():
             pass
         
         wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
-        
-        while True:
-            try:
-                search_box = browser.find_element_by_id('mla-media-search-input').clear()
-                search_box = browser.find_element_by_id('mla-media-search-input')
-                search_box.send_keys(strona_numeru.at[index+1, 'jpg'])
-                search_button = browser.find_element_by_id('mla-search-submit').click()
-                time.sleep(2)
-                znajdz_obrazek = browser.find_element_by_css_selector('.thumbnail').click()
-                time.sleep(2)
-                zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']").click()
-                czy_obrazek = browser.find_element_by_xpath("//img[@class = 'attachment-post-thumbnail size-post-thumbnail']")
-            except NoSuchElementException:
-                time.sleep(5)
-                continue
-            break
+        wybierz_pliki = browser.find_element_by_xpath("//input[starts-with(@id,'html5_')]")
+        wybierz_pliki.send_keys(f"{strona_numeru.at[index+1, 'folder lokalny']}\\{strona_numeru.at[index+1, 'jpg']}")
+        time.sleep(10)
+        zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
+        zaakceptuj_obrazek.click()
         
         body = f"""<a href="{strona_numeru.at[index+1, 'link do pdf']}"><img class="alignleft wp-image-3823" src="{strona_numeru.at[index+1, 'link do jpg']}" alt="" width="166" height="235" /></a>{strona_numeru.at[index+1, 'wstęp']}
 
@@ -535,11 +545,13 @@ utworz_numer = browser.find_element_by_css_selector('.pkp_linkaction_icon_add_ca
 time.sleep(1)
 odznacz_tom = browser.find_element_by_id('showVolume').click()
     
-wprowadz_numer = browser.find_element_by_xpath("//input[@name='number']").send_keys(strona_numeru.at[0, 'numer'])
-rok = browser.find_element_by_xpath("//input[@name='year']").send_keys(strona_numeru.at[0, 'rok'])
+wprowadz_numer = browser.find_element_by_xpath("//input[@name='number']")
+wprowadz_numer.send_keys('{:.0f}'.format(strona_numeru.at[0, 'numer']))
+rok = browser.find_element_by_xpath("//input[@name='year']")
+rok.send_keys('{:.0f}'.format(strona_numeru.at[0, 'rok']))
 tytul_pl = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[0, 'tytuł numeru']).strip()
 
-nazwa_numeru = f"Nr {strona_numeru.at[0, 'numer']} ({strona_numeru.at[0, 'rok']}): {tytul_pl}"
+nazwa_numeru = f"Nr {'{:.0f}'.format(strona_numeru.at[0, 'numer'])} ({'{:.0f}'.format(strona_numeru.at[0, 'rok'])}): {tytul_pl}"
 
 tytul_pl = browser.find_element_by_xpath("//input[@name='title[pl_PL]']").send_keys(tytul_pl)
 tytul_eng = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[1, 'tytuł numeru']).strip()
@@ -632,28 +644,68 @@ for i, row in aktualny_numer.iterrows():
             kliknij_poza_biogram = browser.find_element_by_name('orcid').click()
             rola_autora = browser.find_element_by_xpath("//input[@name='userGroupId' and @value='14']").click()
             zapisz_autora = browser.find_elements_by_xpath("//button[@class = 'pkp_button submitFormButton']")[-1].click()
-        
-        time.sleep(2)    
+            time.sleep(2)
+   
         dodaj_plik_pl = browser.find_element_by_xpath("//a[@title='Dodaj plik do publikacji']").click()
         time.sleep(2)
         etykieta = browser.find_element_by_xpath("//input[@class='field text required' and @name = 'label']").send_keys('PDF')
         jezyk_publikacji = browser.find_element_by_xpath("//select[@id = 'galleyLocale']/option[text()='Język Polski']").click()
-        zewnetrzny_url_checkbox = browser.find_element_by_id('remotelyHostedContent').click()
-        zewnetrzny_url = browser.find_element_by_name('remoteURL').send_keys(row['link do pdf'])
+        
         zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
         zapisz[-1].click()
         time.sleep(2)
-        dodaj_plik_eng = browser.find_element_by_xpath("//a[@title='Dodaj plik do publikacji']").click()
+        
+        element_artykulu = browser.find_element_by_xpath("//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
+        przeslij_pdf = browser.find_element_by_xpath("//input[@type='file']")
+        przeslij_pdf.send_keys(f"{row['folder lokalny']}\\{row['pdf']}")
         time.sleep(2)
-        etykieta = browser.find_element_by_xpath("//input[@class='field text required' and @name = 'label']").send_keys('PDF')
-        jezyk_publikacji = browser.find_element_by_xpath("//select[@id = 'galleyLocale']/option[text()='English']").click()
-        zewnetrzny_url_checkbox = browser.find_element_by_id('remotelyHostedContent').click()
-        zewnetrzny_url = browser.find_element_by_name('remoteURL').send_keys(aktualny_numer.at[i+1, 'link do pdf'])
-        zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
-        zapisz[-1].click()
+        kontunuuj_button = browser.find_element_by_id('continueButton').click()
         time.sleep(2)
-        zaplanuj_do_publikacji = browser.find_element_by_id('articlePublished').click()
+        kontunuuj_button = browser.find_element_by_id('continueButton').click()
         time.sleep(2)
+        potwierdz_button = browser.find_element_by_id('continueButton').click()
+        time.sleep(2)
+        
+        if row['kategoria'] != 'Przekłady':
+        
+            while True:
+                try:
+                    dodaj_plik_eng = browser.find_element_by_xpath("//a[@title='Dodaj plik do publikacji']").click()
+                    time.sleep(2)
+                except ElementClickInterceptedException:
+                    potwierdz_button = browser.find_element_by_id('continueButton').click()
+                    time.sleep(2)
+                    continue
+                break
+                
+            etykieta = browser.find_element_by_xpath("//input[@class='field text required' and @name = 'label']").send_keys('PDF')
+            jezyk_publikacji = browser.find_element_by_xpath("//select[@id = 'galleyLocale']/option[text()='English']").click()
+            
+            zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
+            zapisz[-1].click()
+            time.sleep(2)
+            
+            element_artykulu = browser.find_element_by_xpath("//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
+            przeslij_pdf = browser.find_element_by_xpath("//input[@type='file']")
+            przeslij_pdf.send_keys(f"{aktualny_numer.at[i+1, 'folder lokalny']}\\{aktualny_numer.at[i+1, 'pdf']}")
+            time.sleep(2)
+            kontunuuj_button = browser.find_element_by_id('continueButton').click()
+            time.sleep(2)
+            kontunuuj_button = browser.find_element_by_id('continueButton').click()
+            time.sleep(2)
+            potwierdz_button = browser.find_element_by_id('continueButton').click()
+            time.sleep(2)
+        
+        while True:
+            try:
+                breakzaplanuj_do_publikacji = browser.find_element_by_id('articlePublished').click()
+                time.sleep(2)
+            except ElementClickInterceptedException:
+                potwierdz_button = browser.find_element_by_id('continueButton').click()
+                time.sleep(2)
+                continue
+            break
+        
         publikuj_w = browser.find_element_by_xpath(f"//select[@id = 'issueId']/option[text()='{nazwa_numeru}']").click()
         publikuj_strony = browser.find_element_by_name('pages').send_keys(row['strony'])
         
@@ -664,7 +716,7 @@ for i, row in aktualny_numer.iterrows():
         zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
         zapisz[-1].click()
         
-        wzoc_do_zgloszenia = browser.find_element_by_xpath("//a[contains(text(),'Go to Submission')]").click()
+        wroc_do_zgloszenia = browser.find_element_by_xpath("//a[contains(text(),'Go to Submission')]").click()
         metadane = browser.find_element_by_xpath("//a[@title = 'Wyświetl metadane zgłoszenia']").click()
         time.sleep(2)
         identyfikatory = browser.find_element_by_xpath("//a[@name = 'catalog' and @class = 'ui-tabs-anchor']").click()
@@ -698,17 +750,48 @@ browser.close()
 
 #uzupełnienie tabeli artykułów na dysku google
 
-df_to_gsheet(aktualny_numer, gs_table, 'artykuły po pętli')
+try:
+    set_with_dataframe(aktualny_numer_sheet.worksheet('artykuły po pętli'), aktualny_numer)
+except gs.WorksheetNotFound:
+    aktualny_numer_sheet.add_worksheet(title="artykuły po pętli", rows="100", cols="20")
+    set_with_dataframe(aktualny_numer_sheet.worksheet('artykuły po pętli'), aktualny_numer)
+
 
 #uzupełnienie tabeli numeru na dysku google
+try:
+    set_with_dataframe(aktualny_numer_sheet.worksheet('strona po pętli'), strona_numeru)
+except gs.WorksheetNotFound:
+    aktualny_numer_sheet.add_worksheet(title="strona po pętli", rows="100", cols="20")
+    set_with_dataframe(aktualny_numer_sheet.worksheet('strona po pętli'), strona_numeru)
 
-df_to_gsheet(strona_numeru, gs_table, 'strona po pętli')
+worksheets = ['artykuły po pętli', 'strona po pętli']
+for worksheet in worksheets:
+    worksheet = aktualny_numer_sheet.worksheet(worksheet)
+    
+    aktualny_numer_sheet.batch_update({
+        "requests": [
+            {
+                "updateDimensionProperties": {
+                    "range": {
+                        "sheetId": worksheet._properties['sheetId'],
+                        "dimension": "ROWS",
+                        "startIndex": 0,
+                        #"endIndex": 100
+                    },
+                    "properties": {
+                        "pixelSize": 20
+                    },
+                    "fields": "pixelSize"
+                }
+            }
+        ]
+    })
+    
+    worksheet.freeze(rows=1)
+    worksheet.set_basic_filter()
 
-print('Done')
-
-
-
-
+print('Nowy numer opublikowany!')
+    
 
 
 
