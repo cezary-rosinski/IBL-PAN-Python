@@ -156,7 +156,7 @@ file_list = drive.ListFile({'q': f"'{cr_projects}' in parents and trashed=false"
 #[print(e['title'], e['id']) for e in file_list]
 translation_folder = [file['id'] for file in file_list if file['title'] == 'Vimr Project'][0]
 
-nkp_sheet = sheet = gc.create('NKP_Czech_translations', translation_folder)
+nkp_sheet = gc.create('NKP_Czech_translations', translation_folder)
 worksheet = nkp_sheet.get_worksheet(0)
 worksheet.update_title('NKP_Czech_translations')
 try:
