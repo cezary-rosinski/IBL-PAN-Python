@@ -10,6 +10,7 @@ import os
 import glob
 import regex as re
 import pandas as pd
+from tqdm import tqdm
 
 #%%harvesting OAI-PMH
 
@@ -95,11 +96,39 @@ response = requests.get(url)
 with open('test2.xml', 'wb') as file:
     file.write(response.content)
     
-tree = et.parse('test.xml')
+tree = et.parse('test2.xml')
 root = tree.getroot() 
 ns = '{http://www.openarchives.org/OAI/2.0/}'
 root.tag
 records = root.findall(f'.//{ns}record/{ns}metadata/{{http://www.loc.gov/MARC21/slim}}record')
+
+list_of_marks = []
+for r in tqdm(records):
+    r = et.tostring(r)
+    with open('test3.xml', 'wb') as file:
+        file.write(b"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
+        file.write(r)
+    xml_to_mrk('test3.xml', 'test3.mrk')
+    marc_list = io.open('test3.mrk', 'rt', encoding = encoding).read().splitlines()
+    list_of_marks.append(marc_list)
+
+
+#ogarnąć nextpage i resumptionToken
+
+
+
+
+context = et.iterparse('test2.xml', events=('end', ))
+for event, elem in context:
+    print(elem.tag)
+
+
+
+
+
+
+
+
 
 writer = pymarc.TextWriter(io.open('testtest.mrk', 'wt', encoding="utf-8"))
 for record in records:
@@ -280,7 +309,8 @@ while start < stop:
                         allcontent+=urlcontent
                 except urllib.error.URLError as e:
                     print(e.reason)
-            print(allcontent) # harvest of the day here - please save me
+            #print(allcontent)
+            saverecords(allcontent)# harvest of the day here - please save me
     except urllib.error.URLError as e:
         print(e.reason)
 
