@@ -125,22 +125,63 @@ marc_df.to_excel(f'Translation_into_Polish_{year}-{month}-{day}.xlsx', index=Fal
 
 
 #%% All translations into Czech
+
+fiction_types = ['1', 'd', 'f', 'h', 'j', 'p', 'u', '|', '\\']
+years = range(1990,2021)
+encoding = 'UTF-8' 
+new_list = []
+   
+marc_list = io.open('F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/nkp_nkc_2021-03-18.mrk', 'rt', encoding = encoding).read().splitlines()
+
+mrk_list = []
+for row in marc_list:
+    if row.startswith('=LDR'):
+        mrk_list.append([row])
+    else:
+        if row:
+            mrk_list[-1].append(row)
+        
+for sublist in tqdm(mrk_list):
+    language = ''.join([ele for ele in sublist if ele.startswith('=008')])[41:44]
+    type_of_record_bibliographical_level = ''.join([ele for ele in sublist if ele.startswith('=LDR')])[12:14]
+    if [ele for ele in sublist if ele.startswith('=041')]: 
+        is_translation = True
+    else:
+        is_translation = False
+    try:
+        fiction_type = ''.join([ele for ele in sublist if ele.startswith('=008')])[39]
+    except IndexError:
+        fiction_type = 'a'
+    try:
+        bib_year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
+    except ValueError:
+        bib_year = 1000
+    if language == 'cze' and type_of_record_bibliographical_level == 'am' and fiction_type in fiction_types and bib_year in years and is_translation:
+        new_list.append(sublist)
+
+final_list = []
+for lista in new_list:
+    slownik = {}
+    for el in lista:
+        if el[1:4] in slownik:
+            slownik[el[1:4]] += f"❦{el[6:]}"
+        else:
+            slownik[el[1:4]] = el[6:]
+    final_list.append(slownik)
+
+marc_df = pd.DataFrame(final_list)
+fields = marc_df.columns.tolist()
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+marc_df = marc_df.reindex(columns=fields) 
+
+marc_df.to_excel(f'Translation_into_Czech_{year}-{month}-{day}.xlsx', index=False)
+
 #%% All translations into Swedish
 #%% All translations into Norwegian
 
-# =============================================================================
-# For the Norwegian dataset, this should work:
-# 
-#  
-# 
-# URL = 'https://bibsys.alma.exlibrisgroup.com/view/oai/47BIBSYS_NB'
-# 
-# set = 'oai_komplett'
-# 
-#  
-# 
-# (I have tested https://bibsys.alma.exlibrisgroup.com/view/oai/47BIBSYS_NB/request?verb=ListRecords&metadataPrefix=marc21&set=oai_komplett&from=2020-01-21T00:00:00Z&until=2020-01-22T00:00:00Z)
-# =============================================================================
+
 
 
 

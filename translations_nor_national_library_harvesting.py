@@ -10,29 +10,22 @@ import os
 import glob
 import regex as re
 import pandas as pd
-from my_functions import mrc_to_mrk
-from tqdm import tqdm
-from pydrive.auth import GoogleAuth
-from pydrive.drive import GoogleDrive
-import gspread as gs
-from gspread_dataframe import set_with_dataframe, get_as_dataframe
-from google_drive_research_folders import cr_projects
 
 #%%harvesting OAI-PMH
 
 #date
-now = datetime.datetime.now()
+now = datetime.now()
 year = now.year
 month = '{:02d}'.format(now.month)
 day = '{:02d}'.format(now.day)
 
 # vars
 
-# savefile = 'F:/Cezary/Documents/IBL/Translations/nor_{year}-{month}-{day}.marc'
-# logfile = 'F:/Cezary/Documents/IBL/Translations/nor_log_{year}-{month}-{day}.txt'
-savefile = f'C:/Users/User/Desktop/nor_{year}-{month}-{day}.marc'
-logfile = f'C:/Users/User/Desktop/nor_log_{year}-{month}-{day}.txt'
-URL = 'https://bibsys.alma.exlibrisgroup.com/view/oai/47BIBSYS_NB'
+savefile = f'F:/Cezary/Documents/IBL/Translations/nor_{year}-{month}-{day}.marc'
+logfile = f'F:/Cezary/Documents/IBL/Translations/nor_log_{year}-{month}-{day}.txt'
+# savefile = f'C:/Users/User/Desktop/nor_{year}-{month}-{day}.marc'
+# logfile = f'C:/Users/User/Desktop/nor_log_{year}-{month}-{day}.txt'
+URL = 'http://bibsys.alma.exlibrisgroup.com/view/oai/47BIBSYS_NB'
 start_date = '2012-12-20 00:00:00'   # [YYYY-mm-dd HH:MM:SS]
 stop_date = datetime.now().replace(minute=0, hour=0, second=0, microsecond=0).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -61,13 +54,6 @@ def saverecords(recs):
     print(from_date, until_date)
     return
 
-def get_bool(prompt):
-    while True:
-        try:
-           return {"true":True,"false":False}[input(prompt).lower()]
-        except KeyError:
-           print("Invalid input please enter True or False!")
-
 # init
 
 registry = MetadataRegistry()
@@ -75,6 +61,7 @@ registry.registerReader('marc21', MarcXML)
 client = Client(URL, registry)
 
 start = valid_date(start_date)
+start = valid_date('2020-01-21 00:00:00')
 stop = valid_date(stop_date)
 
 # main
@@ -88,78 +75,226 @@ while start < stop:
         saverecords(records)
     except: pass # skipping deleted entries
 
-print('Done.')
-
-#%% processing mrc to df
-
-mrc_to_mrk('F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/nkp_nkc_2021-03-18.marc', 'F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/nkp_nkc_2021-03-18.mrk')
-
-fiction_types = ['1', 'd', 'f', 'h', 'j', 'p', 'u', '|', '\\']
-
-filter_fiction_type = get_bool('Filter with a fiction type? ')
-
-encoding = 'utf-8' 
-new_list = []
-
-marc_list = io.open('F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/nkp_nkc_2021-03-18.mrk', 'rt', encoding = encoding).read().splitlines()
-
-mrk_list = []
-for row in marc_list:
-    if row.startswith('=LDR'):
-        mrk_list.append([row])
-    else:
-        if row:
-            mrk_list[-1].append(row)
-        
-for sublist in tqdm(mrk_list):
-    language = ''.join([ele for ele in sublist if ele.startswith('=008')])[41:44]
-    type_of_record_bibliographical_level = ''.join([ele for ele in sublist if ele.startswith('=LDR')])[12:14]
-    translated_from_czech = '$hcze' in ''.join([ele for ele in sublist if ele.startswith('=041')])
-    if filter_fiction_type:
-        try:
-            fiction_type = ''.join([ele for ele in sublist if ele.startswith('=008')])[39]
-        except IndexError:
-            fiction_type = ''
-        if language != 'cze' and type_of_record_bibliographical_level == 'am' and fiction_type in fiction_types and translated_from_czech:
-            new_list.append(sublist)
-    else:
-        if language != 'cze' and type_of_record_bibliographical_level == 'am' and translated_from_czech:
-            new_list.append(sublist)
-
-final_list = []
-for lista in new_list:
-    slownik = {}
-    for el in lista:
-        if el[1:4] in slownik:
-            slownik[el[1:4]] += f"❦{el[6:]}"
-        else:
-            slownik[el[1:4]] = el[6:]
-    final_list.append(slownik)
-
-marc_df = pd.DataFrame(final_list)
-fields = marc_df.columns.tolist()
-fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
-marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
-fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-marc_df = marc_df.reindex(columns=fields)  
-
-#marc_df.to_excel('NKP_Czech_translations.xlsx', index=False)
-
-# =============================================================================
-# For the Norwegian dataset, this should work:
-# 
-#  
-# 
-# URL = 'https://bibsys.alma.exlibrisgroup.com/view/oai/47BIBSYS_NB'
-# 
-# set = 'oai_komplett'
-# 
-#  
-# 
-# (I have tested https://bibsys.alma.exlibrisgroup.com/view/oai/47BIBSYS_NB/request?verb=ListRecords&metadataPrefix=marc21&set=oai_komplett&from=2020-01-21T00:00:00Z&until=2020-01-22T00:00:00Z)
-# =============================================================================
-
 print('Done!')
+
+for record in records:
+    print(record)
+
+#https://bibsys.alma.exlibrisgroup.com/view/oai/47BIBSYS_NB/request?verb=ListRecords&metadataPrefix=marc21&set=oai_komplett&from=2020-01-21T00:00:00Z&until=2020-01-22T00:00:00Z
+
+
+
+import requests
+from pymarc import MARCReader
+from my_functions import xml_to_mrk, xml_to_mrc
+import pymarc
+import xml.etree.ElementTree as et
+
+url = 'https://bibsys.alma.exlibrisgroup.com/view/oai/47BIBSYS_NB/request?verb=ListRecords&metadataPrefix=marc21&set=oai_komplett&from=2020-01-21T00:00:00Z&until=2020-01-22T00:00:00Z'
+response = requests.get(url)
+with open('test2.xml', 'wb') as file:
+    file.write(response.content)
+    
+tree = et.parse('test.xml')
+root = tree.getroot() 
+ns = '{http://www.openarchives.org/OAI/2.0/}'
+root.tag
+records = root.findall(f'.//{ns}record/{ns}metadata/{{http://www.loc.gov/MARC21/slim}}record')
+
+writer = pymarc.TextWriter(io.open('testtest.mrk', 'wt', encoding="utf-8"))
+for record in records:
+    pymarc.map_xml(writer.write, str(record)) 
+    writer.close() 
+    
+
+
+def xml_to_mrk(path_in, path_out):
+    writer = pymarc.TextWriter(io.open(path_out, 'wt', encoding="utf-8"))
+    pymarc.map_xml(writer.write, path_in) 
+    writer.close() 
+    
+    
+lista = []
+for record in record
+
+records[0].getchildren()
+
+root.getchildren()
+
+
+
+
+
+
+
+
+
+
+
+
+for e in root[-1].getchildren():
+    print(e)
+    with open('test3.xml', 'wb') as file:
+        file.write(et.tostring(e))
+
+root[-1].getchildren()[0].getchildren()[-1].getchildren()[0].getchildren()
+
+lista = []
+for e in root[-1].getchildren():
+    try:
+        val = e.getchildren()[-1]
+        lista.append(et.tostring(val))
+    except IndexError:
+        pass
+    dotrzeć do rekordów i je poiterować - może da się z nich zrobić marki
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+tree = et.parse('test.xml')
+root = tree.getroot()
+
+dir(root)
+
+print(root[-1])
+
+for e in root[-1].getchildren():
+    e = MARCReader(et.tostring(e))
+    print(e)
+
+test = MARCReader(et.tostring(root[-1]))
+next(test)
+for e in root:
+    print(e)
+
+with open('test2.xml', 'wb') as f:
+    for e in root[-1].getchildren():
+        f.write(et.tostring(e))
+
+xml_to_mrk('test2.xml', 'test.mrk')   
+
+
+
+
+
+
+
+for e in tree.iter():
+    print(e)
+    
+writer = pymarc.TextWriter(io.open('test.mrk', 'wt', encoding="utf-8"))    
+records = pymarc.map_xml(writer.write, 'test.xml')     
+    
+xml_to_mrk('test.xml', 'test.mrk')    
+xml_to_mrc('test.xml', 'test.mrc')  
+xml_to   
+
+
+def xml_to_mrk(path_in, path_out):
+    writer = pymarc.TextWriter(io.open(path_out, 'wt', encoding="utf-8"))
+    records = pymarc.map_xml(writer.write, path_in) 
+    writer.close() 
+
+
+def xml_to_mrc(path_in, path_out):
+    writer = pymarc.MARCWriter(open(path_out, 'wb'))
+    records = pymarc.map_xml(writer.write, path_in) 
+    writer.close()  
+
+import lxml.etree
+# tree_pretty = lxml.etree.parse('test.xml')
+# pretty = lxml.etree.tostring(tree_pretty, encoding="unicode", pretty_print=True)
+
+
+
+
+
+
+
+
+   
+    
+
+reader = MARCReader(response.content, force_utf8=True)
+
+
+(marc_target, to_unicode=True, force_utf8=False,
+hide_utf8_warnings=False, utf8_handling=’strict’,
+file_encoding=’iso8859-1’, permissive=False)
+for record in reader:
+    print(1)
+with open('file.mrc', 'wb') as out:
+   out.write(reader.as_marc())
+
+for record in reader:
+    with open('file.mrc', 'wb') as out:
+        out.write(record.as_marc())
+
+
+import urllib.request
+from datetime import datetime, timedelta
+import sys
+
+start_date = '2018-02-21 00:00:00'   # [YYYY-mm-dd HH:MM:SS]
+stop_date = '2021-04-01 00:00:00'
+
+def valid_date(s):
+    try:
+        return datetime.strptime(s, '%Y-%m-%d %H:%M:%S')
+    except:
+        print('Invalid date format.')
+        sys.exit(1)
+
+start = valid_date(start_date)
+stop = valid_date(stop_date)
+
+while start < stop:
+    from_date = start
+    start = start + timedelta(days=1)  # increase days one by one
+    until_date = start
+    print(from_date)
+    harvesturl = 'https://bibsys.alma.exlibrisgroup.com/view/oai/47BIBSYS_NB/request?verb=ListRecords&metadataPrefix=marc21&set=oai_komplett&from='+from_date.strftime('%Y-%m-%dT%H:%M:%SZ')+'&until='+until_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+    try:
+        with urllib.request.urlopen(harvesturl) as f:
+            urlcontent = f.read().decode('utf-8')
+            allcontent = urlcontent
+            while 'resumptionToken>' in urlcontent:
+                #print('token now') # monitoring tokens                
+                rtoken = urlcontent.split('resumptionToken>')[1][:-2]
+                harvesturl = 'https://bibsys.alma.exlibrisgroup.com/view/oai/47BIBSYS_NB/request?verb=ListRecords&resumptionToken='+rtoken
+                #print(harvesturl)
+                try:
+                    with urllib.request.urlopen(harvesturl) as t:
+                        urlcontent = t.read().decode('utf-8')
+                        allcontent+=urlcontent
+                except urllib.error.URLError as e:
+                    print(e.reason)
+            print(allcontent) # harvest of the day here - please save me
+    except urllib.error.URLError as e:
+        print(e.reason)
+
+print('done')
+
+
+
+
+
+
+
+
+
+
 
 
 
