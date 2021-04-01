@@ -41,9 +41,12 @@ while start < stop:
         with open('test.xml', 'wb') as file:
             file.write(b"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
             file.write(r)
-        xml_to_mrk('test.xml', 'test.mrk')
-        marc_list = io.open('test.mrk', 'rt', encoding = encoding).read().splitlines()
-        list_of_records.append(marc_list)
+        try:
+            xml_to_mrk('test.xml', 'test.mrk')
+            marc_list = io.open('test.mrk', 'rt', encoding = encoding).read().splitlines()
+            list_of_records.append(marc_list)
+        except ValueError:
+            pass
     
     while 'resumptionToken>' in response.content.decode('utf-8'):
         rtoken = response.content.decode('utf-8').split('resumptionToken>')[1][:-2]
@@ -57,9 +60,12 @@ while start < stop:
             with open('test.xml', 'wb') as file:
                 file.write(b"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")
                 file.write(r)
-            xml_to_mrk('test.xml', 'test.mrk')
-            marc_list = io.open('test.mrk', 'rt', encoding = encoding).read().splitlines()
-            list_of_records.append(marc_list)
+            try:
+                xml_to_mrk('test.xml', 'test.mrk')
+                marc_list = io.open('test.mrk', 'rt', encoding = encoding).read().splitlines()
+                list_of_records.append(marc_list)
+            except ValueError:
+                pass
         
 
 
