@@ -45,7 +45,7 @@ while start < stop:
             xml_to_mrk('test.xml', 'test.mrk')
             marc_list = io.open('test.mrk', 'rt', encoding = encoding).read().splitlines()
             list_of_records.append(marc_list)
-        except ValueError:
+        except (ValueError, AttributeError):
             pass
     
     while 'resumptionToken>' in response.content.decode('utf-8'):
@@ -64,7 +64,7 @@ while start < stop:
                 xml_to_mrk('test.xml', 'test.mrk')
                 marc_list = io.open('test.mrk', 'rt', encoding = encoding).read().splitlines()
                 list_of_records.append(marc_list)
-            except ValueError:
+            except (ValueError, AttributeError):
                 pass
         
 

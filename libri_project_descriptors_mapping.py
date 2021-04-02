@@ -215,11 +215,11 @@ df['gatunki literackie'] = df[['650', '655']].apply(lambda x: gatunki_literackie
 
 #TUTAJ!!!!!!!!!!! podjąć decyzję
 
-df = df[(df['380'].str.lower().str.contains('książ|book', regex=True)) | (df['380'].isnull())]
-rekordy_id_bez_gatunkow_literackich = df['001'].drop_duplicates().to_list()
+df2 = df[(df['380'].str.lower().str.contains('książ|book', regex=True)) | (df['380'].isnull())]
+rekordy_id_bez_gatunkow_literackich = df2['001'].drop_duplicates().to_list()
 
-df = df[(df['380'].str.lower().str.contains('książ|book', regex=True)) | (df['380'].isnull()) | (df['gatunki literackie'] == True)]
-rekordy_id_z_gatunkami_literackimi = df['001'].drop_duplicates().to_list()
+df3 = df[(df['380'].str.lower().str.contains('książ|book', regex=True)) | (df['380'].isnull()) | (df['gatunki literackie'] == True)]
+rekordy_id_z_gatunkami_literackimi = df3['001'].drop_duplicates().to_list()
 
 roznica = list(set(rekordy_id_z_gatunkami_literackimi) - set(rekordy_id_bez_gatunkow_literackich))
 roznica_df = df_original[df_original['001'].isin(roznica)]
