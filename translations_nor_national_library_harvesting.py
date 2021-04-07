@@ -7,6 +7,8 @@ import sys
 from datetime import datetime, timedelta
 from tqdm import tqdm
 import io
+import pymarc
+import regex as re
 
 encoding = 'UTF-8'
 start_date = '2018-02-21 00:00:00'   # [YYYY-mm-dd HH:MM:SS]
@@ -68,10 +70,41 @@ while start < stop:
                 pass
         
 
+#%% zapisywanie do pliku .mrc
 
+outputfile = open('norwegian_library.mrc', 'wb')
+for record in tqdm(list_of_records, total=len(list_of_records)):
+    try:
+        for field in record:
+            if field[1:4] == 'LDR':
+                leader = field[6:]
+                pymarc_record = pymarc.Record(to_unicode=True, force_utf8=True, leader=leader)
+            elif field[1:4].isnumeric() and int(field[1:4]) < 10:
+                tag = field[1:4]
+                data = field[6:]
+                marc_field = pymarc.Field(tag=tag, data=data)
+                pymarc_record.add_ordered_field(marc_field)
+            elif field[1:4].isnumeric() and int(field[1:4]) >= 10:
+                tag = field[1:4]
+                record_in_list = re.split('\$(.)', ''.join(field[6:]))
+                indicators = list(record_in_list[0])
+                subfields = record_in_list[1:]
+                marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
+                pymarc_record.add_ordered_field(marc_field)
+            elif field[1:4].isalpha() and field[1:4].isupper() and '$' in field:
+                tag = field[1:4]
+                record_in_list = re.split('\$(.)', ''.join(field[6:]))
+                indicators = list(record_in_list[0])
+                subfields = record_in_list[1:]
+                marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
+                pymarc_record.add_ordered_field(marc_field)
+    except ValueError:
+        pass
+outputfile.write(pymarc_record.as_marc())
+outputfile.close()  
+      
 
-
-
+    
 
 
 

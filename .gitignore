@@ -1,4 +1,4 @@
-/google_drive_research_folders.py
+﻿/google_drive_research_folders.py
 /roznica.xlsx
 /libri_margines.xlsx
 /test.txt
@@ -22,6 +22,7 @@
 /bn_books_marc.xlsx
 /libri_marc_bn_articles.mrc
 /libri_marc_bn_articles.mrk
+/test.mrc
 /libri_marc_bn_books.mrc
 /libri_marc_bn_books.mrk
 /pbl_retro.mrc
