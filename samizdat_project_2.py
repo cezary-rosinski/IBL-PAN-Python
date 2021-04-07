@@ -18,6 +18,8 @@ import gspread as gs
 from tqdm import tqdm
 import datetime
 from gspread_dataframe import set_with_dataframe, get_as_dataframe
+import copy
+import json
 
 #%% date
 now = datetime.datetime.now()
@@ -167,27 +169,111 @@ def marc_parser_dict_for_field(string, subfield_code):
     for subfield in subfield_list:
         subfield_escape = re.escape(subfield)
         regex = f'(^)(.*?\❦{subfield_escape}|)(.*?)(\,{{0,1}})((\❦{subfield_code})(.*)|$)'
-        value = re.sub(regex, r'\3', string)
+        value = re.sub(regex, r'\3', string).strip()
         dictionary_field[subfield] = value
     return dictionary_field
 
-test = nodegoat_people_df.copy()
+test = copy.deepcopy(nodegoat_people_df)
 
-for i, row in test.iterrows():
-    row = test.iloc[0,:]
+for i, row in tqdm(test.iterrows(), total=test.shape[0]):
+    # i = 59
+    # row = test.iloc[i,:]
     locations = row['name_form_id'].split('|')
-    for location in locations:
-        location = locations[0]
-        location = location.split('-')
-        if location[0] == 'bn_books':
-            title = tytuly_bn_df[tytuly_bn_df['id'] == int(location[1])][200].reset_index(drop=True)[0]
-        title = marc_parser_dict_for_field(title, '\%')['%a']
-        url = f"http://www.viaf.org//viaf/search?query=cql.any+=+{title}&maximumRecords=5&httpAccept=application/json"
-        response = requests.get(url)
-        response.encoding = 'UTF-8'
-        samizdat_json = response.json()  
-        samizdat_json = samizdat_json['searchRetrieveResponse']['records']
-        samizdat_json = [[e['record']['recordData']['mainHeadings']['data'], e['record']['recordData']['viafID'], e['record']['recordData']['titles']['work'], len(e['record']['recordData']['sources']['source'])] for e in samizdat_json if e['record']['recordData']['nameType'] == 'Personal']
+    try:
+        viaf = row['viaf'][1]
+        list_for_titles = []
+        for location in locations:
+            #location = locations[0]
+            location = location.split('-')
+            if location[0] == 'bn_books':
+                title = tytuly_bn_df[tytuly_bn_df['id'] == int(location[1])][200].reset_index(drop=True)[0]
+                if '%e' in title:
+                    title = marc_parser_dict_for_field(title, '\%')['%a'] + ' ' + marc_parser_dict_for_field(title, '\%')['%e']
+                else:
+                    title = marc_parser_dict_for_field(title, '\%')['%a']
+                url = f"http://www.viaf.org//viaf/search?query=cql.any+=+{title}&maximumRecords=1000&httpAccept=application/json"
+                response = requests.get(url)
+                response.encoding = 'UTF-8'
+                try:
+                    samizdat_json = response.json()  
+                    samizdat_json = samizdat_json['searchRetrieveResponse']['records']
+                    samizdat_json = [[e['record']['recordData']['mainHeadings']['data'], e['record']['recordData']['viafID'], e['record']['recordData']['titles']['work'], len(e['record']['recordData']['sources']['source'])] for e in samizdat_json if e['record']['recordData']['nameType'] == 'Personal']
+                    try:
+                        samizdat_json_selected = [e for e in samizdat_json if e[1] == viaf][0]
+                        if type(samizdat_json_selected[0]) == list:
+                            nazwa = [e['text'] for e in samizdat_json_selected[0]]
+                        elif type(samizdat_json_selected[0]) == dict:
+                            nazwa = samizdat_json_selected[0]['text']
+                        
+                        if type(samizdat_json_selected[2]) == list:
+                            tytuly = [e['title'] for e in samizdat_json_selected[2]]
+                        elif type(samizdat_json_selected[2]) == dict:
+                            tytuly = samizdat_json_selected[2]['title']
+                            
+                        samizdat_dict = str({'viaf':viaf,'nazwa':nazwa, 'tytuły':tytuly})
+                        list_for_titles.append(samizdat_dict)
+                        #test.at[i, 'odpytanie po tytułach'] = samizdat_dict
+                    except IndexError:
+                        test.at[i, 'odpytanie po tytułach'] = 'wiersz do sprawdzenia'
+                        pass
+                except (KeyError, ValueError):
+                    pass
+            else:
+                test.at[i, 'odpytanie po tytułach'] = 'wiersz do sprawdzenia'
+            list_for_titles = list(set(list_for_titles))
+            if list_for_titles:
+                test.at[i, 'odpytanie po tytułach'] = list_for_titles
+            else:
+                test.at[i, 'odpytanie po tytułach'] = 'wiersz do usunięcia'
+    except TypeError:
+        list_for_titles = []
+        for location in locations:
+            #location = locations[0]
+            location = location.split('-')
+            if location[0] == 'bn_books':
+                title = tytuly_bn_df[tytuly_bn_df['id'] == int(location[1])][200].reset_index(drop=True)[0]
+                if '%e' in title:
+                    title = marc_parser_dict_for_field(title, '\%')['%a'] + ' ' + marc_parser_dict_for_field(title, '\%')['%e']
+                else:
+                    title = marc_parser_dict_for_field(title, '\%')['%a']
+                url = f"http://www.viaf.org//viaf/search?query=cql.any+=+{title}&maximumRecords=1000&httpAccept=application/json"
+                response = requests.get(url)
+                response.encoding = 'UTF-8'
+                try:
+                    samizdat_json = response.json()  
+                    samizdat_json = samizdat_json['searchRetrieveResponse']['records']
+                    samizdat_json = [[e['record']['recordData']['mainHeadings']['data'], e['record']['recordData']['viafID'], e['record']['recordData']['titles']['work'], len(e['record']['recordData']['sources']['source'])] for e in samizdat_json if e['record']['recordData']['nameType'] == 'Personal']
+                    if len(samizdat_json) == 1:
+                        samizdat_json_selected = samizdat_json[0]
+                        if type(samizdat_json_selected[0]) == list:
+                            nazwa = [e['text'] for e in samizdat_json_selected[0]]
+                        elif type(samizdat_json_selected[0]) == dict:
+                            nazwa = samizdat_json_selected[0]['text']
+                        
+                        if type(samizdat_json_selected[2]) == list:
+                            tytuly = [e['title'] for e in samizdat_json_selected[2]]
+                        elif type(samizdat_json_selected[2]) == dict:
+                            tytuly = samizdat_json_selected[2]['title']
+                            
+                        samizdat_dict = str({'viaf':viaf,'nazwa':nazwa, 'tytuły':tytuly})
+                        list_for_titles.append(samizdat_dict)
+                    else:
+                        test.at[i, 'odpytanie po tytułach'] = 'wiersz do sprawdzenia'
+                        pass
+                except (KeyError, ValueError):
+                    pass
+            else:
+                test.at[i, 'odpytanie po tytułach'] = 'wiersz do sprawdzenia'
+            list_for_titles = list(set(list_for_titles))
+            if list_for_titles:
+                test.at[i, 'odpytanie po tytułach'] = list_for_titles
+            else:
+                test.at[i, 'odpytanie po tytułach'] = 'wiersz do usunięcia'
+        
+ #%%               
+                
+            
+        
         #samizdat_json = max(samizdat_json, key=lambda x: x[-1])
         samizdat_list_of_dicts = []
         for record in samizdat_json:
