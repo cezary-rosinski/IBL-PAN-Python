@@ -1,6 +1,6 @@
 import requests
 from pymarc import MARCReader
-from my_functions import xml_to_mrk, xml_to_mrc
+from my_functions import xml_to_mrk, xml_to_mrc, mrc_to_mrk
 import pymarc
 import xml.etree.ElementTree as et
 import sys
@@ -9,6 +9,7 @@ from tqdm import tqdm
 import io
 import pymarc
 import regex as re
+import pandas as pd
 
 encoding = 'UTF-8'
 start_date = '2018-02-21 00:00:00'   # [YYYY-mm-dd HH:MM:SS]
@@ -69,10 +70,15 @@ while start < stop:
             except (ValueError, AttributeError):
                 pass
         
+#%% date
+now = datetime.now()
+year = now.year
+month = '{:02}'.format(now.month)
+day = '{:02}'.format(now.day)
 
 #%% zapisywanie do pliku .mrc
 
-outputfile = open('norwegian_library.mrc', 'wb')
+outputfile = open(f'norwegian_library_{year}-{month}-{day}.mrc', 'wb')
 for record in tqdm(list_of_records, total=len(list_of_records)):
     try:
         for field in record:
@@ -98,12 +104,66 @@ for record in tqdm(list_of_records, total=len(list_of_records)):
                 subfields = record_in_list[1:]
                 marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
                 pymarc_record.add_ordered_field(marc_field)
+        outputfile.write(pymarc_record.as_marc())
     except ValueError:
         pass
-outputfile.write(pymarc_record.as_marc())
 outputfile.close()  
       
+#%% processing mrc to df
 
+mrc_to_mrk('C:/Users/User/Desktop/norwegian_library_2021-04-07.mrc', 'C:/Users/User/Desktop/norwegian_library_2021-04-07.mrk')
+
+fiction_types = ['1', 'd', 'f', 'h', 'j', 'p', 'u', '|', '\\']
+years = range(1990,2021)
+encoding = 'utf-8' 
+   
+marc_list = io.open('C:/Users/User/Desktop/norwegian_library_2021-04-07.mrk', 'rt', encoding = encoding).read().splitlines()
+
+mrk_list = []
+for row in marc_list:
+    if row.startswith('=LDR'):
+        mrk_list.append([row])
+    else:
+        if row:
+            mrk_list[-1].append(row)
+
+new_list = []        
+for sublist in tqdm(mrk_list):
+    language = ''.join([ele for ele in sublist if ele.startswith('=008')])[41:44]
+    type_of_record_bibliographical_level = ''.join([ele for ele in sublist if ele.startswith('=LDR')])[12:14]
+    if [ele for ele in sublist if ele.startswith('=041')]: 
+        is_translation = True
+    else:
+        is_translation = False
+    try:
+        fiction_type = ''.join([ele for ele in sublist if ele.startswith('=008')])[39]
+    except IndexError:
+        fiction_type = 'a'
+    try:
+        bib_year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
+    except ValueError:
+        bib_year = 1000
+    if language in ['nor', 'nob', 'nno'] and type_of_record_bibliographical_level == 'am' and fiction_type in fiction_types and bib_year in years and is_translation:
+        new_list.append(sublist)
+
+final_list = []
+for lista in new_list:
+    slownik = {}
+    for el in lista:
+        if el[1:4] in slownik:
+            slownik[el[1:4]] += f"❦{el[6:]}"
+        else:
+            slownik[el[1:4]] = el[6:]
+    final_list.append(slownik)
+
+marc_df = pd.DataFrame(final_list)
+fields = marc_df.columns.tolist()
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+marc_df = marc_df.reindex(columns=fields) 
+
+marc_df.to_excel(f'Translation_into_Norwegian_{year}-{month}-{day}.xlsx', index=False)
     
 
 

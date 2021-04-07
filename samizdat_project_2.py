@@ -175,7 +175,7 @@ def marc_parser_dict_for_field(string, subfield_code):
 
 test = copy.deepcopy(nodegoat_people_df)
 
-for i, row in tqdm(test.iterrows(), total=test.shape[0]):
+for i, row in tqdm(test.iloc[989:,:].iterrows(), total=test.iloc[989:,:].shape[0]):
     # i = 59
     # row = test.iloc[i,:]
     locations = row['name_form_id'].split('|')
@@ -260,7 +260,7 @@ for i, row in tqdm(test.iterrows(), total=test.shape[0]):
                     else:
                         test.at[i, 'odpytanie po tytułach'] = 'wiersz do sprawdzenia'
                         pass
-                except (KeyError, ValueError):
+                except (KeyError, ValueError, TypeError):
                     pass
             else:
                 test.at[i, 'odpytanie po tytułach'] = 'wiersz do sprawdzenia'
