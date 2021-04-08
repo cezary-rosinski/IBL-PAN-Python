@@ -94,8 +94,8 @@ for i, row in positive_viafs_diacritics.iterrows():
         
 viaf_positives_dict = dict(sorted(viaf_positives_dict.items(), key = lambda item : len(item[1]['unidecode name']), reverse=True))
 
-with open("viaf_positives_dict.json", 'w', encoding='utf-8') as file: 
-    json.dump(viaf_positives_dict, file, ensure_ascii=False, indent=4)
+# with open("viaf_positives_dict.json", 'w', encoding='utf-8') as file: 
+#     json.dump(viaf_positives_dict, file, ensure_ascii=False, indent=4)
 
 # oclc_other_languages['language'].drop_duplicates().sort_values().to_list()
 
@@ -444,6 +444,11 @@ df_oclc_people['simplify string'] = df_oclc_people['$a'].apply(lambda x: simplif
 df_oclc_people['001'] = df_oclc_people['001'].astype(int)
 
 people_clusters = viaf_positives_dict.copy()
+
+# Hrabal, Hasek, Capek, Majerova selection
+selection = ['34458072', '4931097', '34454129', '52272']
+people_clusters = {key: people_clusters[key] for key in selection}
+
 for key in tqdm(people_clusters, total=len(people_clusters)):
     viaf_id = people_clusters[key]['viaf id']
     records = []
@@ -500,16 +505,18 @@ df_original_titles_simple_grouped = df_original_titles_simple.groupby('cluster_v
 
 df_original_titles_simple = pd.DataFrame()
 for name, group in tqdm(df_original_titles_simple_grouped, total=len(df_original_titles_simple_grouped)):
-    df = cluster_records(group, 'index', ['original title'])
+    df = cluster_records(group, 'index', ['original title'], similarity_lvl=0.7)
     df_original_titles_simple = df_original_titles_simple.append(df)
 
 df_original_titles_simple = df_original_titles_simple.sort_values(['cluster_viaf', 'cluster'])    
 df_original_titles_simple.to_excel('cluster_original_titles_0.8_author_clusters.xlsx', index=False)
 
 
+df_08 = df_original_titles_simple.copy()
+df_07 = df_original_titles_simple.copy().sort_values(['cluster_viaf', 'cluster', 'original title'])  
 
-
-
+df_07.to_excel('cluster_original_titles_0.7_author_clusters.xlsx', index=False)
+df_08.to_excel('cluster_original_titles_0.8_author_clusters.xlsx', index=False)
 
 
 

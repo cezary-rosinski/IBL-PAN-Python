@@ -183,7 +183,7 @@ def czy_polonik(x):
         pol_descriptor = True
     else:
         pol_descriptor = False
-    if any([polish_language, x041, x044, pol_in_remarks, pol_descriptor]):
+    if any([polish_language, published_in_Poland, x041, x044, pol_in_remarks, pol_descriptor]):
         return True
     else:
         return False
@@ -260,11 +260,60 @@ df = df[~df['001'].isin(dobre2_lista)]
 # czy sprawdzić frekwencyjnie deskryptory w df? czy czegoś nie uwzględniliśmy? - podjąć decyzję
 # dodać starych ludzi 1. wziąć nazwy bn zmapowane na twórców pbl, 2. wyfiltrować tych, którzy zmarli do 1700, 3. przeszukać bazę pod kątem obecności tych ludzi w polu 100
 # czy brać pod uwagę UKD?
+df.to_excel('niski_odsetek_deskryptorow.xlsx', index=False)
 
+#%% harvesting BN dla 655 (mapowane deskryptory z 650 i 655)
+    
+#zakres lat 
+years = range(2013,2020)
+   
+path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/2021-02-08/'
+files = [file for file in glob.glob(path + '*.mrk', recursive=True)]
 
+encoding = 'utf-8'
+new_list = []
+for file_path in tqdm(files):
+    marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
 
+    mrk_list = []
+    for row in marc_list:
+        if row.startswith('=LDR'):
+            mrk_list.append([row])
+        else:
+            if row:
+                mrk_list[-1].append(row)
+                               
+    for sublist in mrk_list:
+        try:
+            year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
+            bibliographic_level = ''.join([ele for ele in sublist if ele.startswith('=LDR')])[13]
+            if year in years and bibliographic_level == 'm':
+                for el in sublist:
+                    if el.startswith('=655'):
+                        el = re.sub('\$y.*', '', el[10:]).replace('$2DBN', '')
+                        if any(desc == el for desc in BN_descriptors):
+                            new_list.append(sublist)
+                            break
+        except ValueError:
+            pass
 
+final_list = []
+for lista in new_list:
+    slownik = {}
+    for el in lista:
+        if el[1:4] in slownik:
+            slownik[el[1:4]] += f"❦{el[6:]}"
+        else:
+            slownik[el[1:4]] = el[6:]
+    final_list.append(slownik)
 
+df3 = pd.DataFrame(final_list).drop_duplicates().reset_index(drop=True)
+fields = df3.columns.tolist()
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+df3 = df3.loc[:, df3.columns.isin(fields)]
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+df3 = df3.reindex(columns=fields)   
+df3_original = df3.copy()
 #%% filtrowanie BN po roku zgonu
 
 file_list = drive.ListFile({'q': f"'{PBL_folder}' in parents and trashed=false"}).GetList() 
@@ -278,12 +327,12 @@ mapowanie_osob = [file['id'] for file in file_list if file['title'].startswith('
 mapowanie_osob_df = pd.DataFrame()
 for file in tqdm(mapowanie_osob):
     sheet = gc.open_by_key(file)
-    df = get_as_dataframe(sheet.worksheet('pbl_bn'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1).drop_duplicates()
-    df = df[df['czy_ten_sam'] != 'nie'][['pbl_id', 'BN_id', 'BN_name']]
-    df['BN_name'] = df['BN_name'].str.replace('\|\(', ' (').str.replace('\;\|', '; ').str.replace('\|$', '')
-    df['index'] = df.index + 1
-    df = cSplit(df, 'index', 'BN_name', '\|').drop(columns='index')
-    mapowanie_osob_df = mapowanie_osob_df.append(df)
+    df_osoby = get_as_dataframe(sheet.worksheet('pbl_bn'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1).drop_duplicates()
+    df_osoby = df_osoby[df_osoby['czy_ten_sam'] != 'nie'][['pbl_id', 'BN_id', 'BN_name']]
+    df_osoby['BN_name'] = df_osoby['BN_name'].str.replace('\|\(', ' (').str.replace('\;\|', '; ').str.replace('\|$', '')
+    df_osoby['index'] = df_osoby.index + 1
+    df_osoby = cSplit(df_osoby, 'index', 'BN_name', '\|').drop(columns='index')
+    mapowanie_osob_df = mapowanie_osob_df.append(df_osoby)
 
 mapowanie_osob_df = mapowanie_osob_df.drop_duplicates().reset_index(drop=True)
 def rok_zgonu(x):
@@ -361,9 +410,13 @@ fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0
 df2 = df2.reindex(columns=fields)   
 df_original2 = df2.copy()
 
+df2['czy polonik'] = df2.apply(lambda x: czy_polonik(x), axis=1)
+df2 = df2[df2['czy polonik'] == True]
 
+#%% notatki
 
-
+test = pd.DataFrame(BN_descriptors, columns=['deskyptory'])
+test.to_excel('deskryptory_do_filtrowania.xlsx', index=False)
 
 
 

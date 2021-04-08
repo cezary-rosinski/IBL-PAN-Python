@@ -175,15 +175,20 @@ def marc_parser_dict_for_field(string, subfield_code):
 
 test = copy.deepcopy(nodegoat_people_df)
 
-for i, row in tqdm(test.iloc[989:,:].iterrows(), total=test.iloc[989:,:].shape[0]):
-    # i = 59
-    # row = test.iloc[i,:]
+test = gc.open_by_key('1VNzdJzCaQzPYKLySUD3Jc5D8U-B4c_T2SE68ybc9c9o')
+test = get_as_dataframe(test.worksheet('po tytułach'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1).drop_duplicates()
+
+
+for i, row in tqdm(test.iterrows(), total=test.shape[0]):
+    i = 9
+    row = test.iloc[i,:]
     locations = row['name_form_id'].split('|')
     try:
         viaf = row['viaf'][1]
+        viaf = '101882692'
         list_for_titles = []
         for location in locations:
-            #location = locations[0]
+            location = locations[0]
             location = location.split('-')
             if location[0] == 'bn_books':
                 title = tytuly_bn_df[tytuly_bn_df['id'] == int(location[1])][200].reset_index(drop=True)[0]
@@ -191,7 +196,8 @@ for i, row in tqdm(test.iloc[989:,:].iterrows(), total=test.iloc[989:,:].shape[0
                     title = marc_parser_dict_for_field(title, '\%')['%a'] + ' ' + marc_parser_dict_for_field(title, '\%')['%e']
                 else:
                     title = marc_parser_dict_for_field(title, '\%')['%a']
-                url = f"http://www.viaf.org//viaf/search?query=cql.any+=+{title}&maximumRecords=1000&httpAccept=application/json"
+                # url = f"http://www.viaf.org//viaf/search?query=cql.any+=+{title}&maximumRecords=1000&httpAccept=application/json"
+                url = f"https://viaf.org/viaf/search?query=cql.any%20all%20'{title}'&sortKeys=holdingscount&httpAccept=application/json"
                 response = requests.get(url)
                 response.encoding = 'UTF-8'
                 try:
@@ -301,7 +307,8 @@ worksheet.freeze(rows=1)
 worksheet.set_basic_filter()
  #%%               
                 
-            
+#wyszukiwanie osób przez ten link:
+# http://viaf.org/viaf/search?query=local.names%20all%20%22Babi%C5%84ski%20Stanis%C5%82aw%22&sortKeys=holdingscount&httpAccept=application/json            
    
 
 

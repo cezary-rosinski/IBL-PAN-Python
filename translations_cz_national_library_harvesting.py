@@ -21,7 +21,7 @@ from google_drive_research_folders import cr_projects
 #%%harvesting OAI-PMH
 
 #date
-now = datetime.datetime.now()
+now = datetime.now()
 year = now.year
 month = '{:02d}'.format(now.month)
 day = '{:02d}'.format(now.day)
@@ -84,7 +84,7 @@ while start < stop:
     start = start + timedelta(days=1)  # increase days one by one
     until_date = start
     try: 
-        records = client.listRecords(metadataPrefix='marc21', set='NKC', from_=from_date, until=until_date)
+        records = client.listRecords(metadataPrefix='marc21', set='SKC', from_=from_date, until=until_date)
         saverecords(records)
     except: pass # skipping deleted entries
 
@@ -92,7 +92,7 @@ print('Done.')
 
 #%% processing mrc to df
 
-mrc_to_mrk('F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/nkp_nkc_2021-03-18.marc', 'F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/nkp_nkc_2021-03-18.mrk')
+mrc_to_mrk('C:/Users/User/Desktop/nkp_nkc_2021-04-07.marc', 'C:/Users/User/Desktop/nkp_nkc_2021-04-07.mrk')
 
 fiction_types = ['1', 'd', 'f', 'h', 'j', 'p', 'u', '|', '\\']
 
@@ -101,7 +101,7 @@ filter_fiction_type = get_bool('Filter with a fiction type? ')
 encoding = 'utf-8' 
 new_list = []
 
-marc_list = io.open('F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/nkp_nkc_2021-03-18.mrk', 'rt', encoding = encoding).read().splitlines()
+# marc_list = io.open('C:/Users/User/Desktop/nkp_nkc_2021-04-07.mrk', 'rt', encoding = encoding).read().splitlines()
 
 mrk_list = []
 for row in marc_list:
@@ -143,8 +143,10 @@ marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
 fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 marc_df = marc_df.reindex(columns=fields)  
 
-#marc_df.to_excel('NKP_Czech_translations.xlsx', index=False)
-
+if filter_fiction_type:
+    marc_df.to_excel(f'NKP_Czech_translations_SKC_{year}-{month}-{day}.xlsx', index=False)
+else:
+    marc_df.to_excel(f'NKP_Czech_translations_SKC_without_filter_fiction_type_{year}-{month}-{day}.xlsx', index=False)
 #%% sending file to google drive
 
 gc = gs.oauth()
