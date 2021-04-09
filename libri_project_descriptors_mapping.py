@@ -420,6 +420,25 @@ test.to_excel('deskryptory_do_filtrowania.xlsx', index=False)
 
 
 
+#Karolina - udokumentować proces!!!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
