@@ -80,12 +80,21 @@ for i, row in tqdm(df_655.iterrows(), total=df_655.shape[0]):
 
 # dict_650['Poradnik']    
 # dict_655['Poradnik'] 
-#%% harvesting BN
     
-#lista deskryptorów do wzięcia
+#lista deskryptorów do wzięcia - szeroka (z mapowania)
 BN_descriptors = list(dict_650.keys())
 BN_descriptors.extend(dict_655.keys())
 BN_descriptors = list(set([re.sub('\$y.*', '', e) for e in BN_descriptors]))
+
+#%% deskryptory wąsko
+#lista deskryptorów do wzięcia - wąska (z selekcji Karoliny)
+deskryptory_do_filtrowania = [file['id'] for file in file_list if file['title'] == 'deskryptory_do_filtrowania'][0]
+deskryptory_do_filtrowania = gc.open_by_key(deskryptory_do_filtrowania)
+deskryptory_do_filtrowania = get_as_dataframe(deskryptory_do_filtrowania.worksheet('deskryptory_do_filtrowania'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+BN_descriptors = deskryptory_do_filtrowania[deskryptory_do_filtrowania['deskryptor do filtrowania'] == 'tak']['deskyptory'].to_list()
+
+#%% harvesting BN
+
 #zakres lat 
 years = range(2013,2020)
    
@@ -194,6 +203,15 @@ df = df[df['czy polonik'] == True]
 #odsianie druków ulotnych
 druki_ulotne = df[(df['380'].str.contains('Druki ulotne')) & (df['380'].notnull())]['001'].to_list()
 df = df[~df['001'].isin(druki_ulotne)]
+
+df_deskryptory_wasko = df.copy()
+df_deskryptory_szeroko = df.copy()
+df_roznica = df_deskryptory_szeroko[~df_deskryptory_szeroko['001'].isin(df_deskryptory_wasko['001'])]
+df_roznica.to_excel('roznica.xlsx', index=False)
+
+test = df_roznica[['001', '655']]
+test = cSplit(test, '001', '655', '❦')['655'].drop_duplicates()
+test.to_excel('dobre.xlsx', index=False)
 
 #gatunki literackie
 deskryptory_spoza_centrum = get_as_dataframe(sheet.worksheet('deskryptory_spoza_centrum'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)['deskryptor'].to_list()
@@ -415,7 +433,7 @@ df2 = df2[df2['czy polonik'] == True]
 
 #%% notatki
 
-test = pd.DataFrame(BN_descriptors, columns=['deskyptory'])
+test = pd.DataFrame(BN_descriptors, columns=['deskryptory'])
 test.to_excel('deskryptory_do_filtrowania.xlsx', index=False)
 
 
