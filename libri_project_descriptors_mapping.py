@@ -1,26 +1,15 @@
 import pandas as pd
 import io
-import requests
-from sickle import Sickle
-import xml.etree.ElementTree as et
-import lxml.etree
-import pdfplumber
 from google_drive_research_folders import PBL_folder
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 import gspread as gs
-import json
-from my_functions import cSplit, cluster_strings, marc_parser_1_field
+from my_functions import cSplit, df_to_mrc, mrk_to_df
 import datetime
 import regex as re
-from collections import OrderedDict
-import difflib
-import spacy
-from collections import Counter, OrderedDict
-from gspread_dataframe import set_with_dataframe, get_as_dataframe
+from gspread_dataframe import get_as_dataframe, set_with_dataframe
 from tqdm import tqdm
 import glob
-import pandasql
 
 #%% date
 now = datetime.datetime.now()
@@ -44,7 +33,7 @@ file_list = drive.ListFile({'q': "'1xzqGIfZllmXXTh2dJABeHbRPFAM34nbw' in parents
 mapping_files_655 = [file['id'] for file in file_list if file['title'] == 'mapowanie BN-Oracle - 655'][0]
 mapping_files_650 = [file['id'] for file in file_list if file['title'].startswith('mapowanie BN-Oracle') if file['id'] != mapping_files_655]
 
-#%% dictionary processing
+#%% deskryptory z mapowania
 df_650 = pd.DataFrame()
 for file in tqdm(mapping_files_650):
     sheet = gc.open_by_key(file)
@@ -82,16 +71,28 @@ for i, row in tqdm(df_655.iterrows(), total=df_655.shape[0]):
 # dict_655['Poradnik'] 
     
 #lista deskryptorów do wzięcia - szeroka (z mapowania)
-BN_descriptors = list(dict_650.keys())
-BN_descriptors.extend(dict_655.keys())
-BN_descriptors = list(set([re.sub('\$y.*', '', e) for e in BN_descriptors]))
+BN_descriptors_mapping = list(dict_650.keys())
+BN_descriptors_mapping.extend(dict_655.keys())
+BN_descriptors_mapping = list(set([re.sub('\$y.*', '', e) for e in BN_descriptors_mapping]))
 
-#%% deskryptory wąsko
+#%% deskryptory do harvestowania BN
 #lista deskryptorów do wzięcia - wąska (z selekcji Karoliny)
 deskryptory_do_filtrowania = [file['id'] for file in file_list if file['title'] == 'deskryptory_do_filtrowania'][0]
 deskryptory_do_filtrowania = gc.open_by_key(deskryptory_do_filtrowania)
 deskryptory_do_filtrowania = get_as_dataframe(deskryptory_do_filtrowania.worksheet('deskryptory_do_filtrowania'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
 BN_descriptors = deskryptory_do_filtrowania[deskryptory_do_filtrowania['deskryptor do filtrowania'] == 'tak']['deskyptory'].to_list()
+def uproszczenie_nazw(x):
+    try:
+        if x.index('$') == 0:
+            return x[2:]
+        elif x.index('$') == 1:
+            return x[4:]
+    except ValueError:
+        return x
+BN_descriptors = list(set(BN_descriptors))
+BN_descriptors2 = list(set(uproszczenie_nazw(e) for e in BN_descriptors))
+roznica = list(set(BN_descriptors2) - set(BN_descriptors))
+BN_descriptors.extend(roznica)
 
 #%% harvesting BN
 
@@ -173,6 +174,7 @@ df_original = df.copy()
 
 #%% dalsze filtrowanie
 #odsianie rekordów, które nie mają nic wspólnego z PL
+
 def czy_polonik(x):
     polish_language = x['008'][35:38] == 'pol'
     published_in_Poland = x['008'][15:17] == 'pl'
@@ -204,20 +206,17 @@ df = df[df['czy polonik'] == True]
 druki_ulotne = df[(df['380'].str.contains('Druki ulotne')) & (df['380'].notnull())]['001'].to_list()
 df = df[~df['001'].isin(druki_ulotne)]
 
-df_deskryptory_wasko = df.copy()
-df_deskryptory_szeroko = df.copy()
-df_roznica = df_deskryptory_szeroko[~df_deskryptory_szeroko['001'].isin(df_deskryptory_wasko['001'])]
-df_roznica.to_excel('roznica.xlsx', index=False)
-
-test = df_roznica[['001', '655']]
-test = cSplit(test, '001', '655', '❦')['655'].drop_duplicates()
-test.to_excel('dobre.xlsx', index=False)
-
 #gatunki literackie
 deskryptory_spoza_centrum = get_as_dataframe(sheet.worksheet('deskryptory_spoza_centrum'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)['deskryptor'].to_list()
-deskryptory_spoza_centrum = list(set([re.sub('\$y.*', '', e) for e in deskryptory_spoza_centrum]))
+deskryptory_spoza_centrum = list(set([re.sub('\$y.*', '', e) for e in deskryptory_spoza_centrum if pd.notnull(e)]))
+dodatek_do_centrum = get_as_dataframe(sheet.worksheet('dodatek_do_centrum'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+dodatek_do_centrum = dodatek_do_centrum[dodatek_do_centrum['decyzja'] == 'PRAWDA']['deskryptor'].to_list()
+dodatek_do_centrum = list(set([re.sub('\$y.*', '', e) for e in dodatek_do_centrum]))
+
 list_655 = list(set([re.sub('\$y.*', '', e) for e in dict_655.keys()]))
 list_655 = [e for e in list_655 if e not in deskryptory_spoza_centrum]
+list_655.extend(dodatek_do_centrum)
+list_655 = list(set(list_655))
 
 def gatunki_literackie(x):
     for field in x:
@@ -227,6 +226,21 @@ def gatunki_literackie(x):
                 if any(desc == element for desc in list_655):
                     return True
     return False
+
+# def gatunki_literackie(x):
+#     match = []
+#     for field in x:
+#         if pd.notnull(field):
+#             for element in field.split('❦'):
+#                 element = re.sub('\$y.*', '', element[4:]).replace('$2DBN', '')
+#                 if any(desc == element for desc in list_655):
+#                     match.append(True)
+#                 else:
+#                     match.append(False)
+#     if any(match):
+#         return True
+#     else:
+#         return False
 
 df['gatunki literackie'] = df[['650', '655']].apply(lambda x: gatunki_literackie(x), axis=1)
 #zostawiamy tylko książki lub dobre gatunki literackie lub przynależność do literatury
@@ -248,8 +262,8 @@ df = df[(df['380'].str.lower().str.contains('książ|book', regex=True)) |
 #%% dobre gatunki literackie
 #jeśli coś ma gatunek literacki, to jest z automatu dobre
 dobre1_df = df[(df['gatunki literackie'] == True) |
-               ((df['650'].str.lower().str.contains('literatur|pisar|poezj')) & df['650'].notnull()) |
-               ((df['655'].str.lower().str.contains('literatur|pisar|poezj')) & df['655'].notnull())]
+               ((df['650'].str.lower().str.contains('filolog|literatur|literac|pisar|poezj')) & df['650'].notnull()) |
+               ((df['655'].str.lower().str.contains('filolog|literatur|literac|pisar|poezj')) & df['655'].notnull())]
 
 #pozostałe rekordy przetwarzamy
 df = df[~df['001'].isin(dobre1_df['001'])]
@@ -275,63 +289,18 @@ dobre2_df = df[df['001'].isin(dobre2_lista)]
 
 df = df[~df['001'].isin(dobre2_lista)]
 
+#%% puste 655 z dobrymi 650
+
+dobre3_df = df[df['655'].isnull()]
+
+df = df[~df['001'].isin(dobre3_df['001'])]
+
 # czy sprawdzić frekwencyjnie deskryptory w df? czy czegoś nie uwzględniliśmy? - podjąć decyzję
 # dodać starych ludzi 1. wziąć nazwy bn zmapowane na twórców pbl, 2. wyfiltrować tych, którzy zmarli do 1700, 3. przeszukać bazę pod kątem obecności tych ludzi w polu 100
 # czy brać pod uwagę UKD?
-df.to_excel('niski_odsetek_deskryptorow.xlsx', index=False)
+#df.to_excel('niski_odsetek_deskryptorow.xlsx', index=False)
 
-#%% harvesting BN dla 655 (mapowane deskryptory z 650 i 655)
-    
-#zakres lat 
-years = range(2013,2020)
-   
-path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/2021-02-08/'
-files = [file for file in glob.glob(path + '*.mrk', recursive=True)]
 
-encoding = 'utf-8'
-new_list = []
-for file_path in tqdm(files):
-    marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
-
-    mrk_list = []
-    for row in marc_list:
-        if row.startswith('=LDR'):
-            mrk_list.append([row])
-        else:
-            if row:
-                mrk_list[-1].append(row)
-                               
-    for sublist in mrk_list:
-        try:
-            year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
-            bibliographic_level = ''.join([ele for ele in sublist if ele.startswith('=LDR')])[13]
-            if year in years and bibliographic_level == 'm':
-                for el in sublist:
-                    if el.startswith('=655'):
-                        el = re.sub('\$y.*', '', el[10:]).replace('$2DBN', '')
-                        if any(desc == el for desc in BN_descriptors):
-                            new_list.append(sublist)
-                            break
-        except ValueError:
-            pass
-
-final_list = []
-for lista in new_list:
-    slownik = {}
-    for el in lista:
-        if el[1:4] in slownik:
-            slownik[el[1:4]] += f"❦{el[6:]}"
-        else:
-            slownik[el[1:4]] = el[6:]
-    final_list.append(slownik)
-
-df3 = pd.DataFrame(final_list).drop_duplicates().reset_index(drop=True)
-fields = df3.columns.tolist()
-fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
-df3 = df3.loc[:, df3.columns.isin(fields)]
-fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-df3 = df3.reindex(columns=fields)   
-df3_original = df3.copy()
 #%% filtrowanie BN po roku zgonu
 
 file_list = drive.ListFile({'q': f"'{PBL_folder}' in parents and trashed=false"}).GetList() 
@@ -359,7 +328,7 @@ def rok_zgonu(x):
     except (TypeError, AttributeError):
         return None
 mapowanie_osob_df['rok zgonu'] = mapowanie_osob_df['BN_name'].apply(lambda x: rok_zgonu(x))
-mapowanie_osob_lista = mapowanie_osob_df[(mapowanie_osob_df['rok zgonu'].notnull()) & (mapowanie_osob_df['rok zgonu'] <= 1700)]['BN_name'].drop_duplicates().to_list()
+mapowanie_osob_lista = mapowanie_osob_df[(mapowanie_osob_df['rok zgonu'].notnull()) & (mapowanie_osob_df['rok zgonu'] <= 1800)]['BN_name'].drop_duplicates().to_list()
 
 #ujednolicenie nazw z BN 100 z tabelą wzorcową
 def marc_parser_dict_for_field(string, subfield_code):
@@ -420,16 +389,142 @@ for lista in new_list:
             slownik[el[1:4]] = el[6:]
     final_list.append(slownik)
 
-df2 = pd.DataFrame(final_list).drop_duplicates().reset_index(drop=True)
-fields = df2.columns.tolist()
+dobre4_df = pd.DataFrame(final_list).drop_duplicates().reset_index(drop=True)
+fields = dobre4_df.columns.tolist()
 fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
-df2 = df2.loc[:, df2.columns.isin(fields)]
+dobre4_df = dobre4_df.loc[:, dobre4_df.columns.isin(fields)]
 fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-df2 = df2.reindex(columns=fields)   
-df_original2 = df2.copy()
+dobre4_df = dobre4_df.reindex(columns=fields)   
+df_original2 = dobre4_df.copy()
 
-df2['czy polonik'] = df2.apply(lambda x: czy_polonik(x), axis=1)
-df2 = df2[df2['czy polonik'] == True]
+dobre4_df['czy polonik'] = dobre4_df.apply(lambda x: czy_polonik(x), axis=1)
+dobre4_df = dobre4_df[dobre4_df['czy polonik'] == True]
+
+dobre4_df = dobre4_df[(dobre4_df['380'].str.lower().str.contains('książ|book', regex=True)) | 
+                      (dobre4_df['380'].isnull())]
+
+#%% połączenie zbiorów
+dobre1_df.columns.values
+dobre2_df.columns.values
+dobre3_df.columns.values
+dobre4_df.columns.values
+
+bn_harvested = pd.concat([dobre1_df.drop(columns=['czy polonik', 'gatunki literackie']), dobre2_df.drop(columns=['czy polonik', 'gatunki literackie']), dobre3_df.drop(columns=['czy polonik', 'gatunki literackie']), dobre4_df.drop(columns='czy polonik')]).drop_duplicates().reset_index(drop=False)
+
+df_to_mrc(bn_harvested, '❦', f'bn_harvested_{year}_{month}_{day}.mrc', f'bn_harvested_errors_{year}_{month}_{day}.txt')
+
+#%% porównanie dwóch metod harvestowania BN
+
+df_stare = mrk_to_df('F:/Cezary/Documents/IBL/Libri/Iteracja 2021-02/libri_marc_bn_books_2021-2-9.mrk')
+sheet = gc.create('porównanie_podejść', '1xzqGIfZllmXXTh2dJABeHbRPFAM34nbw')
+
+worksheet = sheet.worksheet('Arkusz1')
+worksheet.update_title('jest_a_nie_bylo')
+jest_a_nie_bylo = bn_harvested[~bn_harvested['001'].isin(df_stare['001'])][['LDR', '001', '008', '080', '100', '245', '650', '655']]
+set_with_dataframe(worksheet, jest_a_nie_bylo)
+
+jest_tu_i_tu = bn_harvested[bn_harvested['001'].isin(df_stare['001'])][['LDR', '001', '008', '080', '100', '245', '650', '655']]
+try:
+    set_with_dataframe(sheet.worksheet('jest_tu_i_tu'), jest_tu_i_tu)
+except gs.WorksheetNotFound:
+    sheet.add_worksheet(title='jest_tu_i_tu', rows="100", cols="20")
+    set_with_dataframe(sheet.worksheet('jest_tu_i_tu'), jest_tu_i_tu)
+
+bylo_a_nie_ma = df_stare[~df_stare['001'].isin(bn_harvested['001'])]['001'].to_list()
+
+years = range(2013,2020)
+   
+path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/2021-02-08/'
+files = [file for file in glob.glob(path + '*.mrk', recursive=True)]
+
+encoding = 'utf-8'
+new_list = []
+for file_path in tqdm(files):
+    marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+
+    mrk_list = []
+    for row in marc_list:
+        if row.startswith('=LDR'):
+            mrk_list.append([row])
+        else:
+            if row:
+                mrk_list[-1].append(row)
+            
+    for sublist in mrk_list:
+        try:
+            year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
+            bibliographic_level = ''.join([ele for ele in sublist if ele.startswith('=LDR')])[13]
+            if year in years and bibliographic_level == 'm':
+                for el in sublist:
+                    if el.startswith('=001'):
+                        el = el[6:]
+                        if el in bylo_a_nie_ma:
+                            new_list.append(sublist)
+                            break
+        except ValueError:
+            pass
+
+final_list = []
+for lista in new_list:
+    slownik = {}
+    for el in lista:
+        if el[1:4] in slownik:
+            slownik[el[1:4]] += f"❦{el[6:]}"
+        else:
+            slownik[el[1:4]] = el[6:]
+    final_list.append(slownik)
+
+bylo_a_nie_ma = pd.DataFrame(final_list).drop_duplicates().reset_index(drop=True)
+fields = bylo_a_nie_ma.columns.tolist()
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+bylo_a_nie_ma = bylo_a_nie_ma.loc[:, bylo_a_nie_ma.columns.isin(fields)]
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+bylo_a_nie_ma = bylo_a_nie_ma.reindex(columns=fields)[['LDR', '001', '008', '080', '100', '245', '650', '655']]  
+
+try:
+    set_with_dataframe(sheet.worksheet('bylo_a_nie_ma'), bylo_a_nie_ma)
+except gs.WorksheetNotFound:
+    sheet.add_worksheet(title='bylo_a_nie_ma', rows="100", cols="20")
+    set_with_dataframe(sheet.worksheet('bylo_a_nie_ma'), bylo_a_nie_ma)
+    
+worksheets = sheet.worksheets()
+for worksheet in worksheets:
+    sheet.batch_update({
+        "requests": [
+            {
+                "updateDimensionProperties": {
+                    "range": {
+                        "sheetId": worksheet._properties['sheetId'],
+                        "dimension": "ROWS",
+                        "startIndex": 0,
+                        #"endIndex": 100
+                    },
+                    "properties": {
+                        "pixelSize": 20
+                    },
+                    "fields": "pixelSize"
+                }
+            }
+        ]
+    })
+    
+    worksheet.freeze(rows=1)
+    worksheet.set_basic_filter()
+
+#%% analiza jakościowa
+
+list_of_dfs = [dobre1_df, dobre2_df, dobre3_df, dobre4_df]
+list_of_dfs_names = ['dobre1_df', 'dobre2_df', 'dobre3_df', 'dobre4_df']
+
+for name, data_frame in zip(list_of_dfs_names, list_of_dfs):
+    if 'b1000000245117' in data_frame['001'].to_list():
+        print(name)
+
+test = dobre1_df[dobre1_df['001'] == 'b1000000245117']
+
+test = df[df['001'] == 'b1000000245117'].squeeze()
+
+
 
 #%% notatki
 
@@ -440,11 +535,7 @@ test.to_excel('deskryptory_do_filtrowania.xlsx', index=False)
 
 #Karolina - udokumentować proces!!!
 
-
-
-
-
-
+df_stare = mrk_to_df('F:/Cezary/Documents/IBL/Libri/Iteracja 2021-02/libri_marc_bn_books_2021-2-9.mrk')
 
 
 

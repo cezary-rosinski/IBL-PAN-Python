@@ -333,37 +333,33 @@ def df_to_mrc(df, delimiter, path_out, txt_error_file):
     errorfile.close()
     outputfile.close()
     
-def mrk_to_df(path_in, field_with_id, encoding='UTF-8'):
+def mrk_to_df(path_in, encoding='UTF-8'):
     reader = io.open(path_in, 'rt', encoding = encoding).read().splitlines()
     mrk_list = []
-    errors = []
     for row in reader:
         if '=LDR' not in row:
             mrk_list[-1] += '\n' + row
         else:
             mrk_list.append(row)
-    full_data_list = []     
-    for index, record in enumerate(mrk_list):
-        print(str(index) + '/' + str(len(mrk_list)))
-        try:
-            record = re.split('^=|\n=', record)
-            record = list(filter(None, record))
-            for i, row in enumerate(record):
-                record[i] = record[i].rstrip().split('  ', 1)
-            df = pd.DataFrame(record, columns = ['field', 'content'])
-            df['id'] = df.apply(lambda x: f(x, field_with_id), axis = 1)
-            df['id'] = df['id'].ffill().bfill()
-            df['content'] = df.groupby(['id', 'field'])['content'].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
-            df = df.drop_duplicates().reset_index(drop=True)
-            record_dict = df.pivot(index = 'id', columns = 'field', values = 'content').to_dict('records')
-            full_data_list += record_dict
-        except ValueError:
-            errors.append(record)
-    full_df = pd.DataFrame.from_records(full_data_list)
-    fields_order = full_df.columns.tolist()
-    fields_order.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-    full_df = full_df.reindex(columns=fields_order)
-    return full_df, errors
+            
+    final_list = []
+    for lista in tqdm(mrk_list):
+        lista = [e for e in lista.split('\n') if e]
+        slownik = {}
+        for el in lista:
+            if el[1:4] in slownik:
+                slownik[el[1:4]] += f"❦{el[6:]}"
+            else:
+                slownik[el[1:4]] = el[6:]
+        final_list.append(slownik)
+        
+    df = pd.DataFrame(final_list).drop_duplicates().reset_index(drop=True)
+    fields = df.columns.tolist()
+    fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+    df = df.loc[:, df.columns.isin(fields)]
+    fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+    df = df.reindex(columns=fields)
+    return df
 
 
 def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8, how_to_organise='cluster_first', show_time=False):

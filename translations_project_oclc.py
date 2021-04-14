@@ -544,7 +544,7 @@ test = pd.merge(df_all_positive.drop(columns=['viaf_positive', 'all_names', 'cz_
 
 df_people_clusters['001'] = df_people_clusters['001'].astype('int64')
 test = pd.merge(df_people_clusters, df_original_titles_simple.drop(columns='index'), how='left', on=['001', 'cluster_viaf'])
-
+#test.columns.values
 test_full = test.groupby('cluster_viaf')
 for name, test in tqdm(test_full, total=len(test_full)):
     if name == '52272':
@@ -768,7 +768,7 @@ import operator
 test = pd.read_excel('clusters_deduplication_trial_full_viaf_52272.xlsx', sheet_name='final_marc21_with_edition_count')
 test.columns.values
 
-test_simple = test[['index', '001', 'language', 'name', 'dates', 'viaf', 'cluster_viaf', 'original title', 'cluster_titles', 'title', 'cluster', 'edition_cluster', 'edition_index']]    
+test_simple = test[['index', '001', '100', '245', '240', 'language', 'name', 'dates', 'viaf', 'cluster_viaf', 'original title', 'cluster_titles', 'title', 'cluster', 'edition_cluster', 'edition_index', 'group_ids']]    
 
 test = test_simple.groupby('edition_cluster')
 
@@ -809,9 +809,9 @@ test_simple_after.to_excel('Majerova_cluster.xlsx', index=False)
 
 
  
-przykladowy_rekord = df_all_positive[df_all_positive['001'] == 561473178].squeeze()
+# przykladowy_rekord = df_all_positive[df_all_positive['001'] == 561473178].squeeze()
     
-przykladowy_rekord = df_people_clusters[df_people_clusters['001'] == 561473178].squeeze()  
+# przykladowy_rekord = df_people_clusters[df_people_clusters['001'] == 561473178].squeeze()  
     
     
     

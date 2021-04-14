@@ -50,6 +50,8 @@ samizdat_people_other_names = samizdat_people_other_names[samizdat_people_other_
 nodegoat_people_df = pd.concat([nodegoat_people_df[['Project_ID', 'Index_Name']], samizdat_people_other_names]).sort_values('Project_ID').drop_duplicates().reset_index(drop=True)
 nodegoat_people_tuples = list(nodegoat_people_df.to_records(index=False))
 
+#%% harvestowanie viaf i wikidaty
+
 nodegoat_people_dict = {}
 for index, name in tqdm(nodegoat_people_tuples):
     index = int(index)
@@ -310,14 +312,43 @@ worksheet.set_basic_filter()
 #wyszukiwanie osób przez ten link:
 # http://viaf.org/viaf/search?query=local.names%20all%20%22Babi%C5%84ski%20Stanis%C5%82aw%22&sortKeys=holdingscount&httpAccept=application/json            
    
+#%% wgranie danych dla PW 14.04
+nodegoat_people = [file['id'] for file in file_list if file['title'] == 'nodegoat_people_2021-04-07'][0]
+nodegoat_people_sheet = gc.open_by_key(nodegoat_people)
+nodegoat_people_sheet.worksheets()
 
+nodegoat_people_df = get_as_dataframe(nodegoat_people_sheet.worksheet('po tytułach'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1).drop_duplicates()
 
-
-
-
-
-
-
+df_grouped = nodegoat_people_df.groupby('samizdatID')
+df_ok_z_viaf = pd.DataFrame()
+df_ok_bez_viaf = pd.DataFrame()
+df_reszta_z_trafieniami = pd.DataFrame()
+df_reszta_bez_trafienia = pd.DataFrame()
+for name, group in tqdm(df_grouped, total=len(df_grouped)):
+    try:
+        wiersze_do_usuniecia = group['odpytanie po tytułach'].value_counts()['wiersz do usunięcia']
+    except KeyError:
+        wiersze_do_usuniecia = 0
+    if group.shape[0] == wiersze_do_usuniecia:
+        df_reszta_bez_trafienia = df_reszta_bez_trafienia.append(group)
+    else:
+        df = group[group['odpytanie po tytułach'] != 'wiersz do usunięcia']
+        jest_viaf = any(df['viaf'].notnull())
+        if df.shape[0] == 1 and jest_viaf == True:
+            df_ok_z_viaf = df_ok_z_viaf.append(df)
+        elif df.shape[0] == 1 and jest_viaf == False:
+            df_ok_bez_viaf = df_ok_bez_viaf.append(df)
+        else:
+            df_reszta_z_trafieniami = df_reszta_z_trafieniami.append(df)
+    
+arkusze = ['ok z viaf', 'ok bez viaf', 'reszta z trafieniami', 'reszta bez trafienia']
+dfs = [df_ok_z_viaf, df_ok_bez_viaf, df_reszta_z_trafieniami, df_reszta_bez_trafienia]
+for arkusz, dataf in zip(arkusze, dfs):
+    try:
+        set_with_dataframe(nodegoat_people_sheet.worksheet(arkusz), dataf)
+    except gs.WorksheetNotFound:
+        nodegoat_people_sheet.add_worksheet(title=arkusz, rows="100", cols="20")
+        set_with_dataframe(nodegoat_people_sheet.worksheet(arkusz), dataf)
 
 
 
