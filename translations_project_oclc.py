@@ -537,8 +537,8 @@ df_original_titles_simple = df_original_titles_simple.sort_values(['cluster_viaf
 
 
 #tylko dla rekordów z oryginalnym tytułem
-writer = pd.ExcelWriter('clusters_deduplication_trial.xlsx', engine = 'xlsxwriter')
-test = pd.merge(df_all_positive.drop(columns=['viaf_positive', 'all_names', 'cz_name']), df_original_titles_simple.drop(columns='index'), how='inner', on='001')
+# writer = pd.ExcelWriter('clusters_deduplication_trial.xlsx', engine = 'xlsxwriter')
+# test = pd.merge(df_all_positive.drop(columns=['viaf_positive', 'all_names', 'cz_name']), df_original_titles_simple.drop(columns='index'), how='inner', on='001')
 
 #dla wszystkich rekordów z podziałem na clustry viaf
 
@@ -768,7 +768,8 @@ import operator
 test = pd.read_excel('clusters_deduplication_trial_full_viaf_52272.xlsx', sheet_name='final_marc21_with_edition_count')
 test.columns.values
 
-test_simple = test[['index', '001', '100', '245', '240', 'language', 'name', 'dates', 'viaf', 'cluster_viaf', 'original title', 'cluster_titles', 'title', 'cluster', 'edition_cluster', 'edition_index', 'group_ids']]    
+test_simple = test.copy()
+#[['index', '001', '100', '245', '240', 'language', 'name', 'dates', 'viaf', 'cluster_viaf', 'original title', 'cluster_titles', 'title', 'cluster', 'edition_cluster', 'edition_index', 'group_ids']]    
 
 test = test_simple.groupby('edition_cluster')
 

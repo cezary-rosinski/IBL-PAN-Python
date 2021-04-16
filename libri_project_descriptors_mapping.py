@@ -75,12 +75,20 @@ BN_descriptors_mapping = list(dict_650.keys())
 BN_descriptors_mapping.extend(dict_655.keys())
 BN_descriptors_mapping = list(set([re.sub('\$y.*', '', e) for e in BN_descriptors_mapping]))
 
+#dydaktyka
+dydaktyka = get_as_dataframe(sheet.worksheet('dydaktyka'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+dydaktyka_650 = [e.split('❦') for e in dydaktyka[650] if pd.notnull(e)]
+dydaktyka_650 = list(set([re.sub('\$y.*', '', e[4:]).replace('$2DBN', '') for sub in dydaktyka_650 for e in sub]))
+
+dydaktyka_655 = [e.split('❦') for e in dydaktyka[655] if pd.notnull(e)]
+dydaktyka_655 = list(set([re.sub('\$y.*', '', e[4:]).replace('$2DBN', '') for sub in dydaktyka_655 for e in sub]))
+
 #%% deskryptory do harvestowania BN
 #lista deskryptorów do wzięcia - wąska (z selekcji Karoliny)
 deskryptory_do_filtrowania = [file['id'] for file in file_list if file['title'] == 'deskryptory_do_filtrowania'][0]
 deskryptory_do_filtrowania = gc.open_by_key(deskryptory_do_filtrowania)
 deskryptory_do_filtrowania = get_as_dataframe(deskryptory_do_filtrowania.worksheet('deskryptory_do_filtrowania'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
-BN_descriptors = deskryptory_do_filtrowania[deskryptory_do_filtrowania['deskryptor do filtrowania'] == 'tak']['deskyptory'].to_list()
+BN_descriptors = deskryptory_do_filtrowania[deskryptory_do_filtrowania['deskryptor do filtrowania'] == 'tak']['deskryptory'].to_list()
 def uproszczenie_nazw(x):
     try:
         if x.index('$') == 0:
@@ -89,7 +97,7 @@ def uproszczenie_nazw(x):
             return x[4:]
     except ValueError:
         return x
-BN_descriptors = list(set(BN_descriptors))
+BN_descriptors = list(set([e.strip() for e in BN_descriptors]))
 BN_descriptors2 = list(set(uproszczenie_nazw(e) for e in BN_descriptors))
 roznica = list(set(BN_descriptors2) - set(BN_descriptors))
 BN_descriptors.extend(roznica)
@@ -117,12 +125,12 @@ for file_path in tqdm(files):
                                
     for sublist in mrk_list:
         try:
-            year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
+            year_biblio = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
             bibliographic_level = ''.join([ele for ele in sublist if ele.startswith('=LDR')])[13]
-            if year in years and bibliographic_level == 'm':
+            if year_biblio in years and bibliographic_level == 'm':
                 for el in sublist:
                     if el.startswith('=650') or el.startswith('=655'):
-                        el = re.sub('\$y.*', '', el[10:]).replace('$2DBN', '')
+                        el = re.sub('\$y.*', '', el[10:]).replace('$2DBN', '').strip()
                         if any(desc == el for desc in BN_descriptors):
                             new_list.append(sublist)
                             break
@@ -183,7 +191,7 @@ def czy_polonik(x):
     except TypeError:
         x041 = False
     try:
-        x044 = 'pol' in x['044']
+        x044 = 'pol' in x['044'] or 'pl' in x['044']
     except TypeError:
         x044 = False
     if any('pol' in e.lower() for e in [x['500'], x['501'], x['546']] if pd.notnull(e)):
@@ -365,9 +373,9 @@ for file_path in tqdm(files):
             
     for sublist in mrk_list:
         try:
-            year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
+            year_biblio = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
             bibliographic_level = ''.join([ele for ele in sublist if ele.startswith('=LDR')])[13]
-            if year in years and bibliographic_level == 'm':
+            if year_biblio in years and bibliographic_level == 'm':
                 for el in sublist:
                     if el.startswith('=100'):
                         el = el[6:]
@@ -403,6 +411,65 @@ dobre4_df = dobre4_df[dobre4_df['czy polonik'] == True]
 dobre4_df = dobre4_df[(dobre4_df['380'].str.lower().str.contains('książ|book', regex=True)) | 
                       (dobre4_df['380'].isnull())]
 
+#%% dydaktyka
+
+#zakres lat 
+years = range(2013,2020)
+   
+path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/2021-02-08/'
+files = [file for file in glob.glob(path + '*.mrk', recursive=True)]
+
+encoding = 'utf-8'
+new_list = []
+for file_path in tqdm(files):
+    marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+
+    mrk_list = []
+    for row in marc_list:
+        if row.startswith('=LDR'):
+            mrk_list.append([row])
+        else:
+            if row:
+                mrk_list[-1].append(row)
+                               
+    for sublist in mrk_list:
+        try:
+            year_biblio = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
+            bibliographic_level = ''.join([ele for ele in sublist if ele.startswith('=LDR')])[13]
+            if year_biblio in years and bibliographic_level == 'm':
+                x650s = []
+                x655s = []
+                for el in sublist:
+                    if el.startswith('=650'):
+                        el = re.sub('\$y.*', '', el[10:]).replace('$2DBN', '').strip()
+                        x650s.append(el)
+                    elif el.startswith('=655'):
+                        el = re.sub('\$y.*', '', el[10:]).replace('$2DBN', '').strip()
+                        x655s.append(el)
+                if any(desc in x650s for desc in dydaktyka_650) and any(desc in x655s for desc in dydaktyka_655):
+                    new_list.append(sublist)                    
+        except ValueError:
+            pass
+
+final_list = []
+for lista in new_list:
+    slownik = {}
+    for el in lista:
+        if el[1:4] in slownik:
+            slownik[el[1:4]] += f"❦{el[6:]}"
+        else:
+            slownik[el[1:4]] = el[6:]
+    final_list.append(slownik)
+
+dobre5_df = pd.DataFrame(final_list).drop_duplicates().reset_index(drop=True)
+fields = dobre5_df.columns.tolist()
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+dobre5_df = dobre5_df.loc[:, dobre5_df.columns.isin(fields)]
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+dobre5_df = dobre5_df.reindex(columns=fields)   
+df_original3 = dobre5_df.copy()
+
+test = dobre5_df[['650', '655']]
 #%% połączenie zbiorów
 dobre1_df.columns.values
 dobre2_df.columns.values
@@ -411,19 +478,21 @@ dobre4_df.columns.values
 
 bn_harvested = pd.concat([dobre1_df.drop(columns=['czy polonik', 'gatunki literackie']), dobre2_df.drop(columns=['czy polonik', 'gatunki literackie']), dobre3_df.drop(columns=['czy polonik', 'gatunki literackie']), dobre4_df.drop(columns='czy polonik')]).drop_duplicates().reset_index(drop=False)
 
+test = bn_harvested.head(100)
+
 df_to_mrc(bn_harvested, '❦', f'bn_harvested_{year}_{month}_{day}.mrc', f'bn_harvested_errors_{year}_{month}_{day}.txt')
 
 #%% porównanie dwóch metod harvestowania BN
 
 df_stare = mrk_to_df('F:/Cezary/Documents/IBL/Libri/Iteracja 2021-02/libri_marc_bn_books_2021-2-9.mrk')
-sheet = gc.create('porównanie_podejść', '1xzqGIfZllmXXTh2dJABeHbRPFAM34nbw')
+sheet = gc.create(f'porównanie_podejść_{year}_{month}_{day}', '1xzqGIfZllmXXTh2dJABeHbRPFAM34nbw')
 
 worksheet = sheet.worksheet('Arkusz1')
 worksheet.update_title('jest_a_nie_bylo')
-jest_a_nie_bylo = bn_harvested[~bn_harvested['001'].isin(df_stare['001'])][['LDR', '001', '008', '080', '100', '245', '650', '655']]
+jest_a_nie_bylo = bn_harvested[~bn_harvested['001'].isin(df_stare['001'])][['LDR', '001', '008', '080', '100', '245', '650', '655', '380', '386']]
 set_with_dataframe(worksheet, jest_a_nie_bylo)
 
-jest_tu_i_tu = bn_harvested[bn_harvested['001'].isin(df_stare['001'])][['LDR', '001', '008', '080', '100', '245', '650', '655']]
+jest_tu_i_tu = bn_harvested[bn_harvested['001'].isin(df_stare['001'])][['LDR', '001', '008', '080', '100', '245', '650', '655', '380', '386']]
 try:
     set_with_dataframe(sheet.worksheet('jest_tu_i_tu'), jest_tu_i_tu)
 except gs.WorksheetNotFound:
@@ -452,9 +521,9 @@ for file_path in tqdm(files):
             
     for sublist in mrk_list:
         try:
-            year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
+            year_biblio = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
             bibliographic_level = ''.join([ele for ele in sublist if ele.startswith('=LDR')])[13]
-            if year in years and bibliographic_level == 'm':
+            if year_biblio in years and bibliographic_level == 'm':
                 for el in sublist:
                     if el.startswith('=001'):
                         el = el[6:]
@@ -479,7 +548,7 @@ fields = bylo_a_nie_ma.columns.tolist()
 fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
 bylo_a_nie_ma = bylo_a_nie_ma.loc[:, bylo_a_nie_ma.columns.isin(fields)]
 fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-bylo_a_nie_ma = bylo_a_nie_ma.reindex(columns=fields)[['LDR', '001', '008', '080', '100', '245', '650', '655']]  
+bylo_a_nie_ma = bylo_a_nie_ma.reindex(columns=fields)[['LDR', '001', '008', '080', '100', '245', '650', '655', '380', '386']]
 
 try:
     set_with_dataframe(sheet.worksheet('bylo_a_nie_ma'), bylo_a_nie_ma)
@@ -522,9 +591,9 @@ for name, data_frame in zip(list_of_dfs_names, list_of_dfs):
 
 test = dobre1_df[dobre1_df['001'] == 'b1000000245117']
 
-test = df[df['001'] == 'b1000000245117'].squeeze()
+test = df[df['001'] == 'b0000005818158'].squeeze()
 
-
+'b0000005818158'
 
 #%% notatki
 
