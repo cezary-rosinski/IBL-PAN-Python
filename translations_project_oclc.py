@@ -24,7 +24,7 @@ month = now.month
 day = now.day
 
 #autoryzacja do tworzenia i edycji plików
-gc = gs.oauth()
+gc = gs.oauth(flow=gs.auth.console_flow)
 #autoryzacja do penetrowania dysku
 gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
@@ -545,11 +545,14 @@ df_original_titles_simple = df_original_titles_simple.sort_values(['cluster_viaf
 df_people_clusters['001'] = df_people_clusters['001'].astype('int64')
 test = pd.merge(df_people_clusters, df_original_titles_simple.drop(columns='index'), how='left', on=['001', 'cluster_viaf'])
 #test.columns.values
+file_names = []
 test_full = test.groupby('cluster_viaf')
 for name, test in tqdm(test_full, total=len(test_full)):
-    if name == '52272':
-    
-        writer = pd.ExcelWriter(f'clusters_deduplication_trial_full_viaf_{name}.xlsx', engine = 'xlsxwriter')
+    #if name == '52272':
+    if True:
+        file_name = f'clusters_deduplication_trial_full_viaf_{name}.xlsx'
+        file_names.append(file_name)
+        writer = pd.ExcelWriter(file_name, engine = 'xlsxwriter')
         test.to_excel(writer, index=False, sheet_name='clusters_viaf_titles')
             
         #de-duplication 1: duplicates
@@ -765,32 +768,35 @@ for name, test in tqdm(test_full, total=len(test_full)):
 from collections import Counter
 import operator
 
-test = pd.read_excel('clusters_deduplication_trial_full_viaf_52272.xlsx', sheet_name='final_marc21_with_edition_count')
-test.columns.values
+for file_name in tqdm(file_names):
+    viaf = re.findall('\d+', file_name)[0]
 
-test_simple = test.copy()
-#[['index', '001', '100', '245', '240', 'language', 'name', 'dates', 'viaf', 'cluster_viaf', 'original title', 'cluster_titles', 'title', 'cluster', 'edition_cluster', 'edition_index', 'group_ids']]    
-
-test = test_simple.groupby('edition_cluster')
-
-test_simple_after = pd.DataFrame()
-for name, group in test:
-    ttt = dict(Counter([e for e in group['cluster_titles'] if pd.notnull(e)]))
-    try:
-        cluster = int(max(ttt.items(), key=operator.itemgetter(1))[0])
-    except ValueError:
-        cluster = np.nan
-    yyy = dict(Counter([e for e in group['original title'] if pd.notnull(e)]))
-    try:
-        original_title = max(yyy.items(), key=operator.itemgetter(1))[0]
-    except ValueError:
-        original_title = np.nan    
-    group['cluster_titles suggestion'] = cluster
-    group['original title suggestion'] = original_title
-    test_simple_after = test_simple_after.append(group)
-
-test_simple_after = test_simple_after.sort_values('cluster_titles suggestion').drop(columns=['index', 'cluster'])
-test_simple_after.to_excel('Majerova_cluster.xlsx', index=False)
+    test = pd.read_excel(file_name, sheet_name='final_marc21_with_edition_count')
+    test.columns.values
+    
+    test_simple = test.copy()
+    #[['index', '001', '100', '245', '240', 'language', 'name', 'dates', 'viaf', 'cluster_viaf', 'original title', 'cluster_titles', 'title', 'cluster', 'edition_cluster', 'edition_index', 'group_ids']]    
+    
+    test = test_simple.groupby('edition_cluster')
+    
+    test_simple_after = pd.DataFrame()
+    for name, group in test:
+        ttt = dict(Counter([e for e in group['cluster_titles'] if pd.notnull(e)]))
+        try:
+            cluster = int(max(ttt.items(), key=operator.itemgetter(1))[0])
+        except ValueError:
+            cluster = np.nan
+        yyy = dict(Counter([e for e in group['original title'] if pd.notnull(e)]))
+        try:
+            original_title = max(yyy.items(), key=operator.itemgetter(1))[0]
+        except ValueError:
+            original_title = np.nan    
+        group['cluster_titles suggestion'] = cluster
+        group['original title suggestion'] = original_title
+        test_simple_after = test_simple_after.append(group)
+    
+    test_simple_after = test_simple_after.sort_values('cluster_titles suggestion').drop(columns=['index', 'cluster'])
+    test_simple_after.to_excel(f'{viaf}_cluster.xlsx', index=False)
 
 
 

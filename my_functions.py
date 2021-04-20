@@ -282,43 +282,35 @@ def mrk_to_mrc(path_in, path_out, field_with_id):
         outputfile.write(pymarc_record.as_marc())     
     outputfile.close()
     
-def df_to_mrc(df, delimiter, path_out, txt_error_file):
+def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
     mrc_errors = []
     df = df.replace(r'^\s*$', np.nan, regex=True)
     outputfile = open(path_out, 'wb')
     errorfile = io.open(txt_error_file, 'wt', encoding='UTF-8')
-    for index, row in enumerate(df.iterrows()):
-        try: 
-            print(str(index+1) + '/' + str(len(df)))
-            table_row = df.iloc[[index]].dropna(axis=1)
-            for column in table_row:
-                table_row[column] = table_row[column].astype(str).str.split(delimiter)
-            marc_fields = table_row.columns.tolist()
-            marc_fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-            record_id = table_row.index[0]
-            table_row = table_row.reindex(columns=marc_fields)
-            table_row = table_row.T.to_dict()[record_id]
-            leader = ''.join(table_row['LDR'])
-            del table_row['LDR']
-            table_row = list(table_row.items())
-            pymarc_record = pymarc.Record(to_unicode=True, force_utf8=True, leader=leader)
-            for i, field in enumerate(table_row):
-                if int(table_row[i][0]) < 10:
-                    tag = table_row[i][0]
-                    data = ''.join(table_row[i][1])
+    list_of_dicts = df.to_dict('records')
+    for record in tqdm(list_of_dicts, total=len(list_of_dicts)):
+        record = {k: v for k, v in record.items() if pd.notnull(v)}
+        try:
+            pymarc_record = pymarc.Record(to_unicode=True, force_utf8=True, leader=record['LDR'])
+            del record['LDR']
+            for k, v in record.items():
+                v = v.split(field_delimiter)
+                if int(k) < 10:
+                    tag = k
+                    data = ''.join(v)
                     marc_field = pymarc.Field(tag=tag, data=data)
                     pymarc_record.add_ordered_field(marc_field)
                 else:
-                    if len(table_row[i][1]) == 1:
-                        tag = table_row[i][0]
-                        record_in_list = re.split('\$(.)', ''.join(table_row[i][1]))
+                    if len(v) == 1:
+                        tag = k
+                        record_in_list = re.split('\$(.)', ''.join(v))
                         indicators = list(record_in_list[0])
                         subfields = record_in_list[1:]
                         marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
                         pymarc_record.add_ordered_field(marc_field)
                     else:
-                        for element in table_row[i][1]:
-                            tag = table_row[i][0]
+                        for element in v:
+                            tag = k
                             record_in_list = re.split('\$(.)', ''.join(element))
                             indicators = list(record_in_list[0])
                             subfields = record_in_list[1:]
@@ -326,7 +318,7 @@ def df_to_mrc(df, delimiter, path_out, txt_error_file):
                             pymarc_record.add_ordered_field(marc_field)
             outputfile.write(pymarc_record.as_marc())
         except ValueError:
-            mrc_errors.append(table_row)
+            mrc_errors.append(record)
     if len(mrc_errors) > 0:
         for element in mrc_errors:
             errorfile.write(str(element) + '\n\n')

@@ -13,6 +13,8 @@ from json.decoder import JSONDecodeError
 from urllib.parse import urlparse
 import datetime
 import ast
+import itertools
+from tqdm import tqdm
 
 #%% kartoteka osobowa
 folder_path = 'F:/Cezary/Documents/IBL/Libri/Iteracja 2021-02/'
@@ -83,6 +85,72 @@ df['LDR'] = '-----nz--a22-----n--4500'
 df_to_mrc(df, '❦', 'koha_kartoteka_wzorcowa_instytucji.mrc', 'koha_kartoteka_wzorcowa_instytucji_bledy.txt')
 
 #%% kartoteka czasopism (źródła + tematy)
+folder_path = 'F:/Cezary/Documents/IBL/Libri/Iteracja 2021-02/'
+
+files = [file for file in glob.glob(folder_path + 'pbl*.mrk', recursive=True)]
+
+encoding = 'utf-8'
+new_list = []
+for file_path in files:   
+    marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+    for field in marc_list:
+        if field.startswith(('=773', '=130', '=630', '=730', '=830')):
+            new_list.append(field)
+            
+new_list = list(set(new_list))
+
+x773 = pd.DataFrame([e[6:] for e in new_list if e.startswith('=773')], columns=['journal title'])
+x773['index'] = x773.index+1
+x773 = marc_parser_1_field(x773, 'index', 'journal title', '\$')[['$t', '$9']].drop_duplicates().rename(columns={'$t':'130', '$9':'rok'})
+
+x773['rok'] = x773.groupby('130').transform(lambda x: ', '.join(x))
+x773['130'] = '\\\\$a' + x773['130']
+x773 = x773.drop_duplicates()
+
+def ranges(i):
+    for a, b in itertools.groupby(enumerate(i), lambda pair: pair[1] - pair[0]):
+        b = list(b)
+        if len(b) == 1 and b[0][1] == b[-1][1]:
+            yield f"{b[0][1]}"
+        else:
+            yield f"{b[0][1]}-{b[-1][1]}"
+            
+x773['rok'] = x773['rok'].apply(lambda x: ', '.join(list(ranges(sorted([int(i) for i in x.split(', ') if i])))))
+
+def rok(x, order='pierwszy'):
+    if order == 'pierwszy':
+        try:
+            return '$s' + re.findall('\d{4}', x)[0]
+        except IndexError:
+            return np.nan
+    elif order == 'ostatni':
+        try: 
+            return '$t' + re.findall('\d{4}', x)[-1]
+        except IndexError:
+            return np.nan
+    else:
+        print('Wrong order!')
+        
+def lata(x):
+    pierwszy = rok(x)
+    ostatni = rok(x, order='ostatni')
+    if isinstance(pierwszy, str) and isinstance(ostatni, str):
+        return '\\\\' + ''.join([rok(x), rok(x, order='ostatni')])
+    elif isinstance(pierwszy, str):
+        return '\\\\' + pierwszy
+    elif isinstance(ostatni, str):
+        return '\\\\' + ostatni
+    else:
+        return np.nan
+
+x773['046'] = x773['rok'].apply(lambda x: lata(x))
+x773 = x773[['130', '046']]
+x773['667'] = '\\\\$aŹródło'
+x773['LDR'] = '-----nz--a22-----n--4500'
+# ogarnąć temat czasopism jako tematów, bo na ten moment w danych libri nie ma informacji o odwołaniach z bazy Oracle
+#inne = pd.DataFrame([e[6:] for e in new_list if not e.startswith('=773')], columns=['journal title'])
+
+df_to_mrc(x773, '❦', 'koha_kartoteka_wzorcowa_czasopism.mrc', 'koha_kartoteka_wzorcowa_czasopism_bledy.txt')
 
 #%% kartoteka utworów
 
