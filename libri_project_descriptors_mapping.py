@@ -606,6 +606,53 @@ test.to_excel('deskryptory_do_filtrowania.xlsx', index=False)
 
 df_stare = mrk_to_df('F:/Cezary/Documents/IBL/Libri/Iteracja 2021-02/libri_marc_bn_books_2021-2-9.mrk')
 
+#%% odsiewanie po deskryptorach
+sheet = gc.open_by_key('1a_jLhXHmAI4YitAyG1e8_8uHC0n07gjRDWC4VbHsnrY')
+df = get_as_dataframe(sheet.worksheet('jest_a_nie_bylo'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+
+podejrzane_deskryptory = ['Muzyka (przedmiot szkolny)', 'Edukacja artystyczna', 'Biblia dla dzieci',  'Fotografia teatralna', 'Odbitka barwna', 'Korespondencja handlowa', 'Książka do kolorowania', 'Książka do wypełniania', 'Książka kucharska', 'Książka obrazkowa', 'Reportaż radiowy', 'Program teatralny', 'Przewodnik po wystawie', 'Przewodnik turystyczny', 'Słownik frazeologiczny', 'Publikacja bogato ilustrowana', 'Raport', 'Relacja z podróży', 'Rozważania i rozmyślania religijne', 'Awangarda (kierunek artystyczno-literacki', 'Modlitwa', 'Tematy i motywy', 'Krytyka artystyczna', 'Semiotyka', 'Kazanie', 'Biografistyka', 'Przekłady', 'Teoria przekładu', 'Drama (pedagogika)', 'Parapsychologia', 'Publicystyka']
+
+ids = []
+for el in podejrzane_deskryptory[:10]:
+    test = df[(df[650].str.contains(el, regex=False)) | 
+              (df[655].str.contains(el, regex=False))][1].to_list()
+    ids += test
+ids = list(set(ids))    
+
+df = df[~df[1].isin(ids)]
+#następne - reportaż radiowy
+test = df[(df[650].str.contains(podejrzane_deskryptory[9], regex=False)) | 
+          (df[655].str.contains(podejrzane_deskryptory[9], regex=False))][[80, 245, 650, 655, 380, 386]]
+
+
+
+# 650 - Opera (przedstawienie) i 655 Program teatralny - to do usunięcia
+# LDR g to 386 Przynależność kulturowa film polski - to ma zostać z grupy "g"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
