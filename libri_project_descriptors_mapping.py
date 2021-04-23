@@ -610,24 +610,33 @@ df_stare = mrk_to_df('F:/Cezary/Documents/IBL/Libri/Iteracja 2021-02/libri_marc_
 sheet = gc.open_by_key('1a_jLhXHmAI4YitAyG1e8_8uHC0n07gjRDWC4VbHsnrY')
 df = get_as_dataframe(sheet.worksheet('jest_a_nie_bylo'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
 
-podejrzane_deskryptory = ['Muzyka (przedmiot szkolny)', 'Edukacja artystyczna', 'Biblia dla dzieci',  'Fotografia teatralna', 'Odbitka barwna', 'Korespondencja handlowa', 'Książka do kolorowania', 'Książka do wypełniania', 'Książka kucharska', 'Książka obrazkowa', 'Reportaż radiowy', 'Program teatralny', 'Przewodnik po wystawie', 'Przewodnik turystyczny', 'Słownik frazeologiczny', 'Publikacja bogato ilustrowana', 'Raport', 'Relacja z podróży', 'Rozważania i rozmyślania religijne', 'Awangarda (kierunek artystyczno-literacki', 'Modlitwa', 'Tematy i motywy', 'Krytyka artystyczna', 'Semiotyka', 'Kazanie', 'Biografistyka', 'Przekłady', 'Teoria przekładu', 'Drama (pedagogika)', 'Parapsychologia', 'Publicystyka']
+podejrzane_deskryptory = ['Muzyka (przedmiot szkolny)', 'Edukacja artystyczna',  'Fotografia teatralna', 'Odbitka barwna', 'Korespondencja handlowa', 'Książka kucharska', 'Gatunek zagrożony', 'Reportaż radiowy', 'Przewodnik po wystawie', 'Turystyka dziecięca', 'Słownik frazeologiczny', 'Rozważania i rozmyślania religijne', 'Pedagogika$x', 'Budownictwo$xprojekty$xprzekłady', 'Język środowiskowy$xprzekłady', 'Drama (pedagogika)']
 
-ids = []
-for el in podejrzane_deskryptory[:10]:
+ids = df[(df[650].str.contains('Opera (przedstawienie)', regex=False)) & (df[655].str.contains('Program teatralny'))][1].to_list()
+
+ids += 
+
+test = df[(df['LDR'].str[6] == 'g') & ((~df[386].str.contains('Film polski', regex=False, na=False)) & (~df[655].str.contains('polsk', na=False)))][[1, 80, 245, 650, 655, 380, 386]]
+test2 = df[(df['LDR'].str[6] == 'g') & ((~df[386].str.contains('Film polski', regex=False, na=False)) | (~df[655].str.contains('polsk', na=False)))][[1, 80, 245, 650, 655, 380, 386]]
+test2 = test2[~test2[1].isin(test[1])]
+
+for el in podejrzane_deskryptory:
     test = df[(df[650].str.contains(el, regex=False)) | 
               (df[655].str.contains(el, regex=False))][1].to_list()
     ids += test
 ids = list(set(ids))    
 
-df = df[~df[1].isin(ids)]
+df = df[df[1].isin(ids)][[80, 245, 650, 655, 380, 386]]
+
+
 #następne - reportaż radiowy
-test = df[(df[650].str.contains(podejrzane_deskryptory[9], regex=False)) | 
-          (df[655].str.contains(podejrzane_deskryptory[9], regex=False))][[80, 245, 650, 655, 380, 386]]
+test = df[(df[650].str.contains(podejrzane_deskryptory[-1], regex=False)) | 
+          (df[655].str.contains(podejrzane_deskryptory[-1], regex=False))][[80, 245, 650, 655, 380, 386]]
 
 
 
-# 650 - Opera (przedstawienie) i 655 Program teatralny - to do usunięcia
 # LDR g to 386 Przynależność kulturowa film polski - to ma zostać z grupy "g"
+# \7$aImage$2DBN❦\7$aSemiotyka$2DBN
 
 
 
@@ -637,13 +646,14 @@ test = df[(df[650].str.contains(podejrzane_deskryptory[9], regex=False)) |
 
 
 
+df1 = get_as_dataframe(sheet.worksheet('jest_a_nie_bylo'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+df2 = get_as_dataframe(sheet.worksheet('jest_tu_i_tu'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+df = pd.concat([df1, df2])
 
-
-
-
-
-
-
+df = df[df['LDR'].str[6] == 'g']
+df.to_excel('filmy do wywalenia.xlsx', index=False)
+#wywalić filmy ze wszystkich tabel
+#sprawdzić reguły wywalania z jest a nie było dla jest tu i tu
 
 
 
