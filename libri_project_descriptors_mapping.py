@@ -469,18 +469,12 @@ fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0
 dobre5_df = dobre5_df.reindex(columns=fields)   
 df_original3 = dobre5_df.copy()
 
-test = dobre5_df[['650', '655']]
 #%% połączenie zbiorów
-dobre1_df.columns.values
-dobre2_df.columns.values
-dobre3_df.columns.values
-dobre4_df.columns.values
 
-bn_harvested = pd.concat([dobre1_df.drop(columns=['czy polonik', 'gatunki literackie']), dobre2_df.drop(columns=['czy polonik', 'gatunki literackie']), dobre3_df.drop(columns=['czy polonik', 'gatunki literackie']), dobre4_df.drop(columns='czy polonik')]).drop_duplicates().reset_index(drop=False)
+bn_harvested = pd.concat([dobre1_df, dobre2_df, dobre3_df, dobre4_df, dobre5_df]).drop_duplicates().reset_index(drop=False)
+bn_harvested.to_excel('bn_ks_libri_mapowanie.xlsx', index=False)
 
-test = bn_harvested.head(100)
-
-df_to_mrc(bn_harvested, '❦', f'bn_harvested_{year}_{month}_{day}.mrc', f'bn_harvested_errors_{year}_{month}_{day}.txt')
+df_to_mrc(bn_harvested.drop(columns=['czy polonik', 'gatunki literackie']), '❦', f'bn_harvested_{year}_{month}_{day}.mrc', f'bn_harvested_errors_{year}_{month}_{day}.txt')
 
 #%% porównanie dwóch metod harvestowania BN
 
@@ -607,31 +601,41 @@ test.to_excel('deskryptory_do_filtrowania.xlsx', index=False)
 df_stare = mrk_to_df('F:/Cezary/Documents/IBL/Libri/Iteracja 2021-02/libri_marc_bn_books_2021-2-9.mrk')
 
 #%% odsiewanie po deskryptorach
-sheet = gc.open_by_key('1a_jLhXHmAI4YitAyG1e8_8uHC0n07gjRDWC4VbHsnrY')
-df = get_as_dataframe(sheet.worksheet('jest_a_nie_bylo'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+# sheet = gc.open_by_key('1a_jLhXHmAI4YitAyG1e8_8uHC0n07gjRDWC4VbHsnrY')
+# df = get_as_dataframe(sheet.worksheet('jest_a_nie_bylo'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
 
-podejrzane_deskryptory = ['Muzyka (przedmiot szkolny)', 'Edukacja artystyczna',  'Fotografia teatralna', 'Odbitka barwna', 'Korespondencja handlowa', 'Książka kucharska', 'Gatunek zagrożony', 'Reportaż radiowy', 'Przewodnik po wystawie', 'Turystyka dziecięca', 'Słownik frazeologiczny', 'Rozważania i rozmyślania religijne', 'Pedagogika$x', 'Budownictwo$xprojekty$xprzekłady', 'Język środowiskowy$xprzekłady', 'Drama (pedagogika)']
+df = pd.read_excel('bn_ks_libri_mapowanie.xlsx')
 
-ids = df[(df[650].str.contains('Opera (przedstawienie)', regex=False)) & (df[655].str.contains('Program teatralny'))][1].to_list()
+ids = df[(df['650'].str.contains('Opera (przedstawienie)', regex=False)) & (df['655'].str.contains('Program teatralny'))]['001'].to_list()
+ids += df[(df['650'].str.contains('Turystyka dziecięca', regex=False)) & (df['655'].str.count('\\$a') == 1) & (df['655'].str.count('\\$y') == 0)]['001'].to_list()
+ids += df[df['LDR'].str[6] == 'g']['001'].to_list()
+ids += df[(df['245'].str.contains('$a[Scena ze spektaklu', regex=False)) & ((df['650'].str.contains('Fotografia teatralna', regex=False)) | 
+          (df['655'].str.contains('Fotografia teatralna', regex=False)))]['001'].to_list()
+ids += df[(df['655'].str.contains('Słownik frazeologiczny', regex=False)) & (~df['655'].str.contains('języka polskiego', regex=False, na=False))]['001'].to_list()
+#Zacząć od tego
+ids += test = df[((df['655'].str.contains('Rozważania i rozmyślania religijne', regex=False)) & (df['655'].str.count('\\$a') == 1)) |((df['655'].str.contains('Rozważania i rozmyślania religijne', regex=False)) & (df['655'].str.contains('Modlitwa|Modlitewnik')) & (df['655'].str.count('\\$a') == 2))][['080', '245', '650', '655', '380', '386']]['001'].to_list()
 
-ids += 
+df = df[~df['001'].isin(ids)][['080', '245', '650', '655', '380', '386']]
 
-test = df[(df['LDR'].str[6] == 'g') & ((~df[386].str.contains('Film polski', regex=False, na=False)) & (~df[655].str.contains('polsk', na=False)))][[1, 80, 245, 650, 655, 380, 386]]
-test2 = df[(df['LDR'].str[6] == 'g') & ((~df[386].str.contains('Film polski', regex=False, na=False)) | (~df[655].str.contains('polsk', na=False)))][[1, 80, 245, 650, 655, 380, 386]]
-test2 = test2[~test2[1].isin(test[1])]
+podejrzane_deskryptory = ['Muzyka (przedmiot szkolny)', 'Edukacja artystyczna', 'Odbitka barwna', 'Korespondencja handlowa', 'Gatunek zagrożony', 'Reportaż radiowy', 'Art brut', 'Rozważania i rozmyślania religijne', 'Pedagogika$x', 'Budownictwo$xprojekty$xprzekłady', 'Język środowiskowy$xprzekłady', 'Drama (pedagogika)']
+# jednak zostają: Pedagogika$x, Rozważania i rozmyślania religijne (jeśli nie są same?), Przewodnik turystyczny (jeśli nie jest sam?), Fotografia teatralna (jeśli nie sama?), Drama (pedagogika) (gdy jest Teatr lub język polski), 'Turystyka dziecięca' (gdy ma też gatunek?), Przewodnik po wystawie (jeśli film/teatr), książka kucharksa, Edukacja artystyczna (gdy Scenografia/teatr), Książka do wypełniania (jeśli teatr), Słownik frazeologiczny (jeśli Język polski + $xfrazeologia)
+
+
 
 for el in podejrzane_deskryptory:
-    test = df[(df[650].str.contains(el, regex=False)) | 
-              (df[655].str.contains(el, regex=False))][1].to_list()
+    test = df[(df['650'].str.contains(el, regex=False)) | 
+              (df['655'].str.contains(el, regex=False))]['001'].to_list()
     ids += test
 ids = list(set(ids))    
 
-df = df[df[1].isin(ids)][[80, 245, 650, 655, 380, 386]]
+df_out = df[df['001'].isin(ids)][['080', '245', '650', '655', '380', '386']]
+df = df[~df['001'].isin(ids)][['080', '245', '650', '655', '380', '386']]
 
+df.to_excel('do wywalenia.xlsx', index=False)
 
 #następne - reportaż radiowy
-test = df[(df[650].str.contains(podejrzane_deskryptory[-1], regex=False)) | 
-          (df[655].str.contains(podejrzane_deskryptory[-1], regex=False))][[80, 245, 650, 655, 380, 386]]
+test = df[(df['650'].str.contains(podejrzane_deskryptory[7], regex=False)) | 
+          (df['655'].str.contains(podejrzane_deskryptory[7], regex=False))][['080', '245', '650', '655', '380', '386']]
 
 
 
@@ -647,7 +651,7 @@ test = df[(df[650].str.contains(podejrzane_deskryptory[-1], regex=False)) |
 
 
 df1 = get_as_dataframe(sheet.worksheet('jest_a_nie_bylo'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
-df2 = get_as_dataframe(sheet.worksheet('jest_tu_i_tu'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+df = get_as_dataframe(sheet.worksheet('jest_tu_i_tu'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
 df = pd.concat([df1, df2])
 
 df = df[df['LDR'].str[6] == 'g']

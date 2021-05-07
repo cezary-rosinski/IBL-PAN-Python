@@ -24,7 +24,7 @@ month = now.month
 day = now.day
 
 #autoryzacja do tworzenia i edycji plików
-gc = gs.oauth(flow=gs.auth.console_flow)
+gc = gs.oauth()
 #autoryzacja do penetrowania dysku
 gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
@@ -215,7 +215,10 @@ for language in languages:
                 if column in ['fiction_type', '490', '500', '650', '655']:
                     group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
                 else:
-                    group[column] = group[column].dropna().astype(str).max()
+                    try:
+                        group[column] = max(group[column].dropna().astype(str), key=len)
+                    except ValueError:
+                        group[column] = np.nan
             df_oclc_deduplicated = df_oclc_deduplicated.append(group)
         
         df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
@@ -256,7 +259,10 @@ for language in languages:
                         elif column in ['001', '245']:
                             pass
                         else:
-                            group[column] = group[column].dropna().astype(str).max()
+                            try:
+                                group[column] = max(group[column].dropna().astype(str), key=len)
+                            except ValueError:
+                                group[column] = np.nan
                     df = group[~group['245'].str.contains('\$n', regex=True)]
                     df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(df)
                 else:
@@ -270,9 +276,15 @@ for language in languages:
                             field_245 = field_245[['001', '245']]
                             field_245['245'] = '10' + field_245['245']
                             group = pd.merge(group.drop(columns='245'), field_245, how='left', on='001')
-                            group[column] = group[column].dropna().astype(str).max()
+                            try:
+                                group[column] = max(group[column].dropna().astype(str), key=len)
+                            except ValueError:
+                                group[column] = np.nan
                         else:
-                            group[column] = group[column].dropna().astype(str).max()
+                            try:
+                                group[column] = max(group[column].dropna().astype(str), key=len)
+                            except ValueError:
+                                group[column] = np.nan
                     group = group.drop_duplicates().reset_index(drop=True)
                     df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(group)
                         
@@ -315,9 +327,15 @@ for language in languages:
                         group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
                     elif column == '245':
                         group[column] = group[column][group[column].str.contains('$', regex=False)]
-                        group[column] = group[column].dropna().astype(str).max()
+                        try:
+                            group[column] = max(group[column].dropna().astype(str), key=len)
+                        except ValueError:
+                            group[column] = np.nan
                     else:
-                        group[column] = group[column].dropna().astype(str).max()
+                        try:
+                            group[column] = max(group[column].dropna().astype(str), key=len)
+                        except ValueError:
+                            group[column] = np.nan
                 df_oclc_deduplicated = df_oclc_deduplicated.append(group)
                 
             df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
@@ -352,9 +370,15 @@ for language in languages:
     #                     group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
     #                 elif column == '245':
     #                     group[column] = group[column][group[column].str.contains('$', regex=False)]
-    #                     group[column] = group[column].dropna().astype(str).max()
+    #                     try:
+    #                           group[column] = max(group[column].dropna().astype(str), key=len)
+    #                     except ValueError:
+    #                           group[column] = np.nan
     #                 else:
-    #                     group[column] = group[column].dropna().astype(str).max()
+    #                     try:
+    #                           group[column] = max(group[column].dropna().astype(str), key=len)
+    #                     except ValueError:
+    #                           group[column] = np.nan
     #             df_oclc_deduplicated = df_oclc_deduplicated.append(group)
     #             
     #         df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
@@ -437,6 +461,36 @@ df_all_positive['260'] = df_all_positive[['260', '264']].apply(lambda x: x['260'
 df_all_positive['240'] = df_all_positive[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)
 df_all_positive['100_unidecode'] = df_all_positive['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
 
+#df_all_positive.to_excel('oclc_all_positive.xlsx', index=False)
+
+df_all_positive = pd.read_excel('oclc_all_positive.xlsx').reset_index(drop=True)
+
+#index of correctness
+
+def index_of_correctness(x):
+    full_index = 7
+    record_index = 0
+    if x['008'][35:38] != 'und':
+        record_index += 1
+    if pd.notnull(x['240']) and '$a' in x['240'] and any(e for e in ['$l', '$i'] if e in x['240']) and x['240'].count('$a') == 1 and '$k' not in x['240']:
+        record_index += 3
+    # elif pd.notnull(x['240']) and '$a' in x['240'] and x['240'].count('$a') == 1:
+    #     record_index += 1.5
+    if pd.notnull(x['245']) and all(e for e in ['$a', '$c'] if e in x['245']):
+        record_index += 1
+    elif pd.notnull(x['245']) and any(e for e in ['$a', '$c'] if e in x['245']): 
+        record_index += 0.5
+    if pd.notnull(x['260']) and all(e for e in ['$a', '$b', '$c'] if e in x['260']):
+        record_index += 1
+    elif pd.notnull(x['260']) and any(e for e in ['$a', '$b', '$c'] if e in x['260']):
+        record_index += 0.5
+    if pd.notnull(x['700']) and pd.notnull(x['700']):
+        record_index += 1
+    full_index = record_index/full_index
+    return full_index
+    
+df_all_positive['index of correctness'] = df_all_positive.apply(lambda x: index_of_correctness(x), axis=1)
+    
 df_oclc_people = marc_parser_1_field(df_all_positive, '001', '100_unidecode', '\\$')[['001', '$a', '$d', '$1']].replace(r'^\s*$', np.nan, regex=True)  
 df_oclc_people['$ad'] = df_oclc_people[['$a', '$d']].apply(lambda x: '$d'.join(x.dropna().astype(str)) if pd.notnull(x['$d']) else x['$a'], axis=1)
 df_oclc_people['$ad'] = '$a' + df_oclc_people['$ad']
@@ -447,6 +501,7 @@ people_clusters = viaf_positives_dict.copy()
 
 # Hrabal, Hasek, Capek, Majerova selection
 selection = ['34458072', '4931097', '34454129', '52272']
+# selection = ['52272']
 people_clusters = {key: people_clusters[key] for key in selection}
 
 for key in tqdm(people_clusters, total=len(people_clusters)):
@@ -493,8 +548,11 @@ counter_100 = df_original_titles_100['001'].value_counts().reset_index()
 counter_100 = counter_100[counter_100['001'] == 1]['index'].to_list()
 df_original_titles_100 = df_original_titles_100[df_original_titles_100['001'].isin(counter_100)]
 df_original_titles_240 = marc_parser_1_field(df_original_titles, '001', '240', '\\$')
-df_original_titles_240['original title'] = df_original_titles_240.apply(lambda x: x['$b'] if x['$b'] != '' else x['$a'], axis=1)
-df_original_titles_240 = df_original_titles_240[['001', 'original title']]
+try:
+    df_original_titles_240['original title'] = df_original_titles_240.apply(lambda x: x['$b'] if x['$b'] != '' else x['$a'], axis=1)
+except KeyError:
+    df_original_titles_240['original title'] = df_original_titles_240['$a']
+# df_original_titles_240 = df_original_titles_240[['001', 'original title']]
 
 df_original_titles_simple = pd.merge(df_original_titles_100, df_original_titles_240, how='left', on='001')
 df_original_titles_simple = df_original_titles_simple.merge(df_original_titles[['001', 'cluster_viaf']]).reset_index(drop=True)
@@ -509,6 +567,23 @@ for name, group in tqdm(df_original_titles_simple_grouped, total=len(df_original
     df_original_titles_simple = df_original_titles_simple.append(df)
 
 df_original_titles_simple = df_original_titles_simple.sort_values(['cluster_viaf', 'cluster']).rename(columns={'cluster':'cluster_titles'}) 
+
+
+df_with_original_titles = pd.merge(df_people_clusters, df_original_titles_simple.drop(columns=['index', 'cluster_viaf']), on='001', how='left').drop_duplicates()
+
+correct = df_with_original_titles[df_with_original_titles['index of correctness'] > 0.7]
+not_correct = df_with_original_titles[df_with_original_titles['index of correctness'] <= 0.7]
+writer = pd.ExcelWriter('4_writers.xlsx', engine = 'xlsxwriter')
+correct.to_excel(writer, index=False, sheet_name='correct')
+not_correct.to_excel(writer, index=False, sheet_name='not_correct')
+writer.save()
+writer.close()
+
+# for 4 authors: 2365 from 7026 -> 34%  --- one record == one row
+# for Majerova: 59 from 335 -> 18%
+
+
+
 
 
 
@@ -542,13 +617,16 @@ df_original_titles_simple = df_original_titles_simple.sort_values(['cluster_viaf
 
 #dla wszystkich rekordów z podziałem na clustry viaf
 
-df_people_clusters['001'] = df_people_clusters['001'].astype('int64')
-test = pd.merge(df_people_clusters, df_original_titles_simple.drop(columns='index'), how='left', on=['001', 'cluster_viaf'])
+# df_people_clusters['001'] = df_people_clusters['001'].astype('int64')
+# test = pd.merge(df_people_clusters, df_original_titles_simple.drop(columns='index'), how='left', on=['001', 'cluster_viaf'])
+
+test = correct.copy()
 #test.columns.values
 file_names = []
 test_full = test.groupby('cluster_viaf')
 for name, test in tqdm(test_full, total=len(test_full)):
     #if name == '52272':
+    #test = test_full.get_group('52272')
     if True:
         file_name = f'clusters_deduplication_trial_full_viaf_{name}.xlsx'
         file_names.append(file_name)
@@ -594,11 +672,15 @@ for name, test in tqdm(test_full, total=len(test_full)):
         
         df_oclc_deduplicated = pd.DataFrame()
         for name, group in df_oclc_duplicates_grouped:
+            # group = df_oclc_duplicates_grouped.get_group(('rudarskabalada', 'zagreb', '1948'))
             for column in group:
                 if column in ['fiction_type', '490', '500', '650', '655']:
                     group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
                 else:
-                    group[column] = group[column].dropna().astype(str).max()
+                    try:
+                        group[column] = max(group[column].dropna().astype(str), key=len)
+                    except ValueError:
+                        group[column] = np.nan
             df_oclc_deduplicated = df_oclc_deduplicated.append(group)
         
         df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
@@ -639,7 +721,10 @@ for name, test in tqdm(test_full, total=len(test_full)):
                         elif column in ['001', '245']:
                             pass
                         else:
-                            group[column] = group[column].dropna().astype(str).max()
+                            try:
+                                group[column] = max(group[column].dropna().astype(str), key=len)
+                            except ValueError:
+                                group[column] = np.nan
                     df = group[~group['245'].str.contains('\$n', regex=True)]
                     df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(df)
                 else:
@@ -653,9 +738,15 @@ for name, test in tqdm(test_full, total=len(test_full)):
                             field_245 = field_245[['001', '245']]
                             field_245['245'] = '10' + field_245['245']
                             group = pd.merge(group.drop(columns='245'), field_245, how='left', on='001')
-                            group[column] = group[column].dropna().astype(str).max()
+                            try:
+                                group[column] = max(group[column].dropna().astype(str), key=len)
+                            except ValueError:
+                                group[column] = np.nan
                         else:
-                            group[column] = group[column].dropna().astype(str).max()
+                            try:
+                                group[column] = max(group[column].dropna().astype(str), key=len)
+                            except ValueError:
+                                group[column] = np.nan
                     group = group.drop_duplicates().reset_index(drop=True)
                     df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(group)
                         
@@ -698,9 +789,15 @@ for name, test in tqdm(test_full, total=len(test_full)):
                         group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
                     elif column == '245':
                         group[column] = group[column][group[column].str.contains('$', regex=False)]
-                        group[column] = group[column].dropna().astype(str).max()
+                        try:
+                            group[column] = max(group[column].dropna().astype(str), key=len)
+                        except ValueError:
+                            group[column] = np.nan
                     else:
-                        group[column] = group[column].dropna().astype(str).max()
+                        try:
+                            group[column] = max(group[column].dropna().astype(str), key=len)
+                        except ValueError:
+                            group[column] = np.nan
                 df_oclc_deduplicated = df_oclc_deduplicated.append(group)
                 
             df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
@@ -819,6 +916,58 @@ for file_name in tqdm(file_names):
 # przykladowy_rekord = df_all_positive[df_all_positive['001'] == 561473178].squeeze()
     
 # przykladowy_rekord = df_people_clusters[df_people_clusters['001'] == 561473178].squeeze()  
+    
+    
+    
+#%%control vocabulary for translations    
+from langdetect import detect_langs
+from langdetect.lang_detect_exception import LangDetectException
+
+def detect_language(x):
+    try:
+        return detect_langs(x)
+    except LangDetectException:
+        return np.nan
+    
+translations = marc_parser_1_field(df_all_positive, '001', '700', '\$')
+translations = pd.merge(translations, df_all_positive[['001', 'language']], how='left', on='001')
+translation_roles_e = translations[translations['$e'] != ''][['$e', 'language']].drop_duplicates().reset_index(drop=True)
+translation_roles_e['index'] = translation_roles_e.index+1
+translation_roles_e = cSplit(translation_roles_e, 'index', '$e', '❦').drop(columns='index').drop_duplicates().rename(columns={'language':'target language'})
+translation_roles_e['language detected'] = translation_roles_e['$e'].apply(lambda x: detect_language(x))
+
+translation_roles_4 = translations[translations['$4'] != ''][['$4', 'language']].drop_duplicates().reset_index(drop=True)
+translation_roles_4['index'] = translation_roles_4.index+1
+translation_roles_4 = cSplit(translation_roles_4, 'index', '$4', '❦').drop(columns='index').drop_duplicates().rename(columns={'language':'target language'})
+
+writer = pd.ExcelWriter('translation_control_vocabulary.xlsx', engine = 'xlsxwriter')
+translation_roles_e.to_excel(writer, index=False, sheet_name='$e')
+translation_roles_4.to_excel(writer, index=False, sheet_name='$4')
+writer.save()
+writer.close()
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
