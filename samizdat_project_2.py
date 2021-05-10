@@ -20,6 +20,7 @@ import datetime
 from gspread_dataframe import set_with_dataframe, get_as_dataframe
 import copy
 import json
+import difflib
 
 #%% date
 now = datetime.datetime.now()
@@ -52,6 +53,216 @@ nodegoat_people_df = pd.concat([nodegoat_people_df[['Project_ID', 'Index_Name']]
 nodegoat_people_tuples = list(nodegoat_people_df.to_records(index=False))
 
 #%% harvestowanie viaf i wikidaty
+
+#odpytanie po tytułach NOWY POCZĄTEK - KROK NR 1
+start_time = time.time()
+tytuly_bn = [file['id'] for file in file_list if file['title'] == 'samizdat_kartoteka_osób'][0]
+tytuly_bn_sheet = gc.open_by_key(tytuly_bn)
+tytuly_bn_sheet.worksheets()
+
+tytuly_bn_df = get_as_dataframe(tytuly_bn_sheet.worksheet('bn_books'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+
+nodegoat_people_df_location = get_as_dataframe(nodegoat_people_sheet.worksheet('Arkusz1'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1).drop_duplicates()[['Project_ID', 'name_form_id']]
+
+nodegoat_people_df = nodegoat_people_df.merge(nodegoat_people_df_location, on='Project_ID', how='left')
+
+def marc_parser_dict_for_field(string, subfield_code):
+    subfield_list = re.findall(f'{subfield_code}.', string)
+    dictionary_field = {}
+    for subfield in subfield_list:
+        subfield_escape = re.escape(subfield)
+        string = re.sub(f'({subfield_escape})', r'❦\1', string)
+    for subfield in subfield_list:
+        subfield_escape = re.escape(subfield)
+        regex = f'(^)(.*?\❦{subfield_escape}|)(.*?)(\,{{0,1}})((\❦{subfield_code})(.*)|$)'
+        value = re.sub(regex, r'\3', string).strip()
+        dictionary_field[subfield] = value
+    return dictionary_field
+
+test = copy.deepcopy(nodegoat_people_df)
+# test = test[test['samizdatID'] != 53]
+test['odpytanie po tytułach'] = np.nan
+test['odpytanie po tytułach'] = test['odpytanie po tytułach'].astype(object)
+
+test = test.groupby('Project_ID')
+
+test = pd.concat(e[1] for e in list(test)[:100]).groupby('Project_ID')
+
+def catch(e):
+    try:
+        return '❦'.join([a['text'] for a in e['record']['recordData']['mainHeadings']['data']])
+    except (TypeError, KeyError):
+        return e['record']['recordData']['mainHeadings']['data']['text']
+    
+new_df = pd.DataFrame()
+for name, group in tqdm(test, total=len(test)):
+    # group = test.get_group(5)
+    testy = []
+    group = group.reset_index(drop=True)
+    for i, row in group.iterrows():
+        # i = 0
+        # row = group.iloc[i, :]
+        locations = row['name_form_id'].split('|')
+        list_of_suggested_viafs = []
+        for location in locations:
+            # location = locations[0]
+            location = location.split('-')
+            if location[0] == 'bn_books':
+                title = tytuly_bn_df[tytuly_bn_df['id'] == int(location[1])][200].reset_index(drop=True)[0]
+                title = marc_parser_dict_for_field(title, '\%')['%a']
+                try:
+                    url = f"https://viaf.org/viaf/search?query=cql.any%20all%20'{title}'&sortKeys=holdingscount&httpAccept=application/json"
+                    response = requests.get(url)
+                    response.encoding = 'UTF-8'
+                    samizdat_json = response.json()
+                    list_of_numbers_of_records = [e for e in range(int(samizdat_json['searchRetrieveResponse']['numberOfRecords']))[11::10] if e <= 100]
+                    samizdat_json = samizdat_json['searchRetrieveResponse']['records']
+                    for number in list_of_numbers_of_records:
+                        url = re.sub('\s+', '%20', f"https://viaf.org/viaf/search?query=cql.any%20all%20'{title}'&sortKeys=holdingscount&startRecord={number}&httpAccept=application/json")
+                        response = requests.get(url)
+                        response.encoding = 'UTF-8'
+                        samizdat_json_next = response.json()
+                        samizdat_json_next = samizdat_json_next['searchRetrieveResponse']['records']
+                        samizdat_json += samizdat_json_next 
+                except (ValueError, KeyError):
+                    try:
+                        url = f"http://www.viaf.org//viaf/search?query=cql.any+=+{title}&maximumRecords=1000&httpAccept=application/json"
+                        response = requests.get(url)
+                        response.encoding = 'UTF-8'
+                        samizdat_json = response.json()  
+                        list_of_numbers_of_records = [e for e in range(int(samizdat_json['searchRetrieveResponse']['numberOfRecords']))[11::10] if e <= 100]
+                        samizdat_json = samizdat_json['searchRetrieveResponse']['records']
+                        for number in list_of_numbers_of_records:
+                            url = re.sub('\s+', '%20', f"https://viaf.org/viaf/search?query=cql.any%20all%20'{title}'&sortKeys=holdingscount&startRecord={number}&httpAccept=application/json")
+                            response = requests.get(url)
+                            response.encoding = 'UTF-8'
+                            samizdat_json_next = response.json()
+                            samizdat_json_next = samizdat_json_next['searchRetrieveResponse']['records']
+                            samizdat_json += samizdat_json_next
+                    except (ValueError, KeyError):
+                       # pass
+                        break
+                    
+                samizdat_personal = [[catch(e), e['record']['recordData']['viafID']] for e in samizdat_json if e['record']['recordData']['nameType'] == 'Personal']
+                try:
+                    samizdat_json_title = [[e['record']['recordData']['titles']['author']['text'], e['record']['recordData']['titles']['author']['@id'].split('|')[-1]] for e in samizdat_json]
+                except KeyError:
+                    samizdat_json_title = []
+                
+                suggested_viafs = samizdat_personal + samizdat_json_title
+                
+            if len(suggested_viafs) > 0:
+                list_of_suggested_viafs.append(suggested_viafs)
+                # group['odpytanie po tytułach'] = '‽'.join(['|'.join(e) for e in suggested_viafs])
+                # break
+        if len(list_of_suggested_viafs) > 0:
+            yyy = [[a for a in e] for e in list_of_suggested_viafs]
+            yyy = [e for sub in yyy for e in sub]
+            testy.append(yyy)
+        testy2 = [e for s in testy for e in s]
+        testy2 = [list(x) for x in set(tuple(x) for x in testy2)]
+        group['odpytanie po tytułach'] = '‽'.join(['|'.join(e) for e in testy2]) 
+    new_df = new_df.append(group)            
+        
+#podobieństwo nazewnictwa dla tych samych tytułów - KROK NR 2
+new_df = new_df.reset_index(drop=True)
+new_df['sugestia po tytułach'] = np.nan
+new_df['sugestia po tytułach'] = new_df['sugestia po tytułach'].astype(object)   
+for i, row in tqdm(new_df.iterrows(), total=new_df.shape[0]):
+    if row['odpytanie po tytułach'] != '':
+        # i = 1
+        # row = new_df.iloc[i,:]
+        project_name = row['Index_Name']
+        slownik = {}
+        for el in row['odpytanie po tytułach'].split('‽'):
+            slownik[el.split('|')[-1]] = [{f"{e}|{el.split('|')[-1]}":0} for e in el.split('|')[0].split('❦')]
+        
+        for k, v in slownik.items():
+            for index, element in enumerate(v):
+                for name, similarity in element.items():
+                    only_name = name.split('|')[0]
+                    slownik[k][index][name] = difflib.SequenceMatcher(a=project_name, b=only_name).ratio()
+        df = [e for sub in list(slownik.values()) for e in sub]
+        df = [[[k.split('|')[0], k.split('|')[-1], v] for k,v in e.items()] for e in df]
+        df = [e for sub in df for e in sub]
+        value = max(df, key=lambda x: x[-1])
+        value = '|'.join(str(e) for e in value)
+        new_df.at[i, 'sugestia po tytułach'] = value
+
+#wyszukanie indentyfikatorów w wikidacie - KROK NR 3
+new_df = pd.read_excel("samizdat_osoby_2021-05-10_100_osob.xlsx", index=False)
+sparql = SPARQLWrapper("https://query.wikidata.org/sparql")    
+
+new_df['wikidata'] = np.nan
+new_df['wikidata'] = new_df['wikidata'].astype(object)   
+        
+for i, row in tqdm(new_df.iterrows(), total=new_df.shape[0]):
+    while True:
+        try:
+            viaf = row['sugestia po tytułach'].split('|')[1]
+            sparql_query = f"""PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+            SELECT distinct ?autor ?autorLabel ?birthplaceLabel ?deathplaceLabel ?birthdate ?deathdate ?sexLabel ?pseudonym ?occupationLabel WHERE {{ 
+              ?autor wdt:P214 "{viaf}" ;
+              optional {{ ?autor wdt:P19 ?birthplace . }}
+              optional {{ ?autor wdt:P569 ?birthdate . }}
+              optional {{ ?autor wdt:P570 ?deathdate . }}
+              optional {{ ?autor wdt:P20 ?deathplace . }}
+              optional {{ ?autor wdt:P21 ?sex . }}
+              optional {{ ?autor wdt:P106 ?occupation . }}
+              optional {{ ?autor wdt:P742 ?pseudonym . }}
+            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "pl". }}}}"""    
+            sparql.setQuery(sparql_query)
+            sparql.setReturnFormat(JSON)
+            results = sparql.query().convert()
+            results_df = pd.json_normalize(results['results']['bindings'])
+            columns = [e for e in results_df.columns.tolist() if 'value' in e]
+            results_df = results_df[results_df.columns.intersection(columns)]       
+            for column in results_df.drop(columns='autor.value'):
+                results_df[column] = results_df.groupby('autor.value')[column].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+            results_df = results_df.drop_duplicates().reset_index(drop=True)   
+            result = results_df.to_dict('records')
+            new_df.at[i, 'wikidata'] = result
+        except (KeyError, TypeError, AttributeError):
+            nodegoat_people_df.at[i, 'wikidata'] = np.nan
+        except (HTTPError, RemoteDisconnected) as error:
+            print(error)# time.sleep(61)
+            time.sleep(5)
+            continue
+        break
+new_df.to_excel(f"samizdat_osoby_{year}-{month}-{day}_100_osob.xlsx", index=False)
+print('Done')
+print("--- %s seconds ---" % (time.time() - start_time))
+
+#100 osób = 2h
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def catch(e):
        try:
            return e['record']['recordData']['mainHeadings']['data'][0]['text']
@@ -143,103 +354,30 @@ nodegoat_viaf_wikidata_df = nodegoat_viaf_wikidata_df[nodegoat_viaf_wikidata_df[
 nodegoat_people_df = nodegoat_people_df[~nodegoat_people_df['samizdatID'].isin(nodegoat_viaf_wikidata_df['samizdatID'])].drop(columns=['viaf id'])
 nodegoat_people_df = nodegoat_people_df[['samizdatID', 'samizdat_name', 'viaf', 'wikidata']]
 
-#odpytanie po tytułach NOWY POCZĄTEK - KROK NR 1
 
-tytuly_bn = [file['id'] for file in file_list if file['title'] == 'samizdat_kartoteka_osób'][0]
-tytuly_bn_sheet = gc.open_by_key(tytuly_bn)
-tytuly_bn_sheet.worksheets()
 
-tytuly_bn_df = get_as_dataframe(tytuly_bn_sheet.worksheet('bn_books'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
 
-nodegoat_people_df_location = get_as_dataframe(nodegoat_people_sheet.worksheet('Arkusz1'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1).drop_duplicates()[['Project_ID', 'name_form_id']]
+df = [e for e in df if max(e[-1])]
 
-nodegoat_people_df = nodegoat_people_df.merge(nodegoat_people_df_location, on='Project_ID', how='left')
+df = pd.DataFrame(df, columns=['name', 'viaf', 'similarity'])
 
-def marc_parser_dict_for_field(string, subfield_code):
-    subfield_list = re.findall(f'{subfield_code}.', string)
-    dictionary_field = {}
-    for subfield in subfield_list:
-        subfield_escape = re.escape(subfield)
-        string = re.sub(f'({subfield_escape})', r'❦\1', string)
-    for subfield in subfield_list:
-        subfield_escape = re.escape(subfield)
-        regex = f'(^)(.*?\❦{subfield_escape}|)(.*?)(\,{{0,1}})((\❦{subfield_code})(.*)|$)'
-        value = re.sub(regex, r'\3', string).strip()
-        dictionary_field[subfield] = value
-    return dictionary_field
+df = pd.concat([pd.DataFrame.from_dict(slownik[e], orient='index') for e in slownik])  
 
-test = copy.deepcopy(nodegoat_people_df)
-# test = test[test['samizdatID'] != 53]
-test['odpytanie po tytułach'] = np.nan
-test['odpytanie po tytułach'] = test['odpytanie po tytułach'].astype(object)
 
-test = test.groupby('Project_ID')
-new_df = pd.DataFrame()
-for name, group in tqdm(test, total=len(test)):
-    # group = test.get_group(4)
-    group = group.reset_index(drop=True)
-    for i, row in group.iterrows():
-        # i = 1
-        # row = group.iloc[i, :]
-        locations = row['name_form_id'].split('|')
-        for location in locations:
-            # location = locations[0]
-            location = location.split('-')
-            if location[0] == 'bn_books':
-                title = tytuly_bn_df[tytuly_bn_df['id'] == int(location[1])][200].reset_index(drop=True)[0]
-                title = marc_parser_dict_for_field(title, '\%')['%a']
-                try:
-                    url = f"https://viaf.org/viaf/search?query=cql.any%20all%20'{title}'&sortKeys=holdingscount&httpAccept=application/json"
-                    response = requests.get(url)
-                    response.encoding = 'UTF-8'
-                    samizdat_json = response.json()
-                    list_of_numbers_of_records = [e for e in range(int(samizdat_json['searchRetrieveResponse']['numberOfRecords']))[11::10] if e <= 100]
-                    samizdat_json = samizdat_json['searchRetrieveResponse']['records']
-                    for number in list_of_numbers_of_records:
-                        url = re.sub('\s+', '%20', f"https://viaf.org/viaf/search?query=cql.any%20all%20'{title}'&sortKeys=holdingscount&startRecord={number}&httpAccept=application/json")
-                        response = requests.get(url)
-                        response.encoding = 'UTF-8'
-                        samizdat_json_next = response.json()
-                        samizdat_json_next = samizdat_json_next['searchRetrieveResponse']['records']
-                        samizdat_json += samizdat_json_next 
-                except (ValueError, KeyError):
-                    try:
-                        url = f"http://www.viaf.org//viaf/search?query=cql.any+=+{title}&maximumRecords=1000&httpAccept=application/json"
-                        response = requests.get(url)
-                        response.encoding = 'UTF-8'
-                        samizdat_json = response.json()  
-                        list_of_numbers_of_records = [e for e in range(int(samizdat_json['searchRetrieveResponse']['numberOfRecords']))[11::10] if e <= 100]
-                        samizdat_json = samizdat_json['searchRetrieveResponse']['records']
-                        for number in list_of_numbers_of_records:
-                            url = re.sub('\s+', '%20', f"https://viaf.org/viaf/search?query=cql.any%20all%20'{title}'&sortKeys=holdingscount&startRecord={number}&httpAccept=application/json")
-                            response = requests.get(url)
-                            response.encoding = 'UTF-8'
-                            samizdat_json_next = response.json()
-                            samizdat_json_next = samizdat_json_next['searchRetrieveResponse']['records']
-                            samizdat_json += samizdat_json_next
-                    except (ValueError, KeyError):
-                        # pass
-                        break
-                    
-                samizdat_personal = [e['record']['recordData']['viafID'] for e in samizdat_json if e['record']['recordData']['nameType'] == 'Personal']
-                try:
-                    samizdat_json_title = [e['record']['recordData']['titles']['author']['@id'].split('|')[-1] for e in samizdat_json]
-                except KeyError:
-                    samizdat_json_title = []
+return '❦'.join([a['text'] for a in e['record']['recordData']['mainHeadings']['data']])        
                 
-                suggested_viafs = samizdat_personal + samizdat_json_title
-                
-            if len(suggested_viafs) > 0:
-                group['odpytanie po tytułach'] = '|'.join(suggested_viafs)
-                break
-        if len(suggested_viafs) > 0:
-            break   
-    new_df = new_df.append(group)            
-        
-        
-        
-        
-                
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -299,9 +437,11 @@ for name, group in tqdm(test, total=len(test)):
                             samizdat_json_next = samizdat_json_next['searchRetrieveResponse']['records']
                             samizdat_json += samizdat_json_next
                     except ValueError:
-                        break
+                        # break
+                        pass
                 except KeyError:
-                    break    
+                    # break  
+                    pass
                     #TUTAJ albo personal albo work
                 try:
                     samizdat_personal = [e['record']['recordData']['viafID'] for e in samizdat_json if e['record']['recordData']['nameType'] == 'Personal']
