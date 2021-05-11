@@ -21,6 +21,8 @@ from gspread_dataframe import set_with_dataframe, get_as_dataframe
 import copy
 import json
 import difflib
+from qwikidata.sparql  import return_sparql_query_results
+import requests
 
 #%% date
 now = datetime.datetime.now()
@@ -86,7 +88,7 @@ test['odpytanie po tytułach'] = test['odpytanie po tytułach'].astype(object)
 
 test = test.groupby('Project_ID')
 
-test = pd.concat(e[1] for e in list(test)[:100]).groupby('Project_ID')
+test = pd.concat(e[1] for e in list(test)[450:]).groupby('Project_ID')
 
 def catch(e):
     try:
@@ -146,7 +148,7 @@ for name, group in tqdm(test, total=len(test)):
                 samizdat_personal = [[catch(e), e['record']['recordData']['viafID']] for e in samizdat_json if e['record']['recordData']['nameType'] == 'Personal']
                 try:
                     samizdat_json_title = [[e['record']['recordData']['titles']['author']['text'], e['record']['recordData']['titles']['author']['@id'].split('|')[-1]] for e in samizdat_json]
-                except KeyError:
+                except (TypeError, KeyError):
                     samizdat_json_title = []
                 
                 suggested_viafs = samizdat_personal + samizdat_json_title
@@ -190,9 +192,8 @@ for i, row in tqdm(new_df.iterrows(), total=new_df.shape[0]):
         new_df.at[i, 'sugestia po tytułach'] = value
 
 #wyszukanie indentyfikatorów w wikidacie - KROK NR 3
-new_df = pd.read_excel("samizdat_osoby_2021-05-10_100_osob.xlsx", index=False)
-sparql = SPARQLWrapper("https://query.wikidata.org/sparql")    
 
+url = 'https://query.wikidata.org/sparql'
 new_df['wikidata'] = np.nan
 new_df['wikidata'] = new_df['wikidata'].astype(object)   
         
@@ -211,9 +212,8 @@ for i, row in tqdm(new_df.iterrows(), total=new_df.shape[0]):
               optional {{ ?autor wdt:P106 ?occupation . }}
               optional {{ ?autor wdt:P742 ?pseudonym . }}
             SERVICE wikibase:label {{ bd:serviceParam wikibase:language "pl". }}}}"""    
-            sparql.setQuery(sparql_query)
-            sparql.setReturnFormat(JSON)
-            results = sparql.query().convert()
+            results = requests.get(url, params = {'format': 'json', 'query': sparql_query})
+            results = results.json()
             results_df = pd.json_normalize(results['results']['bindings'])
             columns = [e for e in results_df.columns.tolist() if 'value' in e]
             results_df = results_df[results_df.columns.intersection(columns)]       
@@ -222,21 +222,20 @@ for i, row in tqdm(new_df.iterrows(), total=new_df.shape[0]):
             results_df = results_df.drop_duplicates().reset_index(drop=True)   
             result = results_df.to_dict('records')
             new_df.at[i, 'wikidata'] = result
-        except (KeyError, TypeError, AttributeError):
+            time.sleep(1)
+        except (AttributeError, KeyError, ValueError):
             nodegoat_people_df.at[i, 'wikidata'] = np.nan
+            time.sleep(1)
         except (HTTPError, RemoteDisconnected) as error:
             print(error)# time.sleep(61)
             time.sleep(5)
             continue
         break
-new_df.to_excel(f"samizdat_osoby_{year}-{month}-{day}_100_osob.xlsx", index=False)
+new_df.to_excel(f"samizdat_osoby_{year}-{month}-{day}.xlsx", index=False)
 print('Done')
 print("--- %s seconds ---" % (time.time() - start_time))
 
 #100 osób = 2h
-
-
-
 
 
 
