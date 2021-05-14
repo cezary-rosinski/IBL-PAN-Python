@@ -38,9 +38,9 @@ def marc_parser_dict_for_field(string, subfield_code):
 
 # 01 - wydobycie listy osób
 start_time = time.time()
-# file_path = 'bn_harvested_2021_05_12.mrc'
-# path_mrk = file_path.replace('.mrc', '.mrk')
-# mrc_to_mrk(file_path, path_mrk)
+file_path = 'bn_harvested_2021_05_12.mrc'
+path_mrk = file_path.replace('.mrc', '.mrk')
+mrc_to_mrk(file_path, path_mrk)
 path_mrk = 'bn_harvested_2021_05_12.mrk'
 
 encoding = 'utf-8'
