@@ -897,16 +897,68 @@ for file_name in tqdm(file_names):
 
 
 
+# alternatywne podejście - budowa kartoteki osobowej na podstawie indeksu poprawności
+fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
+list_of_records = []
+with open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
+#with open('C:/Users/User/Desktop/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
+    reader = csv.reader(csv_file, delimiter=',')
+    headers = next(reader)
+    position_008 = headers.index('008')
+    for row in reader:
+        if row[position_008][35:38] != 'cze':
+            list_of_records.append(row)
+            
+oclc_lang = pd.DataFrame(list_of_records, columns=headers)
+oclc_lang['language'] = oclc_lang['008'].apply(lambda x: x[35:38])
+oclc_viaf = pd.read_excel('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.xlsx')
+#oclc_viaf = pd.read_excel('C:/Users/User/Desktop/oclc_viaf.xlsx')
+oclc_viaf['language'] = oclc_viaf['008'].apply(lambda x: x[35:38])
+oclc_viaf = oclc_viaf[oclc_viaf['language'] != 'cze']
 
+oclc_other_languages = pd.concat([oclc_lang, oclc_viaf])
 
+oclc_other_languages['nature_of_contents'] = oclc_other_languages['008'].apply(lambda x: x[24:27])
+oclc_other_languages = oclc_other_languages[oclc_other_languages['nature_of_contents'].isin(['\\\\\\', '6\\\\', '\\6\\', '\\\\6'])]
+oclc_other_languages['type of record + bibliographic level'] = oclc_other_languages['LDR'].apply(lambda x: x[6:8])
+oclc_other_languages['fiction_type'] = oclc_other_languages['008'].apply(lambda x: x[33])
 
+df = oclc_other_languages[(oclc_other_languages['type of record + bibliographic level'] == 'am') &
+                          (oclc_other_languages['041'].str.contains('\$hcz')) &
+                          (oclc_other_languages['fiction_type'].isin(fiction_types))]
 
+def index_of_correctness(x):
+    full_index = 7
+    record_index = 0
+    if x['008'][35:38] != 'und':
+        record_index += 1
+    if pd.notnull(x['240']) and '$a' in x['240'] and any(e for e in ['$l', '$i'] if e in x['240']) and x['240'].count('$a') == 1 and '$k' not in x['240']:
+        record_index += 3
+    # elif pd.notnull(x['240']) and '$a' in x['240'] and x['240'].count('$a') == 1:
+    #     record_index += 1.5
+    if pd.notnull(x['245']) and all(e for e in ['$a', '$c'] if e in x['245']):
+        record_index += 1
+    elif pd.notnull(x['245']) and any(e for e in ['$a', '$c'] if e in x['245']): 
+        record_index += 0.5
+    if pd.notnull(x['260']) and all(e for e in ['$a', '$b', '$c'] if e in x['260']):
+        record_index += 1
+    elif pd.notnull(x['260']) and any(e for e in ['$a', '$b', '$c'] if e in x['260']):
+        record_index += 0.5
+    if pd.notnull(x['700']) and pd.notnull(x['700']):
+        record_index += 1
+    full_index = record_index/full_index
+    return full_index
 
+df['index of correctness'] = df.apply(lambda x: index_of_correctness(x), axis=1)
 
+correct = df[df['index of correctness'] > 0.7]
+not_correct = df[df['index of correctness'] <= 0.7]
 
-
-
-
+writer = pd.ExcelWriter('high-quality_index_whole_OCLC.xlsx', engine = 'xlsxwriter')
+correct.to_excel(writer, index=False, sheet_name='correct')
+not_correct.to_excel(writer, index=False, sheet_name='not_correct')
+writer.save()
+writer.close()
 
 
 

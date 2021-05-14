@@ -88,7 +88,7 @@ test['odpytanie po tytułach'] = test['odpytanie po tytułach'].astype(object)
 
 test = test.groupby('Project_ID')
 
-test = pd.concat(e[1] for e in list(test)[450:]).groupby('Project_ID')
+test = pd.concat(e[1] for e in list(test)[1197:]).groupby('Project_ID')
 
 def catch(e):
     try:
@@ -236,7 +236,7 @@ print('Done')
 print("--- %s seconds ---" % (time.time() - start_time))
 
 #100 osób = 2h
-
+#tutaj jest błąd, że osoby bez bn_books też coś dostają - ale to można usunąć na końcu
 
 
 
