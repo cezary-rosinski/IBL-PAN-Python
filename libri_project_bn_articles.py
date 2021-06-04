@@ -1,7 +1,7 @@
 #%% import
 import pandas as pd
 import numpy as np
-from my_functions import marc_parser_1_field, cSplit, df_to_mrc, gsheet_to_df, mrc_to_mrk, f
+from my_functions import marc_parser_1_field, cSplit, df_to_mrc, gsheet_to_df, mrc_to_mrk
 import pandasql
 import json
 import requests
@@ -14,7 +14,19 @@ from json.decoder import JSONDecodeError
 from urllib.parse import urlparse
 import datetime
 import ast
+from SPUB_importer_read_data import read_MARC21
+from tqdm import tqdm
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+import gspread as gs
+from google_drive_research_folders import PBL_folder
+from gspread_dataframe import get_as_dataframe, set_with_dataframe
 
+#%% date
+now = datetime.datetime.now()
+year = now.year
+month = '{:02}'.format(now.month)
+day = '{:02}'.format(now.day)
 
 #%% def
 
@@ -70,7 +82,7 @@ def rodzaj_zapisu(x):
 #%%mode
 #with people OR without people
 # preferable = without people
-mode = input('Enter the mode: ')
+# mode = input('Enter the mode: ')
 
 #%% download of the list of journals
 # trzeba zwrócić uwagę, czy po 25.01.2021 nie były przeprowadzane update'y mapowania czasopism między PBL i BN
@@ -84,35 +96,67 @@ for sheet in bn_magazines_spreadsheets:
 
 bn_magazines = bn_magazines[bn_magazines['decyzja'] == 'tak']['bn_magazine'].tolist()
 
+#%% google authentication & google drive
+#autoryzacja do tworzenia i edycji plików
+gc = gs.oauth()
+#autoryzacja do penetrowania dysku
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()
+drive = GoogleDrive(gauth)
+
+file_list = drive.ListFile({'q': f"'{PBL_folder}' in parents and trashed=false"}).GetList() 
+file_list = drive.ListFile({'q': "'0B0l0pB6Tt9olWlJVcDFZQ010R0E' in parents and trashed=false"}).GetList()
+file_list = drive.ListFile({'q': "'1tPr_Ly9Lf0ZwgRQjj_iNVt-T15FSWbId' in parents and trashed=false"}).GetList()
+file_list = drive.ListFile({'q': "'1xzqGIfZllmXXTh2dJABeHbRPFAM34nbw' in parents and trashed=false"}).GetList()
+#[print(e['title'], e['id']) for e in file_list]
+mapping_files_655 = [file['id'] for file in file_list if file['title'] == 'mapowanie BN-Oracle - 655'][0]
+mapping_files_650 = [file['id'] for file in file_list if file['title'].startswith('mapowanie BN-Oracle') if file['id'] != mapping_files_655]
+
+#%% deskryptory do harvestowania BN
+#lista deskryptorów do wzięcia - wąska (z selekcji Karoliny)
+deskryptory_do_filtrowania = [file['id'] for file in file_list if file['title'] == 'deskryptory_do_filtrowania'][0]
+deskryptory_do_filtrowania = gc.open_by_key(deskryptory_do_filtrowania)
+deskryptory_do_filtrowania = get_as_dataframe(deskryptory_do_filtrowania.worksheet('deskryptory_do_filtrowania'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+BN_descriptors = deskryptory_do_filtrowania[deskryptory_do_filtrowania['deskryptor do filtrowania'] == 'tak']['deskryptory'].to_list()
+def uproszczenie_nazw(x):
+    try:
+        if x.index('$') == 0:
+            return x[2:]
+        elif x.index('$') == 1:
+            return x[4:]
+    except ValueError:
+        return x
+BN_descriptors = list(set([e.strip() for e in BN_descriptors]))
+BN_descriptors2 = list(set(uproszczenie_nazw(e) for e in BN_descriptors))
+roznica = list(set(BN_descriptors2) - set(BN_descriptors))
+BN_descriptors.extend(roznica)
+
 #%% BN data extraction
 
-path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/2021-02-08/'
-#path = 'C:/Users/User/Documents/bn_all/'
+path = 'F:/Cezary/Documents/IBL/BN/bn_all/2021-02-08/'
 files = [file for file in glob.glob(path + '*.mrk', recursive=True)]
-
+years = range(2004,2022)
 encoding = 'utf-8'
 new_list = []
-for i, file_path in enumerate(files):
-    print(f"{i+1}/{len(files)}")
-    marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
-
-    mrk_list = []
-    for row in marc_list:
-        if row.startswith('=LDR'):
-            mrk_list.append([row])
-        else:
-            if row:
-                mrk_list[-1].append(row)
+for file_path in tqdm(files):
+    mrk_list = read_MARC21(file_path)
                 
     for sublist in mrk_list:
         try:
-            year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
-            if year in range(2004,2021):
+            year_biblio = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
+            if year_biblio in years:
+                score1, score2 = 0, 0
                 for el in sublist:
                     if el.startswith('=773'):
                         val = re.search('(\$t)(.+?)(\$|$)', el).group(2)
                         if val in bn_magazines:
-                            new_list.append(sublist)
+                            score1 += 1
+                    if el.startswith('=650') or el.startswith('=655'):
+                        el = re.sub('\$y.*', '', el[10:]).replace('$2DBN', '').strip()
+                        if any(desc == el for desc in BN_descriptors):
+                            score2 +=1
+                if score1 > 0 and score2 > 0:
+                    new_list.append(sublist)
         except (ValueError, AttributeError):
             pass
 
@@ -132,6 +176,72 @@ fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
 marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
 fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 marc_df = marc_df.reindex(columns=fields)
+
+marc_df.to_excel(f'bn_harvested_articles_{year}_{month}_{day}.xlsx', index=False)
+
+df_to_mrc(marc_df, '❦', f'marc_df_articles_{year}_{month}_{day}.mrc', f'marc_df_articles_errors_{year}_{month}_{day}.txt')
+
+#%% porównanie zasobów
+nowe = read_MARC21('marc_df_articles_2021_05_25.mrk')
+nowe_id = [[f[6:] for f in e if f.startswith('=001')] for e in nowe]
+nowe_id = [e for sub in nowe_id for e in sub]
+stare = read_MARC21('F:/Cezary/Documents/IBL/Libri/Iteracja 2021-02/libri_marc_bn_articles_2021-2-9.mrk')
+stare_id = [[f[6:] for f in e if f.startswith('=001')] for e in stare]
+stare_id = [e for sub in stare_id for e in sub]
+
+bylo_a_nie_ma = list(set(stare_id) - set(nowe_id))
+final_list = []
+for lista in stare:
+    slownik = {}
+    for el in lista:
+        if el[1:4] in slownik:
+            slownik[el[1:4]] += f"❦{el[6:]}"
+        else:
+            slownik[el[1:4]] = el[6:]
+    final_list.append(slownik)
+bylo_a_nie_ma_df = pd.DataFrame(final_list).drop_duplicates().reset_index(drop=True)
+bylo_a_nie_ma_df = bylo_a_nie_ma_df[bylo_a_nie_ma_df['001'].isin(bylo_a_nie_ma)][['001', '245', '650', '655', '773']]
+
+test = [e.split('❦') for e in bylo_a_nie_ma_df['650'] if pd.notnull(e)]
+test = list(set([e for sub in test for e in sub]))
+test = pd.DataFrame(test)
+test.to_excel('test.xlsx', index=False)
+        
+
+
+jest_a_nie_bylo = list(set(nowe_id) - set(stare_id))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #%% PBL SQL connection
 

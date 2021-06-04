@@ -64,9 +64,9 @@ def rosinski_hubar_index(x):
     
 df['rosinski-hubar index'] = df.apply(lambda x: rosinski_hubar_index(x), axis=1)
 
-# df.to_excel('running.xlsx', index=False)
+df.to_excel('running.xlsx', index=False)
 
-fig = df.groupby('date').sum()['rosinski-hubar index'].plot(figsize = (40,10), title='running', legend=True, grid=True).get_figure()
+fig = df.groupby('date').sum()['rosinski-hubar index'].plot(figsize = (40,10), title='running', legend=True, grid=True, lw=4).get_figure()
 fig.savefig('running.jpg')
 
 

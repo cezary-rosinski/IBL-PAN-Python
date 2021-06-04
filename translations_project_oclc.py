@@ -17,6 +17,8 @@ import sys
 import csv
 from tqdm import tqdm
 import json
+import xml.etree.ElementTree as et
+import requests
 
 now = datetime.datetime.now()
 year = now.year
@@ -67,30 +69,61 @@ oclc_other_languages['fiction_type'] = oclc_other_languages['008'].apply(lambda 
 
 cz_authority_df = get_as_dataframe(cz_authority_spreadsheet.worksheet('Sheet1'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
 
-viaf_positives = cz_authority_df['viaf_positive'].drop_duplicates().dropna().to_list()
+# tutaj wąsko
+# viaf_positives = cz_authority_df['viaf_positive'].drop_duplicates().dropna().to_list()
+# viaf_positives = cz_authority_df['viaf_positive'].drop_duplicates().dropna().to_list()
+# viaf_positives = [f"http://viaf.org/viaf/{l}" for l in viaf_positives if l]
+
+# positive_viafs_names = cz_authority_df[cz_authority_df['viaf_positive'].notnull()][['viaf_positive', 'all_names']]
+# positive_viafs_names = cSplit(positive_viafs_names, 'viaf_positive', 'all_names', '❦')
+# positive_viafs_names['all_names'] = positive_viafs_names['all_names'].apply(lambda x: re.sub('(.*?)(\$a.*?)(\$0.*$)', r'\2', x) if pd.notnull(x) else np.nan)
+# positive_viafs_names = positive_viafs_names[positive_viafs_names['all_names'].notnull()].drop_duplicates()
+
+# positive_viafs_diacritics = cz_authority_df[cz_authority_df['viaf_positive'].notnull()][['viaf_positive', 'cz_name']]
+# positive_viafs_diacritics['cz_name'] = positive_viafs_diacritics['cz_name'].apply(lambda x: unidecode.unidecode(x))
+
+# viaf_positives_dict = {}
+# for element in viaf_positives:
+#     viaf_positives_dict[re.findall('\d+', element)[0]] = {'viaf id':element}
+# for i, row in positive_viafs_names.iterrows():
+#     if 'form of name' in viaf_positives_dict[row['viaf_positive']]:
+#         viaf_positives_dict[row['viaf_positive']]['form of name'].append(row['all_names'])
+#     else:
+#         viaf_positives_dict[row['viaf_positive']].update({'form of name':[row['all_names']]})
+# for i, row in positive_viafs_diacritics.iterrows():
+#     if 'unidecode name' in viaf_positives_dict[row['viaf_positive']]:
+#         viaf_positives_dict[row['viaf_positive']]['unidecode name'].append(row['cz_name'])
+#     else:
+#         viaf_positives_dict[row['viaf_positive']].update({'unidecode name':[row['cz_name']]})
+        
+# viaf_positives_dict = dict(sorted(viaf_positives_dict.items(), key = lambda item : len(item[1]['unidecode name']), reverse=True))
+
+#tutaj szeroko
+viaf_positives = cz_authority_df['viaf_id'].drop_duplicates().dropna().to_list()
+viaf_positives = cz_authority_df['viaf_id'].drop_duplicates().dropna().to_list()
 viaf_positives = [f"http://viaf.org/viaf/{l}" for l in viaf_positives if l]
 
-positive_viafs_names = cz_authority_df[cz_authority_df['viaf_positive'].notnull()][['viaf_positive', 'all_names']]
-positive_viafs_names = cSplit(positive_viafs_names, 'viaf_positive', 'all_names', '❦')
+positive_viafs_names = cz_authority_df[cz_authority_df['viaf_id'].notnull()][['viaf_id', 'all_names']]
+positive_viafs_names = cSplit(positive_viafs_names, 'viaf_id', 'all_names', '❦')
 positive_viafs_names['all_names'] = positive_viafs_names['all_names'].apply(lambda x: re.sub('(.*?)(\$a.*?)(\$0.*$)', r'\2', x) if pd.notnull(x) else np.nan)
 positive_viafs_names = positive_viafs_names[positive_viafs_names['all_names'].notnull()].drop_duplicates()
 
-positive_viafs_diacritics = cz_authority_df[cz_authority_df['viaf_positive'].notnull()][['viaf_positive', 'cz_name']]
+positive_viafs_diacritics = cz_authority_df[cz_authority_df['viaf_id'].notnull()][['viaf_id', 'cz_name']]
 positive_viafs_diacritics['cz_name'] = positive_viafs_diacritics['cz_name'].apply(lambda x: unidecode.unidecode(x))
 
 viaf_positives_dict = {}
 for element in viaf_positives:
     viaf_positives_dict[re.findall('\d+', element)[0]] = {'viaf id':element}
 for i, row in positive_viafs_names.iterrows():
-    if 'form of name' in viaf_positives_dict[row['viaf_positive']]:
-        viaf_positives_dict[row['viaf_positive']]['form of name'].append(row['all_names'])
+    if 'form of name' in viaf_positives_dict[row['viaf_id']]:
+        viaf_positives_dict[row['viaf_id']]['form of name'].append(row['all_names'])
     else:
-        viaf_positives_dict[row['viaf_positive']].update({'form of name':[row['all_names']]})
+        viaf_positives_dict[row['viaf_id']].update({'form of name':[row['all_names']]})
 for i, row in positive_viafs_diacritics.iterrows():
-    if 'unidecode name' in viaf_positives_dict[row['viaf_positive']]:
-        viaf_positives_dict[row['viaf_positive']]['unidecode name'].append(row['cz_name'])
+    if 'unidecode name' in viaf_positives_dict[row['viaf_id']]:
+        viaf_positives_dict[row['viaf_id']]['unidecode name'].append(row['cz_name'])
     else:
-        viaf_positives_dict[row['viaf_positive']].update({'unidecode name':[row['cz_name']]})
+        viaf_positives_dict[row['viaf_id']].update({'unidecode name':[row['cz_name']]})
         
 viaf_positives_dict = dict(sorted(viaf_positives_dict.items(), key = lambda item : len(item[1]['unidecode name']), reverse=True))
 
@@ -433,14 +466,17 @@ for language in languages:
         
         
 #%% clusters for original titles        
-fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
+# fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
 
 df = oclc_other_languages.copy()
 df_language_materials_monographs = df[df['type of record + bibliographic level'] == 'am']
 negative = df_language_materials_monographs.copy()
 df_other_types = df[~df['001'].isin(df_language_materials_monographs['001'])]
-df_first_positive = df_language_materials_monographs[(df_language_materials_monographs['041'].str.contains('\$hcz')) &
-                                                     (df_language_materials_monographs['fiction_type'].isin(fiction_types))]
+# df_first_positive = df_language_materials_monographs[(df_language_materials_monographs['041'].str.contains('\$hcz')) &
+#                                                      (df_language_materials_monographs['fiction_type'].isin(fiction_types))]
+
+df_first_positive = df_language_materials_monographs[df_language_materials_monographs['041'].str.contains('\$hcz', na=False)]
+
 negative = negative[~negative['001'].isin(df_first_positive['001'])]
 df_second_positive = marc_parser_1_field(negative, '001', '100', '\$')[['001', '$1']]
 df_second_positive = df_second_positive[df_second_positive['$1'].isin(viaf_positives)]
@@ -461,7 +497,7 @@ df_all_positive['260'] = df_all_positive[['260', '264']].apply(lambda x: x['260'
 df_all_positive['240'] = df_all_positive[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)
 df_all_positive['100_unidecode'] = df_all_positive['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
 
-#df_all_positive.to_excel('oclc_all_positive.xlsx', index=False)
+df_all_positive.to_excel('oclc_all_positive.xlsx', index=False)
 
 df_all_positive = pd.read_excel('oclc_all_positive.xlsx').reset_index(drop=True)
 
@@ -500,9 +536,9 @@ df_oclc_people['001'] = df_oclc_people['001'].astype(int)
 people_clusters = viaf_positives_dict.copy()
 
 # Hrabal, Hasek, Capek, Majerova selection
-selection = ['34458072', '4931097', '34454129', '52272']
-# selection = ['52272']
-people_clusters = {key: people_clusters[key] for key in selection}
+# selection = ['34458072', '4931097', '34454129', '52272']
+# # selection = ['52272']
+# people_clusters = {key: people_clusters[key] for key in selection}
 
 for key in tqdm(people_clusters, total=len(people_clusters)):
     viaf_id = people_clusters[key]['viaf id']
@@ -531,7 +567,8 @@ for key in people_clusters:
 df_people_clusters = pd.DataFrame.from_dict(people_clusters_records, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster_viaf', 0:'001'})
 df_people_clusters['001'] = df_people_clusters['001'].astype('int64')
 df_all_positive['001'] = df_all_positive['001'].astype('int64')
-df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns=['all_names', 'cz_name', 'viaf_positive']).drop_duplicates().reset_index(drop=True)
+# df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns=['all_names', 'cz_name', 'viaf_positive']).drop_duplicates().reset_index(drop=True)
+df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns=['all_names', 'cz_name']).drop_duplicates().reset_index(drop=True)
 
 multiple_clusters = df_people_clusters['001'].value_counts().reset_index()
 multiple_clusters = multiple_clusters[multiple_clusters['001'] > 1]['index'].to_list()
@@ -573,7 +610,7 @@ df_with_original_titles = pd.merge(df_people_clusters, df_original_titles_simple
 
 correct = df_with_original_titles[df_with_original_titles['index of correctness'] > 0.7]
 not_correct = df_with_original_titles[df_with_original_titles['index of correctness'] <= 0.7]
-writer = pd.ExcelWriter('4_writers.xlsx', engine = 'xlsxwriter')
+writer = pd.ExcelWriter('all_data_correctness.xlsx', engine = 'xlsxwriter')
 correct.to_excel(writer, index=False, sheet_name='correct')
 not_correct.to_excel(writer, index=False, sheet_name='not_correct')
 writer.save()
@@ -999,17 +1036,76 @@ writer.save()
 writer.close()
 
 
+#%% dodanie osób
+     
+cz_authority_spreadsheet = gc.open_by_key('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA')  
+cz_authority_df = get_as_dataframe(cz_authority_spreadsheet.worksheet('Sheet1'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)    
+cz_authority_viaf = cz_authority_df['viaf_id'].dropna().drop_duplicates().to_list()
     
+df = pd.read_excel('C:/Users/Cezary/Downloads/high-quality_index_whole_OCLC.xlsx', sheet_name = ['correct', 'not_correct'])   
+df = pd.concat([df['correct'], df['not_correct']]) 
+viaf_100 = marc_parser_1_field(df, '001', '100', '\$')['$1'].drop_duplicates().to_list()
+viaf_100 = [re.findall('\d+', e)[0] for e in viaf_100 if e != ''] 
     
+missing_people_to_add = [e for e in viaf_100 if e not in cz_authority_viaf] 
+
+ns = '{http://viaf.org/viaf/terms#}'
+viaf_list = []
+for element in tqdm(missing_people_to_add):
+    empty_dict = {}
+    url = f"https://viaf.org/viaf/{element}/viaf.xml"
+    response = requests.get(url)
+    with open('viaf.xml', 'wb') as file:
+        file.write(response.content)
+    tree = et.parse('viaf.xml')
+    root = tree.getroot()
+    empty_dict['viaf_id'] = root.findall(f'.//{ns}viafID')[0].text
+    IDs = root.findall(f'.//{ns}mainHeadings/{ns}data/{ns}sources/{ns}sid')
+    empty_dict['IDs'] = '❦'.join([t.text for t in IDs])
+    nationality = root.findall(f'.//{ns}nationalityOfEntity/{ns}data/{ns}text')
+    empty_dict['nationality'] = '❦'.join([t.text for t in nationality])
+    occupation = root.findall(f'.//{ns}occupation/{ns}data/{ns}text')
+    empty_dict['occupation'] = '❦'.join([t.text for t in occupation])
+    language = root.findall(f'.//{ns}languageOfEntity/{ns}data/{ns}text')
+    empty_dict['language'] = '❦'.join([t.text for t in language])
+    names = root.findall(f'.//{ns}mainHeadings/{ns}data/{ns}text')
+    empty_dict['names'] = '❦'.join([t.text for t in names])
+    viaf_list.append(empty_dict)
     
-    
-    
-    
-    
-    
-    
-    
-    
+with open('missing_people_to_add.json', 'w', encoding='utf-8') as file: 
+            json.dump(viaf_list, file, ensure_ascii=False, indent=4)    
+ 
+
+unused_people = [e for e in cz_authority_viaf if e not in viaf_100] 
+unused_people_df = pd.DataFrame(unused_people)
+unused_people_df.to_excel('unused_people.xlsx', index=False)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
     
     

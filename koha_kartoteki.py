@@ -15,6 +15,12 @@ import datetime
 import ast
 import itertools
 from tqdm import tqdm
+import cx_Oracle
+
+# SQL connection
+
+dsn_tns = cx_Oracle.makedsn('pbl.ibl.poznan.pl', '1521', service_name='xe')
+connection = cx_Oracle.connect(user='IBL_SELECT', password='CR333444', dsn=dsn_tns, encoding='windows-1250')
 
 #%% kartoteka osobowa
 folder_path = 'F:/Cezary/Documents/IBL/Libri/Iteracja 2021-02/'
@@ -149,6 +155,29 @@ x773['667'] = '\\\\$aŹródło'
 x773['LDR'] = '-----nz--a22-----n--4500'
 # ogarnąć temat czasopism jako tematów, bo na ten moment w danych libri nie ma informacji o odwołaniach z bazy Oracle
 #inne = pd.DataFrame([e[6:] for e in new_list if not e.startswith('=773')], columns=['journal title'])
+
+#odwołania z ORACLE'a
+
+pbl_journals_query = """select ZA_TYTUL
+                    from IBL_OWNER.pbl_zapisy z
+                    where (z.za_rz_rodzaj1_id = 641 or z.za_rz_rodzaj2_id = 641)
+                    and (z.ZA_DZ_DZIAL1_ID in (1643, 1644, 1645, 1646, 3183) or z.ZA_DZ_DZIAL2_ID in (1643, 1644, 1645, 1646, 3183))"""                
+
+pbl_journals = pd.read_sql(pbl_journals_query, con=connection).fillna(value = np.nan)
+pbl_journals['tytuł'] = pbl_journals['ZA_TYTUL'].apply(lambda x: re.findall('(.*?)(?=\(|$)', x)[0].strip())
+def get_place(x):
+    try:
+        return re.findall('(?<=\()(.*?)(?=\d|\))', x)[0].strip()
+    except IndexError:
+        pass
+pbl_journals['miejsce_wydania'] = pbl_journals['ZA_TYTUL'].apply(lambda x: get_place(x))
+pbl_journals['miejsce_wydania'] = pbl_journals['miejsce_wydania'].apply(lambda x: re.sub(', od| od|,od', '', ', '.join([e.strip() for e in x.split(',', x.count(',')) if e])) if x else None)
+#	ZA_TYTUL	tytuł	miejsce_wydania
+# 802	Er(r)go (Katowice 2000 - )	Er	r
+
+pbl_journals['lata_wydania']
+
+', '.join([e.strip() for e in 'Piekary, Bytom,'.split(',', 'Piekary, Bytom,'.count(',')) if e])
 
 df_to_mrc(x773, '❦', 'koha_kartoteka_wzorcowa_czasopism.mrc', 'koha_kartoteka_wzorcowa_czasopism_bledy.txt')
 

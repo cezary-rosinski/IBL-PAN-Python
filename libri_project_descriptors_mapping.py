@@ -109,7 +109,7 @@ BN_descriptors.extend(roznica)
 #zakres lat 
 years = range(2013,2020)
    
-path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/2021-02-08/'
+path = 'F:/Cezary/Documents/IBL/BN/bn_all/2021-02-08/'
 files = [file for file in glob.glob(path + '*.mrk', recursive=True)]
 
 encoding = 'utf-8'
