@@ -19,6 +19,10 @@ from tqdm import tqdm
 import json
 import xml.etree.ElementTree as et
 import requests
+from collections import Counter
+import warnings
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 now = datetime.datetime.now()
 year = now.year
@@ -31,6 +35,56 @@ gc = gs.oauth()
 gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
+
+#%% def
+def replace_viaf_group(df):
+    viaf_groups = {'256578118':'118529174', '83955898':'25095273', '2299152636076120051534':'11196637'}
+    df['viaf_id'] = df['viaf_id'].replace(viaf_groups)
+    return df
+
+def index_of_correctness(x):
+    full_index = 7
+    record_index = 0
+    if x['008'][35:38] != 'und':
+        record_index += 1
+    if pd.notnull(x['240']) and '$a' in x['240'] and any(e for e in ['$l', '$i'] if e in x['240']) and x['240'].count('$a') == 1 and '$k' not in x['240']:
+        record_index += 3
+    # elif pd.notnull(x['240']) and '$a' in x['240'] and x['240'].count('$a') == 1:
+    #     record_index += 1.5
+    if pd.notnull(x['245']) and all(e for e in ['$a', '$c'] if e in x['245']):
+        record_index += 1
+    elif pd.notnull(x['245']) and any(e for e in ['$a', '$c'] if e in x['245']): 
+        record_index += 0.5
+    if pd.notnull(x['260']) and all(e for e in ['$a', '$b', '$c'] if e in x['260']):
+        record_index += 1
+    elif pd.notnull(x['260']) and any(e for e in ['$a', '$b', '$c'] if e in x['260']):
+        record_index += 0.5
+    if pd.notnull(x['700']) and pd.notnull(x['700']):
+        record_index += 1
+    full_index = record_index/full_index
+    return full_index
+
+def genre(df):
+    genres_dict = {'0':'nonfiction','e':'nonfiction', 'f':'fiction' ,'1':'fiction' ,'h':'fiction' ,'j':'fiction', 'd':'drama','p':'poetry'}
+    df['cluster_genre'] = df['fiction_type'].replace(genres_dict)
+    df.loc[~df["cluster_genre"].isin(list(genres_dict.values())), "cluster_genre"] = "other"
+    return df
+
+def genre_algorithm(df):
+    length = len(df['cluster_genre'])
+    x = Counter(df['cluster_genre'])
+    if x['nonfiction']/length > 0.8:
+        return 'nonfiction'
+    elif x['drama']/length > 0.1:
+        return 'drama'
+    elif x['poetry']/length > 0.1:
+        return 'poetry'
+    else:
+        return 'fiction'
+    
+def longest_string(s):
+    return max(s, key=len)
+
 #%% google drive
 file_list = drive.ListFile({'q': f"'{cr_projects}' in parents and trashed=false"}).GetList() 
 #[print(e['title'], e['id']) for e in file_list]
@@ -68,6 +122,7 @@ oclc_other_languages['type of record + bibliographic level'] = oclc_other_langua
 oclc_other_languages['fiction_type'] = oclc_other_languages['008'].apply(lambda x: x[33])
 
 cz_authority_df = get_as_dataframe(cz_authority_spreadsheet.worksheet('Sheet1'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+cz_authority_df = cz_authority_df[cz_authority_df['used in OCLC'] == True]
 
 # tutaj wąsko
 # viaf_positives = cz_authority_df['viaf_positive'].drop_duplicates().dropna().to_list()
@@ -99,20 +154,23 @@ cz_authority_df = get_as_dataframe(cz_authority_spreadsheet.worksheet('Sheet1'),
 # viaf_positives_dict = dict(sorted(viaf_positives_dict.items(), key = lambda item : len(item[1]['unidecode name']), reverse=True))
 
 #tutaj szeroko
-viaf_positives = cz_authority_df['viaf_id'].drop_duplicates().dropna().to_list()
-viaf_positives = cz_authority_df['viaf_id'].drop_duplicates().dropna().to_list()
-viaf_positives = [f"http://viaf.org/viaf/{l}" for l in viaf_positives if l]
+viaf_positives = [e.split('|') for e in cz_authority_df['viaf_id'].drop_duplicates().dropna().to_list()]
+viaf_positives = [e for sub in viaf_positives for e in sub]
 
 positive_viafs_names = cz_authority_df[cz_authority_df['viaf_id'].notnull()][['viaf_id', 'all_names']]
 positive_viafs_names = cSplit(positive_viafs_names, 'viaf_id', 'all_names', '❦')
 positive_viafs_names['all_names'] = positive_viafs_names['all_names'].apply(lambda x: re.sub('(.*?)(\$a.*?)(\$0.*$)', r'\2', x) if pd.notnull(x) else np.nan)
 positive_viafs_names = positive_viafs_names[positive_viafs_names['all_names'].notnull()].drop_duplicates()
+positive_viafs_names['index'] = positive_viafs_names.index+1
+positive_viafs_names = cSplit(positive_viafs_names, 'index', 'viaf_id', '|').drop(columns='index')
 
 positive_viafs_diacritics = cz_authority_df[cz_authority_df['viaf_id'].notnull()][['viaf_id', 'cz_name']]
 positive_viafs_diacritics['cz_name'] = positive_viafs_diacritics['cz_name'].apply(lambda x: unidecode.unidecode(x))
+positive_viafs_diacritics['index'] = positive_viafs_diacritics.index+1
+positive_viafs_diacritics = cSplit(positive_viafs_diacritics, 'index', 'viaf_id', '|').drop(columns='index')
 
 viaf_positives_dict = {}
-for element in viaf_positives:
+for element in tqdm(viaf_positives, total = len(viaf_positives)):
     viaf_positives_dict[re.findall('\d+', element)[0]] = {'viaf id':element}
 for i, row in positive_viafs_names.iterrows():
     if 'form of name' in viaf_positives_dict[row['viaf_id']]:
@@ -132,7 +190,432 @@ viaf_positives_dict = dict(sorted(viaf_positives_dict.items(), key = lambda item
 
 # oclc_other_languages['language'].drop_duplicates().sort_values().to_list()
 
-#%% de-duplication
+#%% clusters for original titles        
+# fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
+
+df = oclc_other_languages.copy()
+df_language_materials_monographs = df[df['type of record + bibliographic level'] == 'am']
+negative = df_language_materials_monographs.copy()
+df_other_types = df[~df['001'].isin(df_language_materials_monographs['001'])]
+# df_first_positive = df_language_materials_monographs[(df_language_materials_monographs['041'].str.contains('\$hcz')) &
+#                                                      (df_language_materials_monographs['fiction_type'].isin(fiction_types))]
+
+df_first_positive = df_language_materials_monographs[df_language_materials_monographs['041'].str.contains('\$hcz', na=False)]
+
+negative = negative[~negative['001'].isin(df_first_positive['001'])]
+df_second_positive = marc_parser_1_field(negative, '001', '100', '\$')[['001', '$1']]
+df_second_positive = df_second_positive[df_second_positive['$1'].isin(viaf_positives)]
+df_second_positive = negative[negative['001'].isin(df_second_positive['001'])]
+
+negative = negative[~negative['001'].isin(df_second_positive['001'])].reset_index(drop=True)
+df_third_positive = "select * from negative a join positive_viafs_names b on a.'100' like '%'||b.all_names||'%'"
+df_third_positive = pandasql.sqldf(df_third_positive)
+
+negative = negative[~negative['001'].isin(df_third_positive['001'])].reset_index(drop=True)
+df_fourth_positive = "select * from negative a join positive_viafs_diacritics b on a.'100' like '%'||b.cz_name||'%'"
+df_fourth_positive = pandasql.sqldf(df_fourth_positive)
+
+negative = negative[~negative['001'].isin(df_fourth_positive['001'])].reset_index(drop=True)
+df_all_positive = pd.concat([df_first_positive, df_second_positive, df_third_positive, df_fourth_positive])
+
+df_all_positive['260'] = df_all_positive[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
+df_all_positive['240'] = df_all_positive[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)
+df_all_positive['100_unidecode'] = df_all_positive['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
+
+df_all_positive.to_excel('oclc_all_positive.xlsx', index=False)
+
+# df_all_positive = pd.read_excel('oclc_all_positive.xlsx').reset_index(drop=True)
+
+df_all_positive = replace_viaf_group(df_all_positive)
+
+#index of correctness
+    
+df_all_positive['index of correctness'] = df_all_positive.apply(lambda x: index_of_correctness(x), axis=1)
+    
+df_oclc_people = marc_parser_1_field(df_all_positive, '001', '100_unidecode', '\\$')[['001', '$a', '$d', '$1']].replace(r'^\s*$', np.nan, regex=True)  
+df_oclc_people['$ad'] = df_oclc_people[['$a', '$d']].apply(lambda x: '$d'.join(x.dropna().astype(str)) if pd.notnull(x['$d']) else x['$a'], axis=1)
+df_oclc_people['$ad'] = '$a' + df_oclc_people['$ad']
+df_oclc_people['simplify string'] = df_oclc_people['$a'].apply(lambda x: simplify_string(x))
+df_oclc_people['001'] = df_oclc_people['001'].astype(int)
+
+additional_viaf_to_remove = ['256578118', '83955898', '2299152636076120051534']
+people_clusters = {k:v for k,v in viaf_positives_dict.copy().items() if k not in additional_viaf_to_remove}
+
+# Hrabal, Hasek, Capek, Majerova selection
+# selection = ['34458072', '4931097', '34454129', '52272']
+# # selection = ['52272']
+# people_clusters = {key: people_clusters[key] for key in selection}
+
+for key in tqdm(people_clusters, total=len(people_clusters)):
+    viaf_id = people_clusters[key]['viaf id']
+    records = []
+    records_1 = df_oclc_people[df_oclc_people['$1'] == viaf_id]['001'].to_list()
+    records += records_1
+    try:
+        unidecode_lower_forms_of_names = [simplify_string(e) for e in people_clusters[key]['form of name']]
+        records_2 = df_oclc_people[df_oclc_people['$ad'].isin(unidecode_lower_forms_of_names)]['001'].to_list()
+        records += records_2
+    except KeyError:
+        pass
+    try:
+        unidecode_name = [simplify_string(e) for e in people_clusters[key]['unidecode name']]
+        records_3 = df_oclc_people[df_oclc_people['simplify string'].isin(unidecode_name)]['001'].to_list()
+        records += records_3
+    except KeyError:
+        pass
+    records = list(set(records))
+    people_clusters[key].update({'list of records':records})
+    
+people_clusters_records = {}
+for key in people_clusters:
+    people_clusters_records[key] = people_clusters[key]['list of records']
+    
+df_people_clusters = pd.DataFrame.from_dict(people_clusters_records, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster_viaf', 0:'001'})
+df_people_clusters['001'] = df_people_clusters['001'].astype('int64')
+df_all_positive['001'] = df_all_positive['001'].astype('int64')
+# df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns=['all_names', 'cz_name', 'viaf_positive']).drop_duplicates().reset_index(drop=True)
+df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns=['all_names', 'cz_name']).drop_duplicates().reset_index(drop=True)
+
+# multiple_clusters = df_people_clusters['001'].value_counts().reset_index()
+# multiple_clusters = multiple_clusters[multiple_clusters['001'] > 1]['index'].to_list()
+# df_multiple_clusters = df_people_clusters[df_people_clusters['001'].isin(multiple_clusters)].sort_values('001')
+# multiple_clusters_ids = df_multiple_clusters['001'].drop_duplicates().to_list()
+# df_people_clusters = df_people_clusters[~df_people_clusters['001'].isin(multiple_clusters_ids)]
+# df_multiple_clusters = df_multiple_clusters[df_multiple_clusters['cluster_viaf'] == '34454129']
+# df_people_clusters = pd.concat([df_people_clusters, df_multiple_clusters])
+
+df_original_titles = df_people_clusters.replace(r'^\s*$', np.nan, regex=True)    
+df_original_titles = df_original_titles[(df_original_titles['240'].notnull()) & (df_original_titles['100'].notnull())][['001', '100', '240', 'cluster_viaf']]
+df_original_titles_100 = marc_parser_1_field(df_original_titles, '001', '100', '\\$')[['001', '$a', '$d', '$1']].rename(columns={'$a':'name', '$d':'dates', '$1':'viaf'})
+counter_100 = df_original_titles_100['001'].value_counts().reset_index()
+counter_100 = counter_100[counter_100['001'] == 1]['index'].to_list()
+df_original_titles_100 = df_original_titles_100[df_original_titles_100['001'].isin(counter_100)]
+df_original_titles_240 = marc_parser_1_field(df_original_titles, '001', '240', '\\$')
+try:
+    df_original_titles_240['original title'] = df_original_titles_240.apply(lambda x: x['$b'] if x['$b'] != '' else x['$a'], axis=1)
+except KeyError:
+    df_original_titles_240['original title'] = df_original_titles_240['$a']
+# df_original_titles_240 = df_original_titles_240[['001', 'original title']]
+
+df_original_titles_simple = pd.merge(df_original_titles_100, df_original_titles_240, how='left', on='001')
+df_original_titles_simple = df_original_titles_simple.merge(df_original_titles[['001', 'cluster_viaf']]).reset_index(drop=True)
+df_original_titles_simple['001'] = df_original_titles_simple['001'].astype(int)
+df_original_titles_simple['index'] = df_original_titles_simple.index+1
+
+df_original_titles_simple_grouped = df_original_titles_simple.groupby('cluster_viaf')
+
+df_original_titles_simple = pd.DataFrame()
+for name, group in tqdm(df_original_titles_simple_grouped, total=len(df_original_titles_simple_grouped)):
+    df = cluster_records(group, 'index', ['original title'], similarity_lvl=0.7)
+    df_original_titles_simple = df_original_titles_simple.append(df)
+
+df_original_titles_simple = df_original_titles_simple.sort_values(['cluster_viaf', 'cluster']).rename(columns={'cluster':'cluster_titles'}) 
+
+
+df_with_original_titles = pd.merge(df_people_clusters, df_original_titles_simple.drop(columns=['index', 'cluster_viaf']), on='001', how='left').drop_duplicates()
+
+correct = df_with_original_titles[df_with_original_titles['index of correctness'] > 0.7]
+not_correct = df_with_original_titles[df_with_original_titles['index of correctness'] <= 0.7]
+writer = pd.ExcelWriter('all_data_correctness.xlsx', engine = 'xlsxwriter')
+correct.to_excel(writer, index=False, sheet_name='correct')
+not_correct.to_excel(writer, index=False, sheet_name='not_correct')
+writer.save()
+writer.close()
+
+# for 4 authors: 2365 from 7026 -> 34%  --- one record == one row
+# for Majerova: 59 from 335 -> 18%
+
+# correct = pd.read_excel('all_data_correctness.xlsx', sheet_name='correct')
+
+correct = genre(correct)    
+
+correct_grouped = correct.groupby('cluster_titles')
+
+correct = pd.DataFrame()
+for name, group in tqdm(correct_grouped, total=len(correct_grouped)):
+    group['cluster_genre'] = genre_algorithm(group)
+    correct = correct.append(group)
+    
+correct.to_excel('translation_correct_data.xlsx', index=False)    
+    
+
+    
+#%% HQ records: de-duplication
+# po czym grupować do deduplikacji? - język, cluster_viaf, cluster original title
+# correct_grouped = correct.groupby(['cluster_viaf', 'language'])
+
+# correct = pd.read_excel('translation_correct_data.xlsx') 
+# ttt = correct.copy()
+# correct = ttt.copy()
+# correct = correct[(correct['cluster_viaf'] == '4931097') & (correct['language'] == 'ger') & (correct['cluster_titles'] == 2526)]   
+# correct = correct[correct['cluster_viaf'] == '4931097']
+# correct = correct[(correct['cluster_viaf'] == '10256796') & (correct['language'] == 'ger') & (correct['cluster_titles'] == 10081)]
+correct_grouped = correct.groupby(['cluster_viaf', 'language', 'cluster_titles'])
+# grupy = list(correct_grouped.groups.keys())
+writer = pd.ExcelWriter('all_data_deduplicated.xlsx', engine = 'xlsxwriter')
+correct.to_excel(writer, index=False, sheet_name='phase_0')
+
+phase_1 = pd.DataFrame()
+phase_2 = pd.DataFrame()
+phase_3 = pd.DataFrame()
+phase_4 = pd.DataFrame()
+phase_5 = pd.DataFrame()
+correct = pd.DataFrame()
+for name, group in tqdm(correct_grouped, total=len(correct_grouped)):
+# slice = 100
+# result = [g[1] for g in list(correct_grouped)[:slice]]
+# df = pd.concat(result)
+# df.to_excel(writer, index=False, sheet_name='phase_0') 
+# for group in tqdm(result, total=len(result)):
+    # group = correct_grouped.get_group(('4931097', 'pol', 2526))
+    # group = correct_grouped.get_group(grupy[1])
+# group = correct.copy()    
+#phase_1: de-duplication 1: duplicates
+    try:
+        title = marc_parser_1_field(group, '001', '245', '\$')[['001', '$a', '$b', '$n', '$p']].replace(r'^\s*$', np.nan, regex=True)
+    except KeyError:
+        try:
+            title = marc_parser_1_field(group, '001', '245', '\$')[['001', '$a', '$b']].replace(r'^\s*$', np.nan, regex=True)
+        except KeyError:
+            title = marc_parser_1_field(group, '001', '245', '\$')[['001', '$a']].replace(r'^\s*$', np.nan, regex=True)
+    title['title'] = title[title.columns[1:]].apply(lambda x: simplify_string(x, with_spaces=False), axis=1)    
+    title = title[['001', 'title']]
+    group = pd.merge(group, title, how='left', on='001')
+    
+    try:
+        place = marc_parser_1_field(group, '001', '260', '\$')[['001', '$a']].rename(columns={'$a':'place'})
+        place = place[place['place'] != '']
+        place['place'] = place['place'].apply(lambda x: simplify_string(x, with_spaces=False))
+        place = place.groupby('001').agg({'place': longest_string}).reset_index()
+    except KeyError:
+        place = pd.DataFrame(columns=['001','place'])
+    group = pd.merge(group, place, how='left', on='001')
+    
+    try:
+        publisher = marc_parser_1_field(group, '001', '260', '\$')[['001', '$b']].rename(columns={'$b':'publisher'})
+        publisher = publisher.groupby('001').head(1).reset_index(drop=True)
+        publisher['publisher'] = publisher['publisher'].apply(lambda x: simplify_string(x, with_spaces=False))
+        publisher = publisher.groupby('001').agg({'publisher': longest_string}).reset_index()
+    except KeyError:
+        publisher = pd.DataFrame(columns=['001','publisher'])
+    group = pd.merge(group, publisher, how='left', on='001')
+    
+    year = group.copy()[['001', '008']].rename(columns={'008':'year'})
+    year['year'] = year['year'].apply(lambda x: x[7:11])
+    group = pd.merge(group, year, how='left', on='001')
+    
+    df_oclc_duplicates = pd.DataFrame()
+    df_oclc_grouped = group.groupby(['title', 'place', 'year'])
+    for sub_name, sub_group in df_oclc_grouped:
+        if len(sub_group) > 1:
+            sub_group['groupby'] = str(sub_name)
+            group_ids = '❦'.join([str(e) for e in sub_group['001'].to_list()])
+            sub_group['group_ids'] = group_ids
+            df_oclc_duplicates = df_oclc_duplicates.append(sub_group)
+    df_oclc_duplicates = df_oclc_duplicates.drop_duplicates()
+    
+    if df_oclc_duplicates.shape[0] > 1:
+    
+        oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
+        df_oclc_duplicates_grouped = df_oclc_duplicates.groupby(['title', 'place', 'year'])
+        
+        df_oclc_deduplicated = pd.DataFrame()
+        for sub_name, sub_group in df_oclc_duplicates_grouped:
+            for column in sub_group:
+                if column in ['fiction_type', '490', '500', '650', '655']:
+                    sub_group[column] = '❦'.join(sub_group[column].dropna().drop_duplicates().astype(str))
+                else:
+                    try:
+                        sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
+                    except ValueError:
+                        sub_group[column] = np.nan
+            df_oclc_deduplicated = df_oclc_deduplicated.append(sub_group)
+        
+        df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+        df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(int)
+        group = group[~group['001'].isin(oclc_duplicates_list)]
+        group = pd.concat([group, df_oclc_deduplicated]).drop(columns='title')
+        group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+        phase_1 = phase_1.append(group)
+    else:
+        group.drop(columns='title', inplace=True)
+        phase_1 = phase_1.append(group)
+    
+#phase_2: de-duplication 2: multiple volumes
+        
+    title = marc_parser_1_field(group, '001', '245', '\$')[['001', '$a']].replace(r'^\s*$', np.nan, regex=True)
+    title['title'] = title[title.columns[1:]].apply(lambda x: simplify_string(x, with_spaces=False), axis=1)    
+    title = title[['001', 'title']]
+    group = pd.merge(group, title, how='left', on='001')  
+    
+    df_oclc_grouped = group.groupby(['title', 'place', 'year'])
+        
+    df_oclc_multiple_volumes = pd.DataFrame()
+    for sub_name, sub_group in df_oclc_grouped:
+        if len(sub_group[sub_group['245'].str.contains('\$n', regex=True)]):
+            sub_group['groupby'] = str(sub_name)
+            try:
+                group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() + sub_group['group_ids'].to_list() if pd.notnull(e)]))
+            except KeyError:
+                group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() if pd.notnull(e)]))
+            sub_group['group_ids'] = group_ids
+            df_oclc_multiple_volumes = df_oclc_multiple_volumes.append(sub_group)
+            
+    if df_oclc_multiple_volumes.shape[0] > 0:
+        oclc_multiple_volumes_list = df_oclc_multiple_volumes['001'].drop_duplicates().tolist()
+        df_oclc_multiple_volumes_grouped = df_oclc_multiple_volumes.groupby(['title', 'place', 'year'])
+    
+        df_oclc_multiple_volumes_deduplicated = pd.DataFrame()
+        for sub_name, sub_group in df_oclc_multiple_volumes_grouped:
+            if len(sub_group[~sub_group['245'].str.contains('\$n', regex=True)]) == 1:
+                for column in sub_group:
+                    if column in ['fiction_type', '490', '500', '650', '655']:
+                        sub_group[column] = '❦'.join(sub_group[column].dropna().drop_duplicates().astype(str))  
+                    elif column in ['001', '245']:
+                        pass
+                    else:
+                        try:
+                            sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
+                        except ValueError:
+                            sub_group[column] = np.nan
+                df = sub_group[~sub_group['245'].str.contains('\$n', regex=True)]
+                df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(df)
+            else:
+                for column in sub_group:
+                    if column in ['fiction_type', '490', '500', '650', '655']:
+                        sub_group[column] = '❦'.join(sub_group[column].dropna().drop_duplicates().astype(str))
+                    elif column == '245':
+                        field_245 = marc_parser_1_field(sub_group, '001', '245', '\$').replace(r'^\s*$', np.nan, regex=True)
+                        field_245 = field_245.iloc[:, lambda x: x.columns.isin(['001', '$a', '$b', '$c'])]
+                        field_245['245'] = field_245[field_245.columns[1:]].apply(lambda x: ''.join(x.dropna().astype(str)), axis=1)
+                        field_245 = field_245[['001', '245']]
+                        field_245['245'] = '10' + field_245['245']
+                        sub_group = pd.merge(sub_group.drop(columns='245'), field_245, how='left', on='001')
+                        try:
+                            sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
+                        except ValueError:
+                            sub_group[column] = np.nan
+                    else:
+                        try:
+                            sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
+                        except ValueError:
+                            sub_group[column] = np.nan
+                sub_group = sub_group.drop_duplicates().reset_index(drop=True)
+                df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(sub_group)
+                    
+        df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+        df_oclc_multiple_volumes_deduplicated['001'] = df_oclc_multiple_volumes_deduplicated['001'].astype(int)
+        group = group[~group['001'].isin(oclc_multiple_volumes_list)]
+        group = pd.concat([group, df_oclc_multiple_volumes_deduplicated]).drop_duplicates().reset_index(drop=True)
+        group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+        group.drop(columns='title', inplace=True)
+        phase_2 = phase_2.append(group)
+    else:
+        group.drop(columns='title', inplace=True)
+        phase_2 = phase_2.append(group)
+
+#phase_3: de-duplication 3: fuzzyness
+    field_245 = marc_parser_1_field(group, '001', '245', '\$').replace(r'^\s*$', np.nan, regex=True)
+    try:
+        field_245['$a'] = field_245.apply(lambda x: x['$a'] if pd.notnull(x['$a']) else x['indicator'][2:].split('.', 1)[0], axis=1)
+    except KeyError:
+        field_245['$a'] = field_245.apply(lambda x: x['indicator'][2:].split('.', 1)[0], axis=1)
+    field_245 = field_245.iloc[:, lambda x: x.columns.isin(['001', '$a', '$b'])]
+    field_245['title'] = field_245[field_245.columns[1:]].apply(lambda x: simplify_string(x), axis=1)  
+    field_245 = field_245[['001', 'title']]
+    group = pd.merge(group, field_245, how='left', on='001')
+    
+    #similarity level == 0.85 | columns == ['title', 'publisher', 'year'] | same 'year'
+    df_oclc_clusters = cluster_records(group, '001', ['title', 'publisher', 'year'], 0.85)    
+    df_oclc_clusters = df_oclc_clusters[df_oclc_clusters['publisher'] != '']
+    df_oclc_duplicates = df_oclc_clusters.groupby(['cluster', 'year']).filter(lambda x: len(x) > 1)
+    
+    if df_oclc_duplicates.shape[0] > 0:
+ 
+        if df_oclc_duplicates['001'].value_counts().max() > 1:
+            sys.exit('ERROR!!!\nclustering problem!!!')
+    
+        oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
+        df_oclc_duplicates = df_oclc_duplicates.groupby('cluster')
+        
+        df_oclc_deduplicated = pd.DataFrame()
+        for sub_name, sub_group in df_oclc_duplicates:
+            group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() + sub_group['group_ids'].to_list() if pd.notnull(e)]))
+            sub_group['group_ids'] = group_ids
+            for column in sub_group:
+                if column in ['fiction_type', '490', '500', '650', '655']:
+                    sub_group[column] = '❦'.join(sub_group[column].dropna().drop_duplicates().astype(str))
+                elif column == '245':
+                    sub_group[column] = sub_group[column][sub_group[column].str.contains('$', regex=False)]
+                    try:
+                        sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
+                    except ValueError:
+                        sub_group[column] = np.nan
+                else:
+                    try:
+                        sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
+                    except ValueError:
+                        sub_group[column] = np.nan
+            df_oclc_deduplicated = df_oclc_deduplicated.append(sub_group)
+            
+        df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+        df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(int)
+        
+    group = group[~group['001'].isin(oclc_duplicates_list)]
+    group = pd.concat([group, df_oclc_deduplicated])
+    group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+    phase_3 = phase_3.append(group)
+    
+#phase_4: editions counter
+    edition_clusters = cluster_strings(group['title'], 0.7)
+    edition_clusters_df = pd.DataFrame()
+    for k, v in edition_clusters.items():
+        df = group.copy()[group['title'].str.strip().isin(v)]
+        df['edition_cluster'] = k
+        edition_clusters_df = edition_clusters_df.append(df)
+    edition_clusters_df['edition_index'] = edition_clusters_df.groupby('edition_cluster').cumcount()+1
+    group = edition_clusters_df.copy()
+    phase_4 = phase_4.append(group)
+    
+#phase_5: simplify the records
+    # group = group[['001', '080', '100', '245', '240', '260', '650', '655', '700', 'language', 'fiction_type', 'place', 'year', 'edition_cluster', 'edition_index']]
+    # group['001'] = group['001'].astype(int)
+    
+    # identifiers = group[['001']]
+    # udc = marc_parser_1_field(group, '001', '080', '\$')[['001', '$a']].rename(columns={'$a':'universal decimal classification'})
+    # udc['universal decimal classification'] = udc.groupby('001')['universal decimal classification'].transform(lambda x: '❦'.join(x.dropna().drop_duplicates().astype(str)))
+    # udc = udc.drop_duplicates().reset_index(drop=True)
+    # marc_author = marc_parser_1_field(group, '001', '100', '\$')[['001', '$a', '$d', '$1']].rename(columns={'$a':'author name', '$d':'author birth and death', '$1':'author viaf id'})
+    # for column in marc_author.columns[1:]:
+    #     marc_author[column] = marc_author.groupby('001')[column].transform(lambda x: '❦'.join(x.dropna().drop_duplicates().astype(str)))
+    # marc_author = marc_author.drop_duplicates().reset_index(drop=True)
+    # title = marc_parser_1_field(group, '001', '245', '\$').replace(r'^\s*$', np.nan, regex=True)
+    # title['$a'] = title.apply(lambda x: x['245'] if pd.isnull(x['$a']) else x['$a'], axis=1)
+    # title = title.iloc[:, lambda x: x.columns.isin(['001', '$a', '$b'])]
+    # title['title'] = title[title.columns[1:]].apply(lambda x: ''.join(x.dropna().astype(str)), axis=1)
+    # title = title[['001', 'title']]
+    # original_title = marc_parser_1_field(group, '001', '240', '\$').replace(r'^\s*$', np.nan, regex=True)[['001', '$a']].rename(columns={'$a':'original title'})
+    # place_of_publication = marc_parser_1_field(group, '001', '260', '\$').replace(r'^\s*$', np.nan, regex=True)[['001', '$a']].rename(columns={'$a':'place of publication'})
+    # #$e as alternative place of publication?
+    # try:
+    #     contributor = marc_parser_1_field(group, '001', '700', '\$').replace(r'^\s*$', np.nan, regex=True)[['001', '$a', '$d', '$e', '$1']].rename(columns={'$a':'contributor name', '$d':'contributor birth and death', '$1':'contributor viaf id', '$e':'contributor role'})
+    #     contributor['contributor role'] = contributor['contributor role'].apply(lambda x: x if pd.notnull(x) else 'unknown')
+    # except KeyError:
+    #     contributor['contributor role'] = 'unknown'
+        
+    # dfs = [identifiers, udc, marc_author, title, original_title, contributor, group[['001', '650', '655', 'language', 'fiction_type', 'place', 'year', 'edition_cluster', 'edition_index']]]
+    # df_oclc_final = reduce(lambda left,right: pd.merge(left,right,on='001', how='outer'), dfs).drop_duplicates()
+    # phase_5 = phase_5.append(group)
+         
+phase_1.to_excel(writer, index=False, sheet_name='phase_1')    
+phase_2.to_excel(writer, index=False, sheet_name='phase_2')  
+phase_3.to_excel(writer, index=False, sheet_name='phase_3') 
+phase_4.to_excel(writer, index=False, sheet_name='phase_4') 
+phase_5.to_excel(writer, index=False, sheet_name='phase_5') 
+writer.save()
+writer.close()    
+    
+#%% HQ records: de-duplication - przystosować
 fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
 languages = ['pol', 'swe', 'ita', 'spa']
 #languages = ['ita']
@@ -465,159 +948,17 @@ for language in languages:
         time.sleep(60)
         
         
-#%% clusters for original titles        
-# fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
-
-df = oclc_other_languages.copy()
-df_language_materials_monographs = df[df['type of record + bibliographic level'] == 'am']
-negative = df_language_materials_monographs.copy()
-df_other_types = df[~df['001'].isin(df_language_materials_monographs['001'])]
-# df_first_positive = df_language_materials_monographs[(df_language_materials_monographs['041'].str.contains('\$hcz')) &
-#                                                      (df_language_materials_monographs['fiction_type'].isin(fiction_types))]
-
-df_first_positive = df_language_materials_monographs[df_language_materials_monographs['041'].str.contains('\$hcz', na=False)]
-
-negative = negative[~negative['001'].isin(df_first_positive['001'])]
-df_second_positive = marc_parser_1_field(negative, '001', '100', '\$')[['001', '$1']]
-df_second_positive = df_second_positive[df_second_positive['$1'].isin(viaf_positives)]
-df_second_positive = negative[negative['001'].isin(df_second_positive['001'])]
-
-negative = negative[~negative['001'].isin(df_second_positive['001'])].reset_index(drop=True)
-df_third_positive = "select * from negative a join positive_viafs_names b on a.'100' like '%'||b.all_names||'%'"
-df_third_positive = pandasql.sqldf(df_third_positive)
-
-negative = negative[~negative['001'].isin(df_third_positive['001'])].reset_index(drop=True)
-df_fourth_positive = "select * from negative a join positive_viafs_diacritics b on a.'100' like '%'||b.cz_name||'%'"
-df_fourth_positive = pandasql.sqldf(df_fourth_positive)
-
-negative = negative[~negative['001'].isin(df_fourth_positive['001'])].reset_index(drop=True)
-df_all_positive = pd.concat([df_first_positive, df_second_positive, df_third_positive, df_fourth_positive])
-
-df_all_positive['260'] = df_all_positive[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
-df_all_positive['240'] = df_all_positive[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)
-df_all_positive['100_unidecode'] = df_all_positive['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
-
-df_all_positive.to_excel('oclc_all_positive.xlsx', index=False)
-
-df_all_positive = pd.read_excel('oclc_all_positive.xlsx').reset_index(drop=True)
-
-#index of correctness
-
-def index_of_correctness(x):
-    full_index = 7
-    record_index = 0
-    if x['008'][35:38] != 'und':
-        record_index += 1
-    if pd.notnull(x['240']) and '$a' in x['240'] and any(e for e in ['$l', '$i'] if e in x['240']) and x['240'].count('$a') == 1 and '$k' not in x['240']:
-        record_index += 3
-    # elif pd.notnull(x['240']) and '$a' in x['240'] and x['240'].count('$a') == 1:
-    #     record_index += 1.5
-    if pd.notnull(x['245']) and all(e for e in ['$a', '$c'] if e in x['245']):
-        record_index += 1
-    elif pd.notnull(x['245']) and any(e for e in ['$a', '$c'] if e in x['245']): 
-        record_index += 0.5
-    if pd.notnull(x['260']) and all(e for e in ['$a', '$b', '$c'] if e in x['260']):
-        record_index += 1
-    elif pd.notnull(x['260']) and any(e for e in ['$a', '$b', '$c'] if e in x['260']):
-        record_index += 0.5
-    if pd.notnull(x['700']) and pd.notnull(x['700']):
-        record_index += 1
-    full_index = record_index/full_index
-    return full_index
-    
-df_all_positive['index of correctness'] = df_all_positive.apply(lambda x: index_of_correctness(x), axis=1)
-    
-df_oclc_people = marc_parser_1_field(df_all_positive, '001', '100_unidecode', '\\$')[['001', '$a', '$d', '$1']].replace(r'^\s*$', np.nan, regex=True)  
-df_oclc_people['$ad'] = df_oclc_people[['$a', '$d']].apply(lambda x: '$d'.join(x.dropna().astype(str)) if pd.notnull(x['$d']) else x['$a'], axis=1)
-df_oclc_people['$ad'] = '$a' + df_oclc_people['$ad']
-df_oclc_people['simplify string'] = df_oclc_people['$a'].apply(lambda x: simplify_string(x))
-df_oclc_people['001'] = df_oclc_people['001'].astype(int)
-
-people_clusters = viaf_positives_dict.copy()
-
-# Hrabal, Hasek, Capek, Majerova selection
-# selection = ['34458072', '4931097', '34454129', '52272']
-# # selection = ['52272']
-# people_clusters = {key: people_clusters[key] for key in selection}
-
-for key in tqdm(people_clusters, total=len(people_clusters)):
-    viaf_id = people_clusters[key]['viaf id']
-    records = []
-    records_1 = df_oclc_people[df_oclc_people['$1'] == viaf_id]['001'].to_list()
-    records += records_1
-    try:
-        unidecode_lower_forms_of_names = [simplify_string(e) for e in people_clusters[key]['form of name']]
-        records_2 = df_oclc_people[df_oclc_people['$ad'].isin(unidecode_lower_forms_of_names)]['001'].to_list()
-        records += records_2
-    except KeyError:
-        pass
-    try:
-        unidecode_name = [simplify_string(e) for e in people_clusters[key]['unidecode name']]
-        records_3 = df_oclc_people[df_oclc_people['simplify string'].isin(unidecode_name)]['001'].to_list()
-        records += records_3
-    except KeyError:
-        pass
-    records = list(set(records))
-    people_clusters[key].update({'list of records':records})
-    
-people_clusters_records = {}
-for key in people_clusters:
-    people_clusters_records[key] = people_clusters[key]['list of records']
-    
-df_people_clusters = pd.DataFrame.from_dict(people_clusters_records, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster_viaf', 0:'001'})
-df_people_clusters['001'] = df_people_clusters['001'].astype('int64')
-df_all_positive['001'] = df_all_positive['001'].astype('int64')
-# df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns=['all_names', 'cz_name', 'viaf_positive']).drop_duplicates().reset_index(drop=True)
-df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns=['all_names', 'cz_name']).drop_duplicates().reset_index(drop=True)
-
-multiple_clusters = df_people_clusters['001'].value_counts().reset_index()
-multiple_clusters = multiple_clusters[multiple_clusters['001'] > 1]['index'].to_list()
-df_multiple_clusters = df_people_clusters[df_people_clusters['001'].isin(multiple_clusters)].sort_values('001')
-multiple_clusters_ids = df_multiple_clusters['001'].drop_duplicates().to_list()
-df_people_clusters = df_people_clusters[~df_people_clusters['001'].isin(multiple_clusters_ids)]
-df_multiple_clusters = df_multiple_clusters[df_multiple_clusters['cluster_viaf'] == '34454129']
-df_people_clusters = pd.concat([df_people_clusters, df_multiple_clusters])
-
-df_original_titles = df_people_clusters.replace(r'^\s*$', np.nan, regex=True)    
-df_original_titles = df_original_titles[(df_original_titles['240'].notnull()) & (df_original_titles['100'].notnull())][['001', '100', '240', 'cluster_viaf']]
-df_original_titles_100 = marc_parser_1_field(df_original_titles, '001', '100', '\\$')[['001', '$a', '$d', '$1']].rename(columns={'$a':'name', '$d':'dates', '$1':'viaf'})
-counter_100 = df_original_titles_100['001'].value_counts().reset_index()
-counter_100 = counter_100[counter_100['001'] == 1]['index'].to_list()
-df_original_titles_100 = df_original_titles_100[df_original_titles_100['001'].isin(counter_100)]
-df_original_titles_240 = marc_parser_1_field(df_original_titles, '001', '240', '\\$')
-try:
-    df_original_titles_240['original title'] = df_original_titles_240.apply(lambda x: x['$b'] if x['$b'] != '' else x['$a'], axis=1)
-except KeyError:
-    df_original_titles_240['original title'] = df_original_titles_240['$a']
-# df_original_titles_240 = df_original_titles_240[['001', 'original title']]
-
-df_original_titles_simple = pd.merge(df_original_titles_100, df_original_titles_240, how='left', on='001')
-df_original_titles_simple = df_original_titles_simple.merge(df_original_titles[['001', 'cluster_viaf']]).reset_index(drop=True)
-df_original_titles_simple['001'] = df_original_titles_simple['001'].astype(int)
-df_original_titles_simple['index'] = df_original_titles_simple.index+1
-
-df_original_titles_simple_grouped = df_original_titles_simple.groupby('cluster_viaf')
-
-df_original_titles_simple = pd.DataFrame()
-for name, group in tqdm(df_original_titles_simple_grouped, total=len(df_original_titles_simple_grouped)):
-    df = cluster_records(group, 'index', ['original title'], similarity_lvl=0.7)
-    df_original_titles_simple = df_original_titles_simple.append(df)
-
-df_original_titles_simple = df_original_titles_simple.sort_values(['cluster_viaf', 'cluster']).rename(columns={'cluster':'cluster_titles'}) 
 
 
-df_with_original_titles = pd.merge(df_people_clusters, df_original_titles_simple.drop(columns=['index', 'cluster_viaf']), on='001', how='left').drop_duplicates()
 
-correct = df_with_original_titles[df_with_original_titles['index of correctness'] > 0.7]
-not_correct = df_with_original_titles[df_with_original_titles['index of correctness'] <= 0.7]
-writer = pd.ExcelWriter('all_data_correctness.xlsx', engine = 'xlsxwriter')
-correct.to_excel(writer, index=False, sheet_name='correct')
-not_correct.to_excel(writer, index=False, sheet_name='not_correct')
-writer.save()
-writer.close()
 
-# for 4 authors: 2365 from 7026 -> 34%  --- one record == one row
-# for Majerova: 59 from 335 -> 18%
+
+
+
+
+
+
+
 
 
 

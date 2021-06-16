@@ -9,6 +9,7 @@ from datetime import date
 import pandas as pd
 import logging
 from garmin_credentials import garmin_password, garmin_username
+import datetime
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -70,16 +71,40 @@ fig = df.groupby('date').sum()['rosinski-hubar index'].plot(figsize = (40,10), t
 fig.savefig('running.jpg')
 
 
+#%% linear regression
+import numpy as np
+import pandas as pd
+import datetime
+from sklearn import linear_model
+from matplotlib import pyplot as plt
+
+lr_df = df.copy()[['date', 'rosinski-hubar index']]
+lr_df['date'] = pd.to_datetime(lr_df['date'].apply(lambda x: x[:10]), format='%Y-%m-%d').dt.date
+lr_df = lr_df.iloc[::-1].reset_index(drop=True)
+lr_df = lr_df.iloc[56:,]
+lr_df = lr_df.set_index('date')
+lr_df.columns = ["value"]
+lr_df['days_from_start'] = (lr_df.index - lr_df.index[0]).days; lr_df
+
+x = lr_df['days_from_start'].values.reshape(-1, 1)
+y = lr_df['value'].values
+
+model = linear_model.LinearRegression().fit(x, y)
+linear_model.LinearRegression(copy_X=True, fit_intercept=True, n_jobs=1, normalize=False)
+pred = np.asarray(range(65,200)).reshape(-1, 1)
+prediction = model.predict(pred).reshape(-1, 1)
+model.predict([[65], [66], [67], [100]])
+
+plt.scatter(x, y,color='g')
+plt.plot(x, prediction,color='k')
+
+plt.savefig('test.png')
 
 
+prediction = model.predict(np.sort(x, axis=0))
 
-
-
-
-
-
-
-
+plt.scatter(x, y)
+plt.plot(np.sort(x, axis=0),prediction)
 
 
 
