@@ -369,7 +369,8 @@ for name, group in tqdm(correct_grouped, total=len(correct_grouped)):
 # for group in tqdm(result, total=len(result)):
     # group = correct_grouped.get_group(('4931097', 'pol', 2526))
     # group = correct_grouped.get_group(grupy[1])
-# group = correct.copy()    
+# group = correct.copy()  
+# group = correct_grouped.get_group(('107600220', 'hun', 8643))
 #phase_1: de-duplication 1: duplicates
     try:
         title = marc_parser_1_field(group, '001', '245', '\$')[['001', '$a', '$b', '$n', '$p']].replace(r'^\s*$', np.nan, regex=True)
@@ -536,11 +537,15 @@ for name, group in tqdm(correct_grouped, total=len(correct_grouped)):
             sys.exit('ERROR!!!\nclustering problem!!!')
     
         oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
-        df_oclc_duplicates = df_oclc_duplicates.groupby('cluster')
+        df_oclc_duplicates = df_oclc_duplicates.groupby(['cluster', 'year'])
         
         df_oclc_deduplicated = pd.DataFrame()
         for sub_name, sub_group in df_oclc_duplicates:
-            group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() + sub_group['group_ids'].to_list() if pd.notnull(e)]))
+            sub_group = df_oclc_duplicates.get_group((1108272735, '2016'))
+            try:
+                group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() + sub_group['group_ids'].to_list() if pd.notnull(e)]))
+            except KeyError:
+                group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() if pd.notnull(e)]))
             sub_group['group_ids'] = group_ids
             for column in sub_group:
                 if column in ['fiction_type', '490', '500', '650', '655']:
