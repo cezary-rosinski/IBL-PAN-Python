@@ -23,6 +23,7 @@ import json
 import difflib
 from qwikidata.sparql  import return_sparql_query_results
 import requests
+import ast
 
 #%% def
 
@@ -121,7 +122,15 @@ def harvest_viaf_by_titles(df, column_id, data_scope_name, subfield_code, df_wit
             testy2 = [list(x) for x in set(tuple(x) for x in testy2)]
             group['odpytanie po tytułach'] = '‽'.join(['|'.join(e) for e in testy2]) 
         new_df = new_df.append(group)   
-    return new_df.reset_index(drop=True)        
+    return new_df.reset_index(drop=True)   
+
+def get_wikidataID(x):
+    try:
+        if isinstance(x, str):
+            x = ast.literal_eval(x)
+        return re.findall('Q\d+', x[0]['autor.value'])[0]
+    except (TypeError, ValueError):
+        return np.nan      
 
 #%% date
 now = datetime.datetime.now()
@@ -394,19 +403,183 @@ new_sheet = gc.open_by_key('175JqYyEuy9oSdk6JQqo6NgtILitXZo6Umf77YLXWLSU')
 create_worksheet(new_sheet, 'brakujące z viaf', nodegoat_people_df)
 
 
+#TUTAJ 21.06.2021
+nodegoat_people = [file['id'] for file in file_list if file['title'] == 'samizdat_osoby_2021-06-09'][0]
+nodegoat_people_sheet = gc.open_by_key(nodegoat_people)
+nodegoat_people_sheet.worksheets()
+samizdat_dict = {}
+for ws in nodegoat_people_sheet.worksheets():
+    samizdat_dict[ws.title] = get_as_dataframe(ws, evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1).drop_duplicates()
+
+url = 'https://query.wikidata.org/sparql'
+for k,v in samizdat_dict.items():
+    try:
+        samizdat_dict[k]['viafID'] = samizdat_dict[k]['sugestia po tytułach'].apply(lambda x: x.split('|')[1])
+    except KeyError:
+        pass
+    if k in ['pojedyncze_ok', 'grupy_ok']:
+        samizdat_dict[k]['viafREV'] = np.nan
+    else:
+        # k = 'czeskie_bez_tytulow'
+        samizdat_dict[k]['wikidata'] = np.nan
+        samizdat_dict[k]['wikidata'] = samizdat_dict[k]['wikidata'].astype(object)
+        for i, row in tqdm(samizdat_dict[k].iterrows(), total=samizdat_dict[k].shape[0]):
+            # i = 7
+            # row = samizdat_dict[k].iloc[7,:]
+            
+            while True:
+                try:
+                    name = ' '.join(row['Index_Name'].split(', ')[::-1])
+                    sparql_query = f"""PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+                    SELECT distinct ?autor ?autorLabel ?birthplaceLabel ?deathplaceLabel ?birthdate ?deathdate ?sexLabel ?pseudonym ?occupationLabel WHERE {{ 
+                      ?autor wdt:P31 wd:Q5.
+                      ?autor ?label "{name}" .
+                      optional {{ ?autor wdt:P19 ?birthplace . }}
+                      optional {{ ?autor wdt:P569 ?birthdate . }}
+                      optional {{ ?autor wdt:P570 ?deathdate . }}
+                      optional {{ ?autor wdt:P20 ?deathplace . }}
+                      optional {{ ?autor wdt:P21 ?sex . }}
+                      optional {{ ?autor wdt:P106 ?occupation . }}
+                      optional {{ ?autor wdt:P742 ?pseudonym . }}
+                    SERVICE wikibase:label {{ bd:serviceParam wikibase:language "pl". }}}}"""    
+                    results = requests.get(url, params = {'format': 'json', 'query': sparql_query})
+                    results = results.json()
+                    results_df = pd.json_normalize(results['results']['bindings'])
+                    columns = [e for e in results_df.columns.tolist() if 'value' in e]
+                    results_df = results_df[results_df.columns.intersection(columns)]       
+                    for column in results_df.drop(columns='autor.value'):
+                        results_df[column] = results_df.groupby('autor.value')[column].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+                    results_df = results_df.drop_duplicates().reset_index(drop=True)   
+                    result = results_df.to_dict('records')
+                    samizdat_dict[k].at[i, 'wikidata'] = result
+                    time.sleep(2)
+                except (AttributeError, KeyError, ValueError):
+                    samizdat_dict[k].at[i, 'wikidata'] = np.nan
+                    time.sleep(2)
+                except (HTTPError, RemoteDisconnected) as error:
+                    print(error)# time.sleep(61)
+                    time.sleep(5)
+                    continue
+                break
+    try:
+        samizdat_dict[k]['wikidataID'] = samizdat_dict[k]['wikidata'].apply(lambda x: get_wikidataID(x))
+    except KeyError:
+        pass        
+    
+    
+###    
+for key, df in samizdat_dict.items():
+    try:
+        df.to_csv(key+'.csv', index=False)    
+    except OSError:
+        key = ''.join([e for e in key if e.isalnum()])
+        df.to_csv(key+'.csv', index=False)    
+        
+files = ["C:/Users/Cezary/Documents/IBL-PAN-Python/czeskie_bez_tytulow.csv",
+"C:/Users/Cezary/Documents/IBL-PAN-Python/grupy_ok.csv",
+"C:/Users/Cezary/Documents/IBL-PAN-Python/grupy_rozne_id_lub_niskie_prawd.csv",
+"C:/Users/Cezary/Documents/IBL-PAN-Python/pojedyncze_ok.csv",
+"C:/Users/Cezary/Documents/IBL-PAN-Python/pojedyncze075.csv",
+"C:/Users/Cezary/Documents/IBL-PAN-Python/rekordy_BN_bez_viaf.csv"]   
+samizdat_dict = {}
+for file in files:
+    name = re.findall('(?<=Python\/)(.+?)(?=\.csv)', file)[0]
+    samizdat_dict[name] = pd.read_csv(file)
+        
+#podzielić dane na grupy!!!    
+new_samizdat_dict = {}    
+for k,v in samizdat_dict.items():
+    if k in ['grupy_ok', 'pojedyncze_ok']:
+        new_samizdat_dict[k] = v
+    else:
+        if 'reszta' not in new_samizdat_dict:
+            new_samizdat_dict['reszta'] = v
+        else:
+            new_samizdat_dict['reszta'] = pd.concat([new_samizdat_dict['reszta'], v])
+        
+grouped_df = new_samizdat_dict['reszta'].groupby('Project_ID')
+for name, group in tqdm(grouped_df, total=len(grouped_df)):
+    # name = 476
+    # group = grouped_df.get_group(name)
+    if group.shape[0] == 1:
+        if all(pd.notnull(group['viafID'])):
+            if 'osoby z jednym wierszem i identyfikatorem viaf' not in new_samizdat_dict:
+                new_samizdat_dict['osoby z jednym wierszem i identyfikatorem viaf'] = group
+            else:
+                new_samizdat_dict['osoby z jednym wierszem i identyfikatorem viaf'] = pd.concat([new_samizdat_dict['osoby z jednym wierszem i identyfikatorem viaf'], group])
+        else:
+            if 'osoby z pustym viafem' not in new_samizdat_dict:
+                new_samizdat_dict['osoby z pustym viafem'] = group
+            else:
+                new_samizdat_dict['osoby z pustym viafem'] = pd.concat([new_samizdat_dict['osoby z pustym viafem'], group])      
+    elif group.shape[0] > 1 and group['wikidata'].notna().sum() == 1:
+        if 'grupa z jedną wikidatą' not in new_samizdat_dict:
+            new_samizdat_dict['grupa z jedną wikidatą'] = group
+        else:
+            new_samizdat_dict['grupa z jedną wikidatą'] = pd.concat([new_samizdat_dict['grupa z jedną wikidatą'], group])
+    elif group.shape[0] > 1 and group['wikidata'].notna().sum() > 1:
+        if 'grupa z wieloma wikidatami' not in new_samizdat_dict:
+            new_samizdat_dict['grupa z wieloma wikidatami'] = group
+        else:
+            new_samizdat_dict['grupa z wieloma wikidatami'] = pd.concat([new_samizdat_dict['grupa z wieloma wikidatami'], group])
+    elif group.shape[0] > 1 and group['wikidata'].notna().sum() == 0:
+        if 'grupa bez wikidaty' not in new_samizdat_dict:
+            new_samizdat_dict['grupa bez wikidaty'] = group
+        else:
+            new_samizdat_dict['grupa bez wikidaty'] = pd.concat([new_samizdat_dict['grupa bez wikidaty'], group])
+    else:
+        if 'pozostałe' not in new_samizdat_dict:
+            new_samizdat_dict['pozostałe'] = group
+        else:
+            new_samizdat_dict['pozostałe'] = pd.concat([new_samizdat_dict['pozostałe'], group])
+del new_samizdat_dict['reszta']    
+
+
+new_sheet = gc.create(f'samizdat_osoby_{year}-{month}-{day}', '1UdglvjjX4r2Hzh5BIAr8FjPuWV89NVs6')
+for k,v in tqdm(new_samizdat_dict.items(), total=len(new_samizdat_dict)):
+    try:
+        v = v.drop(columns='viaf')
+    except KeyError:
+        pass
+    create_worksheet(new_sheet, k, v)
+    
+new_sheet.del_worksheet(new_sheet.worksheet('Arkusz1'))        
+for worksheet in new_sheet.worksheets():
+    new_sheet.batch_update({
+        "requests": [
+            {
+                "updateDimensionProperties": {
+                    "range": {
+                        "sheetId": worksheet._properties['sheetId'],
+                        "dimension": "ROWS",
+                        "startIndex": 0,
+                        #"endIndex": 100
+                    },
+                    "properties": {
+                        "pixelSize": 20
+                    },
+                    "fields": "pixelSize"
+                }
+            }
+        ]
+    })
+    
+    worksheet.freeze(rows=1)
+    worksheet.set_basic_filter()    
+
+
+    
 
 
 
 
 
+type(samizdat_dict['grupy_ok'].at[0, 'wikidata'])
 
+type(samizdat_dict['rekordy_BN_bez_viaf'].at[9, 'wikidata'])
 
-
-
-
-
-
-
+oo = samizdat_dict['rekordy_BN_bez_viaf'].at[9, 'wikidata']
+isinstance(oo, str)
 
 
 
