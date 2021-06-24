@@ -404,8 +404,7 @@ create_worksheet(new_sheet, 'brakujące z viaf', nodegoat_people_df)
 
 
 #TUTAJ 21.06.2021
-nodegoat_people = [file['id'] for file in file_list if file['title'] == 'samizdat_osoby_2021-06-09'][0]
-nodegoat_people_sheet = gc.open_by_key(nodegoat_people)
+nodegoat_people_sheet = gc.open_by_key('175JqYyEuy9oSdk6JQqo6NgtILitXZo6Umf77YLXWLSU')
 nodegoat_people_sheet.worksheets()
 samizdat_dict = {}
 for ws in nodegoat_people_sheet.worksheets():
