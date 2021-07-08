@@ -292,7 +292,10 @@ counter_100 = counter_100[counter_100['001'] == 1]['index'].to_list()
 df_original_titles_100 = df_original_titles_100[df_original_titles_100['001'].isin(counter_100)]
 df_original_titles_240 = marc_parser_1_field(df_original_titles, '001', '240', '\\$')
 try:
-    df_original_titles_240['original title'] = df_original_titles_240.apply(lambda x: x['$b'] if x['$b'] != '' else x['$a'], axis=1)
+    #było
+    #df_original_titles_240['original title'] = df_original_titles_240.apply(lambda x: x['$b'] if x['$b'] != '' else x['$a'], axis=1)
+    #jest - zmiana 30.06.2021
+    df_original_titles_240['original title'] = df_original_titles_240.apply(lambda x: ''.join([x['$a'], x['$b']]) if x['$b'] != '' else x['$a'], axis=1)
 except KeyError:
     df_original_titles_240['original title'] = df_original_titles_240['$a']
 # df_original_titles_240 = df_original_titles_240[['001', 'original title']]
@@ -306,7 +309,12 @@ df_original_titles_simple_grouped = df_original_titles_simple.groupby('cluster_v
 
 df_original_titles_simple = pd.DataFrame()
 for name, group in tqdm(df_original_titles_simple_grouped, total=len(df_original_titles_simple_grouped)):
-    df = cluster_records(group, 'index', ['original title'], similarity_lvl=0.7)
+    # name = '25095273'
+    # name = '107600220'
+    # name = '27873545'
+    group = df_original_titles_simple_grouped.get_group(name)
+    # było 0.7 - zmiana 30.06.2021
+    df = cluster_records(group, 'index', ['original title'], similarity_lvl=0.81)
     df_original_titles_simple = df_original_titles_simple.append(df)
 
 df_original_titles_simple = df_original_titles_simple.sort_values(['cluster_viaf', 'cluster']).rename(columns={'cluster':'cluster_titles'}) 
@@ -341,8 +349,6 @@ correct.to_excel('translation_correct_data.xlsx', index=False)
 
     
 #%% HQ records: de-duplication
-# po czym grupować do deduplikacji? - język, cluster_viaf, cluster original title
-# correct_grouped = correct.groupby(['cluster_viaf', 'language'])
 
 # correct = pd.read_excel('translation_correct_data.xlsx') 
 # ttt = correct.copy()
@@ -352,7 +358,7 @@ correct.to_excel('translation_correct_data.xlsx', index=False)
 # correct = correct[(correct['cluster_viaf'] == '10256796') & (correct['language'] == 'ger') & (correct['cluster_titles'] == 10081)]
 correct_grouped = correct.groupby(['cluster_viaf', 'language', 'cluster_titles'])
 # grupy = list(correct_grouped.groups.keys())
-writer = pd.ExcelWriter('all_data_deduplicated.xlsx', engine = 'xlsxwriter')
+writer = pd.ExcelWriter('hq_data_deduplicated.xlsx', engine = 'xlsxwriter')
 correct.to_excel(writer, index=False, sheet_name='phase_0')
 
 phase_1 = pd.DataFrame()
@@ -541,7 +547,7 @@ for name, group in tqdm(correct_grouped, total=len(correct_grouped)):
         
         df_oclc_deduplicated = pd.DataFrame()
         for sub_name, sub_group in df_oclc_duplicates:
-            sub_group = df_oclc_duplicates.get_group((1108272735, '2016'))
+            # sub_group = df_oclc_duplicates.get_group((1108272735, '2016'))
             try:
                 group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() + sub_group['group_ids'].to_list() if pd.notnull(e)]))
             except KeyError:
@@ -572,15 +578,15 @@ for name, group in tqdm(correct_grouped, total=len(correct_grouped)):
     phase_3 = phase_3.append(group)
     
 #phase_4: editions counter
-    edition_clusters = cluster_strings(group['title'], 0.7)
-    edition_clusters_df = pd.DataFrame()
-    for k, v in edition_clusters.items():
-        df = group.copy()[group['title'].str.strip().isin(v)]
-        df['edition_cluster'] = k
-        edition_clusters_df = edition_clusters_df.append(df)
-    edition_clusters_df['edition_index'] = edition_clusters_df.groupby('edition_cluster').cumcount()+1
-    group = edition_clusters_df.copy()
-    phase_4 = phase_4.append(group)
+    # edition_clusters = cluster_strings(group['title'], 0.7)
+    # edition_clusters_df = pd.DataFrame()
+    # for k, v in edition_clusters.items():
+    #     df = group.copy()[group['title'].str.strip().isin(v)]
+    #     df['edition_cluster'] = k
+    #     edition_clusters_df = edition_clusters_df.append(df)
+    # edition_clusters_df['edition_index'] = edition_clusters_df.groupby('edition_cluster').cumcount()+1
+    # group = edition_clusters_df.copy()
+    # phase_4 = phase_4.append(group)
     
 #phase_5: simplify the records
     # group = group[['001', '080', '100', '245', '240', '260', '650', '655', '700', 'language', 'fiction_type', 'place', 'year', 'edition_cluster', 'edition_index']]
@@ -614,13 +620,13 @@ for name, group in tqdm(correct_grouped, total=len(correct_grouped)):
          
 phase_1.to_excel(writer, index=False, sheet_name='phase_1')    
 phase_2.to_excel(writer, index=False, sheet_name='phase_2')  
-phase_3.to_excel(writer, index=False, sheet_name='phase_3') 
+phase_3.drop_duplicates().to_excel(writer, index=False, sheet_name='phase_3') 
 phase_4.to_excel(writer, index=False, sheet_name='phase_4') 
 phase_5.to_excel(writer, index=False, sheet_name='phase_5') 
 writer.save()
 writer.close()    
     
-#%% HQ records: de-duplication - przystosować
+#%% HQ records: de-duplication - przystosować - jest w chunku wyżej
 fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
 languages = ['pol', 'swe', 'ita', 'spa']
 #languages = ['ita']

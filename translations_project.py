@@ -1555,8 +1555,8 @@ oclc_pl = pd.read_excel('oclc_pl_test.xlsx')
       
 test1a = unidecode.unidecode("Przygody dobrego wojaka Szwejka").lower()
 test1b = unidecode.unidecode("Przygody dobrego wojanka szwejka").lower()
-test1a = "Przygody dobrego wojaka Szwejka"
-test1b = "Przygody dobrego wojanka szwejka"
+# test1a = "Przygody dobrego wojaka Szwejka"
+# test1b = "Przygody dobrego wojanka szwejka"
 
 
 test2a = unidecode.unidecode("Opowieści o piesku i kotce jak razem gospodarzyli i jeszcze innych rzeczach").lower()

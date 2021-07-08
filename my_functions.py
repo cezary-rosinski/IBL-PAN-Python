@@ -390,11 +390,15 @@ def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8, ho
         if show_time:
             for i in tqdm(range(series_len)):
                 for j in range(series_len):
-                    matrix[i,j] = difflib.SequenceMatcher(a=series[i],b=series[j]).ratio()
+                    a = re.sub('[^\p{L}\d\s]', '', unidecode.unidecode(series[i]))
+                    b = re.sub('[^\p{L}\d\s]', '', unidecode.unidecode(series[j]))
+                    matrix[i,j] = difflib.SequenceMatcher(a=a,b=b).ratio()
         else:                
             for i in range(series_len):
                 for j in range(series_len):
-                    matrix[i,j] = difflib.SequenceMatcher(a=series[i],b=series[j]).ratio()
+                    a = re.sub('[^\p{L}\d\s]', '', unidecode.unidecode(series[i]))
+                    b = re.sub('[^\p{L}\d\s]', '', unidecode.unidecode(series[j]))
+                    matrix[i,j] = difflib.SequenceMatcher(a=a,b=b).ratio()
         list_of_matrixes.append(matrix)
         
     matrix = np.mean(list_of_matrixes, axis=0)

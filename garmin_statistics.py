@@ -66,7 +66,7 @@ df['s/km'] = df['total time']*1000/df['distance']
 
 def rosinski_hubar_index(x):
     # return ((1-(x['averageHR']/x['s/km']))+(x['total time']/x['averageHR']/300)+(x['zones 1 and 2 %']))*(x['distance']/10000)
-    return ((1+(x['averageHR']/x['s/km']))/(x['averageHR']/100)+(x['total time']/x['averageHR']/500)+(x['zones 1 and 2 %']))*(x['distance']/10000)
+    return ((1-(x['averageHR']/x['s/km']))/(x['averageHR']/100)+(x['total time']/x['averageHR']/500)+(x['zones 1 and 2 %']))*(x['distance']/10000)
     
 df['rosinski-hubar index'] = df.apply(lambda x: rosinski_hubar_index(x), axis=1)
 
