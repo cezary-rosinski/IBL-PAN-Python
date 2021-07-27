@@ -13,6 +13,8 @@ import difflib
 import statistics
 import unidecode
 from tqdm import tqdm
+import gspread as gs
+from gspread_dataframe import set_with_dataframe, get_as_dataframe
 
 # parser kolumny marc
 def marc_parser_1_field(df, field_id, field_data, subfield_code, delimiter='❦'):
@@ -163,18 +165,23 @@ def replacenth(string, sub, wanted, n):
     return newString 
 
 #read google sheet
-def gsheet_to_df(gsheetId, scope):
-    CLIENT_SECRET_FILE = 'client_secret.json'
-    API_SERVICE_NAME = 'sheets'
-    API_VERSION = 'v4'
-    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-    s = Create_Service(CLIENT_SECRET_FILE, API_SERVICE_NAME, API_VERSION, SCOPES)
-    gs = s.spreadsheets()
-    rows = gs.values().get(spreadsheetId=gsheetId,range=scope).execute()
-    header = rows.get('values', [])[0]   # Assumes first line is header!
-    values = rows.get('values', [])[1:]  # Everything else is data.
-    df = pd.DataFrame(values, columns = header)
+def gsheet_to_df(gsheetId, worksheet):
+    gc = gs.oauth()
+    sheet = gc.open_by_key(gsheetId)
+    df = get_as_dataframe(sheet.worksheet(worksheet), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+    # CLIENT_SECRET_FILE = 'client_secret.json'
+    # API_SERVICE_NAME = 'sheets'
+    # API_VERSION = 'v4'
+    # SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+    # s = Create_Service(CLIENT_SECRET_FILE, API_SERVICE_NAME, API_VERSION, SCOPES)
+    # gs = s.spreadsheets()
+    # rows = gs.values().get(spreadsheetId=gsheetId,range=scope).execute()
+    # header = rows.get('values', [])[0]   # Assumes first line is header!
+    # values = rows.get('values', [])[1:]  # Everything else is data.
+    # df = pd.DataFrame(values, columns = header)
     return df
+
+
 
 #write google sheet
 def df_to_gsheet(df, gsheetId,scope='Arkusz1'):
@@ -292,10 +299,12 @@ def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
         record = {k: v for k, v in record.items() if pd.notnull(v)}
         try:
             pymarc_record = pymarc.Record(to_unicode=True, force_utf8=True, leader=record['LDR'])
-            del record['LDR']
+            record = {k:v for k,v in record.items() if any(a == k for a in ['LDR', 'AVA']) or re.compile('\d{3}').findall(k)}
             for k, v in record.items():
-                v = v.split(field_delimiter)
-                if int(k) < 10:
+                v = str(v).split(field_delimiter)
+                if k == 'LDR':
+                    pass
+                elif int(k) < 10:
                     tag = k
                     data = ''.join(v)
                     marc_field = pymarc.Field(tag=tag, data=data)
@@ -317,8 +326,8 @@ def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
                             marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
                             pymarc_record.add_ordered_field(marc_field)
             outputfile.write(pymarc_record.as_marc())
-        except ValueError:
-            mrc_errors.append(record)
+        except ValueError as err:
+            mrc_errors.append((err, record))
     if len(mrc_errors) > 0:
         for element in mrc_errors:
             errorfile.write(str(element) + '\n\n')

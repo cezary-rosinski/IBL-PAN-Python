@@ -1,4 +1,12 @@
 # https://pressto.amu.edu.pl/index.php/fp/article/view/27426 - czemu światło w biliografii?
+# przed kolejnym numerem:
+# Aby usprawnić proces aktywacji uprzejmie proszę w następnej akcji deponowania o:
+#     - W zakładce Identyfikatory należy kliknąć przycisk Zapisz
+#     - Aby metadane artykułu  były prawidłowo zapisane należy wykonać w zakładce Bibliografia polecenie Zapisz bibliografię
+#     - Uprzejmie proszę o umieszczanie w polu metadanych informacji o Instytucjach finansujących, tak jak w tym przypadku:
+#     - Poprawnie zamieszczone metadane bibliografii zawierają zawsze na początku nazwisko autora
+# Vide: mail pressto!!!
+    
 
 import pandas as pd
 import regex as re
@@ -10,7 +18,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 import fp_credentials
 import time
-from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, NoAlertPresentException, SessionNotCreatedException, ElementClickInterceptedException
+from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, NoAlertPresentException, SessionNotCreatedException, ElementClickInterceptedException, InvalidArgumentException
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -127,6 +135,18 @@ for i, row in aktualny_numer.iterrows():
         aktualny_numer.at[i, 'link do jpg'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_jpg}"
         aktualny_numer.at[i, 'pdf'] = sciezka_pdf
         aktualny_numer.at[i, 'jpg'] = sciezka_jpg
+        
+#kodowanie HTML abstraktu i biogramu
+# wstęp?
+#abstrakt i bio
+def abstrakt_bio(x):
+    x = x.split('\n')
+    x = '\n'.join([f'''<span style="font-family: 'Chaparral Pro', serif; color: black;">{e}</span>''' for e in x])
+    return x
+        
+aktualny_numer['abstrakt'] = aktualny_numer['abstrakt'].apply(lambda x: abstrakt_bio(x) if pd.notnull(x) else np.nan)
+aktualny_numer['biogram'] = aktualny_numer['biogram'].apply(lambda x: abstrakt_bio(x) if pd.notnull(x) else np.nan)
+
 
 #wprowadzanie nowych wpisów
         
@@ -213,7 +233,7 @@ for index, row in aktualny_numer.iterrows():
         wprowadz_pdf_link = browser.find_element_by_id('metavalue').send_keys(row['link do pdf'])
         dodaj_pdf = browser.find_element_by_id("newmeta-submit").click()
         
-        if row['kategoria'] == 'Przekłady' and row['ORCID'] == '':
+        if row['kategoria'] == 'Przekłady' and pd.isnull(row['ORCID']):
             tagi_autorow = row['tag autora'].split('❦')
             autorzy = row['autor'].split('❦')
             
@@ -275,7 +295,10 @@ for index, row in aktualny_numer.iterrows():
         
         wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
         wybierz_pliki = browser.find_element_by_xpath("//input[starts-with(@id,'html5_')]")
-        wybierz_pliki.send_keys(f"{aktualny_numer.at[index+1, 'folder lokalny']}\\{aktualny_numer.at[index+1, 'jpg']}")
+        try:
+            wybierz_pliki.send_keys(f"{aktualny_numer.at[index+1, 'folder lokalny']}\\{aktualny_numer.at[index+1, 'jpg']}")
+        except InvalidArgumentException:
+            wybierz_pliki.send_keys(f"{row['folder lokalny']}\\{row['jpg']}")
         zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
         zaakceptuj_obrazek.click()
 
@@ -291,7 +314,7 @@ for index, row in aktualny_numer.iterrows():
         wprowadz_pdf_link = browser.find_element_by_id('metavalue').send_keys(aktualny_numer.at[index+1, 'link do pdf'])
         dodaj_pdf = browser.find_element_by_id("newmeta-submit").click()
         
-        if aktualny_numer.at[index+1, 'kategoria'] == 'Przekłady' and aktualny_numer.at[index+1, 'ORCID'] == '':
+        if aktualny_numer.at[index+1, 'kategoria'] == 'Przekłady' and pd.isnull(aktualny_numer.at[index+1, 'ORCID']):
             tagi_autorow = aktualny_numer.at[index+1, 'tag autora'].split('❦')
             autorzy = aktualny_numer.at[index+1, 'autor'].split('❦')
             
@@ -636,6 +659,7 @@ for i, row in aktualny_numer.iterrows():
             kraj = browser.find_element_by_xpath("//select[@id = 'country']/option[text()='Polska']").click()
             if len(o) > 0:
                 orcid = f"https://orcid.org/{o}"
+            # TU PROBLEM, BO NIE MA POLA TEKSTOWEGO
                 wprowadz_orcid = browser.find_element_by_name('orcid').send_keys(orcid)
             afiliacja = browser.find_element_by_xpath("//input[@name='affiliation[pl_PL]']").send_keys(af)
             biogram = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[-2].click()

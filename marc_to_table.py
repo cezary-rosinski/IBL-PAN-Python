@@ -5,6 +5,7 @@ import re
 import numpy as np
 import glob
 from dask import delayed, dataframe as dd
+from tqdm import tqdm
 
 def year(row, field):
     if row['field'] == field:
@@ -24,10 +25,9 @@ for i, file_path in enumerate(files):
 
 # BN
 #mrc to mrk 
-path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/2021-02-08/'
+path = 'F:/Cezary/Documents/IBL/BN/bn_all/2021-07-26/'
 files = [f for f in glob.glob(path + '*.mrc', recursive=True)]
-for i, file_path in enumerate(files):
-    print(str(i) + '/' + str(len(files)))
+for file_path in tqdm(files):
     path_mrk = file_path.replace('.mrc', '.mrk')
     mrc_to_mrk(file_path, path_mrk)
 #mrk to table    

@@ -42,9 +42,12 @@ def marc_parser_dict_for_field(string, subfield_code):
 
 def catch(e):
     try:
-        return '❦'.join([a['text'] for a in e['record']['recordData']['mainHeadings']['data']])
+        return '❦'.join([f"{a['text']}|{len(a['sources']['s']) if isinstance(a['sources']['s'], list) else 1}" for a in e['record']['recordData']['mainHeadings']['data']])
     except (TypeError, KeyError):
-        return e['record']['recordData']['mainHeadings']['data']['text']
+        if isinstance(e['record']['recordData']['mainHeadings']['data']['sources']['s'], list):
+            return f"{e['record']['recordData']['mainHeadings']['data']['text']}|{len(e['record']['recordData']['mainHeadings']['data']['sources']['s'])}"
+        else:
+            return f"{e['record']['recordData']['mainHeadings']['data']['text']}|1"
 
 def create_worksheet(sheet, worksheet_name, df):    
     try:
@@ -165,7 +168,7 @@ nodegoat_people_tuples = list(nodegoat_people_df.to_records(index=False))
 #%% harvestowanie viaf i wikidaty
 
 #odpytanie po tytułach NOWY POCZĄTEK - KROK NR 1
-start_time = time.time()
+
 tytuly_bn = [file['id'] for file in file_list if file['title'] == 'samizdat_kartoteka_osób'][0]
 tytuly_bn_sheet = gc.open_by_key(tytuly_bn)
 tytuly_bn_sheet.worksheets()
@@ -249,19 +252,8 @@ for i, row in tqdm(new_df.iterrows(), total=new_df.shape[0]):
             continue
         break
 new_df.to_excel(f"samizdat_osoby_{year}-{month}-{day}.xlsx", index=False)
-print('Done')
-print("--- %s seconds ---" % (time.time() - start_time))
 
-#100 osób = 2h
-#tutaj jest błąd, że osoby bez bn_books też coś dostają - ale to można usunąć na końcu
-#TUTAJ 09.06.2021
-
-nodegoat_people = [file['id'] for file in file_list if file['title'] == 'samizdat_osoby_2021-05-11'][0]
-nodegoat_people_sheet = gc.open_by_key(nodegoat_people)
-nodegoat_people_sheet.worksheets()
-nodegoat_people_df = get_as_dataframe(nodegoat_people_sheet.worksheet('Sheet1'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1).drop_duplicates()
-new_sheet = gc.create(f'samizdat_osoby_{year}-{month}-{day}', '1UdglvjjX4r2Hzh5BIAr8FjPuWV89NVs6')
-
+# KROK NR 4 - Stworzenie grup dla poprawnych wyników i Oddzielenie reszty rekordów do dalszego przetwarzania
 
 # Podzielenie na zbiory
 
@@ -344,10 +336,20 @@ for worksheet in new_sheet.worksheets():
     worksheet.freeze(rows=1)
     worksheet.set_basic_filter()
 
-df_wrong = pd.concat([df1, df4, df5, df]).reset_index(drop=True)
+# KROK 5
+sheet = gc.open_by_key('175JqYyEuy9oSdk6JQqo6NgtILitXZo6Umf77YLXWLSU')
+test_dict = {}
+for worksheet in tqdm(sheet.worksheets()):
+    title = worksheet.title
+    test_df = get_as_dataframe(sheet.worksheet(title), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+    test_dict[title] = test_df
+del test_dict['brakujące z viaf']
+df_wrong = pd.concat([v for k,v in test_dict.items() if k not in ['pojedyncze_ok', 'grupy_ok']])
 
 nodegoat_people_dict = {}
 for index, name in tqdm(df_wrong.iterrows(), total=df_wrong.shape[0]):
+    # index = 0
+    # name = df_wrong.iloc[index,:]
     if len(name['Index_Name']) > 6:
         #index, name = nodegoat_people_tuples[7]
         index = int(index)
@@ -374,7 +376,7 @@ for index, name in tqdm(df_wrong.iterrows(), total=df_wrong.shape[0]):
             nodegoat_people_dict[index] = {'Project_ID':name['Project_ID'], 'samizdat_name':name['Index_Name']}
             nodegoat_people_dict[index]['viaf'] = []
 
-for person_k, person_v in nodegoat_people_dict.items():
+for person_k, person_v in tqdm(nodegoat_people_dict.items()):
     # person_k = 0
     # person_v = nodegoat_people_dict[person_k]
     persons = [e[0].split('❦') for e in person_v['viaf']]
@@ -386,32 +388,262 @@ for person_k, person_v in nodegoat_people_dict.items():
             list_of_similarity_indexes.append(difflib.SequenceMatcher(a=person_v['samizdat_name'], b=name).ratio())    
         nodegoat_people_dict[person_k]['viaf'][index].append(max(list_of_similarity_indexes))
             
-with open(f"samizdat_people_{year}-{month}-{day}.json", 'w', encoding='utf-8') as f: 
-    json.dump(nodegoat_people_dict, f, ensure_ascii=False, indent=4)    
+# with open(f"samizdat_people_{year}-{month}-{day}.json", 'w', encoding='utf-8') as f: 
+#     json.dump(nodegoat_people_dict, f, ensure_ascii=False, indent=4)    
     
-with open('samizdat_people_2021-06-09.json', 'r', encoding='utf-8') as json_file:
-    nodegoat_people_dict = json.load(json_file)    
+# with open('samizdat_people_2021-06-09.json', 'r', encoding='utf-8') as json_file:
+#     nodegoat_people_dict = json.load(json_file)    
     
 nodegoat_people_df = [value for value in nodegoat_people_dict.values()]    
 nodegoat_people_df = pd.json_normalize(nodegoat_people_df)
 nodegoat_people_df = nodegoat_people_df.explode('viaf').reset_index(drop=True)
 nodegoat_people_df['viaf id'] = nodegoat_people_df['viaf'].apply(lambda x: x[1] if type(x) != float else np.nan)
 nodegoat_people_df['similarity'] = nodegoat_people_df['viaf'].apply(lambda x: x[-1] if type(x) != float else np.nan)
-nodegoat_people_df = nodegoat_people_df[(nodegoat_people_df['similarity'] >= prawdopodobienstwo) | (nodegoat_people_df['similarity'].isna())]
+nodegoat_people_df = nodegoat_people_df.sort_values(['Project_ID', 'similarity'], ascending=[True, False])
+# nodegoat_people_df = nodegoat_people_df[(nodegoat_people_df['similarity'] >= prawdopodobienstwo) | (nodegoat_people_df['similarity'].isna())]
 
-new_sheet = gc.open_by_key('175JqYyEuy9oSdk6JQqo6NgtILitXZo6Umf77YLXWLSU')
-create_worksheet(new_sheet, 'brakujące z viaf', nodegoat_people_df)
+# new_sheet = gc.open_by_key('175JqYyEuy9oSdk6JQqo6NgtILitXZo6Umf77YLXWLSU')
+# create_worksheet(new_sheet, 'brakujące z viaf', nodegoat_people_df)
 
 
-#TUTAJ 21.06.2021
-nodegoat_people_sheet = gc.open_by_key('175JqYyEuy9oSdk6JQqo6NgtILitXZo6Umf77YLXWLSU')
-nodegoat_people_sheet.worksheets()
-samizdat_dict = {}
-for ws in nodegoat_people_sheet.worksheets():
-    samizdat_dict[ws.title] = get_as_dataframe(ws, evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1).drop_duplicates()
+# #TUTAJ 21.06.2021
+# nodegoat_people_sheet = gc.open_by_key('175JqYyEuy9oSdk6JQqo6NgtILitXZo6Umf77YLXWLSU')
+# nodegoat_people_sheet.worksheets()
+# samizdat_dict = {}
+# for ws in nodegoat_people_sheet.worksheets():
+#     samizdat_dict[ws.title] = get_as_dataframe(ws, evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1).drop_duplicates()
 
+nodegoat_people_df['wikidata'] = np.nan
+nodegoat_people_df['wikidata'] = nodegoat_people_df['wikidata'].astype(object)
 url = 'https://query.wikidata.org/sparql'
-for k,v in samizdat_dict.items():
+for i, row in tqdm(nodegoat_people_df.iterrows(), total=nodegoat_people_df.shape[0]):
+    while True:
+        try:
+            viaf = row['viaf id']
+            sparql_query = f"""PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+            SELECT distinct ?autor ?autorLabel ?birthplaceLabel ?deathplaceLabel ?birthdate ?deathdate ?sexLabel ?pseudonym ?occupationLabel WHERE {{ 
+              ?autor wdt:P214 "{viaf}" ;
+              optional {{ ?autor wdt:P19 ?birthplace . }}
+              optional {{ ?autor wdt:P569 ?birthdate . }}
+              optional {{ ?autor wdt:P570 ?deathdate . }}
+              optional {{ ?autor wdt:P20 ?deathplace . }}
+              optional {{ ?autor wdt:P21 ?sex . }}
+              optional {{ ?autor wdt:P106 ?occupation . }}
+              optional {{ ?autor wdt:P742 ?pseudonym . }}
+            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "pl". }}}}"""    
+            results = requests.get(url, params = {'format': 'json', 'query': sparql_query})
+            results = results.json()
+            results_df = pd.json_normalize(results['results']['bindings'])
+            columns = [e for e in results_df.columns.tolist() if 'value' in e]
+            results_df = results_df[results_df.columns.intersection(columns)]       
+            for column in results_df.drop(columns='autor.value'):
+                results_df[column] = results_df.groupby('autor.value')[column].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+            results_df = results_df.drop_duplicates().reset_index(drop=True)   
+            result = results_df.to_dict('records')
+            nodegoat_people_df.at[i, 'wikidata'] = result
+            time.sleep(1)
+        except (AttributeError, KeyError, ValueError):
+            nodegoat_people_df.at[i, 'wikidata'] = np.nan
+            time.sleep(1)
+        except (HTTPError, RemoteDisconnected) as error:
+            print(error)# time.sleep(61)
+            time.sleep(5)
+            continue
+        break
+nodegoat_people_df.to_excel(f"samizdat_osoby_{year}-{month}-{day}.xlsx", index=False)
+
+samizdat_people_dict = {}
+samizdat_people_dict['pojedyncze ok'] = test_dict['pojedyncze_ok']
+samizdat_people_dict['grupy_ok'] = test_dict['grupy_ok']
+
+jedna_osoba = nodegoat_people_df.groupby('Project_ID').filter(lambda x: len(x) == 1)
+
+samizdat_people_dict['osoby_z_jednym_wierszem'] = jedna_osoba
+
+nodegoat_people_df = nodegoat_people_df[~nodegoat_people_df['Project_ID'].isin(jedna_osoba['Project_ID'])]
+
+grouped = nodegoat_people_df.groupby('Project_ID')
+
+nodegoat_people_df = pd.DataFrame()
+for name, group in tqdm(grouped, total=len(grouped)):
+    # group = grouped.get_group(33)
+    scores_similarity = {e:i+1 for i, e in enumerate(sorted(group['similarity'].unique()))}
+    scores_similarity = pd.DataFrame.from_dict(scores_similarity, orient='index').reset_index().rename(columns={'index':'similarity', 0:'similarity_score'})
+    group = pd.merge(group, scores_similarity, how='left', on='similarity')
+    group['flags'] = group['viaf'].apply(lambda x: sum([int(e.split('|')[-1]) for e in x[0].split('❦')]) if isinstance(x, list) else 0)
+    scores_flags = {e:i+1 for i, e in enumerate(sorted(group['flags'].unique()))}
+    scores_flags = pd.DataFrame.from_dict(scores_flags, orient='index').reset_index().rename(columns={'index':'flags', 0:'flags_score'})
+    group = pd.merge(group, scores_flags, how='left', on='flags')
+    group['score'] = group['flags_score'] + group['similarity_score']
+    group.sort_values(['score', 'similarity', 'flags'], ascending=[False, False, False], inplace=True)
+    nodegoat_people_df = nodegoat_people_df.append(group)
+
+samizdat_people_dict['reszta'] = nodegoat_people_df
+
+new_sheet = gc.create(f'samizdat_osoby_{year}-{month}-{day}', '1UdglvjjX4r2Hzh5BIAr8FjPuWV89NVs6')
+for k,v in tqdm(samizdat_people_dict.items()):
+    try:
+        set_with_dataframe(new_sheet.worksheet(k), v)
+    except gs.WorksheetNotFound:
+        new_sheet.add_worksheet(title=k, rows="100", cols="20")
+        set_with_dataframe(new_sheet.worksheet(k), v)
+    
+new_sheet.del_worksheet(new_sheet.worksheet('Arkusz1'))
+
+for worksheet in new_sheet.worksheets():
+    new_sheet.batch_update({
+        "requests": [
+            {
+                "updateDimensionProperties": {
+                    "range": {
+                        "sheetId": worksheet._properties['sheetId'],
+                        "dimension": "ROWS",
+                        "startIndex": 0,
+                        #"endIndex": 100
+                    },
+                    "properties": {
+                        "pixelSize": 20
+                    },
+                    "fields": "pixelSize"
+                }
+            }
+        ]
+    })   
+    worksheet.freeze(rows=1)
+    worksheet.set_basic_filter()
+
+
+sheet = gc.open_by_key('1TFNZboZaSHZv0FJXCGgcLs7yN47hbFirXFgIa74KupM')
+test_dict = {}
+for worksheet in tqdm(sheet.worksheets()):
+    title = worksheet.title
+    test_df = get_as_dataframe(sheet.worksheet(title), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+    test_dict[title] = test_df
+
+order = ['Project_ID', 'Index_Name', 'name_form_id', 'odpytanie viafu po tytułach', 'sugestia po tytułach', 'viaf', 'name', 'pseudym of', 'score', 'similarity', 'flags', 'viaf_ID', 'wikidata_ID', 'autor.value', 'birthdate.value', 'deathdate.value', 'birthplaceLabel.value', 'deathplaceLabel.value', 'sexLabel.value', 'pseudonym.value', 'occupationLabel.value']
+
+for k,v in tqdm(test_dict.items()):
+    try:
+        v['wikidata'] = v['wikidata'].apply(lambda x: ast.literal_eval(x) if pd.notnull(x) else x)
+    except ValueError:
+        pass
+    if k in ['grupy_ok']:
+        v = pd.concat([v.drop(['wikidata'], axis=1), v['wikidata'].apply(pd.Series)], axis=1).rename(columns={'prawdopodobieństwo':'similarity', 'viaf':'viaf_ID'})
+    elif k == 'osoby_z_jednym_wierszem':
+        v = pd.concat([v.drop(['wikidata'], axis=1), v['wikidata'].apply(pd.Series)], axis=1).rename(columns={'samizdat_name':'Index_Name', 'viaf id':'viaf_ID'})
+    elif k == 'pojedyncze ok':
+        v = pd.concat([v.drop(['wikidata'], axis=1), v['wikidata'].apply(pd.Series)], axis=1).rename(columns={'prawdopodobieństwo':'similarity'})
+        v['viaf_ID'] = v['sugestia po tytułach'].apply(lambda x: x.split('|')[1])
+    elif k == 'reszta':
+        v = pd.concat([v.drop(['wikidata'], axis=1), v['wikidata'].apply(pd.Series)], axis=1).rename(columns={'samizdat_name':'Index_Name', 'viaf id':'viaf_ID'})
+    v = pd.concat([v.drop([0], axis=1), v[0].apply(pd.Series)], axis=1).drop(columns=0)
+    v = v.reindex(columns=order)
+    v['wikidata_ID'] = v['autor.value'].apply(lambda x: re.findall('Q\d+$', x)[0] if pd.notnull(x) else x)
+    v.dropna(how='all', axis=1, inplace=True)
+    v['decyzja'] = np.nan
+    test_dict[k] = v
+
+new_sheet = gc.create(f'samizdat_osoby_{year}-{month}-{day}', '1UdglvjjX4r2Hzh5BIAr8FjPuWV89NVs6')
+for k,v in tqdm(test_dict.items()):
+    try:
+        set_with_dataframe(new_sheet.worksheet(k), v)
+    except gs.WorksheetNotFound:
+        new_sheet.add_worksheet(title=k, rows="100", cols="20")
+        set_with_dataframe(new_sheet.worksheet(k), v)
+    
+new_sheet.del_worksheet(new_sheet.worksheet('Arkusz1'))
+
+for worksheet in new_sheet.worksheets():
+    new_sheet.batch_update({
+        "requests": [
+            {
+                "updateDimensionProperties": {
+                    "range": {
+                        "sheetId": worksheet._properties['sheetId'],
+                        "dimension": "ROWS",
+                        "startIndex": 0,
+                        #"endIndex": 100
+                    },
+                    "properties": {
+                        "pixelSize": 20
+                    },
+                    "fields": "pixelSize"
+                }
+            }
+        ]
+    })   
+    worksheet.freeze(rows=1)
+    worksheet.set_basic_filter()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# for k,v in samizdat_dict.items():
+for i, row in tqdm(nodegoat_people_df.iterrows(), total=nodegoat_people_df.shape[0]):
+    while True:
+        try:
+            name = ' '.join(row['Index_Name'].split(', ')[::-1])
+            sparql_query = f"""PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+            SELECT distinct ?autor ?autorLabel ?birthplaceLabel ?deathplaceLabel ?birthdate ?deathdate ?sexLabel ?pseudonym ?occupationLabel WHERE {{ 
+              ?autor wdt:P31 wd:Q5.
+              ?autor ?label "{name}" .
+              optional {{ ?autor wdt:P19 ?birthplace . }}
+              optional {{ ?autor wdt:P569 ?birthdate . }}
+              optional {{ ?autor wdt:P570 ?deathdate . }}
+              optional {{ ?autor wdt:P20 ?deathplace . }}
+              optional {{ ?autor wdt:P21 ?sex . }}
+              optional {{ ?autor wdt:P106 ?occupation . }}
+              optional {{ ?autor wdt:P742 ?pseudonym . }}
+            SERVICE wikibase:label {{ bd:serviceParam wikibase:language "pl". }}}}"""    
+            results = requests.get(url, params = {'format': 'json', 'query': sparql_query})
+            results = results.json()
+            results_df = pd.json_normalize(results['results']['bindings'])
+            columns = [e for e in results_df.columns.tolist() if 'value' in e]
+            results_df = results_df[results_df.columns.intersection(columns)]       
+            for column in results_df.drop(columns='autor.value'):
+                results_df[column] = results_df.groupby('autor.value')[column].transform(lambda x: '❦'.join(x.drop_duplicates().astype(str)))
+            results_df = results_df.drop_duplicates().reset_index(drop=True)   
+            result = results_df.to_dict('records')
+            nodegoat_people_df.at[i, 'wikidata'] = result
+            time.sleep(2)
+        except (AttributeError, KeyError, ValueError):
+            nodegoat_people_df.at[i, 'wikidata'] = np.nan
+            time.sleep(2)
+        except (HTTPError, RemoteDisconnected) as error:
+            print(error)# time.sleep(61)
+            time.sleep(5)
+            continue
+        break
+    
+    
+    
     try:
         samizdat_dict[k]['viafID'] = samizdat_dict[k]['sugestia po tytułach'].apply(lambda x: x.split('|')[1])
     except KeyError:
