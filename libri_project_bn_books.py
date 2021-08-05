@@ -410,6 +410,10 @@ bn_harvested = bn_harvested[~bn_harvested['001'].isin(ids)]
 
 # df_to_mrc(bn_harvested.drop(columns=['index', 'czy polonik', 'gatunki literackie']), '❦', f'bn_harvested_{year}_{month}_{day}.mrc', f'bn_harvested_errors_{year}_{month}_{day}.txt')
 
+
+
+
+
 #%%
 #dodać uzupełnienie 856 + dzielenie deskryptorów, uzupełnianie haseł przedmiotowych PBL
 
@@ -519,6 +523,8 @@ bn_books_marc_total = bn_books_marc_total.reset_index(drop=True)
 bn_books_marc_total['008'] = bn_books_marc_total['008'].str.replace('\\', ' ')
 if bn_books_marc_total['009'].dtype == np.float64:
         bn_books_marc_total['009'] = bn_books_marc_total['009'].astype(np.int64)
+        
+bn_books_marc_total['995'] = '\\\\$aPBL 2013-2020: książki'
 
 bn_books_marc_total.to_excel('bn_books_marc.xlsx', index=False)
 
@@ -537,8 +543,8 @@ df2 = pd.DataFrame(errors)
 df2['008'] = df2['008'].str.replace('\\', ' ')
 if df2['009'].dtype == np.float64:
         df2['009'] = df2['009'].astype(np.int64)
-df_to_mrc(df2, '❦', f'libri_marc_bn_chapters2_{year}-{month}-{day}.mrc', f'libri_bn_chapters2_errors_{year}-{month}-{day}.txt')
-mrc_to_mrk(f'libri_marc_bn_chapters2_{year}-{month}-{day}.mrc', f'libri_marc_bn_chapters2_{year}-{month}-{day}.mrk')
+df_to_mrc(df2, '❦', f'libri_marc_bn_books2_{year}-{month}-{day}.mrc', f'libri_marc_bn_books2_errors_{year}-{month}-{day}.txt')
+mrc_to_mrk(f'libri_marc_bn_books2_{year}-{month}-{day}.mrc', f'libri_marc_bn_books2_{year}-{month}-{day}.mrk')
 
 
 

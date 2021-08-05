@@ -96,7 +96,9 @@ df = df.reindex(columns=fields)
 # df.to_excel('BN_chapters.xlsx', index=False)
 # #zobaczyć, co się dzieje z 005 - notacja naukowa
 # df = pd.read_excel('BN_chapters.xlsx')
+df['995'] = '\\\\$aPBL 2013-2020: rozdziały książek'
 
+df.to_excel('bn_chapters_marc.xlsx', index=False)
 
 try:
     df = pd.merge(df.drop(columns='856'), chapters.drop(columns='type'), how='left', left_on='001', right_on='id').drop(columns='id')
@@ -113,11 +115,19 @@ with open(f'libri_bn_chapters_errors_{year}-{month}-{day}.txt', encoding='utf8')
     errors = file.readlines()
     
 errors = [ast.literal_eval(re.findall('\{.+\}', e)[0]) for e in errors if e != '\n']
-errors = [{(k):(v if k not in ['856', 856] else re.sub('(\:|\=)(❦)', r'\1 ',v)) for k,v in e.items()} for e in errors]
+errors = [{(k):(v if k not in ['856', 856] else re.sub('(\:|\=|,)(❦)', r'\1 ',v)) for k,v in e.items()} for e in errors]
 
 df2 = pd.DataFrame(errors)
 df_to_mrc(df2, '❦', f'libri_marc_bn_chapters2_{year}-{month}-{day}.mrc', f'libri_bn_chapters2_errors_{year}-{month}-{day}.txt')
 mrc_to_mrk(f'libri_marc_bn_chapters2_{year}-{month}-{day}.mrc', f'libri_marc_bn_chapters2_{year}-{month}-{day}.mrk')
+
+
+
+
+
+
+
+
 
 
 # =============================================================================

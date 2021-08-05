@@ -168,7 +168,7 @@ def replacenth(string, sub, wanted, n):
 def gsheet_to_df(gsheetId, worksheet):
     gc = gs.oauth()
     sheet = gc.open_by_key(gsheetId)
-    df = get_as_dataframe(sheet.worksheet(worksheet), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+    df = get_as_dataframe(sheet.worksheet(worksheet), evaluate_formulas=True, dtype=str).dropna(how='all').dropna(how='all', axis=1)
     # CLIENT_SECRET_FILE = 'client_secret.json'
     # API_SERVICE_NAME = 'sheets'
     # API_VERSION = 'v4'
@@ -299,7 +299,7 @@ def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
         record = {k: v for k, v in record.items() if pd.notnull(v)}
         try:
             pymarc_record = pymarc.Record(to_unicode=True, force_utf8=True, leader=record['LDR'])
-            record = {k:v for k,v in record.items() if any(a == k for a in ['LDR', 'AVA']) or re.compile('\d{3}').findall(k)}
+            record = {k:v for k,v in record.items() if any(a == k for a in ['LDR', 'AVA']) or re.findall('\d{3}', str(k))}
             for k, v in record.items():
                 v = str(v).split(field_delimiter)
                 if k == 'LDR':

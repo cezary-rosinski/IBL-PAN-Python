@@ -79,6 +79,15 @@ def rodzaj_zapisu(x):
     else:
         val = 'podmiotowy'
     return val
+
+def uproszczenie_nazw(x):
+    try:
+        if x.index('$') == 0:
+            return x[2:]
+        elif x.index('$') == 1:
+            return x[4:]
+    except ValueError:
+        return x
 #%%mode
 #with people OR without people
 # preferable = without people
@@ -112,28 +121,24 @@ file_list = drive.ListFile({'q': "'1xzqGIfZllmXXTh2dJABeHbRPFAM34nbw' in parents
 mapping_files_655 = [file['id'] for file in file_list if file['title'] == 'mapowanie BN-Oracle - 655'][0]
 mapping_files_650 = [file['id'] for file in file_list if file['title'].startswith('mapowanie BN-Oracle') if file['id'] != mapping_files_655]
 
-#%% deskryptory do harvestowania BN
-#lista deskryptorów do wzięcia - wąska (z selekcji Karoliny)
-deskryptory_do_filtrowania = [file['id'] for file in file_list if file['title'] == 'deskryptory_do_filtrowania'][0]
-deskryptory_do_filtrowania = gc.open_by_key(deskryptory_do_filtrowania)
-deskryptory_do_filtrowania = get_as_dataframe(deskryptory_do_filtrowania.worksheet('deskryptory_do_filtrowania'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
-BN_descriptors = deskryptory_do_filtrowania[deskryptory_do_filtrowania['deskryptor do filtrowania'] == 'tak']['deskryptory'].to_list()
-def uproszczenie_nazw(x):
-    try:
-        if x.index('$') == 0:
-            return x[2:]
-        elif x.index('$') == 1:
-            return x[4:]
-    except ValueError:
-        return x
-BN_descriptors = list(set([e.strip() for e in BN_descriptors]))
-BN_descriptors2 = list(set(uproszczenie_nazw(e) for e in BN_descriptors))
-roznica = list(set(BN_descriptors2) - set(BN_descriptors))
-BN_descriptors.extend(roznica)
+
+#%% deskryptory BN do wydobycia rekordów
+bn_deskryptory1 = gsheet_to_df('1b_DWfaMsi_10xKR8fg-0Qpzvm91p6gx3lwjgSy0zI1Q', 'deskryptory_do_filtrowania')
+bn_deskryptory1 = bn_deskryptory1[bn_deskryptory1['deskryptor do filtrowania'] == 'tak']['deskryptory'].to_list()
+bn_deskryptory2 = gsheet_to_df('1b_DWfaMsi_10xKR8fg-0Qpzvm91p6gx3lwjgSy0zI1Q', 'deskryptory_czasopisma')
+bn_deskryptory2 = bn_deskryptory2[bn_deskryptory2['deskryptor do filtrowania'] == 'tak']['deskryptory'].to_list()
+bn_deskryptory = list(set(bn_deskryptory1 + bn_deskryptory2))
+
+bn_deskryptory1 = list(set([e.strip() for e in bn_deskryptory]))
+bn_deskryptory2 = list(set(uproszczenie_nazw(e) for e in bn_deskryptory))
+bn_deskryptory1 = list(set(bn_deskryptory1 + bn_deskryptory2))
+bn_deskryptory2 = list(set([re.sub('\$y.*', '', e) for e in bn_deskryptory if e]))
+
+bn_deskryptory = list(set(bn_deskryptory1 + bn_deskryptory2))
 
 #%% BN data extraction
 
-path = 'F:/Cezary/Documents/IBL/BN/bn_all/2021-02-08/'
+path = 'F:/Cezary/Documents/IBL/BN/bn_all/2021-07-26/'
 files = [file for file in glob.glob(path + '*.mrk', recursive=True)]
 years = range(2004,2022)
 encoding = 'utf-8'
@@ -153,7 +158,7 @@ for file_path in tqdm(files):
                             score1 += 1
                     if el.startswith('=650') or el.startswith('=655'):
                         el = re.sub('\$y.*', '', el[10:]).replace('$2DBN', '').strip()
-                        if any(desc == el for desc in BN_descriptors):
+                        if any(desc == el for desc in bn_deskryptory):
                             score2 +=1
                 if score1 > 0 and score2 > 0:
                     new_list.append(sublist)
@@ -177,9 +182,96 @@ marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
 fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 marc_df = marc_df.reindex(columns=fields)
 
-marc_df.to_excel(f'bn_harvested_articles_{year}_{month}_{day}.xlsx', index=False)
 
-df_to_mrc(marc_df, '❦', f'marc_df_articles_{year}_{month}_{day}.mrc', f'marc_df_articles_errors_{year}_{month}_{day}.txt')
+
+
+bn_articles_marc = marc_df.copy()
+bn_articles_marc.drop(['852', '856'], axis = 1, inplace=True) 
+bn_articles_marc['240'] = bn_articles_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' in x else np.nan)
+bn_articles_marc['246'] = bn_articles_marc['246'].apply(lambda x: x if pd.notnull(x) and 'Tyt. oryg.:' not in x else np.nan)
+bn_articles_marc['008'] = bn_articles_marc['008'].str.replace('\\', ' ')
+if bn_articles_marc['009'].dtype == np.float64:
+        bn_articles_marc['009'] = bn_articles_marc['009'].astype(np.int64)
+bn_articles_marc['995'] = '\\\\$aPBL 2004-2020: czasopisma'
+bn_articles_marc = bn_articles_marc.drop_duplicates().reset_index(drop=True).dropna(how='all', axis=1)
+
+# linki do pełnych tekstów i relacje
+
+bazhum_links = gsheet_to_df('1KUoEQTYCrspK1t2gFvGOQPgSodv8ikzZt8f-oNzZe5g', 'Main')
+bazhum_links['is_link'] = bazhum_links['full_text'].apply(lambda x: urlparse(x)[0])
+bazhum_links = bazhum_links[bazhum_links['is_link'] == 'http'].drop(columns='is_link').rename(columns={'full_text':'856'})
+bazhum_links['856'] = bazhum_links['856'].apply(lambda x: f"40$u{x}$yonline$4N")
+
+bn_art_full_text = gsheet_to_df('1ewU50T08ZVNUP-U3dTTrb5VDDfWqT4TeYrMLrYns7c8', 'Sheet1')
+bn_art_full_text = bn_art_full_text[(bn_art_full_text['rights'].notnull()) & (bn_art_full_text['rights'] != 'brak praw')][['001', '856']]
+
+bn_relations = gsheet_to_df('1WPhir3CwlYre7pw4e76rEnJq5DPvVZs3_828c_Mqh9c', 'relacje_rev_book').drop(columns='typ').rename(columns={'id':'001', 856:'856'})
+
+X856 = pd.concat([bn_art_full_text, bn_relations, bazhum_links])
+X856['856'] = X856.groupby('001')['856'].transform(lambda x: '❦'.join(x))
+X856 = X856[X856['856'].notnull()].drop_duplicates()
+
+bn_articles_marc = pd.merge(bn_articles_marc, X856, on='001', how='left')
+
+field_list = bn_articles_marc.columns.tolist()
+field_list.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+bn_articles_marc = bn_articles_marc.reindex(columns=field_list)
+bn_articles_marc = bn_articles_marc.reset_index(drop=True)
+
+#%% Nikodem - dzielenie wierszy
+
+multiple_poems = bn_articles_marc[(bn_articles_marc['245'].str.contains(' ;$b', regex=False)) &
+                                  (bn_articles_marc['245'].notnull()) &
+                                  (bn_articles_marc['655'].str.lower().str.contains('poezja', regex=False)) &
+                                  (bn_articles_marc['505'].isnull())]
+
+bn_articles_marc = bn_articles_marc[~bn_articles_marc['001'].isin(multiple_poems['001'])]
+
+field_245 = marc_parser_1_field(multiple_poems, '001', '245', '\$')
+field_245['titles'] = [' '.join((a, b)).replace(' /', '') for a, b in zip(field_245['$a'], field_245['$b'])]
+field_245['titles'] = field_245['titles'].str.split(' ; ')
+field_245 = field_245.explode("titles").reset_index(drop=True)
+field_245['new_245'] = '10$a' + field_245['titles'] + ' /$c' + field_245['$c']
+field_245 = field_245[['001', 'new_245']].rename(columns={'new_245':'245'})
+
+multiple_poems = pd.merge(field_245, multiple_poems.drop(columns='245'), on='001')
+
+def remove_wrong_700(x):
+    try:
+        val = x['700'].split('❦')
+        result = ''
+        for elem in val:
+            if '$t' not in x['700']:
+                result += elem  
+        if result == '':
+            result = np.nan
+    except AttributeError: 
+        result = np.nan
+    return result
+
+multiple_poems['700'] = multiple_poems[['245', '700']].apply(lambda x: remove_wrong_700(x), axis=1)
+multiple_poems['idx'] = multiple_poems.groupby('001').cumcount()+1
+multiple_poems['001'] = multiple_poems[['idx', '001']].apply(lambda x: x['001'][0] + '{:02d}'.format(x['idx']) + x['001'][3:], axis=1)
+multiple_poems = multiple_poems.drop(columns='idx')
+
+bn_articles_marc = pd.concat([bn_articles_marc, multiple_poems]).reset_index(drop=True).sort_values('001')
+
+bn_articles_marc.to_excel('bn_articles_marc.xlsx', index=False)
+
+df_to_mrc(bn_articles_marc, '❦', f'libri_marc_bn_articles_{year}-{month}-{day}.mrc', f'libri_bn_articles_errors_{year}-{month}-{day}.txt')
+mrc_to_mrk(f'libri_marc_bn_articles_{year}-{month}-{day}.mrc', f'libri_marc_bn_articles_{year}-{month}-{day}.mrk')
+
+#errors
+with open(f'libri_bn_articles_errors_{year}-{month}-{day}.txt', encoding='utf8') as file:
+    errors = file.readlines()
+    
+errors = [ast.literal_eval(re.findall('\{.+\}', e)[0]) for e in errors if e != '\n']
+errors = [{(k):(v if k not in ['856', 856] else re.sub('(\:|\=|,)(❦)', r'\1 ',v)) for k,v in e.items()} for e in errors]
+
+df2 = pd.DataFrame(errors)
+df_to_mrc(df2, '❦', f'libri_marc_bn_articles_vol_2_{year}-{month}-{day}.mrc', f'libri_marc_bn_articles_vol_2_{year}-{month}-{day}.txt')
+mrc_to_mrk(f'libri_marc_bn_articles_vol_2_{year}-{month}-{day}.mrc', f'libri_marc_bn_articles_vol_2_{year}-{month}-{day}.mrk')
+
 
 #%% porównanie zasobów
 nowe = read_MARC21('marc_df_articles_2021_05_25.mrk')

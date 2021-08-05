@@ -21,6 +21,7 @@ import xml.etree.ElementTree as et
 import requests
 from collections import Counter
 import warnings
+import io
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -85,6 +86,38 @@ def genre_algorithm(df):
 def longest_string(s):
     return max(s, key=len)
 
+def harvested_list_to_df(bn_harvesting_list):
+    final_list = []
+    for lista in bn_harvesting_list:
+        slownik = {}
+        for el in lista:
+            if el[1:4] in slownik:
+                slownik[el[1:4]] += f"❦{el[6:]}"
+            else:
+                slownik[el[1:4]] = el[6:]
+        final_list.append(slownik)
+    
+    df = pd.DataFrame(final_list).drop_duplicates().reset_index(drop=True)
+    fields = df.columns.tolist()
+    fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
+    df = df.loc[:, df.columns.isin(fields)]
+    fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+    df = df.reindex(columns=fields)   
+    return df
+
+def marc_parser_dict_for_field(string, subfield_code):
+    subfield_list = re.findall(f'{subfield_code}.', string)
+    dictionary_field = {}
+    for subfield in subfield_list:
+        subfield_escape = re.escape(subfield)
+        string = re.sub(f'({subfield_escape})', r'❦\1', string)
+    for subfield in subfield_list:
+        subfield_escape = re.escape(subfield)
+        regex = f'(^)(.*?\❦{subfield_escape}|)(.*?)(\,{{0,1}})((\❦{subfield_code})(.*)|$)'
+        value = re.sub(regex, r'\3', string)
+        dictionary_field[subfield] = value
+    return dictionary_field
+
 #%% google drive
 file_list = drive.ListFile({'q': f"'{cr_projects}' in parents and trashed=false"}).GetList() 
 #[print(e['title'], e['id']) for e in file_list]
@@ -95,6 +128,76 @@ cz_authority_spreadsheet = [file['id'] for file in file_list if file['title'] ==
 cz_authority_spreadsheet = gc.open_by_key(cz_authority_spreadsheet)
 
 cz_authority_spreadsheet.worksheets()
+
+#%% Czech National Library - SKC set harvesting
+#wczytanie danych z tabeli
+authority_names_df = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'incl_missing')
+authority_names_df = authority_names_df[authority_names_df['used in OCLC'] == 'MISSING']
+cz_ids = [[(el.split('|')[-1], viaf, name) for el in e.split('❦') if 'NKC' in el] for e, viaf, name in zip(authority_names_df['IDs'], authority_names_df['viaf_id'], authority_names_df['cz_name'])]
+cz_ids = [e for sub in cz_ids for e in sub]
+cz_id, cz_viaf, cz_name = zip(*cz_ids)
+cz_ids_df = pd.DataFrame(cz_ids, columns=['cz_id', 'viaf_id', 'cz_name'])
+
+file_path = 'F:/Cezary/Documents/IBL/Translations/Czech database/nkp_nkc_2021-04-07.mrk'
+file_path = 'F:/Cezary/Documents/IBL/Translations/Czech database/nkp_nkc_2021-07-27.mrk'
+
+marc_list = io.open(file_path, 'rt', encoding = 'utf8').read().splitlines()
+
+mrk_list = []
+for row in tqdm(marc_list):
+    if row.startswith('=LDR'):
+        mrk_list.append([row])
+    else:
+        if row:
+            mrk_list[-1].append(row)
+            
+del marc_list
+
+final_list = []
+for lista in tqdm(mrk_list):
+    slownik = {}
+    for el in lista:
+        if el[1:4] in slownik:
+            slownik[el[1:4]] += f"❦{el[6:]}"
+        else:
+            slownik[el[1:4]] = el[6:]
+    final_list.append(slownik)
+    
+final_list[0]    
+test = []
+for el in tqdm(final_list):
+    print(el['001'])
+    
+    if el['001'] == 'zpk20183059372':
+        test.append(el)
+    
+'jo2015884136' in cz_id    
+
+cz_harvested = []
+for el in tqdm(final_list):
+    try:
+        if marc_parser_dict_for_field(el['100'], '\$')['$7'].strip() in cz_id:
+            el_id = marc_parser_dict_for_field(el['100'], '\$')['$7'].strip()
+            el['cz_id'] = el_id
+            cz_harvested.append(el)
+    except KeyError:
+        pass
+            
+skc_df = pd.DataFrame(cz_harvested).drop_duplicates().reset_index(drop=True)
+fields = skc_df.columns.tolist()
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i) or 'cz_id' in i]
+skc_df = skc_df.loc[:, skc_df.columns.isin(fields)]
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+skc_df = skc_df.reindex(columns=fields)           
+skc_df = pd.merge(skc_df, cz_ids_df, how='outer', on='cz_id')                           
+
+missing_in_skc = cz_ids_df[~cz_ids_df['cz_id'].isin(skc_df['cz_id'])]['cz_id'].unique()
+skc_df.to_excel('skc_cz_authority.xlsx', index=False)
+
+skc_df['language'] = skc_df['008'].apply(lambda x: x[35:38])
+skc_df_translations = skc_df[skc_df['language'] != 'cze']
+skc_df_translations.to_excel('skc_translations_cz_authority.xlsx', index=False)
+
 
 #%% load data
 list_of_records = []
@@ -121,8 +224,10 @@ oclc_other_languages = oclc_other_languages[oclc_other_languages['nature_of_cont
 oclc_other_languages['type of record + bibliographic level'] = oclc_other_languages['LDR'].apply(lambda x: x[6:8])
 oclc_other_languages['fiction_type'] = oclc_other_languages['008'].apply(lambda x: x[33])
 
-cz_authority_df = get_as_dataframe(cz_authority_spreadsheet.worksheet('Sheet1'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
-cz_authority_df = cz_authority_df[cz_authority_df['used in OCLC'] == True]
+# cz_authority_df = get_as_dataframe(cz_authority_spreadsheet.worksheet('Sheet1'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+# cz_authority_df = cz_authority_df[cz_authority_df['used in OCLC'] == True]
+# nowy arkusz Ondreja!!!
+cz_authority_df = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'incl_missing')
 
 # tutaj wąsko
 # viaf_positives = cz_authority_df['viaf_positive'].drop_duplicates().dropna().to_list()
@@ -224,7 +329,10 @@ df_all_positive['100_unidecode'] = df_all_positive['100'].apply(lambda x: unidec
 
 df_all_positive.to_excel('oclc_all_positive.xlsx', index=False)
 
-# df_all_positive = pd.read_excel('oclc_all_positive.xlsx').reset_index(drop=True)
+df_all_positive = pd.read_excel('oclc_all_positive.xlsx').reset_index(drop=True)
+skc_df_translations = pd.read_excel('skc_translations_cz_authority.xlsx').reset_index(drop=True)
+
+df_all_positive = pd.concat([df_all_positive, skc_df_translations])
 
 df_all_positive = replace_viaf_group(df_all_positive)
 
@@ -272,7 +380,7 @@ for key in people_clusters:
     
 df_people_clusters = pd.DataFrame.from_dict(people_clusters_records, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster_viaf', 0:'001'})
 df_people_clusters['001'] = df_people_clusters['001'].astype('int64')
-df_all_positive['001'] = df_all_positive['001'].astype('int64')
+# df_all_positive['001'] = df_all_positive['001'].astype('int64')
 # df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns=['all_names', 'cz_name', 'viaf_positive']).drop_duplicates().reset_index(drop=True)
 df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns=['all_names', 'cz_name']).drop_duplicates().reset_index(drop=True)
 
@@ -346,28 +454,36 @@ for name, group in tqdm(correct_grouped, total=len(correct_grouped)):
     
 correct.to_excel('translation_correct_data.xlsx', index=False)    
     
-
-    
 #%% HQ records: de-duplication
 
+#HQ or LQ
+records_set = input('Choose HQ or LQ: ')
+
+if records_set == 'HQ':
+    records_df = correct.copy()
+elif records_set == 'LQ':
+    records_df = not_correct.copy()
+else:
+    print('Wrong records set!')
+
+records_grouped = records_df.groupby(['cluster_viaf', 'language', 'cluster_titles'], dropna=False)
 # correct = pd.read_excel('translation_correct_data.xlsx') 
 # ttt = correct.copy()
 # correct = ttt.copy()
 # correct = correct[(correct['cluster_viaf'] == '4931097') & (correct['language'] == 'ger') & (correct['cluster_titles'] == 2526)]   
 # correct = correct[correct['cluster_viaf'] == '4931097']
 # correct = correct[(correct['cluster_viaf'] == '10256796') & (correct['language'] == 'ger') & (correct['cluster_titles'] == 10081)]
-correct_grouped = correct.groupby(['cluster_viaf', 'language', 'cluster_titles'])
+# correct_grouped = correct.groupby(['cluster_viaf', 'language', 'cluster_titles'])
 # grupy = list(correct_grouped.groups.keys())
-writer = pd.ExcelWriter('hq_data_deduplicated.xlsx', engine = 'xlsxwriter')
-correct.to_excel(writer, index=False, sheet_name='phase_0')
+writer = pd.ExcelWriter(f'{records_set}_data_deduplicated.xlsx', engine = 'xlsxwriter')
+records_df.to_excel(writer, index=False, sheet_name='phase_0')
 
 phase_1 = pd.DataFrame()
 phase_2 = pd.DataFrame()
 phase_3 = pd.DataFrame()
 phase_4 = pd.DataFrame()
 phase_5 = pd.DataFrame()
-correct = pd.DataFrame()
-for name, group in tqdm(correct_grouped, total=len(correct_grouped)):
+for name, group in tqdm(records_grouped, total=len(records_grouped)):
 # slice = 100
 # result = [g[1] for g in list(correct_grouped)[:slice]]
 # df = pd.concat(result)
@@ -377,6 +493,7 @@ for name, group in tqdm(correct_grouped, total=len(correct_grouped)):
     # group = correct_grouped.get_group(grupy[1])
 # group = correct.copy()  
 # group = correct_grouped.get_group(('107600220', 'hun', 8643))
+    # group = records_grouped.get_group(name)
 #phase_1: de-duplication 1: duplicates
     try:
         title = marc_parser_1_field(group, '001', '245', '\$')[['001', '$a', '$b', '$n', '$p']].replace(r'^\s*$', np.nan, regex=True)
@@ -626,7 +743,7 @@ phase_5.to_excel(writer, index=False, sheet_name='phase_5')
 writer.save()
 writer.close()    
     
-#%% HQ records: de-duplication - przystosować - jest w chunku wyżej
+#%% HQ records: de-duplication - przystosować - jest w chunku wyżej - NIEAKTUALNE
 fiction_types = ['1', 'd', 'f', 'h', 'j', 'p']
 languages = ['pol', 'swe', 'ita', 'spa']
 #languages = ['ita']
