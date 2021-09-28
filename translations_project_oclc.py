@@ -2,7 +2,7 @@ import pandas as pd
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 import gspread as gs
-import datetime
+from datetime import datetime
 import regex as re
 from collections import OrderedDict
 from gspread_dataframe import set_with_dataframe, get_as_dataframe
@@ -22,14 +22,16 @@ import requests
 from collections import Counter
 import warnings
 import io
+import glob
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-now = datetime.datetime.now()
+#%%
+now = datetime.now()
 year = now.year
-month = now.month
-day = now.day
-
+month = '{:02}'.format(now.month)
+day = '{:02}'.format(now.day)
+#%%
 #autoryzacja do tworzenia i edycji plików
 gc = gs.oauth()
 #autoryzacja do penetrowania dysku
@@ -130,74 +132,199 @@ cz_authority_spreadsheet = gc.open_by_key(cz_authority_spreadsheet)
 cz_authority_spreadsheet.worksheets()
 
 #%% Czech National Library - SKC set harvesting
+
+paths = ['F:/Cezary/Documents/IBL/Translations/Czech database/2020-05-27/',
+         'F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/'
+         'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-04-07/',
+         'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-07-27/',
+         'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-05/',
+         'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-10/']
+
+cz_harvested = []
+
+for path in tqdm(paths):
+    files = [e for e in glob.glob(path + '*.mrk', recursive=True)]
+    # ids = []    
+    for file in tqdm(files):
+        marc_list = io.open(file, 'rt', encoding = 'utf8').read().splitlines()
+        mrk_list = []
+        for row in marc_list:
+            if row.startswith('=LDR'):
+                mrk_list.append([row])
+            else:
+                if row:
+                    mrk_list[-1].append(row)
+    
+        final_list = []
+        for lista in mrk_list:
+            slownik = {}
+            for el in lista:
+                if el[1:4] in slownik:
+                    slownik[el[1:4]] += f"❦{el[6:]}"
+                else:
+                    slownik[el[1:4]] = el[6:]
+            final_list.append(slownik)
+    
+        for el in final_list:
+            try:
+                is_not_czech = el['008'][35:38] != 'cze'
+                is_book = el['LDR'][6:8] == 'am'
+                is_translated_from_czech = '$hcze' in el['041']
+                if all([is_not_czech, is_book, is_translated_from_czech]):
+                    cz_harvested.append(el)
+            except KeyError:
+                pass
+            
+df = pd.DataFrame(cz_harvested).drop_duplicates().reset_index(drop=True)
+fields = df.columns.tolist()
+fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i) or 'cz_id' in i]
+df = df.loc[:, df.columns.isin(fields)]
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+df = df.reindex(columns=fields)           
+df = df.sort_values('005', ascending=False).groupby('001').head(1)   
+df = df[df['998'].str.contains('local_base=SKC', regex=False)]
+
+sheet = gc.create(f'Czech translations_{year}-{month}-{day}', translation_folder)
+
+try:
+    set_with_dataframe(sheet.worksheet('Czech translations'), df_total)
+except gs.WorksheetNotFound:
+    sheet.add_worksheet(title="Czech translations", rows="100", cols="20")
+    set_with_dataframe(sheet.worksheet('Czech translations'), df_total)
+
+for worksheet in sheet.worksheets():
+    
+    sheet.batch_update({
+        "requests": [
+            {
+                "updateDimensionProperties": {
+                    "range": {
+                        "sheetId": worksheet._properties['sheetId'],
+                        "dimension": "ROWS",
+                        "startIndex": 0,
+                        #"endIndex": 100
+                    },
+                    "properties": {
+                        "pixelSize": 20
+                    },
+                    "fields": "pixelSize"
+                }
+            }
+        ]
+    })
+    
+    worksheet.freeze(rows=1)
+    worksheet.set_basic_filter()
+
+
+test = df_total['001'].value_counts().reset_index()
+
+
+
+
+
+
+#mrc to mrk
+
+# path = 'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-05/'
+path = 'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-10/'
+files = [e for e in glob.glob(path + '*.mrc', recursive=True)]
+for file_path in tqdm(files):
+    path_mrk = file_path.replace('.mrc', '.mrk')
+
+    mrc_to_mrk(file_path, path_mrk)
+
+
+paths = ['F:/Cezary/Documents/IBL/Translations/Czech database/2020-05-27/',
+         'F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/'
+         'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-04-07/',
+         'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-07-27/',
+         'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-05/',
+         'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-10/']
+
 #wczytanie danych z tabeli
 authority_names_df = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'incl_missing')
-authority_names_df = authority_names_df[authority_names_df['used in OCLC'] == 'MISSING']
+# authority_names_df = authority_names_df[authority_names_df['used in OCLC'] == 'MISSING']
 cz_ids = [[(el.split('|')[-1], viaf, name) for el in e.split('❦') if 'NKC' in el] for e, viaf, name in zip(authority_names_df['IDs'], authority_names_df['viaf_id'], authority_names_df['cz_name'])]
 cz_ids = [e for sub in cz_ids for e in sub]
 cz_id, cz_viaf, cz_name = zip(*cz_ids)
 cz_ids_df = pd.DataFrame(cz_ids, columns=['cz_id', 'viaf_id', 'cz_name'])
 
-file_path = 'F:/Cezary/Documents/IBL/Translations/Czech database/nkp_nkc_2021-04-07.mrk'
-file_path = 'F:/Cezary/Documents/IBL/Translations/Czech database/nkp_nkc_2021-07-27.mrk'
-
-marc_list = io.open(file_path, 'rt', encoding = 'utf8').read().splitlines()
-
-mrk_list = []
-for row in tqdm(marc_list):
-    if row.startswith('=LDR'):
-        mrk_list.append([row])
-    else:
-        if row:
-            mrk_list[-1].append(row)
-            
-del marc_list
-
-final_list = []
-for lista in tqdm(mrk_list):
-    slownik = {}
-    for el in lista:
-        if el[1:4] in slownik:
-            slownik[el[1:4]] += f"❦{el[6:]}"
-        else:
-            slownik[el[1:4]] = el[6:]
-    final_list.append(slownik)
-    
-final_list[0]    
-test = []
-for el in tqdm(final_list):
-    print(el['001'])
-    
-    if el['001'] == 'zpk20183059372':
-        test.append(el)
-    
-'jo2015884136' in cz_id    
-
 cz_harvested = []
-for el in tqdm(final_list):
-    try:
-        if marc_parser_dict_for_field(el['100'], '\$')['$7'].strip() in cz_id:
-            el_id = marc_parser_dict_for_field(el['100'], '\$')['$7'].strip()
-            el['cz_id'] = el_id
-            cz_harvested.append(el)
-    except KeyError:
-        pass
+
+for path in tqdm(paths):
+    files = [e for e in glob.glob(path + '*.mrk', recursive=True)]
+    # ids = []    
+    for file in tqdm(files):
+        marc_list = io.open(file, 'rt', encoding = 'utf8').read().splitlines()
+        mrk_list = []
+        for row in marc_list:
+            if row.startswith('=LDR'):
+                mrk_list.append([row])
+            else:
+                if row:
+                    mrk_list[-1].append(row)
+                    
+        final_list = []
+        for lista in mrk_list:
+            slownik = {}
+            for el in lista:
+                if el[1:4] in slownik:
+                    slownik[el[1:4]] += f"❦{el[6:]}"
+                else:
+                    slownik[el[1:4]] = el[6:]
+            final_list.append(slownik)
+            
+        # for el in final_list:
+        #     ids.append(el['001'])
+        
+        for el in final_list:
+            try:
+                is_not_czech = el['008'][35:38] != 'cze'
+                is_book = el['LDR'][6:8] == 'am'
+                if if_not_czech and is_book and marc_parser_dict_for_field(el['100'], '\$')['$7'].strip() in cz_id:
+                    # el_id = marc_parser_dict_for_field(el['100'], '\$')['$7'].strip()
+                    # el['cz_id'] = el_id
+                    cz_harvested.append(el)
+            except KeyError:
+                pass
+    
+# final_list[0]    
+# test = []
+# for el in tqdm(final_list):
+#     print(el['001'])
+    
+#     if el['001'] == 'zpk20183059372':
+#         test.append(el)
+    
+# 'jo2015884136' in cz_id    
+
+# 'zpk20183059372' in ids
             
 skc_df = pd.DataFrame(cz_harvested).drop_duplicates().reset_index(drop=True)
 fields = skc_df.columns.tolist()
 fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i) or 'cz_id' in i]
 skc_df = skc_df.loc[:, skc_df.columns.isin(fields)]
 fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-skc_df = skc_df.reindex(columns=fields)           
-skc_df = pd.merge(skc_df, cz_ids_df, how='outer', on='cz_id')                           
+skc_df = skc_df.reindex(columns=fields) 
+skc_df = skc_df.sort_values('005', ascending=False).groupby('001').head(1)   
+skc_df = skc_df[skc_df['998'].str.contains('local_base=SKC', regex=False)]
+
+df_total = pd.concat([df, skc_df]).drop_duplicates().reset_index(drop=True)
+          
+skc_df = pd.merge(skc_df, cz_ids_df, how='left', on='cz_id')                           
 
 missing_in_skc = cz_ids_df[~cz_ids_df['cz_id'].isin(skc_df['cz_id'])]['cz_id'].unique()
-skc_df.to_excel('skc_cz_authority.xlsx', index=False)
+with open('missing_in_skc.txt', 'w') as file:
+    for el in missing_in_skc:
+        file.write(f'{el}/n')
+        
+skc_df = skc_df.sort_values('005', ascending=False).groupby('001').head(1)        
+skc_df.to_excel(f'skc_cz_authority_{year}-{month}-{day}.xlsx', index=False)
 
 skc_df['language'] = skc_df['008'].apply(lambda x: x[35:38])
 skc_df_translations = skc_df[skc_df['language'] != 'cze']
-skc_df_translations.to_excel('skc_translations_cz_authority.xlsx', index=False)
-
+skc_df_translations.to_excel(f'skc_translations_cz_authority_{year}-{month}-{day}.xlsx', index=False)
 
 #%% load data
 list_of_records = []
@@ -329,22 +456,27 @@ df_all_positive['100_unidecode'] = df_all_positive['100'].apply(lambda x: unidec
 
 df_all_positive.to_excel('oclc_all_positive.xlsx', index=False)
 
-df_all_positive = pd.read_excel('oclc_all_positive.xlsx').reset_index(drop=True)
-skc_df_translations = pd.read_excel('skc_translations_cz_authority.xlsx').reset_index(drop=True)
+df_all_positive_origin = pd.read_excel('oclc_all_positive.xlsx').reset_index(drop=True)
+
+df_all_positive = df_all_positive_origin.copy().drop(columns=['all_names', 'cz_name']).drop_duplicates().reset_index(drop=True)
+skc_df_translations = pd.read_excel('skc_translations_cz_authority_2021-8-12.xlsx').reset_index(drop=True)
+skc_df_translations['260'] = skc_df_translations[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
+skc_df_translations['240'] = skc_df_translations[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)
+skc_df_translations['100_unidecode'] = skc_df_translations['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
 
 df_all_positive = pd.concat([df_all_positive, skc_df_translations])
-
 df_all_positive = replace_viaf_group(df_all_positive)
 
 #index of correctness
     
-df_all_positive['index of correctness'] = df_all_positive.apply(lambda x: index_of_correctness(x), axis=1)
-    
+df_all_positive['index of correctness'] = df_all_positive.apply(lambda x: index_of_correctness(x), axis=1)  
+
 df_oclc_people = marc_parser_1_field(df_all_positive, '001', '100_unidecode', '\\$')[['001', '$a', '$d', '$1']].replace(r'^\s*$', np.nan, regex=True)  
 df_oclc_people['$ad'] = df_oclc_people[['$a', '$d']].apply(lambda x: '$d'.join(x.dropna().astype(str)) if pd.notnull(x['$d']) else x['$a'], axis=1)
 df_oclc_people['$ad'] = '$a' + df_oclc_people['$ad']
 df_oclc_people['simplify string'] = df_oclc_people['$a'].apply(lambda x: simplify_string(x))
-df_oclc_people['001'] = df_oclc_people['001'].astype(int)
+df_oclc_people['simplify_ad'] = df_oclc_people['$ad'].apply(lambda x: simplify_string(x))
+# df_oclc_people['001'] = df_oclc_people['001'].astype(int)
 
 additional_viaf_to_remove = ['256578118', '83955898', '2299152636076120051534']
 people_clusters = {k:v for k,v in viaf_positives_dict.copy().items() if k not in additional_viaf_to_remove}
@@ -355,6 +487,7 @@ people_clusters = {k:v for k,v in viaf_positives_dict.copy().items() if k not in
 # people_clusters = {key: people_clusters[key] for key in selection}
 
 for key in tqdm(people_clusters, total=len(people_clusters)):
+    # key = '55955650'
     viaf_id = people_clusters[key]['viaf id']
     records = []
     records_1 = df_oclc_people[df_oclc_people['$1'] == viaf_id]['001'].to_list()
@@ -371,6 +504,12 @@ for key in tqdm(people_clusters, total=len(people_clusters)):
         records += records_3
     except KeyError:
         pass
+    try:
+        unidecode_lower_forms_of_names = [simplify_string(e) for e in people_clusters[key]['form of name']]
+        records_4 = df_oclc_people[df_oclc_people['simplify_ad'].isin(unidecode_lower_forms_of_names)]['001'].to_list()
+        records += records_4
+    except KeyError:
+        pass
     records = list(set(records))
     people_clusters[key].update({'list of records':records})
     
@@ -379,10 +518,21 @@ for key in people_clusters:
     people_clusters_records[key] = people_clusters[key]['list of records']
     
 df_people_clusters = pd.DataFrame.from_dict(people_clusters_records, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster_viaf', 0:'001'})
-df_people_clusters['001'] = df_people_clusters['001'].astype('int64')
-# df_all_positive['001'] = df_all_positive['001'].astype('int64')
+
+def type_str(x):
+    try:
+        return str(int(x))
+    except ValueError:
+        return str(x)    
+
+df_people_clusters['001'] = df_people_clusters['001'].apply(lambda x: type_str(x))
+df_all_positive['001'] = df_all_positive['001'].apply(lambda x: type_str(x))
+df_all_positive = df_all_positive.drop_duplicates().reset_index(drop=True)
+
 # df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns=['all_names', 'cz_name', 'viaf_positive']).drop_duplicates().reset_index(drop=True)
-df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns=['all_names', 'cz_name']).drop_duplicates().reset_index(drop=True)
+df_people_clusters = df_people_clusters.merge(df_all_positive, how='left', on='001').drop(columns='cz_name').drop_duplicates().reset_index(drop=True)
+
+# 'zpk20183020995' in df_oclc_people['001'].to_list()
 
 # multiple_clusters = df_people_clusters['001'].value_counts().reset_index()
 # multiple_clusters = multiple_clusters[multiple_clusters['001'] > 1]['index'].to_list()
@@ -410,7 +560,7 @@ except KeyError:
 
 df_original_titles_simple = pd.merge(df_original_titles_100, df_original_titles_240, how='left', on='001')
 df_original_titles_simple = df_original_titles_simple.merge(df_original_titles[['001', 'cluster_viaf']]).reset_index(drop=True)
-df_original_titles_simple['001'] = df_original_titles_simple['001'].astype(int)
+# df_original_titles_simple['001'] = df_original_titles_simple['001'].astype('Int64').astype('str')
 df_original_titles_simple['index'] = df_original_titles_simple.index+1
 
 df_original_titles_simple_grouped = df_original_titles_simple.groupby('cluster_viaf')
@@ -458,18 +608,23 @@ correct.to_excel('translation_correct_data.xlsx', index=False)
 
 #HQ or LQ
 records_set = input('Choose HQ or LQ: ')
+# records_sets = ['LQ', 'HQ']
+
+
 
 if records_set == 'HQ':
     records_df = correct.copy()
 elif records_set == 'LQ':
     records_df = not_correct.copy()
 else:
-    print('Wrong records set!')
+    sys.exit('Wrong records set!')
 
 records_grouped = records_df.groupby(['cluster_viaf', 'language', 'cluster_titles'], dropna=False)
 # correct = pd.read_excel('translation_correct_data.xlsx') 
 # ttt = correct.copy()
 # correct = ttt.copy()
+# not_correct = pd.read_excel('all_data_correctness.xlsx', sheet_name='not_correct')
+# not_correct['cluster_titles'] = not_correct['cluster_titles'].apply(lambda x: type_str(x) if pd.notnull(x) else np.nan)
 # correct = correct[(correct['cluster_viaf'] == '4931097') & (correct['language'] == 'ger') & (correct['cluster_titles'] == 2526)]   
 # correct = correct[correct['cluster_viaf'] == '4931097']
 # correct = correct[(correct['cluster_viaf'] == '10256796') & (correct['language'] == 'ger') & (correct['cluster_titles'] == 10081)]
@@ -484,6 +639,8 @@ phase_3 = pd.DataFrame()
 phase_4 = pd.DataFrame()
 phase_5 = pd.DataFrame()
 for name, group in tqdm(records_grouped, total=len(records_grouped)):
+    # gg = group.copy()
+    # group = gg.copy()
 # slice = 100
 # result = [g[1] for g in list(correct_grouped)[:slice]]
 # df = pd.concat(result)
@@ -495,6 +652,9 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
 # group = correct_grouped.get_group(('107600220', 'hun', 8643))
     # group = records_grouped.get_group(name)
 #phase_1: de-duplication 1: duplicates
+    
+    # name = test[6]
+    # group = records_grouped.get_group(name)
     try:
         title = marc_parser_1_field(group, '001', '245', '\$')[['001', '$a', '$b', '$n', '$p']].replace(r'^\s*$', np.nan, regex=True)
     except KeyError:
@@ -556,13 +716,15 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
             df_oclc_deduplicated = df_oclc_deduplicated.append(sub_group)
         
         df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
-        df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(int)
+        df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(object).astype('str')
         group = group[~group['001'].isin(oclc_duplicates_list)]
         group = pd.concat([group, df_oclc_deduplicated]).drop(columns='title')
         group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+        group = group.drop_duplicates().reset_index(drop=True)
         phase_1 = phase_1.append(group)
     else:
         group.drop(columns='title', inplace=True)
+        group = group.drop_duplicates().reset_index(drop=True)
         phase_1 = phase_1.append(group)
     
 #phase_2: de-duplication 2: multiple volumes
@@ -628,14 +790,16 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
                 df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(sub_group)
                     
         df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
-        df_oclc_multiple_volumes_deduplicated['001'] = df_oclc_multiple_volumes_deduplicated['001'].astype(int)
+        df_oclc_multiple_volumes_deduplicated['001'] = df_oclc_multiple_volumes_deduplicated['001'].astype(object).astype('str')
         group = group[~group['001'].isin(oclc_multiple_volumes_list)]
         group = pd.concat([group, df_oclc_multiple_volumes_deduplicated]).drop_duplicates().reset_index(drop=True)
         group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
         group.drop(columns='title', inplace=True)
+        group = group.drop_duplicates().reset_index(drop=True)
         phase_2 = phase_2.append(group)
     else:
         group.drop(columns='title', inplace=True)
+        group = group.drop_duplicates().reset_index(drop=True)
         phase_2 = phase_2.append(group)
 
 #phase_3: de-duplication 3: fuzzyness
@@ -656,8 +820,8 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
     
     if df_oclc_duplicates.shape[0] > 0:
  
-        if df_oclc_duplicates['001'].value_counts().max() > 1:
-            sys.exit('ERROR!!!\nclustering problem!!!')
+        # if df_oclc_duplicates['001'].value_counts().max() > 1:
+        #     sys.exit('ERROR!!!\nclustering problem!!!')
     
         oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
         df_oclc_duplicates = df_oclc_duplicates.groupby(['cluster', 'year'])
@@ -687,12 +851,17 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
             df_oclc_deduplicated = df_oclc_deduplicated.append(sub_group)
             
         df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
-        df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(int)
+        df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(object).astype('str')
         
-    group = group[~group['001'].isin(oclc_duplicates_list)]
-    group = pd.concat([group, df_oclc_deduplicated])
-    group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
-    phase_3 = phase_3.append(group)
+        group = group[~group['001'].isin(oclc_duplicates_list)]
+        group = pd.concat([group, df_oclc_deduplicated])
+        group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+        group = group.drop_duplicates().reset_index(drop=True)
+        phase_3 = phase_3.append(group)
+    else:
+        group.drop(columns='title', inplace=True)
+        group = group.drop_duplicates().reset_index(drop=True)
+        phase_3 = phase_3.append(group)
     
 #phase_4: editions counter
     # edition_clusters = cluster_strings(group['title'], 0.7)
@@ -737,7 +906,7 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
          
 phase_1.to_excel(writer, index=False, sheet_name='phase_1')    
 phase_2.to_excel(writer, index=False, sheet_name='phase_2')  
-phase_3.drop_duplicates().to_excel(writer, index=False, sheet_name='phase_3') 
+phase_3.drop(columns='title').drop_duplicates().to_excel(writer, index=False, sheet_name='phase_3') 
 phase_4.to_excel(writer, index=False, sheet_name='phase_4') 
 phase_5.to_excel(writer, index=False, sheet_name='phase_5') 
 writer.save()
