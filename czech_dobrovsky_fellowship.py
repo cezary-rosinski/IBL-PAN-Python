@@ -5,6 +5,7 @@ import re
 from collections import Counter
 from my_functions import xml_to_mrk, marc_parser_1_field
 import numpy as np
+import random
 
 #%% VIAF IDs for people from Czech database
 
@@ -13,15 +14,31 @@ import numpy as np
    
 # xml_to_mrk(path_in, path_out)
  
-file_path = "C:/Users/Cezary/Downloads/ucla0110.mrk"
+# file_path = "C:/Users/Cezary/Downloads/ucla0110.mrk"
+file_path = "C:/Users/Rosinski/Downloads/ucla0110.mrk"
 encoding = 'utf-8'
 
 marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
 
+records_sample = []
+for row in tqdm(marc_list):
+    if row.startswith('=LDR') and len(row) > 6:
+        records_sample.append([row])
+    else:
+        if len(row) == 0 or len(row) > 6:
+            records_sample[-1].append(row)
+
+sample = random.choices(records_sample, k=20)
+sample = [e for sub in sample for e in sub]
+sample_txt = io.open("marc21_sample.txt", 'wt', encoding='UTF-8')
+for element in sample:
+    sample_txt.write(str(element) + '\n')
+sample_txt.close()
+
 mrk_list = []
-for vojta in tqdm(marc_list):
-    if vojta.startswith(('=100', '=600', '=700')):
-        mrk_list.append(vojta[6:])
+for el in tqdm(marc_list):
+    if el.startswith(('=100', '=600', '=700')):
+        mrk_list.append(el[6:])
        
 # data_counter = dict(Counter(mrk_list).most_common(100))
 
@@ -49,7 +66,6 @@ group_2 = df_parsed[(df_parsed['$a'].notnull()) &
 group_3 = df_parsed[(~df_parsed['index'].isin(group_1['index'])) &
                     (~df_parsed['index'].isin(group_2['index']))].drop(columns='all')
 
-group_3.to_excel('file_for_long_rainy_evening.xlsx', index=False)
 
 test = group_3.sample(1000)
 
