@@ -75,6 +75,46 @@ urls = []
 for link in links:
     if link.text:
         urls.append([link.text.strip(), "http://ceny.ucl.cas.cz/index.php" + link['href']])
+
+
+
+
+test = urls[0]
+test = 'https://ceny.ucl.cas.cz/index.php?c=116'
+page = requests.get(test)
+page.encoding = 'ISO 8859-2'
+tree = BeautifulSoup(page.text, 'html.parser')
+awardees = tree.select_one('#bpopis+ div')
+
+
+.text.strip()
+awardees_list = re.split('\s(?=\d{4}\n)', awardees)
+
+print(awardees)
+
+.text.strip()
+
+
+        
+data= {}
+for i, url in tqdm(enumerate(urls, 1)):
+    # url = urls[0]
+    page = requests.get(url[1])
+    page.encoding = 'ISO 8859-2'
+    tree = BeautifulSoup(page.text, 'html.parser')
+    try:
+        data_person = tree.select_one('h2').text.strip()
+    except:
+        data_person = "brak danych (CR)"
+    try:
+        role = tree.select_one('h3').text
+    except:
+        role = "brak danych (CR)"
+    try:
+        description = tree.select_one('.indent').text.strip()
+    except:
+        description = "brak danych (CR)"
+    data[i] = {'data_person': data_person, 'role': role, 'description': description}
         
 #%%
 
