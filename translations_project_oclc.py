@@ -11,7 +11,7 @@ from my_functions import cosine_sim_2_elem, marc_parser_1_field, gsheet_to_df, x
 import unidecode
 import pandasql
 import time
-from google_drive_research_folders import cr_projects
+# from google_drive_research_folders import cr_projects
 from functools import reduce
 import sys
 import csv
@@ -133,106 +133,106 @@ cz_authority_spreadsheet.worksheets()
 
 #%% Czech National Library - SKC set harvesting
 
-paths = ['F:/Cezary/Documents/IBL/Translations/Czech database/2020-05-27/',
-         'F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/'
-         'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-04-07/',
-         'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-07-27/',
-         'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-05/',
-         'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-10/']
+# paths = ['F:/Cezary/Documents/IBL/Translations/Czech database/2020-05-27/',
+#          'F:/Cezary/Documents/IBL/Translations/Czech database/2021-03-18/'
+#          'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-04-07/',
+#          'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-07-27/',
+#          'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-05/',
+#          'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-10/']
 
-cz_harvested = []
+# cz_harvested = []
 
-for path in tqdm(paths):
-    files = [e for e in glob.glob(path + '*.mrk', recursive=True)]
-    # ids = []    
-    for file in tqdm(files):
-        marc_list = io.open(file, 'rt', encoding = 'utf8').read().splitlines()
-        mrk_list = []
-        for row in marc_list:
-            if row.startswith('=LDR'):
-                mrk_list.append([row])
-            else:
-                if row:
-                    mrk_list[-1].append(row)
+# for path in tqdm(paths):
+#     files = [e for e in glob.glob(path + '*.mrk', recursive=True)]
+#     # ids = []    
+#     for file in tqdm(files):
+#         marc_list = io.open(file, 'rt', encoding = 'utf8').read().splitlines()
+#         mrk_list = []
+#         for row in marc_list:
+#             if row.startswith('=LDR'):
+#                 mrk_list.append([row])
+#             else:
+#                 if row:
+#                     mrk_list[-1].append(row)
     
-        final_list = []
-        for lista in mrk_list:
-            slownik = {}
-            for el in lista:
-                if el[1:4] in slownik:
-                    slownik[el[1:4]] += f"❦{el[6:]}"
-                else:
-                    slownik[el[1:4]] = el[6:]
-            final_list.append(slownik)
+#         final_list = []
+#         for lista in mrk_list:
+#             slownik = {}
+#             for el in lista:
+#                 if el[1:4] in slownik:
+#                     slownik[el[1:4]] += f"❦{el[6:]}"
+#                 else:
+#                     slownik[el[1:4]] = el[6:]
+#             final_list.append(slownik)
     
-        for el in final_list:
-            try:
-                is_not_czech = el['008'][35:38] != 'cze'
-                is_book = el['LDR'][6:8] == 'am'
-                is_translated_from_czech = '$hcze' in el['041']
-                if all([is_not_czech, is_book, is_translated_from_czech]):
-                    cz_harvested.append(el)
-            except KeyError:
-                pass
+#         for el in final_list:
+#             try:
+#                 is_not_czech = el['008'][35:38] != 'cze'
+#                 is_book = el['LDR'][6:8] == 'am'
+#                 is_translated_from_czech = '$hcze' in el['041']
+#                 if all([is_not_czech, is_book, is_translated_from_czech]):
+#                     cz_harvested.append(el)
+#             except KeyError:
+#                 pass
             
-df = pd.DataFrame(cz_harvested).drop_duplicates().reset_index(drop=True)
-fields = df.columns.tolist()
-fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i) or 'cz_id' in i]
-df = df.loc[:, df.columns.isin(fields)]
-fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
-df = df.reindex(columns=fields)           
-df = df.sort_values('005', ascending=False).groupby('001').head(1)   
-df = df[df['998'].str.contains('local_base=SKC', regex=False)]
+# df = pd.DataFrame(cz_harvested).drop_duplicates().reset_index(drop=True)
+# fields = df.columns.tolist()
+# fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i) or 'cz_id' in i]
+# df = df.loc[:, df.columns.isin(fields)]
+# fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+# df = df.reindex(columns=fields)           
+# df = df.sort_values('005', ascending=False).groupby('001').head(1)   
+# df = df[df['998'].str.contains('local_base=SKC', regex=False)]
 
-sheet = gc.create(f'Czech translations_{year}-{month}-{day}', translation_folder)
+# sheet = gc.create(f'Czech translations_{year}-{month}-{day}', translation_folder)
 
-try:
-    set_with_dataframe(sheet.worksheet('Czech translations'), df_total)
-except gs.WorksheetNotFound:
-    sheet.add_worksheet(title="Czech translations", rows="100", cols="20")
-    set_with_dataframe(sheet.worksheet('Czech translations'), df_total)
+# try:
+#     set_with_dataframe(sheet.worksheet('Czech translations'), df_total)
+# except gs.WorksheetNotFound:
+#     sheet.add_worksheet(title="Czech translations", rows="100", cols="20")
+#     set_with_dataframe(sheet.worksheet('Czech translations'), df_total)
 
-for worksheet in sheet.worksheets():
+# for worksheet in sheet.worksheets():
     
-    sheet.batch_update({
-        "requests": [
-            {
-                "updateDimensionProperties": {
-                    "range": {
-                        "sheetId": worksheet._properties['sheetId'],
-                        "dimension": "ROWS",
-                        "startIndex": 0,
-                        #"endIndex": 100
-                    },
-                    "properties": {
-                        "pixelSize": 20
-                    },
-                    "fields": "pixelSize"
-                }
-            }
-        ]
-    })
+#     sheet.batch_update({
+#         "requests": [
+#             {
+#                 "updateDimensionProperties": {
+#                     "range": {
+#                         "sheetId": worksheet._properties['sheetId'],
+#                         "dimension": "ROWS",
+#                         "startIndex": 0,
+#                         #"endIndex": 100
+#                     },
+#                     "properties": {
+#                         "pixelSize": 20
+#                     },
+#                     "fields": "pixelSize"
+#                 }
+#             }
+#         ]
+#     })
     
-    worksheet.freeze(rows=1)
-    worksheet.set_basic_filter()
+#     worksheet.freeze(rows=1)
+#     worksheet.set_basic_filter()
 
 
-test = df_total['001'].value_counts().reset_index()
-
-
-
+# test = df_total['001'].value_counts().reset_index()
 
 
 
-#mrc to mrk
 
-# path = 'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-05/'
-path = 'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-10/'
-files = [e for e in glob.glob(path + '*.mrc', recursive=True)]
-for file_path in tqdm(files):
-    path_mrk = file_path.replace('.mrc', '.mrk')
 
-    mrc_to_mrk(file_path, path_mrk)
+
+# #mrc to mrk
+
+# # path = 'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-05/'
+# path = 'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-10/'
+# files = [e for e in glob.glob(path + '*.mrc', recursive=True)]
+# for file_path in tqdm(files):
+#     path_mrk = file_path.replace('.mrc', '.mrk')
+
+#     mrc_to_mrk(file_path, path_mrk)
 
 
 paths = ['F:/Cezary/Documents/IBL/Translations/Czech database/2020-05-27/',
