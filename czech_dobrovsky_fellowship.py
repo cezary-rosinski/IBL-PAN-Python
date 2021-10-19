@@ -7,6 +7,7 @@ from my_functions import xml_to_mrk, marc_parser_1_field
 import numpy as np
 import random
 import requests
+from bs4 import BeautifulSoup
 
 #%% VIAF IDs for people from Czech database
 
@@ -112,6 +113,139 @@ for i, row in tqdm(group_2.iterrows(), total=group_2.shape[0]):
         except KeyError:
             group_2.at[i, 'nkc_id'] = np.nan
             group_2.at[i, 'viaf_id'] = np.nan
+
+#%% Subject Headings
+# getting SH from CLB
+file_path = "C:/Users/Cezary/Downloads/ucla0110.mrk"
+encoding = 'utf-8'
+marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+
+clb_sh = []
+errors = []
+for row in tqdm(marc_list):
+    if row.startswith('=650  07'):
+        if re.findall('(?<=\$7)(.+?)(?=\$|$)', row):
+            errors.append((row, re.findall('(?<=\$7)(.+?)(?=\$|$)', row)[0]))
+        try:
+            sh = re.findall('ph\d+(?=\$|$)', row)[0]
+            clb_sh.append(sh)
+        except IndexError:
+            pass
+clb_sh = list(set(clb_sh))
+errors = list(set(errors))
+
+# difference = []
+# for error, identifier in tqdm(errors):
+#     if any(desc == identifier for desc in clb_sh):
+#         pass
+#     else:
+#         difference.append((error, identifier))
+
+# with open('vojtas_errors.txt', 'w', encoding='utf-8') as f:
+#     for el in difference:
+#         f.write(str(el) + '\n')
+# f.close()
+
+
+# finding the same in authority
+            
+            
+file_path = "C:/Users/Cezary/Downloads/150.txt"
+encoding = 'utf-8'
+
+marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+marc_list = [e[10:] for e in marc_list]
+
+list_of_records = []
+for row in tqdm(marc_list):
+    if row.startswith('LDR'):
+        list_of_records.append([row])
+    else:
+        if row:
+            list_of_records[-1].append(row)
+            
+sh_dict = {}
+for index, record in tqdm(enumerate(list_of_records, 1),total=len(list_of_records)):
+    for field in record:
+        if field.startswith('150'):
+            sh_dict[index] = {'cz': field[8:]}
+        elif field.startswith('750') and '$$2eczenas' in field:
+            if 'en' not in sh_dict[index]:
+                sh_dict[index].update({'en': field[8:]})
+                
+sh_dict = dict(list(sh_dict.items())[:10])
+
+url = 'https://id.loc.gov/search/?q='
+rest_url = '&q=cs%3Ahttp%3A%2F%2Fid.loc.gov%2Fauthorities%2Fsubjects'
+for key, value in tqdm(sh_dict.items()):
+    # key = list(sh_dict.items())[0][0]
+    # value = list(sh_dict.items())[0][1]
+    
+    term = re.findall('(?<=\$\$a)(.+?)(?=\$)', value['en'])[0]    
+    query = f'{url}{term}{rest_url}'
+    
+    response = requests.get(query).text
+    soup = BeautifulSoup(response, 'html.parser')
+    
+    links = zip(soup.select('.tbody-group a'), soup.select('type'))
+    locsh_dict = {}
+    for i, (name, kind) in enumerate(links, 1):
+        if kind.text == 'Topic':
+            locsh_dict[i] = {'label': name.text}
+            locsh_dict[i].update({'ID': re.findall('sh\d+$', name['href'])[0]})
+        
+    for k,v in locsh_dict.items():
+        query = f"https://id.loc.gov/authorities/subjects/{v['ID']}.json"
+        pure_url = query.replace('https', 'http').replace('.json','')
+        response = requests.get(query)
+        response.encoding = 'UTF-8'
+        response = response.json()
+        try:
+            alt_labels = [e for e in response if pure_url == e['@id']][0]
+            alt_labels = list({k:v for k,v in alt_labels.items() if 'core#altLabel' in k}.values())[-1]
+            alt_labels = [dictionary['@value'] for dictionary in alt_labels]
+            all_names = alt_labels.copy()
+            all_names.append(v['label'])
+            locsh_dict[k].update({'alternative labels': alt_labels, 'all names': all_names}) 
+        except IndexError:
+            pass        
+    sh_dict[key].update({'LoC SH': locsh_dict})
+
+
+                      
+# test2 = {k: {col: value for col, value in v.items() if 'prayer of praise to God' in value} for k, v in sh_dict.items()}
+# test2 = {k:v for k,v in test2.items() if v}
+
+
+
+
+
+
+url = 'https://id.loc.gov/search/?q=cultural+change&q=cs%3Ahttp%3A%2F%2Fid.loc.gov%2Fauthorities%2Fsubjects'
+response = requests.get(url)
+response.encoding = 'UTF-8'
+soup = BeautifulSoup(response.text, 'html.parser')
+links = zip(soup.select('.tbody-group a'), soup.select('type'))
+for a,b in links:
+    if b.text == 'Topic':
+        print(a['href'])
+        print(a.text)
+        print(b.text)
+        print('____________________')
+
+
+
+    
+    
+    
+
+
+links = soup.findAll('a', attrs={'href': re.compile("^\?o\=")})
+
+
+
+
+
 
 
 
