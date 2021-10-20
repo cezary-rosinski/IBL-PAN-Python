@@ -355,6 +355,7 @@ oclc_other_languages['fiction_type'] = oclc_other_languages['008'].apply(lambda 
 # cz_authority_df = cz_authority_df[cz_authority_df['used in OCLC'] == True]
 # nowy arkusz Ondreja!!!
 cz_authority_df = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'incl_missing')
+# cz_authority_df = pd.read_excel("C:/Users/Cezary/Downloads/cz_authority.xlsx", sheet_name='incl_missing')
 
 # tutaj wąsko
 # viaf_positives = cz_authority_df['viaf_positive'].drop_duplicates().dropna().to_list()
@@ -455,6 +456,7 @@ df_all_positive['240'] = df_all_positive[['240', '246']].apply(lambda x: x['240'
 df_all_positive['100_unidecode'] = df_all_positive['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
 
 df_all_positive.to_excel('oclc_all_positive.xlsx', index=False)
+# df_all_positive = pd.read_excel("C:/Users/Cezary/Downloads/Translations/oclc_all_positive.xlsx")
 
 df_all_positive_origin = pd.read_excel('oclc_all_positive.xlsx').reset_index(drop=True)
 

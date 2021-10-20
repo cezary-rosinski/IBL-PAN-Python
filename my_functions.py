@@ -442,13 +442,16 @@ def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8, ho
         elif t_id not in [e for e in clusters.values() for e in e]:
             clusters[t_cluster] = [t_id, t_cluster]
 
-    group_df = pd.DataFrame.from_dict(clusters, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster', 0:column_with_ids})
-    group_df[column_with_ids] = group_df[column_with_ids].apply(lambda x: type_str(x))
     df[column_with_ids] = df[column_with_ids].apply(lambda x: type_str(x))
+    try:
+        group_df = pd.DataFrame.from_dict(clusters, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster', 0:column_with_ids})
+        group_df[column_with_ids] = group_df[column_with_ids].apply(lambda x: type_str(x))
 
     # print(group_df[column_with_ids].dtype)
     # print(df[column_with_ids].dtype)
-    df = df.merge(group_df, on=column_with_ids, how='left')
+        df = df.merge(group_df, on=column_with_ids, how='left')
+    except IndexError:
+        df['cluster'] = np.nan
     # df['cluster'] = df[[column_with_ids, 'cluster']].apply(lambda x: x['cluster'] if pd.notnull(x['cluster']) else x[column_with_ids], axis=1).astype('int64')
     df['cluster'] = df[[column_with_ids, 'cluster']].apply(lambda x: x['cluster'] if pd.notnull(x['cluster']) else x[column_with_ids], axis=1)
     
