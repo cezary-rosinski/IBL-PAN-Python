@@ -28,7 +28,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
 #%%
-now = datetime.now()
+now = datetime.now().date()
 year = now.year
 month = '{:02}'.format(now.month)
 day = '{:02}'.format(now.day)
@@ -41,8 +41,8 @@ day = '{:02}'.format(now.day)
 # drive = GoogleDrive(gauth)
 
 #%% Authority file
-# cz_authority_df = pd.read_excel("C:/Users/Cezary/Downloads/cz_authority.xlsx", sheet_name='incl_missing')
-cz_authority_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/cz_authority.xlsx", sheet_name='incl_missing')
+cz_authority_df = pd.read_excel("C:/Users/Cezary/Downloads/cz_authority.xlsx", sheet_name='incl_missing')
+# cz_authority_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/cz_authority.xlsx", sheet_name='incl_missing')
 
 cz_authority_list = [e.split('❦') for e in cz_authority_df['IDs'].to_list()]
 cz_authority_list = [[e for e in sublist if 'NKC' in e] for sublist in cz_authority_list]
@@ -60,8 +60,8 @@ for i, row in cz_id_viaf_id.iterrows():
 #%% dictionary for difficult sets of data
 difficult_dbs_dict = {}    
 #%% Brno database
-# file_path = "C:/Users/Cezary/Downloads/scrapeBrno.txt"
-file_path = "C:/Users/Rosinski/Downloads/scrapeBrno.txt"
+file_path = "C:/Users/Cezary/Downloads/scrapeBrno.txt"
+# file_path = "C:/Users/Rosinski/Downloads/scrapeBrno.txt"
 encoding = 'utf-8'
 marc_list = io.open(file_path, 'rt', encoding = encoding).read().replace('|','$').splitlines()
 
@@ -110,6 +110,10 @@ brno_df['001'] = brno_df.apply(lambda x: get_oclc_id(x), axis=1)
 brno_df.drop(columns='fakeid', inplace=True)
 brno_df['008'] = brno_df['008'].str.replace('$', '|')
 
+brno_df['260'] = brno_df[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
+brno_df['240'] = brno_df[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)
+brno_df['100_unidecode'] = brno_df['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
+
 brno_grouped = brno_df.groupby('001')
 brno_duplicates = brno_grouped.filter(lambda x: len(x) > 1).sort_values('001')
 difficult_dbs_dict.update({'Brno duplicates': brno_duplicates})
@@ -135,10 +139,17 @@ for i, row in tqdm(field_100.iterrows(), total=field_100.shape[0]):
 
 for i, row in tqdm(brno_df.iterrows(), total=brno_df.shape[0]):   
     brno_df.at[i, '100'] = f"{row['100']}$1{field_100[field_100['001'] == row['001']]['$1'].to_list()[0]}"
+   
+brno_df['fiction_type'] = brno_df['008'].apply(lambda x: x[33])
+brno_df['audience'] = brno_df['008'].apply(lambda x: x[22])
+    
+brno_multiple_original_titles = brno_df[brno_df['765'].str.count('\$t') > 1]
+difficult_dbs_dict.update({'Brno multiple original titles': brno_multiple_original_titles})
+brno_df = brno_df[~brno_df['001'].isin(brno_multiple_original_titles['001'])].reset_index(drop=True)
     
 #%% NKC database
-# nkc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'viaf_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
-nkc_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'viaf_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
+nkc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'viaf_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
+# nkc_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'viaf_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
 def convert_float_to_int(x):
     try:
         return str(np.int64(x))
@@ -147,6 +158,13 @@ def convert_float_to_int(x):
 nkc_df['005'] = nkc_df['005'].apply(lambda x: convert_float_to_int(x))
 nkc_df = nkc_df[~nkc_df['language'].isin(['pol', 'fre', 'eng', 'ger'])].drop(columns='language').drop_duplicates().reset_index(drop=True)
 
+nkc_df['fiction_type'] = nkc_df['008'].apply(lambda x: x[33])
+nkc_df['audience'] = nkc_df['008'].apply(lambda x: x[22])
+
+nkc_df['260'] = nkc_df[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
+nkc_df['240'] = nkc_df[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)
+nkc_df['100_unidecode'] = nkc_df['100'].apply(lambda x: unidecode.unidecode(x).lower() if pd.notnull(x) else x)
+
 start_value = 100000000000
 nkc_df['fakeid'] = pd.Series(range(start_value,start_value+nkc_df.shape[0]+1,1))
 nkc_df['fakeid'] = nkc_df['fakeid'].astype('Int64').astype('str')      
@@ -154,34 +172,59 @@ nkc_df['001'] = nkc_df.apply(lambda x: get_oclc_id(x), axis=1)
 nkc_df.drop(columns='fakeid', inplace=True)
 nkc_df['SRC'] = 'NKC'
 
-total = pd.concat([brno_df, nkc_df])
-
-total_grouped = total.groupby('001')
-duplicates_brno_nkc = total_grouped.filter(lambda x: len(x) > 1).sort_values('001')
-
-total = total[~total['001'].isin(duplicates_brno_nkc['001'])].reset_index(drop=True)
+total = pd.concat([brno_df, nkc_df]).reset_index(drop=True)
 total['001'] = total['001'].astype(np.int64)
 
 #%% OCLC
-# oclc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', '100_unidecode']).drop_duplicates().reset_index(drop=True)
-oclc_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', '100_unidecode']).drop_duplicates().reset_index(drop=True)
+oclc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', '100_unidecode']).drop_duplicates().reset_index(drop=True)
+# oclc_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', '100_unidecode']).drop_duplicates().reset_index(drop=True)
+
+oclc_df['fiction_type'] = oclc_df['008'].apply(lambda x: x[33])
+oclc_df['audience'] = oclc_df['008'].apply(lambda x: x[22])
 
 def replace_viaf_group(df):
     viaf_groups = {'256578118':'118529174', '83955898':'25095273', '2299152636076120051534':'11196637'}
     df['viaf_id'] = df['viaf_id'].replace(viaf_groups)
     return df
-oclc_df = replace_viaf_group(oclc_df)
+oclc_df = replace_viaf_group(oclc_df).drop_duplicates().reset_index(drop=True)
 oclc_df['001'] = oclc_df['001'].astype(np.int64)
 oclc_df['SRC'] = 'OCLC'
 
-total2 = pd.concat([total, oclc_df])
-total2_grouped = total2.groupby('001')
-duplicates_brno_nkc_oclc = total2_grouped.filter(lambda x: len(x) > 1).sort_values('001')
+oclc_multiple_original_titles = oclc_df[oclc_df['240'].str.count('\$a') > 1]
+difficult_dbs_dict.update({'OCLC multiple original titles': oclc_multiple_original_titles})
+oclc_df = oclc_df[~oclc_df['001'].isin(oclc_multiple_original_titles['001'])].reset_index(drop=True)
 
-# duplicates_brno_nkc_oclc.to_excel('duplicates_brno_nkc_and_oclc.xlsx', index=False)
+total = pd.concat([total, oclc_df])
 
 
-# na razie przygotować paczkę, gdzie mamy wiele tytułów oryginalnych 765$t dla Brno i 240$a albo 246 (sprawdzić) w OCLC
+# ograć duplikaty
+total_grouped = total.groupby('001')
+duplicates_brno_oclc = total_grouped.filter(lambda x: len(x) > 1).sort_values('001')
+total = total[~total['001'].isin(duplicates_brno_oclc['001'])]
+duplicates_brno_oclc_grouped = duplicates_brno_oclc.groupby('001')
+#3636 duplikatów
+
+brno_oclc_deduplicated = pd.DataFrame()
+for name, group in tqdm(duplicates_brno_oclc_grouped, total=len(duplicates_brno_oclc_grouped)):
+    for column in group:
+        if column in ['fiction_type', 'audience', '020', '041', '240', '245', '260']:
+            group[column] = '❦'.join(group[column].dropna().drop_duplicates().astype(str))
+        else:
+            group[column] = group[group['SRC'] == 'Brno'][column]
+    brno_oclc_deduplicated = brno_oclc_deduplicated.append(group)
+
+brno_oclc_deduplicated = brno_oclc_deduplicated[brno_oclc_deduplicated['001'].notnull()]
+brno_oclc_deduplicated['001'] = brno_oclc_deduplicated['001'].astype(np.int64)
+
+test = pd.concat([total, brno_oclc_deduplicated]).reset_index(drop=True)  
+total.to_excel(f'translation_database_{now}.xlsx', index=False)
+
+writer = pd.ExcelWriter(f'problematic_records_{now}.xlsx', engine = 'xlsxwriter')
+for k, v in difficult_dbs_dict.items():
+    v.to_excel(writer, index=False, sheet_name=k)
+writer.save()
+writer.close()  
+
 
 # przygotować statystyki - ile mamy na wejsciu z kazdego zrodla, ile tracimy w kazdym kroku, co sie dzieje liczbowo
 # potrzebujemy danych od samiuskiego poczatku - np. ile dostalismy od oclc na poczatku
@@ -195,7 +238,7 @@ duplicates_brno_nkc_oclc = total2_grouped.filter(lambda x: len(x) > 1).sort_valu
 
 
 
-
+#%% deduplikacja
 
 
 
