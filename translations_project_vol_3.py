@@ -41,13 +41,27 @@ day = '{:02}'.format(now.day)
 # drive = GoogleDrive(gauth)
 
 #%% Authority file
-cz_authority_df = pd.read_excel("C:/Users/Cezary/Downloads/cz_authority.xlsx", sheet_name='incl_missing')
+# cz_authority_df = pd.read_excel("C:/Users/Cezary/Downloads/cz_authority.xlsx", sheet_name='incl_missing')
+cz_authority_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/cz_authority.xlsx", sheet_name='incl_missing')
 
 cz_authority_list = [e.split('❦') for e in cz_authority_df['IDs'].to_list()]
 cz_authority_list = [[e for e in sublist if 'NKC' in e] for sublist in cz_authority_list]
 cz_authority_list = list(set([e.split('|')[-1] for sublist in cz_authority_list for e in sublist]))
+
+cz_id_viaf_id = cz_authority_df[['index', 'viaf_id', 'IDs']]
+cz_id_viaf_id['viaf_id'] = cz_id_viaf_id['viaf_id'].apply(lambda x: re.sub('(.+?)(\|.+$)', r'\1', x))
+cz_id_viaf_id = cSplit(cz_id_viaf_id, 'index', 'IDs', '❦').drop(columns='index').drop_duplicates().reset_index(drop=True)
+cz_id_viaf_id = cz_id_viaf_id[cz_id_viaf_id['IDs'].str.contains('NKC')]
+cz_id_viaf_id['IDs'] = cz_id_viaf_id['IDs'].apply(lambda x: re.findall('(?<=NKC\|)(.+)', x)[0])
+cz_id_viaf_id_dict = {}
+for i, row in cz_id_viaf_id.iterrows():
+    cz_id_viaf_id_dict[row['IDs']] = row['viaf_id']
+    
+#%% dictionary for difficult sets of data
+difficult_dbs_dict = {}    
 #%% Brno database
-file_path = "C:/Users/Cezary/Downloads/scrapeBrno.txt"
+# file_path = "C:/Users/Cezary/Downloads/scrapeBrno.txt"
+file_path = "C:/Users/Rosinski/Downloads/scrapeBrno.txt"
 encoding = 'utf-8'
 marc_list = io.open(file_path, 'rt', encoding = encoding).read().replace('|','$').splitlines()
 
@@ -94,11 +108,37 @@ def get_oclc_id(x):
         
 brno_df['001'] = brno_df.apply(lambda x: get_oclc_id(x), axis=1)
 brno_df.drop(columns='fakeid', inplace=True)
+brno_df['008'] = brno_df['008'].str.replace('$', '|')
 
-#czy pozmieniać treści, np. przenieść tytuł oryginalny?
+brno_grouped = brno_df.groupby('001')
+brno_duplicates = brno_grouped.filter(lambda x: len(x) > 1).sort_values('001')
+difficult_dbs_dict.update({'Brno duplicates': brno_duplicates})
+brno_df = brno_df[~brno_df['001'].isin(brno_duplicates['001'])]
+brno_no_author_in_100 = brno_df[brno_df['100'].isna()]
+difficult_dbs_dict.update({'Brno no author in 100': brno_no_author_in_100})
+brno_df = brno_df[brno_df['100'].notnull()]
+field_100 = marc_parser_1_field(brno_df, '001', '100', '\$')
+brno_no_nkc_id = field_100[field_100['$7'] == '']['001'].to_list()
+brno_no_nkc_id = brno_df[brno_df['001'].isin(brno_no_nkc_id)]
+difficult_dbs_dict.update({'Brno no NKC id for author': brno_no_nkc_id})
+brno_df = brno_df[~brno_df['001'].isin(brno_no_nkc_id['001'])]
+field_100 = marc_parser_1_field(brno_df, '001', '100', '\$')
+field_100['$1'] = ''
+for i, row in tqdm(field_100.iterrows(), total=field_100.shape[0]):
+    try:
+        field_100.at[i,'$1'] = f"http://viaf.org/viaf/{cz_id_viaf_id_dict[row['$7']]}"
+    except KeyError:
+        url = f"http://viaf.org/viaf/sourceID/NKC%7C{row['$7']}/json"
+        response = requests.get(url).url
+        viaf_id = re.findall('\d+', response)[0]
+        field_100.at[i,'$1'] = f"http://viaf.org/viaf/{viaf_id}"
 
+for i, row in tqdm(brno_df.iterrows(), total=brno_df.shape[0]):   
+    brno_df.at[i, '100'] = f"{row['100']}$1{field_100[field_100['001'] == row['001']]['$1'].to_list()[0]}"
+    
 #%% NKC database
-nkc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'viaf_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
+# nkc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'viaf_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
+nkc_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'viaf_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
 def convert_float_to_int(x):
     try:
         return str(np.int64(x))
@@ -123,8 +163,8 @@ total = total[~total['001'].isin(duplicates_brno_nkc['001'])].reset_index(drop=T
 total['001'] = total['001'].astype(np.int64)
 
 #%% OCLC
-
-oclc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', '100_unidecode']).drop_duplicates().reset_index(drop=True)
+# oclc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', '100_unidecode']).drop_duplicates().reset_index(drop=True)
+oclc_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', '100_unidecode']).drop_duplicates().reset_index(drop=True)
 
 def replace_viaf_group(df):
     viaf_groups = {'256578118':'118529174', '83955898':'25095273', '2299152636076120051534':'11196637'}
@@ -138,14 +178,18 @@ total2 = pd.concat([total, oclc_df])
 total2_grouped = total2.groupby('001')
 duplicates_brno_nkc_oclc = total2_grouped.filter(lambda x: len(x) > 1).sort_values('001')
 
-duplicates_brno_nkc_oclc.to_excel('duplicates_brno_nkc_and_oclc.xlsx', index=False)
+# duplicates_brno_nkc_oclc.to_excel('duplicates_brno_nkc_and_oclc.xlsx', index=False)
+
+
+# na razie przygotować paczkę, gdzie mamy wiele tytułów oryginalnych 765$t dla Brno i 240$a albo 246 (sprawdzić) w OCLC
+
+# przygotować statystyki - ile mamy na wejsciu z kazdego zrodla, ile tracimy w kazdym kroku, co sie dzieje liczbowo
+# potrzebujemy danych od samiuskiego poczatku - np. ile dostalismy od oclc na poczatku
 
 
 
 
-
-
-
+# numbers for now: 1. original oclc data, 2. interesting translations (oclc, brno, nkc), 3. HQ and LQ, 4. HQ after deduplication and clustering
 
 
 
