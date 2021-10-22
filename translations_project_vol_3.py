@@ -41,8 +41,8 @@ day = '{:02}'.format(now.day)
 # drive = GoogleDrive(gauth)
 
 #%% Authority file
-cz_authority_df = pd.read_excel("C:/Users/Cezary/Downloads/cz_authority.xlsx", sheet_name='incl_missing')
-# cz_authority_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/cz_authority.xlsx", sheet_name='incl_missing')
+# cz_authority_df = pd.read_excel("C:/Users/Cezary/Downloads/cz_authority.xlsx", sheet_name='incl_missing')
+cz_authority_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/cz_authority.xlsx", sheet_name='incl_missing')
 
 cz_authority_list = [e.split('❦') for e in cz_authority_df['IDs'].to_list()]
 cz_authority_list = [[e for e in sublist if 'NKC' in e] for sublist in cz_authority_list]
@@ -60,8 +60,8 @@ for i, row in cz_id_viaf_id.iterrows():
 #%% dictionary for difficult sets of data
 difficult_dbs_dict = {}    
 #%% Brno database
-file_path = "C:/Users/Cezary/Downloads/scrapeBrno.txt"
-# file_path = "C:/Users/Rosinski/Downloads/scrapeBrno.txt"
+# file_path = "C:/Users/Cezary/Downloads/scrapeBrno.txt"
+file_path = "C:/Users/Rosinski/Downloads/scrapeBrno.txt"
 encoding = 'utf-8'
 marc_list = io.open(file_path, 'rt', encoding = encoding).read().replace('|','$').splitlines()
 
@@ -127,7 +127,9 @@ brno_no_nkc_id = brno_df[brno_df['001'].isin(brno_no_nkc_id)]
 difficult_dbs_dict.update({'Brno no NKC id for author': brno_no_nkc_id})
 brno_df = brno_df[~brno_df['001'].isin(brno_no_nkc_id['001'])]
 field_100 = marc_parser_1_field(brno_df, '001', '100', '\$')
+field_100['$a'] = field_100['$a'].apply(lambda x: x[:-1] if x[-1] == ',' else x)
 field_100['$1'] = ''
+new_people = []
 for i, row in tqdm(field_100.iterrows(), total=field_100.shape[0]):
     try:
         field_100.at[i,'$1'] = f"http://viaf.org/viaf/{cz_id_viaf_id_dict[row['$7']]}"
@@ -136,9 +138,13 @@ for i, row in tqdm(field_100.iterrows(), total=field_100.shape[0]):
         response = requests.get(url).url
         viaf_id = re.findall('\d+', response)[0]
         field_100.at[i,'$1'] = f"http://viaf.org/viaf/{viaf_id}"
-
+        new_people.append({'index':viaf_id, 'cz_name':row['$a'], 'cz_dates':row['$d'], 'viaf_id':viaf_id, 'IDs':row['$7']})
+brno_df['viaf_id'] = ''
 for i, row in tqdm(brno_df.iterrows(), total=brno_df.shape[0]):   
     brno_df.at[i, '100'] = f"{row['100']}$1{field_100[field_100['001'] == row['001']]['$1'].to_list()[0]}"
+    viaf_id = field_100[field_100['001'] == row['001']]['$1'].to_list()[0]
+    viaf_id = re.findall('\d+', viaf_id)[0]
+    brno_df.at[i, 'viaf_id'] = viaf_id
    
 brno_df['fiction_type'] = brno_df['008'].apply(lambda x: x[33])
 brno_df['audience'] = brno_df['008'].apply(lambda x: x[22])
@@ -148,8 +154,8 @@ difficult_dbs_dict.update({'Brno multiple original titles': brno_multiple_origin
 brno_df = brno_df[~brno_df['001'].isin(brno_multiple_original_titles['001'])].reset_index(drop=True)
     
 #%% NKC database
-nkc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'viaf_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
-# nkc_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'viaf_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
+# nkc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'viaf_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
+nkc_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
 def convert_float_to_int(x):
     try:
         return str(np.int64(x))
@@ -176,8 +182,8 @@ total = pd.concat([brno_df, nkc_df]).reset_index(drop=True)
 total['001'] = total['001'].astype(np.int64)
 
 #%% OCLC
-oclc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', '100_unidecode']).drop_duplicates().reset_index(drop=True)
-# oclc_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', '100_unidecode']).drop_duplicates().reset_index(drop=True)
+# oclc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', '100_unidecode']).drop_duplicates().reset_index(drop=True)
+oclc_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', 'nature_of_contents']).drop_duplicates().reset_index(drop=True)
 
 oclc_df['fiction_type'] = oclc_df['008'].apply(lambda x: x[33])
 oclc_df['audience'] = oclc_df['008'].apply(lambda x: x[22])
@@ -195,7 +201,12 @@ difficult_dbs_dict.update({'OCLC multiple original titles': oclc_multiple_origin
 oclc_df = oclc_df[~oclc_df['001'].isin(oclc_multiple_original_titles['001'])].reset_index(drop=True)
 
 total = pd.concat([total, oclc_df])
+fields = total.columns.tolist()
+fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
+total = total.reindex(columns=fields) 
 
+test = total[['SRC', 'nature_of_contents']]
+test = test[test['nature_of_contents'].notnull()]
 
 # ograć duplikaty
 total_grouped = total.groupby('001')
@@ -217,6 +228,9 @@ brno_oclc_deduplicated = brno_oclc_deduplicated[brno_oclc_deduplicated['001'].no
 brno_oclc_deduplicated['001'] = brno_oclc_deduplicated['001'].astype(np.int64)
 
 test = pd.concat([total, brno_oclc_deduplicated]).reset_index(drop=True)  
+
+
+
 total.to_excel(f'translation_database_{now}.xlsx', index=False)
 
 writer = pd.ExcelWriter(f'problematic_records_{now}.xlsx', engine = 'xlsxwriter')
@@ -235,7 +249,10 @@ writer.close()
 # numbers for now: 1. original oclc data, 2. interesting translations (oclc, brno, nkc), 3. HQ and LQ, 4. HQ after deduplication and clustering
 
 
+#%% clusters
 
+new_people = list({v['index']:v for v in new_people}.values())
+# dodać tych ludzi do pliku wzorcowego
 
 
 #%% deduplikacja
