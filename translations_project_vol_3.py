@@ -741,7 +741,8 @@ writer.close()
 
 #%% de-duplication HQ
 
-records_df = pd.read_excel('translation_database_clusters_with_quality_index_2021-10-25.xlsx', sheet_name='HQ')
+# records_df = pd.read_excel('translation_database_clusters_with_quality_index_2021-10-25.xlsx', sheet_name='HQ')
+records_df = correct.copy()
 records_grouped = records_df.groupby(['cluster_viaf', 'language', 'cluster_titles'])
 # records_grouped = records_df.groupby(['cluster_viaf', 'language', 'cluster_titles'], dropna=False)
 
@@ -1014,9 +1015,6 @@ phase_3.to_excel(writer, index=False, sheet_name='phase_3')
 phase_4.to_excel(writer, index=False, sheet_name='phase_4') 
 writer.save()
 writer.close()    
-
-
-phase_4.to_excel('hasek.xlsx', index=False)
 
 
 
