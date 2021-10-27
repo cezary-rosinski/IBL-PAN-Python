@@ -486,6 +486,18 @@ def simplify_string(x, with_spaces=True, nodiacritics=True):
             final_string += letter
     return final_string
 
+def marc_parser_dict_for_field(string, subfield_code):
+    subfield_list = re.findall(f'{subfield_code}.', string)
+    dictionary_field = {}
+    for subfield in subfield_list:
+        subfield_escape = re.escape(subfield)
+        string = re.sub(f'({subfield_escape})', r'❦\1', string)
+    for subfield in subfield_list:
+        subfield_escape = re.escape(subfield)
+        regex = f'(^)(.*?\❦{subfield_escape}|)(.*?)(\,{{0,1}})((\❦{subfield_code})(.*)|$)'
+        value = re.sub(regex, r'\3', string)
+        dictionary_field[subfield] = value
+    return dictionary_field
 
 
 

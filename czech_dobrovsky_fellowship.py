@@ -3,11 +3,12 @@ from tqdm import tqdm
 import pandas as pd
 import re
 from collections import Counter
-from my_functions import xml_to_mrk, marc_parser_1_field
+from my_functions import xml_to_mrk, marc_parser_1_field, marc_parser_dict_for_field
 import numpy as np
 import random
 import requests
 from bs4 import BeautifulSoup
+from difflib import SequenceMatcher
 
 #%% VIAF IDs for people from Czech database
 
@@ -134,21 +135,7 @@ for row in tqdm(marc_list):
 clb_sh = list(set(clb_sh))
 errors = list(set(errors))
 
-# difference = []
-# for error, identifier in tqdm(errors):
-#     if any(desc == identifier for desc in clb_sh):
-#         pass
-#     else:
-#         difference.append((error, identifier))
-
-# with open('vojtas_errors.txt', 'w', encoding='utf-8') as f:
-#     for el in difference:
-#         f.write(str(el) + '\n')
-# f.close()
-
-
-# finding the same in authority
-            
+# getting all Czech SH in English           
             
 file_path = "C:/Users/Cezary/Downloads/150.txt"
 encoding = 'utf-8'
@@ -172,8 +159,12 @@ for index, record in tqdm(enumerate(list_of_records, 1),total=len(list_of_record
         elif field.startswith('750') and '$$2eczenas' in field:
             if 'en' not in sh_dict[index]:
                 sh_dict[index].update({'en': field[8:]})
+
+# filtering SH for literary science
+           
+literary_sh_dict = {k:v for k,v in sh_dict.items() if marc_parser_dict_for_field(v['cz'], '\$\$')['$$7'] in clb_sh}                     
                 
-sh_dict = dict(list(sh_dict.items())[:10])
+sh_dict = dict(list(literary_sh_dict.items())[:10])
 
 url = 'https://id.loc.gov/search/?q='
 rest_url = '&q=cs%3Ahttp%3A%2F%2Fid.loc.gov%2Fauthorities%2Fsubjects'
@@ -211,11 +202,23 @@ for key, value in tqdm(sh_dict.items()):
             pass        
     sh_dict[key].update({'LoC SH': locsh_dict})
 
+# string similarity
 
-                      
-# test2 = {k: {col: value for col, value in v.items() if 'prayer of praise to God' in value} for k, v in sh_dict.items()}
-# test2 = {k:v for k,v in test2.items() if v}
+# put it into a loop
 
+sh_keys = sh_dict[2]['LoC SH'].keys()
+empty_list = []
+for el in sh_keys:
+    cz_name = marc_parser_dict_for_field(sh_dict[2]['en'], '\$\$')['$$a']
+    el2 = sh_dict[2]['LoC SH'][el]['all names']
+    for i, sh in enumerate(el2):
+        coe = SequenceMatcher(a=cz_name, b=sh.lower()).ratio()
+        empty_list.append((sh, coe))
+
+proper_one = max(empty_list, key=lambda x: x[-1])[0]
+similarity_lvl = max(empty_list, key=lambda x: x[-1])[-1]
+
+sh_dict[2]['LoC SH'] = [{k:v for k,v in sh_dict[2]['LoC SH'].items() if proper_one in v['all names']}, similarity_lvl]
 
 
 

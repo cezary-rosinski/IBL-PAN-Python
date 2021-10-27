@@ -399,7 +399,7 @@ writer.close()
 # original OCLC records number: 2115027
 # correct OCLC, Brno and NKC records number: 55182
 # HQ: 13404
-# LQ: 41749
+# LQ: 41778
 
 
 #%% quality index
@@ -742,7 +742,8 @@ writer.close()
 #%% de-duplication HQ
 
 records_df = pd.read_excel('translation_database_clusters_with_quality_index_2021-10-25.xlsx', sheet_name='HQ')
-records_grouped = records_df.groupby(['cluster_viaf', 'language', 'cluster_titles'], dropna=False)
+records_grouped = records_df.groupby(['cluster_viaf', 'language', 'cluster_titles'])
+# records_grouped = records_df.groupby(['cluster_viaf', 'language', 'cluster_titles'], dropna=False)
 
 writer = pd.ExcelWriter(f'HQ_data_deduplicated_{now}.xlsx', engine = 'xlsxwriter')
 records_df.to_excel(writer, index=False, sheet_name='phase_0') # original data
@@ -772,7 +773,7 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
     
     try:
         place = marc_parser_1_field(group, '001', '260', '\$')[['001', '$a']].rename(columns={'$a':'place'})
-        place = place[place['place'] != '']
+        place = place.loc[place['place'] != '']
         place['place'] = place['place'].apply(lambda x: simplify_string(x, with_spaces=False))
         place = place.groupby('001').agg({'place': longest_string}).reset_index()
     except KeyError:
@@ -821,7 +822,7 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
         
         df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
         df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(np.int64)
-        group = group[~group['001'].isin(oclc_duplicates_list)]
+        group = group.loc[~group['001'].isin(oclc_duplicates_list)]
         group = pd.concat([group, df_oclc_deduplicated]).drop(columns='title')
         group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
         group = group.drop_duplicates().reset_index(drop=True)
@@ -868,7 +869,7 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
                             sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
                         except ValueError:
                             sub_group[column] = np.nan
-                df = sub_group[~sub_group['245'].str.contains('\$n', regex=True)]
+                df = sub_group.loc[~sub_group['245'].str.contains('\$n', regex=True)]
                 df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.append(df)
             else:
                 for column in sub_group:
@@ -895,7 +896,7 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
                     
         df_oclc_multiple_volumes_deduplicated = df_oclc_multiple_volumes_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
         df_oclc_multiple_volumes_deduplicated['001'] = df_oclc_multiple_volumes_deduplicated['001'].astype(np.int64)
-        group = group[~group['001'].isin(oclc_multiple_volumes_list)]
+        group = group.loc[~group['001'].isin(oclc_multiple_volumes_list)]
         group = pd.concat([group, df_oclc_multiple_volumes_deduplicated]).drop_duplicates().reset_index(drop=True)
         group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
         group.drop(columns='title', inplace=True)
@@ -918,7 +919,7 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
     group = pd.merge(group, field_245, how='left', on='001')
 
     df_oclc_clusters = cluster_records(group, '001', ['title', 'publisher', 'year'], 0.85)    
-    df_oclc_clusters = df_oclc_clusters[df_oclc_clusters['publisher'] != '']
+    df_oclc_clusters = df_oclc_clusters.loc[df_oclc_clusters['publisher'] != '']
     df_oclc_duplicates = df_oclc_clusters.groupby(['cluster', 'year']).filter(lambda x: len(x) > 1)
     
     if df_oclc_duplicates.shape[0] > 0:
@@ -953,18 +954,17 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
         df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
         df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(np.int64)
         
-        group = group[~group['001'].isin(oclc_duplicates_list)]
+        group = group.loc[~group['001'].isin(oclc_duplicates_list)]
         group = pd.concat([group, df_oclc_deduplicated])
         group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
-        group = group.drop_duplicates().reset_index(drop=True)
+        group = group.drop(columns=['cluster', 'title']).drop_duplicates().reset_index(drop=True)
         phase_3 = phase_3.append(group)
     else:
-        group.drop(columns='title', inplace=True)
-        group = group.drop_duplicates().reset_index(drop=True)
+        group = group.drop(columns='title').drop_duplicates().reset_index(drop=True)
         phase_3 = phase_3.append(group)
     
 #phase_4: ISBN  
-            
+           
     group['ISBN'] = group['020'].apply(lambda x: get_ISBNs(x))
 
     ISBN_dict = {}
@@ -984,7 +984,7 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
     
     ISBN_grouped = group.groupby('001')
    
-    df_oclc_deduplicated = pd.DataFrame()
+    group = pd.DataFrame()
     for sub_name, sub_group in ISBN_grouped:
         try:
             group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() + sub_group['group_ids'].to_list() if pd.notnull(e)]))
@@ -996,32 +996,27 @@ for name, group in tqdm(records_grouped, total=len(records_grouped)):
                 sub_group[column] = '❦'.join(sub_group[column].dropna().drop_duplicates().astype(str))
             else:
                 try:
-                    sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)[0]
+                    sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
                 except ValueError:
                     sub_group[column] = np.nan
-        df_oclc_deduplicated = df_oclc_deduplicated.append(sub_group)
+        group = group.append(sub_group)
     
-    df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
-    df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(np.int64)
+    group = group.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+    group['001'] = group['001'].astype(np.int64)
     
-    group = group[~group['001'].isin(ISBN_dict.keys())]
-    group = pd.concat([group, df_oclc_deduplicated])
     group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
-    group['005'] = group['005'].astype(np.int64)
-    group = group.drop_duplicates().reset_index(drop=True)
+    group = group.drop(columns='ISBN').drop_duplicates().reset_index(drop=True)
     phase_4 = phase_4.append(group)
          
 phase_1.to_excel(writer, index=False, sheet_name='phase_1')    
 phase_2.to_excel(writer, index=False, sheet_name='phase_2')  
-phase_3.drop(columns='title').drop_duplicates().to_excel(writer, index=False, sheet_name='phase_3') 
+phase_3.to_excel(writer, index=False, sheet_name='phase_3') 
 phase_4.to_excel(writer, index=False, sheet_name='phase_4') 
 writer.save()
 writer.close()    
 
 
-
-
-
+phase_4.to_excel('hasek.xlsx', index=False)
 
 
 
