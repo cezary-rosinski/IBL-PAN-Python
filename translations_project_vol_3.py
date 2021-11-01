@@ -18,13 +18,13 @@ pd.set_option('display.float_format', lambda x: '%.3f' % x)
 def get_ISBNs(x):
         try:
             x = x.split('❦')
-            x = [marc_parser_dict_for_field(e, '\$')['$a'].replace('-','').strip() for e in x if '$a' in e]
+            x = [marc_parser_dict_for_field(e, '\$')['$a'].replace('-','').strip().split(' ')[0] for e in x if '$a' in e]
             x = [e.replace('❦', '') for e in x]
             x = list(set([e if e[:3] != '978' else e[3:] for e in x]))
             return '❦'.join(x)
         except AttributeError:
             return 'no ISBN'
-        
+
 def longest_string(s):
     return max(s, key=len)
 
@@ -1015,6 +1015,55 @@ phase_3.to_excel(writer, index=False, sheet_name='phase_3')
 phase_4.to_excel(writer, index=False, sheet_name='phase_4') 
 writer.save()
 writer.close()    
+
+#%% LQ
+
+hq_df = pd.read_excel("C:\\Users\\Rosinski\\Documents\\IBL-PAN-Python\\HQ_data_deduplicated_2021-10-27.xlsx", sheet_name='phase_4')
+lq_df = pd.read_excel("C:\\Users\\Rosinski\\Documents\\IBL-PAN-Python\\translation_database_clusters_with_quality_index_2021-10-27.xlsx", sheet_name='LQ')
+
+hq_db.columns.values
+
+
+test = hq_df.loc()[hq_df['cluster_viaf'] == '34458072']
+test = test[['001', '020', 'year', 'language', 'original title', '100_unidecode', 'cluster_viaf', 'cluster_titles']]
+test = test[test['cluster_titles'] == 391]
+test['ISBN'] = test['020'].apply(lambda x: get_ISBNs(x))
+
+lq_df['ISBN'] = lq_df['020'].apply(lambda x: get_ISBNs(x))
+lq_df['year'] = lq_df['008'].apply(lambda x: x[7:11])
+lq_dict = lq_df[['001', 'year', 'ISBN']].to_dict()
+
+
+for i, row in tqdm(test.iterrows(), total=test.shape[0]):
+    x = row['ISBN'].split('❦')
+    for el in x:
+        
+        
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
