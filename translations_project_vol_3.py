@@ -1059,6 +1059,10 @@ for dic in tqdm(hq_dict):
             
             
 lista = list(set(lista))
+duplicates1 = [e[1:] for e in lista]
+duplicates1 = [e for sub in duplicates1 for e in sub]
+
+hq_df = hq_df.loc()[~hq_df['001'].isin(duplicates1)]
 
 #4099
 #6617
