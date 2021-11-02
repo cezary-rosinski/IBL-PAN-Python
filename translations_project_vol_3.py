@@ -1032,19 +1032,19 @@ except FileNotFoundError:
 
 
 
-test = hq_df.loc()[hq_df['cluster_viaf'] == '34458072']
-test = test[['001', '020', 'year', 'language', 'original title', '100_unidecode', 'cluster_viaf', 'cluster_titles']]
-test = test[test['cluster_titles'] == 391]
-test['ISBN'] = test['020'].apply(lambda x: get_ISBNs(x))
+# test = hq_df.loc()[hq_df['cluster_viaf'] == '34458072']
+# test = test[['001', '020', 'year', 'language', 'original title', '100_unidecode', 'cluster_viaf', 'cluster_titles']]
+# test = test[test['cluster_titles'] == 391]
+# test['ISBN'] = test['020'].apply(lambda x: get_ISBNs(x))
 
-test_dict = test.to_dict(orient='records')
+# test_dict = test.to_dict(orient='records')
 
 hq_df['ISBN'] = hq_df['020'].apply(lambda x: get_ISBNs(x))
-hq_dict = hq_df[['001', '020', 'year', 'language', 'original title', '100_unidecode', 'cluster_viaf', 'cluster_titles', 'ISBN']].to_dict(orient='records')
+hq_dict = hq_df[['001', '020', 'year', 'language', 'original title', '245', '100_unidecode', 'cluster_viaf', 'cluster_titles', 'ISBN']].to_dict(orient='records')
 
 lq_df['ISBN'] = lq_df['020'].apply(lambda x: get_ISBNs(x))
 lq_df['year'] = lq_df['008'].apply(lambda x: x[7:11])
-lq_dict = lq_df[['001', 'year', 'ISBN']].to_dict(orient='records')
+lq_dict = lq_df[['001', '245', 'cluster_viaf', 'year', 'ISBN']].to_dict(orient='records')
 
 # ISBN + title
 lista = []
@@ -1062,12 +1062,32 @@ lista = list(set(lista))
 duplicates1 = [e[1:] for e in lista]
 duplicates1 = [e for sub in duplicates1 for e in sub]
 
-hq_df = hq_df.loc()[~hq_df['001'].isin(duplicates1)]
+lq_duplicates1 = lq_df.loc()[lq_df['001'].isin(duplicates1)]
+
+lq_df = lq_df.loc()[~lq_df['001'].isin(duplicates1)]
 
 #4099
 #6617
 # viaf + year + target language + target title
-        
+for dic in tqdm(hq_dict):
+    try:
+        y = re.split('\/|\:|\;|\=', marc_parser_dict_for_field(dic['245'], '\$')['$a'])[0].strip()
+    except KeyError:
+        y = re.split('\:|\.', dic['245'])[0][2:].strip()
+    except TypeError:
+        pass
+    print((dic['cluster_viaf'], dic['year'], dic['language'], y))
+    
+    
+    
+    
+    if dic['ISBN'] not in ['', 'no ISBN']:
+        x = dic['ISBN'].split('❦')
+        for isbn in x:
+            y = [e['001'] for e in lq_dict if isbn in e['ISBN'].split('❦') and e['year'] == dic['year']]     
+            if y:
+                y.insert(0, dic['001'])
+                lista.append(tuple(y)) 
     
 
 
