@@ -1018,10 +1018,18 @@ writer.close()
 
 #%% LQ
 
-hq_df = pd.read_excel("C:\\Users\\Rosinski\\Documents\\IBL-PAN-Python\\HQ_data_deduplicated_2021-10-27.xlsx", sheet_name='phase_4')
-lq_df = pd.read_excel("C:\\Users\\Rosinski\\Documents\\IBL-PAN-Python\\translation_database_clusters_with_quality_index_2021-10-27.xlsx", sheet_name='LQ')
+try:
+    hq_df = pd.read_excel("C:\\Users\\Rosinski\\Documents\\IBL-PAN-Python\\HQ_data_deduplicated_2021-10-27.xlsx", sheet_name='phase_4')
+except FileNotFoundError:
+    hq_df = pd.read_excel("C:\\Users\\Cezary\\Documents\\IBL-PAN-Python\\HQ_data_deduplicated_2021-10-27.xlsx", sheet_name='phase_4')
+    
+try:
+    lq_df = pd.read_excel("C:\\Users\\Rosinski\\Documents\\IBL-PAN-Python\\translation_database_clusters_with_quality_index_2021-10-27.xlsx", sheet_name='LQ')
+except FileNotFoundError:
+    lq_df = pd.read_excel("C:\\Users\\Cezary\\Documents\\IBL-PAN-Python\\translation_database_clusters_with_quality_index_2021-10-27.xlsx", sheet_name='LQ')
 
-hq_db.columns.values
+
+
 
 
 test = hq_df.loc()[hq_df['cluster_viaf'] == '34458072']
@@ -1029,15 +1037,32 @@ test = test[['001', '020', 'year', 'language', 'original title', '100_unidecode'
 test = test[test['cluster_titles'] == 391]
 test['ISBN'] = test['020'].apply(lambda x: get_ISBNs(x))
 
+test_dict = test.to_dict(orient='records')
+
+hq_df['ISBN'] = hq_df['020'].apply(lambda x: get_ISBNs(x))
+hq_dict = hq_df[['001', '020', 'year', 'language', 'original title', '100_unidecode', 'cluster_viaf', 'cluster_titles', 'ISBN']].to_dict(orient='records')
+
 lq_df['ISBN'] = lq_df['020'].apply(lambda x: get_ISBNs(x))
 lq_df['year'] = lq_df['008'].apply(lambda x: x[7:11])
-lq_dict = lq_df[['001', 'year', 'ISBN']].to_dict()
+lq_dict = lq_df[['001', 'year', 'ISBN']].to_dict(orient='records')
 
+# ISBN + title
+lista = []
+for dic in tqdm(hq_dict):
+    if dic['ISBN'] not in ['', 'no ISBN']:
+        x = dic['ISBN'].split('❦')
+        for isbn in x:
+            y = [e['001'] for e in lq_dict if isbn in e['ISBN'].split('❦') and e['year'] == dic['year']]     
+            if y:
+                y.insert(0, dic['001'])
+                lista.append(tuple(y))
+            
+            
+lista = list(set(lista))
 
-for i, row in tqdm(test.iterrows(), total=test.shape[0]):
-    x = row['ISBN'].split('❦')
-    for el in x:
-        
+#4099
+#6617
+# viaf + year + target language + target title
         
     
 
