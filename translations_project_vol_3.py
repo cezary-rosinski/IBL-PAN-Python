@@ -1062,7 +1062,7 @@ test = test[['001', '020', 'year', 'language', 'original title', '245', '100_uni
 test = test[test['cluster_titles'] == 391]
 test_dict = test.to_dict(orient='records')
 
-# viaf + year + target language + target title
+# viaf + target language + target title
 
 def simplify_245(x):
     try:
@@ -1081,21 +1081,21 @@ lq_dict = lq_df[['001', '245', 'simplified245', 'year', 'language', 'cluster_via
 ttt = []
 for dic in tqdm(test_dict):
     y = simplify_245(dic['245'])    
-    z = [e['001'] for e in lq_dict if dic['cluster_viaf'] == e['cluster_viaf'] and dic['year'] == e['year'] and dic['language'] == e['language'] and y == e['simplified245']]
+    z = [e['001'] for e in lq_dict if dic['cluster_viaf'] == e['cluster_viaf'] and dic['language'] == e['language'] and y == e['simplified245']]
     if z:
         ttt.append((dic['001'], z))
     
 # # problem - multiple target titles    
-# a = hq_df.loc()[hq_df['001'] == 51788260]
-# b = lq_df.loc()[lq_df['001'].isin([73225835])]
+a = hq_df.loc()[hq_df['001'] == 51788260]
+b = lq_df.loc()[lq_df['001'].isin([73225835])]
 
 # ok but different 260    
-# a = hq_df.loc()[hq_df['001'] == 10000002623]
-# b = lq_df.loc()[lq_df['001'].isin([587906250])]
+a = hq_df.loc()[hq_df['001'] == 10000002623]
+b = lq_df.loc()[lq_df['001'].isin([587906250])]
         
 # 2 out of 3 are okay        
-# a = hq_df.loc()[hq_df['001'] == 750568054]
-# b = lq_df.loc()[lq_df['001'].isin([81219067, 718498465, 81807310])]
+a = hq_df.loc()[hq_df['001'] == 750568054]
+b = lq_df.loc()[lq_df['001'].isin([81219067, 718498465, 81807310])]
 
 # same group as above
 a = hq_df.loc()[hq_df['001'] == 834091146]
@@ -1105,7 +1105,7 @@ b = lq_df.loc()[lq_df['001'].isin([81219067, 718498465, 81807310])]
 ttt = []
 for dic in tqdm(hq_dict):
     y = simplify_245(dic['245'])    
-    z = [e['001'] for e in lq_dict if dic['cluster_viaf'] == e['cluster_viaf'] and dic['year'] == e['year'] and dic['language'] == e['language'] and y == e['simplified245']]
+    z = [e['001'] for e in lq_dict if dic['cluster_viaf'] == e['cluster_viaf'] and dic['language'] == e['language'] and y == e['simplified245']]
     if z:
         z.insert(0, dic['001'])
         ttt.append(tuple(z))
@@ -1126,19 +1126,33 @@ lq_df = lq_df.loc()[~lq_df['001'].isin(duplicates2)]
 a = hq_df.loc()[hq_df['001'] == 254393601]
 b = lq_df.loc()[lq_df['001'].isin([925253766, 123689349, 720869925, 492082896, 632597099])]
 
+a = hq_df.loc()[hq_df['001'] == 246420506]
+b = lq_df.loc()[lq_df['001'].isin([174615060, 781010081, 72436021, 174614599, 312205678, 630855539, 258676117, 248855710, 174232966, 174977791, 256436285, 631168511, 632306897, 162906122, 631234370, 174614589, 174614646, 174615031, 312204523, 64788913, 174938402, 631409595, 174614610, 64788919])]
+
+
+
 #deduplicate LQ?
-#HQ without ISBN - is that an issue?
+# miejsce wydania, wydawca, liczba stron?
 
 test2 = lq_df.loc()[(lq_df['cluster_viaf'] == '34458072') &
                     (lq_df['language'] == 'pol')]
 
 test2.to_excel('Hrabal_pl_LQ.xlsx', index=False)
 
+test_jpn = lq_df.loc()[lq_df['language'] == 'jpn']
+test_jpn.to_excel('Japanese_LQ.xlsx', index=False)
+
+test_und = lq_df.loc()[lq_df['language'] == 'und']
+test_und.to_excel('und_LQ.xlsx', index=False)
 
 
+def place_of_pbl(x):
+    try:
+        return marc_parser_dict_for_field(x, '\$')['$a']
+    except (KeyError, TypeError):
+        np.nan
 
-
-
+aaa = Counter(test_und['260'].apply(lambda x: place_of_pbl(x)))
 
 
 
