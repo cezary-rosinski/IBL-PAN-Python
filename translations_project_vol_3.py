@@ -1028,25 +1028,14 @@ try:
 except FileNotFoundError:
     lq_df = pd.read_excel("C:\\Users\\Cezary\\Documents\\IBL-PAN-Python\\translation_database_clusters_with_quality_index_2021-10-27.xlsx", sheet_name='LQ')
 
-
-
-
-
-# test = hq_df.loc()[hq_df['cluster_viaf'] == '34458072']
-# test = test[['001', '020', 'year', 'language', 'original title', '100_unidecode', 'cluster_viaf', 'cluster_titles']]
-# test = test[test['cluster_titles'] == 391]
-# test['ISBN'] = test['020'].apply(lambda x: get_ISBNs(x))
-
-# test_dict = test.to_dict(orient='records')
-
 hq_df['ISBN'] = hq_df['020'].apply(lambda x: get_ISBNs(x))
 hq_dict = hq_df[['001', '020', 'year', 'language', 'original title', '245', '100_unidecode', 'cluster_viaf', 'cluster_titles', 'ISBN']].to_dict(orient='records')
 
 lq_df['ISBN'] = lq_df['020'].apply(lambda x: get_ISBNs(x))
 lq_df['year'] = lq_df['008'].apply(lambda x: x[7:11])
-lq_dict = lq_df[['001', '245', 'cluster_viaf', 'year', 'ISBN']].to_dict(orient='records')
+lq_dict = lq_df[['001', '245', 'year', 'language', 'cluster_viaf', 'ISBN']].to_dict(orient='records')
 
-# ISBN + title
+# ISBN + year
 lista = []
 for dic in tqdm(hq_dict):
     if dic['ISBN'] not in ['', 'no ISBN']:
@@ -1056,8 +1045,7 @@ for dic in tqdm(hq_dict):
             if y:
                 y.insert(0, dic['001'])
                 lista.append(tuple(y))
-            
-            
+                    
 lista = list(set(lista))
 duplicates1 = [e[1:] for e in lista]
 duplicates1 = [e for sub in duplicates1 for e in sub]
@@ -1066,41 +1054,85 @@ lq_duplicates1 = lq_df.loc()[lq_df['001'].isin(duplicates1)]
 
 lq_df = lq_df.loc()[~lq_df['001'].isin(duplicates1)]
 
-#4099
-#6617
+#2333 references to HQ
+#3460 LQ duplicates
+
+test = hq_df.loc()[hq_df['cluster_viaf'] == '34458072']
+test = test[['001', '020', 'year', 'language', 'original title', '245', '100_unidecode', 'cluster_viaf', 'cluster_titles', 'ISBN']]
+test = test[test['cluster_titles'] == 391]
+test_dict = test.to_dict(orient='records')
+
 # viaf + year + target language + target title
-for dic in tqdm(hq_dict):
+
+def simplify_245(x):
     try:
-        y = re.split('\/|\:|\;|\=', marc_parser_dict_for_field(dic['245'], '\$')['$a'])[0].strip()
+        y = re.split('\/|\:|\;|\=', marc_parser_dict_for_field(x, '\$')['$a'])[0].strip()
     except KeyError:
-        y = re.split('\:|\.', dic['245'])[0][2:].strip()
+        y = re.split('\:|\.', x)[0][2:].strip()
     except TypeError:
-        pass
-    print((dic['cluster_viaf'], dic['year'], dic['language'], y))
+        y = np.nan
+    return y
     
+lq_df['simplified245'] = lq_df['245'].apply(lambda x: simplify_245(x))
+lq_dict = lq_df[['001', '245', 'simplified245', 'year', 'language', 'cluster_viaf', 'ISBN']].to_dict(orient='records')
+
+#test
+
+ttt = []
+for dic in tqdm(test_dict):
+    y = simplify_245(dic['245'])    
+    z = [e['001'] for e in lq_dict if dic['cluster_viaf'] == e['cluster_viaf'] and dic['year'] == e['year'] and dic['language'] == e['language'] and y == e['simplified245']]
+    if z:
+        ttt.append((dic['001'], z))
     
-    
-    
-    if dic['ISBN'] not in ['', 'no ISBN']:
-        x = dic['ISBN'].split('❦')
-        for isbn in x:
-            y = [e['001'] for e in lq_dict if isbn in e['ISBN'].split('❦') and e['year'] == dic['year']]     
-            if y:
-                y.insert(0, dic['001'])
-                lista.append(tuple(y)) 
-    
+# # problem - multiple target titles    
+# a = hq_df.loc()[hq_df['001'] == 51788260]
+# b = lq_df.loc()[lq_df['001'].isin([73225835])]
 
+# ok but different 260    
+# a = hq_df.loc()[hq_df['001'] == 10000002623]
+# b = lq_df.loc()[lq_df['001'].isin([587906250])]
+        
+# 2 out of 3 are okay        
+# a = hq_df.loc()[hq_df['001'] == 750568054]
+# b = lq_df.loc()[lq_df['001'].isin([81219067, 718498465, 81807310])]
 
+# same group as above
+a = hq_df.loc()[hq_df['001'] == 834091146]
+b = lq_df.loc()[lq_df['001'].isin([81219067, 718498465, 81807310])]
 
+# all data
+ttt = []
+for dic in tqdm(hq_dict):
+    y = simplify_245(dic['245'])    
+    z = [e['001'] for e in lq_dict if dic['cluster_viaf'] == e['cluster_viaf'] and dic['year'] == e['year'] and dic['language'] == e['language'] and y == e['simplified245']]
+    if z:
+        z.insert(0, dic['001'])
+        ttt.append(tuple(z))
 
+ttt = list(set(ttt))
+duplicates2 = [e[1:] for e in ttt]
+duplicates2 = [e for sub in duplicates2 for e in sub]
 
+lq_duplicates2 = lq_df.loc()[lq_df['001'].isin(duplicates2)]
 
+lq_df = lq_df.loc()[~lq_df['001'].isin(duplicates2)]
 
+#1585 references to HQ
+#3114 LQ duplicates
+# LQ reduced to 35644
 
+# 3 out of 5 correct
+a = hq_df.loc()[hq_df['001'] == 254393601]
+b = lq_df.loc()[lq_df['001'].isin([925253766, 123689349, 720869925, 492082896, 632597099])]
 
+#deduplicate LQ?
+#HQ without ISBN - is that an issue?
 
+test2 = lq_df.loc()[(lq_df['cluster_viaf'] == '34458072') &
+                    (lq_df['language'] == 'pol')]
 
-
+test2.to_excel('Hrabal_pl_LQ.xlsx', index=False)
 
 
 
