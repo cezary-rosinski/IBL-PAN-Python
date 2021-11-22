@@ -21,15 +21,15 @@ file_path = "C:/Users/Cezary/Downloads/ucla0110.mrk"
 # file_path = "C:/Users/Rosinski/Downloads/ucla0110.mrk"
 encoding = 'utf-8'
 
-marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+marc_list = io.open(file_path, 'rt', encoding = encoding).readlines()
 
-# records_sample = []
-# for row in tqdm(marc_list):
-#     if row.startswith('=LDR') and len(row) > 6:
-#         records_sample.append([row])
-#     else:
-#         if len(row) == 0 or len(row) > 6:
-#             records_sample[-1].append(row)
+records_sample = []
+for row in tqdm(marc_list):
+    if row.startswith('=LDR') and len(row) > 6:
+        records_sample.append([row])
+    else:
+        if len(row) == 0 or len(row) > 6:
+            records_sample[-1].append(row)
 
 # sample = random.choices(records_sample, k=20)
 # sample = [e for sub in sample for e in sub]
@@ -119,7 +119,7 @@ for i, row in tqdm(group_2.iterrows(), total=group_2.shape[0]):
 # getting SH from CLB
 file_path = "C:/Users/Cezary/Downloads/ucla0110.mrk"
 encoding = 'utf-8'
-marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
+marc_list = io.open(file_path, 'rt', encoding = encoding).readlines()
 
 clb_sh = []
 errors = []
@@ -224,26 +224,6 @@ sh_dict[2]['LoC SH'] = [{k:v for k,v in sh_dict[2]['LoC SH'].items() if proper_o
 
 
 
-url = 'https://id.loc.gov/search/?q=cultural+change&q=cs%3Ahttp%3A%2F%2Fid.loc.gov%2Fauthorities%2Fsubjects'
-response = requests.get(url)
-response.encoding = 'UTF-8'
-soup = BeautifulSoup(response.text, 'html.parser')
-links = zip(soup.select('.tbody-group a'), soup.select('type'))
-for a,b in links:
-    if b.text == 'Topic':
-        print(a['href'])
-        print(a.text)
-        print(b.text)
-        print('____________________')
-
-
-
-    
-    
-    
-
-
-links = soup.findAll('a', attrs={'href': re.compile("^\?o\=")})
 
 
 

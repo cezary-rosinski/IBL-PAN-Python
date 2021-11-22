@@ -10,6 +10,9 @@ import pandas as pd
 import logging
 from garmin_credentials import garmin_password, garmin_username
 import datetime
+import plotly.express as px
+import plotly.io as pio
+pio.renderers.default='browser'
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -76,6 +79,9 @@ df['rosinski-hubar index'] = df.apply(lambda x: rosinski_hubar_index(x), axis=1)
 
 fig = df.groupby('date').sum()['rosinski-hubar index'].plot(figsize = (40,10), title='running', legend=True, grid=True, lw=4).get_figure()
 fig.savefig('running.jpg')
+
+fig = px.line(df.groupby('date').sum()['rosinski-hubar index'], x='date', y='r-h index', title='My Running Stats')
+fig.show()
 
 
 #%% linear regression

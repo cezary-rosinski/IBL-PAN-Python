@@ -82,6 +82,26 @@ def quality_index(x):
     full_index = record_index/full_index
     return full_index
 
+def quality_index(x):
+    full_index = 7
+    record_index = 0
+    if x['SRC'] != 'Brno' and pd.notnull(x['240']) and '$a' in x['240'] and any(e for e in ['$l', '$i'] if e in x['240']) and x['240'].count('$a') == 1:
+        record_index += 3
+    elif x['SRC'] == 'Brno' and pd.notnull(x['765']) and '$t' in x['765']:
+        record_index += 3
+    # elif pd.notnull(x['240']) and '$a' in x['240'] and x['240'].count('$a') == 1:
+    #     record_index += 1.5
+    if pd.notnull(x['245']) and all(e for e in ['$a', '$c'] if e in x['245']):
+        record_index += 1
+    if pd.notnull(x['260']) and all(e for e in ['$a', '$b', '$c'] if e in x['260']):
+        record_index += 1
+    full_index = record_index/full_index
+    return full_index
+
+#HQ – language of the work is defined and not Czech; Original title (240, viaf_id from 245, or both), 260 a,b,c
+    
+# For HQ not important – translator in 700
+
 def get_longest_cell(x):
     try:
         x = x.split('❦')
@@ -249,7 +269,7 @@ brno_df.to_excel('brno_df.xlsx', index=False)
     
 #%% NKC database
 try:
-    nkc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
+    nkc_df = pd.read_excel("C:/Users/Cezary/Downloads/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
 except FileNotFoundError:
     nkc_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/skc_translations_cz_authority_2021-8-12.xlsx").drop(columns=['cz_id', 'cz_name']).drop_duplicates().reset_index(drop=True)
 
@@ -321,7 +341,7 @@ viaf_positives_dict = dict(sorted(viaf_positives_dict.items(), key = lambda item
 # new_cz_authority_df = pd.read_excel('new_cz_authority_df_2021-10-23.xlsx')
 #%% OCLC
 try:
-    oclc_df = pd.read_excel("C:/Users/Cezary/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', 'type of record + bibliographic level', 'nature_of_contents', 'viaf_id']).drop_duplicates().reset_index(drop=True)
+    oclc_df = pd.read_excel("C:/Users/Cezary/Downloads/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', 'type of record + bibliographic level', 'nature_of_contents', 'viaf_id']).drop_duplicates().reset_index(drop=True)
 except FileNotFoundError:
     oclc_df = pd.read_excel("C:/Users/Rosinski/Downloads/Translations/oclc_all_positive.xlsx").drop(columns=['all_names', 'cz_name', 'nature_of_contents', 'type of record + bibliographic level', 'viaf_id']).drop_duplicates().reset_index(drop=True)
 
@@ -352,6 +372,11 @@ oclc_multiple_original_titles = oclc_df[(oclc_df['240'].str.count('\$a') > 1) |
                                         (oclc_df['765'].str.count('\$t') > 1)]
 difficult_dbs_dict.update({'OCLC multiple original titles': oclc_multiple_original_titles})
 oclc_df = oclc_df[~oclc_df['001'].isin(oclc_multiple_original_titles['001'])].reset_index(drop=True)
+
+oclc_selections = oclc_df[oclc_df['240'].str.contains('\$k', na=False)]
+difficult_dbs_dict.update({'OCLC selections': oclc_selections})
+oclc_df = oclc_df[~oclc_df['001'].isin(oclc_selections['001'])].reset_index(drop=True)
+
 total = pd.concat([total, oclc_df])
 
 # ograć duplikaty
@@ -401,6 +426,94 @@ writer.close()
 # HQ: 13404
 # LQ: 41778
 
+#%% VIAF work harvesting
+import requests
+
+viaf_work_df = translations_df.loc()[translations_df['245'].str.contains('viaf\.org')]
+viaf_work_list = [e for e in marc_parser_1_field(viaf_work_df, '001', '245', '\$')['$1'].drop_duplicates().to_list() if e]
+
+# test = viaf_work_df.head(100)
+# test = marc_parser_1_field(test, '001', '245', '\$')['$1'].drop_duplicates().to_list()
+
+viaf_work_dict = {}
+
+for url in tqdm(viaf_work_list):
+
+    result = requests.get(f'{url}/viaf.json').json()
+    # result = requests.get('https://viaf.org/viaf/1276155566453913380006/viaf.json').json()
+    try:
+        work_viaf = result['viafID']
+    except KeyError:
+        try:
+            result = result['scavenged']['VIAFCluster']
+            work_viaf = result['viafID']
+        except KeyError:
+            continue
+    try:
+        work_title = result['mainHeadings']['data']['text'].split('|')[-1].strip()
+    except TypeError:
+        work_title = result['mainHeadings']['data'][0]['text'].split('|')[-1].strip()
+    
+    try:
+        author_name = result['titles']['author']['text']
+    except KeyError:
+        author_name = result['mainHeadings']['data']['text'].split('|')[0].strip()
+    try:
+        author_viaf = result['titles']['author']['@id'].split('|')[-1]
+    except KeyError:
+        author_viaf = re.findall('\d+', [e for e in result['mainHeadings']['mainHeadingEl']['datafield']['subfield'] if e['@code'] == '0'][0]['#text'])[0]
+    
+    try:
+        expressions = result['titles']['expression']
+        expressions_dict = {}
+        if isinstance(expressions, list):
+            for expression in result['titles']['expression']:
+                translation_viaf = expression['@id'].split('|')[-1]
+                try:
+                    translation_title = [e for e in expression['datafield']['subfield'] if e['@code'] == 't'][0]['#text']
+                except KeyError:
+                    translation_title = np.nan
+                try:
+                    translation_lang = expression['lang']
+                except KeyError:
+                    translation_lang = np.nan
+                try:
+                    translator = expression['translator']
+                except KeyError:
+                    translator = np.nan
+                    if pd.notnull(translation_title) and pd.notnull(translation_lang):
+                        expressions_dict.update({translation_viaf:{'translation_viaf': translation_viaf,
+                                                                   'translation_title': translation_title,
+                                                                   'translation_language': translation_lang,
+                                                                   'translator': translator}})
+        else:
+            expression = expressions
+            translation_viaf = expression['@id'].split('|')[-1]
+            try:
+                translation_title = [e for e in expression['datafield']['subfield'] if e['@code'] == 't'][0]['#text']
+            except KeyError:
+                translation_title = np.nan
+            try:
+                translation_lang = expression['lang']
+            except KeyError:
+                translation_lang = np.nan
+            try:
+                translator = expression['translator']
+            except KeyError:
+                translator = np.nan
+            if pd.notnull(translation_title) and pd.notnull(translation_lang):
+                expressions_dict.update({translation_viaf:{'translation_viaf': translation_viaf,
+                                                           'translation_title': translation_title,
+                                                           'translation_language': translation_lang,
+                                                           'translator': translator}})
+              
+        viaf_work_dict.update({work_viaf:{'work_viaf': work_viaf,
+                                         'work_title': work_title,
+                                         'author_name': author_name,
+                                         'author_viaf': author_viaf,
+                                         'translations': expressions_dict}})
+    except KeyError:
+        pass
 
 #%% quality index
 # translations_df = pd.read_excel('translation_database_2021-10-23.xlsx')
@@ -741,12 +854,18 @@ writer.close()
 
 #%% de-duplication HQ
 
+# choose one
 # records_df = pd.read_excel('translation_database_clusters_with_quality_index_2021-10-25.xlsx', sheet_name='HQ')
-records_df = correct.copy()
-records_grouped = records_df.groupby(['cluster_viaf', 'language', 'cluster_titles'])
+records_df = pd.read_excel('translation_database_clusters_with_quality_index_2021-10-27.xlsx', sheet_name='LQ')
+# records_df = correct.copy()
+#dla HQ
+# records_grouped = records_df.groupby(['cluster_viaf', 'language', 'cluster_titles'])
+#dla LQ
+records_grouped = records_df.groupby(['cluster_viaf', 'language'])
 # records_grouped = records_df.groupby(['cluster_viaf', 'language', 'cluster_titles'], dropna=False)
 
-writer = pd.ExcelWriter(f'HQ_data_deduplicated_{now}.xlsx', engine = 'xlsxwriter')
+# writer = pd.ExcelWriter(f'HQ_data_deduplicated_{now}.xlsx', engine = 'xlsxwriter')
+writer = pd.ExcelWriter(f'LQ_data_deduplicated_{now}.xlsx', engine = 'xlsxwriter')
 records_df.to_excel(writer, index=False, sheet_name='phase_0') # original data
 
 phase_1 = pd.DataFrame() # duplicates
@@ -1027,6 +1146,9 @@ try:
     lq_df = pd.read_excel("C:\\Users\\Rosinski\\Documents\\IBL-PAN-Python\\translation_database_clusters_with_quality_index_2021-10-27.xlsx", sheet_name='LQ')
 except FileNotFoundError:
     lq_df = pd.read_excel("C:\\Users\\Cezary\\Documents\\IBL-PAN-Python\\translation_database_clusters_with_quality_index_2021-10-27.xlsx", sheet_name='LQ')
+    
+# LQ deduplication
+    
 
 hq_df['ISBN'] = hq_df['020'].apply(lambda x: get_ISBNs(x))
 hq_dict = hq_df[['001', '020', 'year', 'language', 'original title', '245', '100_unidecode', 'cluster_viaf', 'cluster_titles', 'ISBN']].to_dict(orient='records')
