@@ -9,6 +9,8 @@ import requests
 from collections import Counter
 import warnings
 import io
+import pickle 
+from copy import deepcopy
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -58,48 +60,50 @@ def replace_viaf_group(df):
     df['viaf_id'] = df['viaf_id'].replace(viaf_groups)
     return df
 
-def quality_index(x):
-    full_index = 7
-    record_index = 0
-    if x['008'][35:38] != 'und':
-        record_index += 1
-    if x['SRC'] != 'Brno' and pd.notnull(x['240']) and '$a' in x['240'] and any(e for e in ['$l', '$i'] if e in x['240']) and x['240'].count('$a') == 1 and '$k' not in x['240']:
-        record_index += 3
-    elif x['SRC'] == 'Brno' and pd.notnull(x['765']) and '$t' in x['765']:
-        record_index += 3
-    # elif pd.notnull(x['240']) and '$a' in x['240'] and x['240'].count('$a') == 1:
-    #     record_index += 1.5
-    if pd.notnull(x['245']) and all(e for e in ['$a', '$c'] if e in x['245']):
-        record_index += 1
-    elif pd.notnull(x['245']) and any(e for e in ['$a', '$c'] if e in x['245']): 
-        record_index += 0.5
-    if pd.notnull(x['260']) and all(e for e in ['$a', '$b', '$c'] if e in x['260']):
-        record_index += 1
-    elif pd.notnull(x['260']) and any(e for e in ['$a', '$b', '$c'] if e in x['260']):
-        record_index += 0.5
-    if pd.notnull(x['700']) and pd.notnull(x['700']):
-        record_index += 1
-    full_index = record_index/full_index
-    return full_index
+# def quality_index(x):
+#     full_index = 7
+#     record_index = 0
+#     if x['008'][35:38] != 'und':
+#         record_index += 1
+#     if x['SRC'] != 'Brno' and pd.notnull(x['240']) and '$a' in x['240'] and any(e for e in ['$l', '$i'] if e in x['240']) and x['240'].count('$a') == 1 and '$k' not in x['240']:
+#         record_index += 3
+#     elif x['SRC'] == 'Brno' and pd.notnull(x['765']) and '$t' in x['765']:
+#         record_index += 3
+#     # elif pd.notnull(x['240']) and '$a' in x['240'] and x['240'].count('$a') == 1:
+#     #     record_index += 1.5
+#     if pd.notnull(x['245']) and all(e for e in ['$a', '$c'] if e in x['245']):
+#         record_index += 1
+#     elif pd.notnull(x['245']) and any(e for e in ['$a', '$c'] if e in x['245']): 
+#         record_index += 0.5
+#     if pd.notnull(x['260']) and all(e for e in ['$a', '$b', '$c'] if e in x['260']):
+#         record_index += 1
+#     elif pd.notnull(x['260']) and any(e for e in ['$a', '$b', '$c'] if e in x['260']):
+#         record_index += 0.5
+#     if pd.notnull(x['700']) and pd.notnull(x['700']):
+#         record_index += 1
+#     full_index = record_index/full_index
+#     return full_index
 
 def quality_index(x):
-    full_index = 7
+    full_index = 6
     record_index = 0
-    if x['SRC'] != 'Brno' and pd.notnull(x['240']) and '$a' in x['240'] and any(e for e in ['$l', '$i'] if e in x['240']) and x['240'].count('$a') == 1:
-        record_index += 3
-    elif x['SRC'] == 'Brno' and pd.notnull(x['765']) and '$t' in x['765']:
-        record_index += 3
-    # elif pd.notnull(x['240']) and '$a' in x['240'] and x['240'].count('$a') == 1:
-    #     record_index += 1.5
-    if pd.notnull(x['245']) and all(e for e in ['$a', '$c'] if e in x['245']):
+    if x['language'] != 'und':
         record_index += 1
-    if pd.notnull(x['260']) and all(e for e in ['$a', '$b', '$c'] if e in x['260']):
+    if x['SRC'] == 'Brno' and pd.notnull(x['765']) and '$t' in x['765'] and simplify_string('Název českého originálu') in simplify_string(x['765']):
+        record_index += 3
+    elif x['SRC'] != 'Brno' and pd.notnull(x['240']) and '$a' in x['240'] and any(e for e in ['$l', '$i'] if e in x['240']) and x['240'].count('$a') == 1:
+        record_index += 3
+    elif x['language'] != 'und' and pd.notnull(x['work_title']):
+        record_index += 3
+    if pd.notnull(x['245']) and all(e in x['245'] for e in ['$a', '$c']):
+        record_index += 1
+    if pd.notnull(x['260']) and all(e in x['260'] for e in ['$a', '$b', '$c']):
         record_index += 1
     full_index = record_index/full_index
     return full_index
 
 #HQ – language of the work is defined and not Czech; Original title (240, viaf_id from 245, or both), 260 a,b,c
-    
+# x = test[test['001'] == 320084695].squeeze()
 # For HQ not important – translator in 700
 
 def get_longest_cell(x):
@@ -306,7 +310,7 @@ new_cz_authority_df = pd.DataFrame(new_people)
 new_cz_authority_df = pd.concat([cz_authority_df, new_cz_authority_df]).reset_index(drop=True)
 new_cz_authority_df.to_excel(f'new_cz_authority_df_{now}.xlsx', index=False)
 
-# new_cz_authority_df = pd.read_excel('new_cz_authority_df_2021-10-23.xlsx')
+# new_cz_authority_df = pd.read_excel('new_cz_authority_df_2021-11-29.xlsx')
 viaf_positives = [e.split('|') for e in new_cz_authority_df['viaf_id'].drop_duplicates().dropna().to_list()]
 viaf_positives = [e for sub in viaf_positives for e in sub]
 
@@ -410,6 +414,24 @@ oclc_without_author = translations_df[translations_df['100'].isnull()]
 difficult_dbs_dict.update({'OCLC without author in 100': oclc_without_author})
 translations_df = translations_df[~translations_df['001'].isin(oclc_without_author['001'])].reset_index(drop=True)
 
+#tutaj ograć te language = und i wywalić śmieci!!!
+
+wrong_und_places = ['"Pp. 176. Kruh Přátel Československé Knihy, péčí týdeníku ""Čechoslovák"":"', '"V Praze, nakl. ""Besedy ucitelske"""', '(Berlin', '(Brno) :', '(České Budějovice', '(Havlíčku̇v Brod', '(Havlíčk°uv Brod', '(Kr. Vinohrady', '(Král. Vinohrady', '(Liberec) :', '(München) :', '(Prag :', '(Prag) :', '(Praha', '(Praha :', '(Praha)', '(Praha) :', '(Praha):', '(Praha-Smichov', '(Praha:', "(Praha:) 'Čsl. spisovatel'", '(Prostějov)', '(V Bratislave', '(V Brně', '(V Brně :', '(V Brně)', '(V Brně) :', '(V Hradci Králové) :', '(V Liberci):', '(V Nuslich)', '(V Ostravě) :', '(V Prace', '(V Praze', '(V Praze :', '(V Praze)', '(V Praze) :', '(V Praze):', '(V Praze-Smíchově)', '(V Ústi nad Labem', '(V Ústí nad Labem', '*R', '2 díl. v Praze', '6 díl. Praha, 1936', 'Âºii. Vyškov na Moravě', 'Berne :', 'Brně :', 'Brno', 'Brno :', 'Brno, Fr. Fadouska [N.D.]', 'Brno, nakl. Polygrafie :', 'Brno:', 'Brně', 'Brumovice :', 'Břeclav :', 'Budějovice', 'Budysin', 'Budyšin', 'Budyšin :', 'Budyšin [Bautzen]', 'Budyšin', 'C̆eské Budějovice', 'Česká Třebová', 'České Budějovice', 'České Budějovice :', 'Československý Spisovatel :', 'Česky Tešín :', 'Dantisci', 'Dedictvi Komenskeho', 'Díl 1. sv. 1, 2. v Praze', 'Evangelicka Bratrska Diaspora Jihoceska', 'Evangelickem Nakladatelstvi', 'Havličk°uv Brod', 'Havlíčkuv Brod :', 'Havlíčkův Brod :', 'Hradci Králové', 'Hradec Králové', 'Hradec Králové :', 'Jablonci nad Nisou :', 'Jablonci nad Nisou :❦', 'Jevičko :', 'Jevíčko :', 'Jinočany :', 'Karviná :', 'Kladno', 'Komeniologicke Dokumentacni Stredisko Pri Museu J.A. Komenskeho v Uh. Brode', 'Kostelec na Hané :❦', 'Král. Vinohrady :', 'Královské Vinohrady', 'Kutná Hora :', 'Liberec :', 'Liberec:', 'Ml. Boleslav :', 'Mladá Boleslav :', 'Mnichov :', 'Moravská Ostrava :', 'Na Kladně :', 'Na Královských Vinohradech :', 'Na Královských Vinohradech:', 'Nak. Bratrske Jednoty', 'Nakladom spolku Tranoscius', 'Nučice :', 'Nyniznovu Vydan', 'Olmütz', 'Olomouc', 'Olomouc :', 'Ostrava', 'Ostrava :', 'Ostrava-Zabreh :', 'PRAG', 'PRAGUE', 'Pardubice', 'Pardubice :', 'Pelhřimov :', 'Pilsen :', 'Place of publication not identified :', 'Plzeň', 'Plzeň :', 'Plzni :', 'Pp. 109. Praha', 'Pp. 111. v Praze', 'Pp. 12. v Praze', 'Pp. 120. v Praze', 'Pp. 127. Praha:', 'Pp. 133. Praha', 'Pp. 144. v Praze', 'Pp. 145. Praha', 'Pp. 155. Praha', 'Pp. 185. v Praze', 'Pp. 200. v Praze', 'Pp. 202. Praha', 'Pp. 211. Praha', 'Pp. 216. v Praze', 'Pp. 223. v Praze', 'Pp. 229. Praha', 'Pp. 24. v Praze', 'Pp. 241. v Praze', 'Pp. 246. v Praze', 'Pp. 258. v Praze', 'Pp. 277. v Praze', 'Pp. 29. v Hranicích', 'Pp. 31. v Praze', 'Pp. 335. pl. 17. Praha', 'Pp. 377. v Praze', 'Pp. 39. 1883.', 'Pp. 400. v Praze', 'Pp. 45.', 'Pp. 46. V Praze', 'Pp. 50. 1880.', 'Pp. 50. v Praze', 'Pp. 501. Praha', 'Pp. 55. 1883.', 'Pp. 55. v Praze', 'Pp. 63. v Praze', 'Pp. 650. v Praze', 'Pp. 72.', 'Pp. 76.', 'Pp. 77. 1883.', 'Pp. 79. v Praze', 'Pp. 81. v Praze', 'Pp. 83. Divadelní ústav:', 'Pp. 93.', 'Pp. 98. v Praze', 'Pp. 99. v Praze', 'Pp. xii. 522. v Praze', 'Praag :', 'Prada :', 'Prag', 'Prag :', 'Prag :❦', 'Praga', 'Praga :', 'Pragae', 'Pragae :', 'Pragae:', 'Prague', 'Prague :', 'Prague, J. Laichter', 'Prague, Statni nakl. politicke literatury', 'Prag❦', 'Praha', 'Praha :', 'Praha :❦', 'Praha :❦❦', 'Praha Českoslov. Spisovatel', 'Praha Statni pedagogicke nakl.', 'Praha Stát. nakl. dětské knihy', 'Praha [Prag]', 'Praha [u.a.]', 'Praha, Ceskoslovenski spisovatel', 'Praha, Czechoslovakia :', 'Praha, F. Backovsky', 'Praha, J. Otto [N.D.]', 'Praha, Statni pedagogicke nakl 1956.', 'Praha, Statni pedagogicke nakl.', 'Praha, etc. :', 'Praha,❦', 'Praha-Dejvice', 'Praha-Vinohrady', 'Praha.', 'Praha:', 'Praha: Mladá fronta', 'Praha] :', 'Prahan :', 'Prahá', 'Praza :', 'Praze', 'Praze :', 'Praze:', 'Práce', 'Prosinec', 'Prága', 'Přerov', 'Ružomberok', 'Růže :', 'Rychnov n. Kn.', 'Stara Ríše', 'Stará Riše :❦', 'Stará Řiše na Moravě', 'Třebíč', 'Třebíč :', 'Tubingae', 'Tubingae :❦', 'Turć. Sv. Martin', 'Třebíčí na Moravé', 'U Zagrebu', 'Uherské Hradiště', 'Uherské Hradiště :', 'Ustí nad Labem', 'Ustredniho spolku jednot ucitelskych na Morave', 'Ústi N.L. :', 'Ústi n. Labem', 'Ústí n. L. :', 'Ústí nad Labem', 'Ústí nad Labem :', 'V Bělé u Bezděze', 'V Bratislavě', 'V Brne', 'V Brnë :', 'V Brně', 'V Brně :', 'V Brně:', 'V Brnǒ :', 'V Brně', 'V Brně [u.a.]', 'V Břeclavě :', 'V Čelabinsku :', 'V České Třebové :', 'V Českém Brodě', 'V HRADICI KRALOVE', 'V Hradci Králove :', 'V Hradci Králové', 'V Hradci Králové :', 'V Hradci Králově', 'V Jinošově', 'V Jinošově na Moravě :', 'V Karlových Varech :', 'V Liberci', 'V Liberci :', 'V Litomyšli', 'V Ljubljani :', 'V Londýně :', 'V Mnichově :', 'V Novém Jičíně :', 'V Novém Jičině', 'V Olomouci :', 'V Ostrave :', 'V Ostravě', 'V Ostravě :', 'V Pelhřimově', 'V Plzni', 'V Policce, F. Popelky', 'V Prace :', 'V Prahe', 'V Praza :', 'V Praze', 'V Praze :', 'V Praze, tiskem E. Gregra', 'V Praze-Spořilově', 'V Praze:', 'V Přerově', 'V Přerově :', 'V Rokycanech', 'V Tasově', 'V Tasově na Moravě :', 'V Táboře:', 'V Telči', 'V Turnově', 'V Táboře', 'V Ustí nad Labem', 'V Ústí nad Labem', 'V Ústí nad Labem :', 'V Ústí nad Labem:', 'V. Praze :', 'Ve Valašském Meziříčí:', 'Ve Vidnie :', 'Ve Vídni :', 'Ve Vranově nad Dyjí', 'Vinohradech', 'Vinohrady', 'Vyškov :', 'W Budyšinje:', 'W Praze', 'W Praze :', 'W. Praze', 'Zlín :', "Žd'ár nad Sázavou :", 'Žižkov', '[Brno]', '[Brno] :', '[Brno]:', '[Erscheinungsort nicht ermittelbar]', '[Erscheinungsort nicht ermittelbar] :', '[Havličkův Brod]', '[Horní Bříza] :', '[Kbh.] :', '[Král. Vinohrady]', '[Liberec]', '[Liberec] :', '[Lieu de publication non identifié] :', '[Lieu de publication non identifié] :❦', '[Place of publication not identified]', '[Place of publication not identified] :', '[Plzen]', '[Plzeň]', '[Plzeň] :', '[Plzeň]:', '[Prag]', '[Prag] :', '[Prag]:', '[Prague, Nakl. Spolku pro zrizeni desky a pomniku Viktoru Dykovi]', '[Prague]', '[Prague] :', '[Prague]:', '[Praha, vyd. red. V.K. Skracha ustredni spolek ceskoslovenskych knihkupeckych ucetnich]', '[Praha]', '[Praha] :', '[Praha] J. Otto', '[Praha] Nakl. ustredniho studentskeho knihkupcectvi', '[Praze] :', '[S.l.?]', '[S.l.]', '[S.l.] :', '[Sárospatak]', '[Stará Řiše]', '[Usti nad Labem] :', '[Ústí nad Labem]', '[Ústí nad Labem] :', '[V Brné] :', '[V Praze :', '[V Praze]', '[V Praze] :', '[V Tasově na Moravě]', '[Ve Velkém Meziřičí]', '[Vork pr. Vejle] :', '[s.l.]', '[v Praze]', 'v Brně', 'v Praze', 'v Praze-Karline']
+
+test_und = translations_df.loc()[translations_df['language'] == 'und']
+
+def place_of_pbl(x):
+    try:
+        return marc_parser_dict_for_field(x, '\$')['$a']
+    except (KeyError, TypeError):
+        np.nan
+
+test_und['wrong place'] = test_und['260'].apply(lambda x: place_of_pbl(x))
+
+test_und = test_und[test_und['wrong place'].isin(wrong_und_places)]
+difficult_dbs_dict.update({'Language und + Czech place': test_und})
+translations_df = translations_df[~translations_df['001'].isin(test_und['001'])].reset_index(drop=True)
+
 translations_df.to_excel(f'translation_database_{now}.xlsx', index=False)
 
 writer = pd.ExcelWriter(f'problematic_records_{now}.xlsx', engine = 'xlsxwriter')
@@ -422,15 +444,20 @@ writer.close()
 # numbers for now: 1. original oclc data, 2. interesting translations (oclc, brno, nkc), 3. HQ and LQ, 4. HQ after deduplication and clustering
 
 # original OCLC records number: 2115027
-# correct OCLC, Brno and NKC records number: 55182
-# HQ: 13404
-# LQ: 41778
+# correct OCLC, Brno and NKC records number: 55182  |  29.11.2021: 48457
+# HQ: 13404  |  29.11.2021: 19416
+# LQ: 41778  |  29.11.2021: 29012
 
 #%% VIAF work harvesting
-import requests
 
-viaf_work_df = translations_df.loc()[translations_df['245'].str.contains('viaf\.org')]
+# translations_df = pd.read_excel("translation_database_2021-11-29.xlsx")
+
+viaf_work_df = translations_df.loc()[translations_df['245'].str.contains('viaf.org')]
 viaf_work_list = [e for e in marc_parser_1_field(viaf_work_df, '001', '245', '\$')['$1'].drop_duplicates().to_list() if e]
+viaf_work_df = marc_parser_1_field(viaf_work_df, '001', '245', '\$')
+viaf_work_df = viaf_work_df[viaf_work_df['$1'] != '']
+viaf_work_df['work_viaf'] = viaf_work_df['$1'].apply(lambda x: re.findall('\d+', x)[0])
+viaf_work_df = viaf_work_df[['001', 'work_viaf']]
 
 # test = viaf_work_df.head(100)
 # test = marc_parser_1_field(test, '001', '245', '\$')['$1'].drop_duplicates().to_list()
@@ -441,6 +468,7 @@ for url in tqdm(viaf_work_list):
 
     result = requests.get(f'{url}/viaf.json').json()
     # result = requests.get('https://viaf.org/viaf/1276155566453913380006/viaf.json').json()
+    # result = requests.get('https://viaf.org/viaf/275194741/viaf.json').json()
     try:
         work_viaf = result['viafID']
     except KeyError:
@@ -452,7 +480,10 @@ for url in tqdm(viaf_work_list):
     try:
         work_title = result['mainHeadings']['data']['text'].split('|')[-1].strip()
     except TypeError:
-        work_title = result['mainHeadings']['data'][0]['text'].split('|')[-1].strip()
+        if [e['text'] for e in result['mainHeadings']['data'] if '|' in e['text']]:
+            work_title = [e['text'] for e in result['mainHeadings']['data'] if '|' in e['text']][0].split('|')[-1].strip()
+        else:
+            work_title = result['mainHeadings']['data'][0]['text'].split('|')[-1].strip()
     
     try:
         author_name = result['titles']['author']['text']
@@ -515,12 +546,71 @@ for url in tqdm(viaf_work_list):
     except KeyError:
         pass
 
-#%% quality index
-# translations_df = pd.read_excel('translation_database_2021-10-23.xlsx')
+#1370 work ids
+#1308 working work ids
 
-#quality index
+difference = [e for e in viaf_work_list if re.findall('\d+', e)[0] not in viaf_work_dict]
+
+
+
+with open('viaf_work_dict_pi.pickle', 'wb') as handle:
+    pickle.dump(viaf_work_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+errorfile = io.open('work_viaf_wrong.txt', 'wt', encoding='UTF-8')    
+for element in difference:
+    errorfile.write(str(element) + '\n')
+errorfile.close()
+
+with open('viaf_work_dict_pi.pickle', 'rb') as handle:
+    viaf_work_dict = pickle.load(handle)
     
-translations_df['quality_index'] = translations_df.apply(lambda x: quality_index(x), axis=1)  
+viaf_works_df = pd.DataFrame(viaf_work_dict.values())
+viaf_works_df['translations'] = viaf_works_df['translations'].apply(lambda x: '|'.join(x.keys()))
+viaf_works_df = cSplit(viaf_works_df, 'work_viaf', 'translations', '|')
+
+viaf_translations_df = [[el for el in e['translations'].values()] for e in viaf_work_dict.values()]
+viaf_translations_df = pd.DataFrame([e for sub in viaf_translations_df for e in sub])
+
+viaf_works_df = pd.merge(viaf_works_df, viaf_translations_df, left_on='translations', right_on='translation_viaf', how='left').drop(columns='translations')
+
+viaf_works_enrichment_df = pd.merge(viaf_work_df, viaf_works_df, on='work_viaf')[['001', 'work_viaf', 'work_title']].drop_duplicates()
+
+with_work_viaf_id = pd.merge(viaf_works_enrichment_df, translations_df, on='001')
+# with_work_viaf_id.to_excel('test.xlsx', index=False)
+work_with_viaf_id_simple_1 = with_work_viaf_id.copy()[['001', 'work_viaf', 'work_title']]
+#8998 records
+
+# wzbogacenie dla rekordów bez work viaf id
+
+
+# na później!!!!!!!!!!!!!!!!!!!!!!
+# test = translations_df.loc()[~translations_df['245'].str.contains('viaf.org')]
+# test = test[['001', '245', 'viaf_id']].to_dict(orient='records')
+# for d in tqdm(test):
+#     d.update({'simple':simplify_string(d['245'])})
+
+# test_viaf = viaf_works_df.to_dict(orient='records')
+# for d in tqdm(test_viaf):
+#     try:
+#         d.update({'simple':simplify_string(d['translation_title'])})
+#     except TypeError:
+#         pass
+
+# for i, el in tqdm(enumerate(test), total=len(test)):
+#     for element in test_viaf:
+#         if pd.notnull(element['translation_title']) and element['simple'] in el['simple'] and el['viaf_id'] == element['author_viaf']:
+#             test[i].update(element)
+            
+# work_with_viaf_id_simple_2 = pd.DataFrame([e for e in test if len(e) > 4])[['001', 'work_viaf', 'work_title']]
+ 
+# # 2107 bez uproszczenia stringów
+# # 3771 z uproszczeniami
+
+# work_with_viaf_id_simple = pd.concat([work_with_viaf_id_simple_1, work_with_viaf_id_simple_2])
+
+translations_df = pd.merge(translations_df, work_with_viaf_id_simple_1, how='left', on='001')
+translations_df.to_excel(f'translation_database_with_VIAF_work_{now}.xlsx', index=False)
+# translations_df = pd.read_excel('translation_database_with_VIAF_work_2021-12-16.xlsx')
 
 #%% clustering
 
@@ -796,7 +886,6 @@ df_original_titles = df_original_titles[(df_original_titles['100'].notnull()) &
                                          df_original_titles['765'])][['001', '100', '240', '765', 'cluster_viaf']]
 
 
-
 df_original_titles['240'] = df_original_titles['240'].apply(lambda x: get_longest_cell(x))
 df_original_titles['765'] = df_original_titles['765'].apply(lambda x: get_longest_cell(x))
 df_original_titles['765_or_240'] = df_original_titles[['765', '240']].apply(lambda x: x['765'] if pd.notnull(x['765']) else x['240'], axis=1)
@@ -834,7 +923,27 @@ df_original_titles_simple['cluster_titles'] = df_original_titles_simple['cluster
 
 df_with_original_titles = pd.merge(df_people_clusters, df_original_titles_simple.drop(columns=['index', 'cluster_viaf']), on='001', how='left').drop_duplicates()
 
+df_with_original_titles.to_excel(f'df_with_title_clusters_{now}.xlsx', index=False)
+
+#%% quality index
+# df_with_original_titles = pd.read_excel('df_with_title_clusters_2021-11-29.xlsx')
+# df_with_original_titles = pd.read_excel('df_with_title_clusters_2021-12-16.xlsx')
+    
+df_with_original_titles['quality_index'] = df_with_original_titles.apply(lambda x: quality_index(x), axis=1)  
+
+test = df_with_original_titles[['001', 'language', 'SRC', '240', '245', '260', '765', 'work_title', 'quality_index']]
+quality_results = Counter(df_with_original_titles['quality_index'])
+
 correct = df_with_original_titles[df_with_original_titles['quality_index'] > 0.7]
+not_correct = df_with_original_titles[df_with_original_titles['quality_index'] <= 0.7]
+
+writer = pd.ExcelWriter(f'translation_database_clusters_with_quality_index_{now}.xlsx', engine = 'xlsxwriter')
+correct.to_excel(writer, index=False, sheet_name='HQ')
+not_correct.to_excel(writer, index=False, sheet_name='LQ')
+writer.save()
+writer.close()
+
+#%% cluster genre – coś tu się dziwnego dzieje
 
 correct['cluster_genre'] = correct['fiction_type'].apply(lambda x: genre(x))
 
@@ -845,12 +954,378 @@ for name, group in tqdm(correct_grouped, total=len(correct_grouped)):
     group['cluster_genre'] = genre_algorithm(group)
     correct = correct.append(group)
 
-not_correct = df_with_original_titles[df_with_original_titles['quality_index'] <= 0.7]
-writer = pd.ExcelWriter(f'translation_database_clusters_with_quality_index_{now}.xlsx', engine = 'xlsxwriter')
-correct.to_excel(writer, index=False, sheet_name='HQ')
-not_correct.to_excel(writer, index=False, sheet_name='LQ')
-writer.save()
-writer.close()
+#%% sprawdzenie po wzbogaceniu o tytuły oryginałów
+
+#pokazać OV!!!
+
+# df_with_original_titles = pd.read_excel('df_with_title_clusters_2021-11-29.xlsx')
+
+with open('viaf_work_dict_pi.pickle', 'rb') as handle:
+    viaf_work_dict = pickle.load(handle)
+
+ttt = df_with_original_titles.copy()[['001', 'cluster_viaf', '100_unidecode', '245', 'language', 'work_viaf', 'work_title', 'original title', 'cluster_titles', 'quality_index']].sort_values('cluster_titles')
+
+#problemy
+problemy_01 = ttt[ttt['work_viaf'] == '1598147270543735700005']
+#oclc ma błędny viaf w 245!!!!
+
+
+# not_in_relation = test_df.loc()[(test_df['work_viaf'].isnull()) & (test_df['cluster_titles'].isnull())]
+
+# teste = ttt[ttt['work_viaf'].isin(['2140157828009554550009', '309414925', '6795151965300000470007'])]
+
+cluster_author_work = ttt[(ttt['work_viaf'].notnull()) &
+                          (ttt['cluster_titles'].notnull())][['cluster_viaf', 'work_viaf', 'cluster_titles']].drop_duplicates()
+
+# a_grouped = cluster_author_work.groupby(['cluster_viaf', 'work_viaf'])
+# new_1 = pd.DataFrame()
+# for name, group in a_grouped:
+#     if group.shape[0] > 1:
+#         new_1 = new_1.append(group)
+# b_grouped = cluster_author_work.groupby(['cluster_viaf', 'cluster_titles'])
+# new_2 = pd.DataFrame()
+# for name, group in b_grouped:
+#     if group.shape[0] > 1:
+#         new_2 = new_2.append(group)
+
+cluster_viaf_title_grouped = cluster_author_work.groupby(['cluster_viaf', 'work_viaf'])
+
+work_viaf_and_cluster_titles = []
+for name, group in tqdm(cluster_viaf_title_grouped, total=len(cluster_viaf_title_grouped)):
+    work_viaf_and_cluster_titles.append({'cluster_viaf': (name[0],), 'viafs':tuple(sorted([name[-1]])), 'clusters':tuple(sorted([int('{:.0f}'.format(e)) for e in list(set(group['cluster_titles'].to_list())) if pd.notnull(e)]))})
+
+def check_dicts_intersec(dict1, dict2):
+    if all([bool(set(val).intersection(dict2.get(key))) for key, val in dict1.items() if key in ['cluster_viaf', 'clusters']]):
+        return True
+    else:
+        return False
+        
+def merge_if_intersect(dict1, dict2):
+    if check_dicts_intersec(dict1, dict2):
+        output_dict = {key: tuple(sorted(set(value + dict2[key]))) for key, value in dict1.items()}
+    else: output_dict = {}
+    return output_dict
+
+# dict2 = [e for e in work_viaf_and_cluster_titles if '176421014' in e['viafs']][0]
+# dict1 = [e for e in work_viaf_and_cluster_titles if '179146462549027771326' in e['viafs']][0]
+# merge_if_intersect(dict1, dict2)
+
+# work_viaf_and_cluster_titles = [e for e in work_viaf_and_cluster_titles if '34458072' in e['cluster_viaf']]
+                  
+# jak to wpisać w while? że stara liczba != nowa liczba  
+
+number = 0
+final_list = []
+control_list = work_viaf_and_cluster_titles[:]
+while len(control_list) != len(final_list):
+    list_of_merged_dicts = []
+    popped_dicts = []
+    for dict1 in tqdm(work_viaf_and_cluster_titles):
+        for dict2 in work_viaf_and_cluster_titles:
+            if dict1 != dict2:
+                temp_dict = merge_if_intersect(dict1, dict2)
+                if temp_dict:
+                    list_of_merged_dicts.append(temp_dict)
+                    popped_dicts.append({key: tuple(sorted(set(value + dict1[key]))) for key, value in dict1.items()})
+                    popped_dicts.append({key: tuple(sorted(set(value + dict2[key]))) for key, value in dict2.items()})
+        
+    popped_dicts = list(map(dict, set(tuple(sorted(sub.items())) for sub in popped_dicts)))  
+    list_of_merged_dicts = list(map(dict, set(tuple(sorted(sub.items())) for sub in list_of_merged_dicts)))  
+    
+    final_list = [e for e in work_viaf_and_cluster_titles if e not in popped_dicts]
+    final_list.extend(list_of_merged_dicts)
+    control_list = work_viaf_and_cluster_titles[:]
+    work_viaf_and_cluster_titles = final_list[:]
+    number += 1
+    print(number)
+
+test_df = ttt.copy()  
+# ttt = test_df.copy()   
+ttt['cluster_titles'] = ttt['cluster_titles'].apply(lambda x: x if pd.notnull(x) else 0)  
+for dictionary in tqdm(final_list):
+    proper_work_viaf = min(dictionary['viafs'])
+    ttt.loc()[(ttt['work_viaf'].isin(dictionary['viafs'])) | 
+              (ttt['cluster_titles'].isin(dictionary['clusters'])), 'work_viaf'] = proper_work_viaf
+    ttt.loc()[(ttt['work_viaf'].isin(dictionary['viafs'])) | 
+              (ttt['cluster_titles'].isin(dictionary['clusters'])), 'cluster_titles'] = proper_work_viaf
+    # proper_title = Counter(ttt.loc()[(ttt['work_viaf'].isin(dictionary['viafs'])) | 
+    #                                  (ttt['cluster_titles'].isin(dictionary['clusters']))]['work_title'].dropna()).most_common(1)[0][0]
+    proper_title = viaf_work_dict[proper_work_viaf]['work_title']
+    ttt.loc()[(ttt['work_viaf'].isin(dictionary['viafs'])) | 
+              (ttt['cluster_titles'].isin(dictionary['clusters'])), 'work_title'] = proper_title
+    
+# ttt['cluster_titles'] = ttt['cluster_titles'].map(int)   
+ttt['cluster_titles'] = ttt.apply(lambda x: x['work_viaf'] if x['cluster_titles'] == 0 and pd.notnull(x['work_viaf']) else x['cluster_titles'], axis=1)
+#statystyki
+Counter(ttt['cluster_titles'] != 0)
+
+original_and_translations_dict = {k:{k2:v2 for k2,v2 in v.items() if k2 in ['author_viaf', 'work_title', 'translations']} \
+                                  for k,v in viaf_work_dict.items()}
+org_and_trans_dict = {}
+for k,v in original_and_translations_dict.items():
+    # k,v = list(original_and_translations_dict.items())[0]
+    temp_dict = {}
+    temp_dict.update({k:{}})
+    for k2,v2 in v.items():
+        if k2 in ['author_viaf', 'work_title']:
+            temp_dict[k].update({k2:v2})
+        else:
+            trans_titles = []
+            for k3,v2 in v2.items():
+                trans_titles.append(v2['translation_title'])
+            trans_titles = list(set([simplify_string(e).strip() for e in trans_titles]))
+            temp_dict[k]['translations'] = trans_titles
+    org_and_trans_dict.update(temp_dict)
+        
+# teraz wzbogacić org_and_trans_dict parami z ttt        
+
+org_and_trans_biblio = {}
+
+ttt_grouped = ttt.groupby('work_viaf')
+
+for name, group in tqdm(ttt_grouped, total=len(ttt_grouped)):
+    # name = '746145424543786830041'
+    # group = ttt_grouped.get_group(name)
+    k = name
+    temp_dict = {}
+    if k not in org_and_trans_biblio:
+        temp_dict.update({k:{}})
+    work_title = group['work_title'].to_list()[0]
+    author_viaf = list(set(group['cluster_viaf'].to_list()))
+    temp_dict[k].update({'work_title': work_title, 'author_viaf': author_viaf})
+    translations_list = list(set([simplify_string(marc_parser_dict_for_field(e, '\$')['$a']).strip() for e in group['245'].to_list()]))
+    translations_list = [e for e in translations_list if e]
+    temp_dict[k].update({'translations': translations_list})
+    org_and_trans_biblio.update(temp_dict)
+
+
+tttt = ttt[ttt['work_viaf'] == '1097153063212219320003']
+tttt = ttt[ttt['work_viaf'] == '12145911097927061907']
+#!!!!!!!!!multiple_authors!!!!!!!!
+#tutaj trzeba manualnych prac
+multiple_authors = {k:v for k,v in org_and_trans_biblio.items() if len(v['author_viaf']) > 1}
+multiple_authors_df = ttt[ttt['work_viaf'].isin(multiple_authors.keys())].sort_values(['work_viaf', 'cluster_viaf'])
+
+#hardcoding
+# #1097153063212219320003 -> author: 2958781
+# 1442145424587186830717 -> author: 34458072
+# 1719149619404004010000 -> 114463286
+# 176421014 -> 4931097
+# 183690272 -> 76500434
+# 2140157828009554550009 -> 2958781
+# 2503154801896656310000 -> 2958781
+# 306998033 -> 2958781
+# 307468389 -> 76500434
+# 310934436 -> 2958781
+# 310961694 -> 2958781
+# 5245158551010816540000 -> 2504978
+# 6999155566443813380005 -> 79081562
+# 9042154801924856310003 -> 2958781
+# 9728157828069554550001 -> 2958781
+
+
+#połączyć dicts
+
+org_and_trans_total = deepcopy(org_and_trans_biblio)
+for k,v in tqdm(org_and_trans_total.items()):
+    org_and_trans_total[k]['translations'].extend(org_and_trans_dict[k]['translations'])
+    org_and_trans_total[k]['translations'] = list(set(org_and_trans_total[k]['translations']))
+    # tu trzeba dodać warunek, żeby autorzy byli ci sami, a nie appendować
+    org_and_trans_total[k]['author_viaf'].append(org_and_trans_dict[k]['author_viaf'])
+    org_and_trans_total[k]['author_viaf'] = list(set(org_and_trans_total[k]['author_viaf']))
+
+#czemu i co to oznacza?
+roznica = {k:v for k,v in org_and_trans_dict.items() if k not in org_and_trans_total}
+#problemy
+#tutaj trzeba manualnych prac
+multiple_authors2 = {k:v for k,v in org_and_trans_total.items() if len(v['author_viaf']) > 1 and k not in multiple_authors}
+multiple_authors_df2 = ttt_upgrade[ttt_upgrade['work_viaf'].isin(multiple_authors2.keys())].sort_values(['work_viaf', 'cluster_viaf'])
+#ondrej porządkuje, wczytać rezultaty jego pracy!
+temp_df = pd.DataFrame.from_dict(multiple_authors2, orient='index').reset_index().rename(columns={'index': 'work_viaf'})
+temp_df.to_excel('people_to_decide.xlsx', index=False)
+
+#jest largo desolato
+problemy_1 = multiple_authors_df2[multiple_authors_df2['work_viaf'] == '1598147270543735700005']
+#czy jest problem w słowniku?
+org_sample_test = {k:v for k,v in org_and_trans_total.items() if k == '1598147270543735700005'}
+org_sample_test2 = {k:v for k,v in org_and_trans_biblio.items() if k == '1598147270543735700005'}
+org_sample_test3 = {k:v for k,v in org_and_trans_dict.items() if k == '1598147270543735700005'}
+org_sample_test4 = {k:v for k,v in viaf_work_dict.items() if k == '1598147270543735700005'}
+
+# szukanie po target titles
+test = ttt.loc()[ttt['work_viaf'].isna()][['001', '245', 'cluster_viaf']].to_dict(orient='records')
+for d in tqdm(test):
+    # d = test[15]
+    simple_245 = marc_parser_dict_for_field(d['245'], '\$')
+    try:
+        simple_245.pop('$c')
+    except KeyError:
+        pass
+    simple_245 = simplify_string(''.join([e.strip() for e in simple_245.values()]))
+    d.update({'simple': simple_245})
+
+viaf_works_df = pd.DataFrame.from_dict(org_and_trans_total, orient='index').reset_index().rename(columns={'index': 'work_viaf'})
+viaf_works_df = viaf_works_df.explode('translations')
+viaf_works_df = viaf_works_df.explode('author_viaf')
+test_viaf = viaf_works_df.to_dict(orient='records')
+
+for i, el in tqdm(enumerate(test), total=len(test)):
+    for element in test_viaf:
+        if element['translations'] in el['simple'] and el['cluster_viaf'] == element['author_viaf']:
+            test[i].update(element)
+
+
+work_with_viaf_id_simple_2 = pd.DataFrame([e for e in test if len(e) > 4])[['001', 'work_viaf', 'work_title']]
+
+ttt_upgrade = deepcopy(ttt).reset_index(drop=True)
+for i, row in tqdm(ttt_upgrade.iterrows(), total=ttt_upgrade.shape[0]):
+    # i = 112
+    # row = ttt_upgrade.iloc[i,:]
+    if not work_with_viaf_id_simple_2[work_with_viaf_id_simple_2['001'] == row['001']]['work_viaf'].empty:
+        ttt_upgrade.at[i, 'work_viaf'] = work_with_viaf_id_simple_2[work_with_viaf_id_simple_2['001'] == row['001']]['work_viaf'].to_string(index=False)
+        ttt_upgrade.at[i, 'work_title'] = work_with_viaf_id_simple_2[work_with_viaf_id_simple_2['001'] == row['001']]['work_title'].to_string(index=False)
+
+
+#ładny efekt
+ttt10 = ttt_upgrade[(ttt_upgrade['work_viaf'] == '309278823') | (ttt_upgrade['cluster_titles'] == 25)]
+ttt10 = ttt_upgrade[(ttt_upgrade['work_viaf'] == '7945157416866716710002') | (ttt_upgrade['cluster_titles'] == 62)]
+#statystyki
+Counter((ttt_upgrade['cluster_titles'] != 0) | (ttt_upgrade['work_viaf'].notnull()))
+tttt = ttt_upgrade[ttt_upgrade['work_viaf'] == '12145911097927061907']
+
+#problemy
+problem_1 = [e for e in test if 'work_viaf' in e and e['work_viaf'] == '1598147270543735700005']
+problem_1 = pd.DataFrame([e for e in test_viaf if 'work_viaf' in e and e['work_viaf'] == '1598147270543735700005'])
+#co jeszcze?
+#zbudować dict dla original_title z cluster_titles i do tego target titles i przeszukać
+
+ttt_upgrade[ttt_upgrade['001'] == 1014060193].index
+ttt_upgrade[ttt_upgrade['001'] == 884653991].index
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+differences = pd.DataFrame()
+for (i1, row1), (i2, row2) in tqdm(zip(test_df.reset_index(drop=True).iterrows(), ttt.reset_index(drop=True).iterrows()), total=ttt.shape[0]):
+    # row1 = test_df.iloc[59,:]
+    # row2 = ttt.iloc[59,:]
+    if pd.notnull(row1['work_viaf']) and row1['work_viaf'] != row2['work_viaf']:
+        row1 = pd.DataFrame(row1).transpose()
+        row2 = pd.DataFrame(row2).transpose()
+        testowy_df = pd.concat([row1, row2], axis=1)
+        differences = differences.append(testowy_df)
+    
+    
+ttt5 = test_df[(test_df['work_viaf'] == '808147727632864710008') |
+               (test_df['cluster_titles'] == 9) |
+               (test_df['cluster_titles'] == 410)]  
+ttt6 = test_df[test_df['work_viaf'] == '1324145424596886831014']
+
+ttt7 = ttt[ttt['work_viaf'] == '176421014']
+                                                                                                                                                                         
+ttt3 = ttt[ttt['work_viaf'] == '184716869']
+
+ttt4 = [e for e in new_list if e['viafs'] == '746145424543786830041']
+
+# tu jest problem, czemu są dwa? zrobić jedno, żeby drugie się nie dopisywało!
+res = list(map(dict, set(tuple(sorted(sub.items())) for sub in total_dicts))) 
+testo = [e for e in res if 134 in e['clusters']] 
+
+
+aaa = Counter(test_df['cluster_titles'])
+aaa1 = dict(aaa)
+aaa2 = {k:v for k,v in aaa1.items() if v == 1 and pd.notnull(k)}
+
+bbb = [e.split('$c')[0] for e in test_df['245']]
+bbb = [e for e in bbb if ' ; ' in e or ' ;$b' in e]
+
+
+total = pd.merge(df_with_original_titles, ttt, on='001', how='left')
+total.to_excel('after_grouping_algorithm_vol_1.xlsx', index=False)
+           
+final_df = pd.DataFrame(total_dicts)
+final_df = final_df.explode('viafs').reset_index(drop=True)
+final_df = final_df.explode('clusters').reset_index(drop=True)
+final_df = final_df.drop_duplicates().reset_index(drop=True)
+
+
+           
+            
+
+
+
+
+
+
+
+    
+    
+test = [e for e in work_viaf_and_cluster_titles if len(e[-1]) > 1]
+
+# dla każdego elementu w test mam grupy – teraz trzeba je ujednolicić
+
+
+
+test[3][-1].most_common()[-1]
+
+
+cluster_author_work_grouped = cluster_author_work.groupby('work_viaf')
+
+
+
+
+
+test = []
+for name, group in tqdm(cluster_author_work_grouped, total=len(cluster_author_work_grouped)):
+    test.append(dict(Counter(group['work_viaf'])))
+'Osudy dobrého vojáka Švejka za světové války' == 'Osudy dobrého vojáka Švejka za světové války'
+test = [e for e in test if len(e) > 1]
+
+
+ttt2 = ttt.loc()[ttt['work_title'] == 'Bambini di Praga']
+ttt2 = ttt.loc()[ttt['work_title'] == 'Báječná léta pod psa']
+ttt2 = ttt.loc()[ttt['work_title'] == 'České pohádky']
+
+ttt2 = ttt.loc()[(ttt['work_viaf'] == '176421014') |
+                 (ttt['work_viaf'] == '179146462549027771326') |
+                 (ttt['cluster_titles'] == 134) |
+                 (ttt['cluster_titles'] == 2725) |
+                 (ttt['cluster_titles'] == 2732) |
+                 (ttt['cluster_titles'] == 3230) |
+                 (ttt['cluster_titles'] == 5669) |
+                 (ttt['cluster_titles'] == 8736) |
+                 (ttt['cluster_titles'] == 11007) |
+                 (ttt['cluster_titles'] == 16796)]
+ttt.to_excel('NW-cale_dane.xlsx', index=False)
+
+#cluster Szwejka z 568 do 1016
+# czy wszystkie cluster_titles ids? jak to ogarnąć?
+ttt2 = ttt.loc()[ttt['work_title'] == 'Porte des langues ouverte']
+
+ttt3 = ttt.loc()[(ttt['cluster_titles'] == 57) |
+                 (ttt['work_title'] == 'Havířská balada')]
+
+ttt4 = ttt.loc()[ttt['001'].isin([1082033388, 1014558108])]
+
+# dla każdego work_viaf poszukać wszystkie cluster_titles, a następnie dla tych cluster_titles wpisać wszędzie work_viaf i work_title, co będzie informacją dla oryginalnego tytułu!!!!
 
 #%% de-duplication HQ
 
@@ -1275,6 +1750,76 @@ def place_of_pbl(x):
         np.nan
 
 aaa = Counter(test_und['260'].apply(lambda x: place_of_pbl(x)))
+
+
+
+#%% tabela translacji do mrc
+from my_functions import gsheet_to_df, df_to_mrc, mrc_to_mrk
+import pymarc
+df = gsheet_to_df('1sr5ChV8JhcZRsPDKWjSNJXpCLo0gu-B6XQMC0ICcQ3I', 'Sheet1')
+
+df_columns = [str(e) for e in df.columns.values]
+
+df_columns = ['{:03d}'.format(int(e)) if e.isnumeric() else e for e in df_columns]
+
+df.columns = df_columns
+
+df_to_mrc(df, '❦', 'czech_translations_NEW.mrc', 'czech_translations_NEW_errors.txt')
+mrc_to_mrk('czech_translations_NEW.mrc', 'czech_translations_NEW.mrk')
+
+test = df[df['001'] == 'trl0000003']
+df, field_delimiter, path_out, txt_error_file = test, '❦', 'czech_translations_NEW.mrc', 'czech_translations_NEW_errors.txt'
+
+def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
+    mrc_errors = []
+    df = df.replace(r'^\s*$', np.nan, regex=True)
+    outputfile = open(path_out, 'wb')
+    errorfile = io.open(txt_error_file, 'wt', encoding='UTF-8')
+    list_of_dicts = df.to_dict('records')
+    for record in tqdm(list_of_dicts, total=len(list_of_dicts)):
+        record = list_of_dicts[0]
+        record = {k: v for k, v in record.items() if pd.notnull(v)}
+        try:
+            pymarc_record = pymarc.Record(to_unicode=True, force_utf8=True, leader=record['LDR'])
+            # record = {k:v for k,v in record.items() if any(a == k for a in ['LDR', 'AVA']) or re.findall('\d{3}', str(k))}
+            for k, v in record.items():
+                v = str(v).split(field_delimiter)
+                if k == 'LDR':
+                    pass
+                elif k.isnumeric() and int(k) < 10:
+                    tag = k
+                    data = ''.join(v)
+                    marc_field = pymarc.Field(tag=tag, data=data)
+                    pymarc_record.add_ordered_field(marc_field)
+                else:
+                    if len(v) == 1:
+                        tag = k
+                        record_in_list = re.split('\$(.)', ''.join(v))
+                        indicators = list(record_in_list[0])
+                        subfields = record_in_list[1:]
+                        marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
+                        pymarc_record.add_ordered_field(marc_field)
+                    else:
+                        for element in v:
+                            tag = k
+                            record_in_list = re.split('\$(.)', ''.join(element))
+                            indicators = list(record_in_list[0])
+                            subfields = record_in_list[1:]
+                            marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
+                            pymarc_record.add_ordered_field(marc_field)
+            outputfile.write(pymarc_record.as_marc())
+        except ValueError as err:
+            mrc_errors.append((err, record))
+    if len(mrc_errors) > 0:
+        for element in mrc_errors:
+            errorfile.write(str(element) + '\n\n')
+    errorfile.close()
+    outputfile.close()
+
+
+
+
+
 
 
 

@@ -1,4 +1,13 @@
-﻿/all_data_correctness.xlsx
+﻿/df_with_title_clusters_2021-12-16.xlsx
+/new_cz_authority_df_2021-11-29.xlsx
+/people_clusters.xlsx
+/problematic_records_2021-11-29.xlsx
+/samizdat_kartoteka_osob_viaf.json                         
+/translation_database_2021-11-29.xlsx                      
+/translation_database_with_VIAF_work_2021-12-16.xlsx       
+/viaf_work_dict_pi.pickle  
+/samizdat_kartoteka_osob_viaf.json
+/all_data_correctness.xlsx
 /HQ_data_deduplicated_2021-10-27.xlsx
 /translation_database_clusters_with_quality_index_2021-10-27.xlsx
 /duplicates_brno_nkc_and_oclc.xlsx

@@ -1,13 +1,15 @@
-# https://pressto.amu.edu.pl/index.php/fp/article/view/27426 - czemu światło w biliografii?
 # przed kolejnym numerem:
-# Aby usprawnić proces aktywacji uprzejmie proszę w następnej akcji deponowania o:
-#     - W zakładce Identyfikatory należy kliknąć przycisk Zapisz
-#     - Aby metadane artykułu  były prawidłowo zapisane należy wykonać w zakładce Bibliografia polecenie Zapisz bibliografię
-#     - Uprzejmie proszę o umieszczanie w polu metadanych informacji o Instytucjach finansujących, tak jak w tym przypadku:
-#     - Poprawnie zamieszczone metadane bibliografii zawierają zawsze na początku nazwisko autora
-# Vide: mail pressto!!!
-    
+# jeśli są też publikowane tłumaczenia po angielsku, to zakomentować od wiersza 333 i 735, a kolejne wciąć mniej
+# automatycznie aktualizować obraz dla strony głównej? https://pressto.amu.edu.pl/index.php/fp/management/settings/website
 
+#Dopisać na pressto:
+# nazwisko i imię również w wersji angielskiej
+# wersja angielska afiliacji
+# nazwisko właściciela praw autorskich w wersji angielskiej
+# biogram w wersji angielskiej
+
+    
+#%% import
 import pandas as pd
 import regex as re
 import regex
@@ -32,6 +34,9 @@ import gspread as gs
 from google_drive_research_folders import cr_projects
 from gspread_dataframe import set_with_dataframe, get_as_dataframe
 
+pd.options.display.max_colwidth = 10000
+#%% def
+
 def get_bool(prompt):
     while True:
         try:
@@ -47,9 +52,24 @@ def jest_autor(x):
         val = ''
     return val
 
+def build_author(x):
+    try:
+        return re.findall('(^.+?)(?=\. \„.+$)', x)[0]
+    except IndexError:
+        return re.sub('(^.+?)(-|–|—|\p{Ll})(\..+$)', r'\1\2', x)
+    
+def abstrakt_bio(x):
+    x = x.split('\n')
+    x = '\n'.join([f'''<span style="font-family: 'Chaparral Pro', serif; color: black;">{e}</span>''' for e in x])
+    return x
+
+#%% check
+
 get_bool('Czy są zrobione pliki jpg dla artykułów? ')
 get_bool('Czy dodano pliki pdf do biblioteki wordpress (plików jpg nie dodawać)? ')
 get_bool('Czy nazwiska autorów w nazwach plików są poprawne? ')
+
+#%% connect go google drive
 
 #autoryzacja do tworzenia i edycji plików
 gc = gs.oauth()
@@ -58,19 +78,25 @@ gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
 
+#%% today
+
+now = datetime.datetime.now()
+year = now.year
+month = '{:02d}'.format(now.month)
+day = '{:02d}'.format(now.day)
+
+#%% open browser
+
+browser = webdriver.Firefox()    
+
+#%% read new issue
+
 file_list = drive.ListFile({'q': f"'{cr_projects}' in parents and trashed=false"}).GetList() 
 #[print(e['title'], e['id']) for e in file_list]
 fp_folder = [file['id'] for file in file_list if file['title'] == 'redakcja FP'][0]
 file_list = drive.ListFile({'q': f"'{fp_folder}' in parents and trashed=false"}).GetList() 
 last_number = max(file_list, key=lambda x: x['createdDate'])
 print(f"{last_number['title']}  |  {last_number['id']}")
-
-pd.options.display.max_colwidth = 10000
-
-now = datetime.datetime.now()
-year = now.year
-month = '{:02d}'.format(now.month)
-day = '{:02d}'.format(now.day)
 
 table_id = input('Podaj id arkusza bieżącego numeru: ')
 aktualny_numer_sheet = gc.open_by_key(table_id)
@@ -139,10 +165,6 @@ for i, row in aktualny_numer.iterrows():
 #kodowanie HTML abstraktu i biogramu
 # wstęp?
 #abstrakt i bio
-def abstrakt_bio(x):
-    x = x.split('\n')
-    x = '\n'.join([f'''<span style="font-family: 'Chaparral Pro', serif; color: black;">{e}</span>''' for e in x])
-    return x
         
 aktualny_numer['abstrakt'] = aktualny_numer['abstrakt'].apply(lambda x: abstrakt_bio(x) if pd.notnull(x) else np.nan)
 aktualny_numer['biogram'] = aktualny_numer['biogram'].apply(lambda x: abstrakt_bio(x) if pd.notnull(x) else np.nan)
@@ -157,8 +179,9 @@ aktualny_numer['biogram'] = aktualny_numer['biogram'].apply(lambda x: abstrakt_b
 # except SessionNotCreatedException:
 #     print('UWAGA!\n\nNieaktualna wersja oprogramowania ChromeDriver\n\nSprawdź wersję przeglądarki Google Chrome\n\nOdwiedź stronę: https://chromedriver.chromium.org/ i pobierz właściwy plik\n\nWypakuj go tutaj: C:\\bin')
 # =============================================================================
+
+#%% upload articles at fp.amu.edu.pl
     
-browser = webdriver.Firefox()    
 browser.get("http://fp.amu.edu.pl/admin")    
 browser.implicitly_wait(5)
 username_input = browser.find_element_by_id('user_login')
@@ -386,6 +409,8 @@ for index, row in aktualny_numer.iterrows():
 
 print('Artykuły na wordpressie opublikowane')
 
+#%% upload new issue at fp.amu.edu.pl
+
 #dane do strony numeru
         
 for i, row in aktualny_numer.iterrows():
@@ -412,7 +437,7 @@ for lp, a, t in tagi_osob:
     wybierz_osobe = browser.find_elements_by_css_selector('.row-title')[0].click()
     opis_tagu = browser.find_element_by_id('description').clear()
     opis_tagu = browser.find_element_by_id('description').send_keys(t)
-    zaktualizuj = browser.find_element_by_xpath("//input[@class = 'button button-primary' and @value = 'Zaktualizuj']").click()
+    zaktualizuj = browser.find_element_by_xpath("//input[@class = 'button button-primary' and @value = 'Aktualizuj']").click()
     opis_tagu = browser.find_element_by_id('description').get_attribute('value')
     tag_pl = re.sub('(.+)(\|)(.+)', r'\1', opis_tagu)
     tag_eng = re.sub('(.+)(\|)(.+)', r'\3', opis_tagu)
@@ -471,8 +496,8 @@ for i, row in strona_numeru.iterrows():
         strona_numeru.at[i, 'link do jpg'] = f"http://fp.amu.edu.pl/wp-content/uploads/{year}/{month}/{sciezka_jpg}"
         strona_numeru.at[i, 'jpg'] = sciezka_jpg
         
-row = strona_numeru.loc[0]
-index = 0
+# row = strona_numeru.loc[0]
+# index = 0
 for index, row in strona_numeru.iterrows():
     if row['język'] == 'pl':
       
@@ -547,6 +572,8 @@ for index, row in strona_numeru.iterrows():
        
 print('Strona numeru na wordpressie opublikowana')
 
+#%% pressto – upload new issue
+
 #pressto - dodawanie numeru
 
 browser.get("https://pressto.amu.edu.pl/index.php/index/login") 
@@ -600,9 +627,13 @@ opublikuj_numer_ok = browser.find_element_by_xpath("//button[@class='pkp_button 
 
 print('Strona numeru na pressto opublikowana')
 
+#%% pressto – upload new articles
+
 #pressto dodawanie artykułów
 
 for i, row in aktualny_numer.iterrows():
+    # i = 0
+    # row = aktualny_numer.iloc[i,:]
     if row['język'] == 'pl':
         nowe_zgloszenie = browser.get('https://pressto.amu.edu.pl/index.php/fp/management/importexport/plugin/QuickSubmitPlugin')
         dzial_fp = row['kategoria']
@@ -630,23 +661,41 @@ for i, row in aktualny_numer.iterrows():
             s = re.sub(',+', ',', s)
             slowa_kluczowe_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[3].send_keys(s, Keys.TAB)
             
+        try:
+            finansowanie_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[4]
+            finansowanie_pl.send_keys(row['finansowanie'])
+            finansowanie_en = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[5]
+            finansowanie_en.send_keys(aktualny_numer.at[i+1, 'finansowanie'])
+        except TypeError:
+            pass
+            
         if len(row['bibliografia']) > 0:
 
             bibliografia_df = pd.DataFrame(row['bibliografia'].split('\n'), columns=['bibliografia'])
-            bibliografia_df = bibliografia_df[bibliografia_df['bibliografia'] != '']
-            bibliografia_df['autor pozycji'] = bibliografia_df['bibliografia'].apply(lambda x: re.sub('(^.+?)(\..+$)', r'\1', x))
+            bibliografia_df = bibliografia_df[bibliografia_df['bibliografia'] != '']       
+            
+            bibliografia_df['autor pozycji'] = bibliografia_df['bibliografia'].apply(lambda x: build_author(x))
             bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].apply(lambda x: jest_autor(x))
-            bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].replace('-{2,}|—{2,}|–{2,}', np.nan, regex=True).ffill()       
+            bibliografia_df['ile małych'] = bibliografia_df['autor pozycji'].apply(lambda x: len(re.findall(' \p{Ll}', x)))
+            bibliografia_df['ile słów'] = bibliografia_df['autor pozycji'].apply(lambda x: len(x.split(' ')))
+            bibliografia_df['odsetek małych'] = bibliografia_df['ile małych'] / bibliografia_df['ile słów']
+            bibliografia_df['autor pozycji'] = bibliografia_df.apply(lambda x: re.sub('(^.+)(\..+$)', r'\1', x['autor pozycji']) if x['odsetek małych'] >= 0.3 else x['autor pozycji'], axis=1)
+            
+            bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].replace('---|- - - |–––|– – –|———|— — —', np.nan, regex=True).ffill()
             bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: re.sub(f"{x['autor pozycji']}.", '', x['bibliografia']).strip(), axis=1)
             bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: x['bibliografia'] if x['pozycja'] == '' else x['pozycja'], axis=1)
-            bibliografia_df['pozycja'] = bibliografia_df['pozycja'].str.replace('-{2,}|—{2,}|–{2,}', '', regex=True)
+            bibliografia_df['pozycja'] = bibliografia_df['pozycja'].str.replace('-{2,}|—{2,}|—{2,}', '', regex=True)
             bibliografia_df['id'] = bibliografia_df.index+1
             bibliografia_df['id'] = bibliografia_df['id']
             bibliografia_df = bibliografia_df.replace(r'^\s*$', np.nan, regex=True)
-            bibliografia_df['bibliografia'] =  bibliografia_df[['id', 'autor pozycji', 'pozycja']].apply(lambda x: '. '.join(x.dropna().astype(str)), axis=1)
-            bibliografia_df = '\n'.join(bibliografia_df['bibliografia'].str.replace('(\. )+', '. ', regex=True).to_list())
+            bibliografia_df['bibliografia'] =  bibliografia_df[['id', 'autor pozycji', 'pozycja']].apply(lambda x: '. '.join(x.dropna().astype(str)).strip(), axis=1)
+            bibliografia_df = bibliografia_df['bibliografia']
+            bibliografia_df = '\n'.join(bibliografia_df.str.replace('(\. )+', '. ', regex=True).to_list())
             
             bibliografia = browser.find_element_by_name('citations').send_keys(bibliografia_df, Keys.BACK_SPACE)
+            # bibliografia_df = re.sub('\n+', '\n', browser.find_element_by_name('citations').get_attribute('value'))
+            # browser.find_element_by_name('citations').clear()
+            # bibliografia = browser.find_element_by_name('citations').send_keys(bibliografia_df, Keys.BACK_SPACE)
         
         for a, o, af, b in zip(row['autor'].split('❦'), row['ORCID'].split('❦'), row['afiliacja'].split('❦'), row['biogram'].split('❦')):
             wspolautor_dodaj = browser.find_element_by_xpath("//a[@title = 'Dodaj autora']").click()
@@ -745,6 +794,17 @@ for i, row in aktualny_numer.iterrows():
         time.sleep(2)
         identyfikatory = browser.find_element_by_xpath("//a[@name = 'catalog' and @class = 'ui-tabs-anchor']").click()
         doi_artykulu = browser.find_element_by_xpath("//p[contains(text(), 'fp')]").text
+        zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
+        time.sleep(2)
+        zapisz[1].click()
+        time.sleep(2)
+        bibliografia = browser.find_element_by_xpath("//a[@name = 'citations' and @class = 'ui-tabs-anchor']")
+        bibliografia.click()
+        time.sleep(2)
+        zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button parse']")
+        time.sleep(2)
+        zapisz[0].click()
+        time.sleep(2)
         
 #dodanie doi do wordpressa
         browser.get(row['url_edycji'])
@@ -772,7 +832,7 @@ print('Artykuły na pressto opublikowane i dodane DOI na wordpressie')
 
 browser.close()
 
-#uzupełnienie tabeli artykułów na dysku google
+#%%uzupełnienie tabeli artykułów na dysku google
 
 try:
     set_with_dataframe(aktualny_numer_sheet.worksheet('artykuły po pętli'), aktualny_numer)

@@ -52,7 +52,7 @@ def marc_parser_1_field(df, field_id, field_data, subfield_code, delimiter='❦'
             marc_field[marker] = marc_field[field_data].apply(lambda x: re.sub(string, r'\3', x) if marker in x else '')
             marc_field[marker] = marc_field[marker].str.replace(marker, '').str.strip().str.replace(' +', ' ')
     for (column_name, column_data) in marc_field.iteritems():
-        if re.findall(f'{subfield_code}', column_name):
+        if re.findall(f'{subfield_code}', str(column_name)):
             marc_field[column_name] = marc_field[column_name].str.replace(re.escape(column_name), '❦')
     return marc_field
 
@@ -299,12 +299,12 @@ def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
         record = {k: v for k, v in record.items() if pd.notnull(v)}
         try:
             pymarc_record = pymarc.Record(to_unicode=True, force_utf8=True, leader=record['LDR'])
-            record = {k:v for k,v in record.items() if any(a == k for a in ['LDR', 'AVA']) or re.findall('\d{3}', str(k))}
+            # record = {k:v for k,v in record.items() if any(a == k for a in ['LDR', 'AVA']) or re.findall('\d{3}', str(k))}
             for k, v in record.items():
                 v = str(v).split(field_delimiter)
                 if k == 'LDR':
                     pass
-                elif int(k) < 10:
+                elif k.isnumeric() and int(k) < 10:
                     tag = k
                     data = ''.join(v)
                     marc_field = pymarc.Field(tag=tag, data=data)
@@ -486,19 +486,32 @@ def simplify_string(x, with_spaces=True, nodiacritics=True):
             final_string += letter
     return final_string
 
+# def marc_parser_dict_for_field(string, subfield_code):
+#     subfield_list = re.findall(f'{subfield_code}.', string)
+#     dictionary_field = {}
+#     for subfield in subfield_list:
+#         subfield_escape = re.escape(subfield)
+#         string = re.sub(f'({subfield_escape})', r'❦\1', string)
+#     for subfield in subfield_list:
+#         subfield_escape = re.escape(subfield)
+#         regex = f'(^)(.*?\❦{subfield_escape}|)(.*?)(\,{{0,1}})((\❦{subfield_code})(.*)|$)'
+#         value = re.sub(regex, r'\3', string)
+#         dictionary_field[subfield] = value
+#     return dictionary_field
+
+def substring_range(s, substring):
+    for i in re.finditer(re.escape(substring), s):
+        yield (i.start(), i.end())
+
 def marc_parser_dict_for_field(string, subfield_code):
     subfield_list = re.findall(f'{subfield_code}.', string)
-    dictionary_field = {}
     for subfield in subfield_list:
         subfield_escape = re.escape(subfield)
         string = re.sub(f'({subfield_escape})', r'❦\1', string)
-    for subfield in subfield_list:
-        subfield_escape = re.escape(subfield)
-        regex = f'(^)(.*?\❦{subfield_escape}|)(.*?)(\,{{0,1}})((\❦{subfield_code})(.*)|$)'
-        value = re.sub(regex, r'\3', string)
-        dictionary_field[subfield] = value
-    return dictionary_field
-
+    string = [e.split('\n')[0] for e in string.split('❦') if e]
+    dictionary_fields = [e for e in string if re.escape(e[0]) == subfield_code]
+    dictionary_fields = [{subfield_list[i]:e[len(subfield_list[i]):]} for i, e in enumerate(dictionary_fields)]
+    return dictionary_fields
 
 
 
