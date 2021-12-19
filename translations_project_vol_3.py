@@ -966,7 +966,7 @@ with open('viaf_work_dict_pi.pickle', 'rb') as handle:
 ttt = df_with_original_titles.copy()[['001', 'cluster_viaf', '100_unidecode', '245', 'language', 'work_viaf', 'work_title', 'original title', 'cluster_titles', 'quality_index']].sort_values('cluster_titles')
 
 #problemy
-problemy_01 = ttt[ttt['work_viaf'] == '1598147270543735700005']
+# problemy_01 = ttt[ttt['work_viaf'] == '1598147270543735700005']
 #oclc ma błędny viaf w 245!!!!
 
 
@@ -1099,31 +1099,38 @@ for name, group in tqdm(ttt_grouped, total=len(ttt_grouped)):
     org_and_trans_biblio.update(temp_dict)
 
 
-tttt = ttt[ttt['work_viaf'] == '1097153063212219320003']
-tttt = ttt[ttt['work_viaf'] == '12145911097927061907']
+# tttt = ttt[ttt['work_viaf'] == '1097153063212219320003']
+# tttt = ttt[ttt['work_viaf'] == '12145911097927061907']
 #!!!!!!!!!multiple_authors!!!!!!!!
 #tutaj trzeba manualnych prac
-multiple_authors = {k:v for k,v in org_and_trans_biblio.items() if len(v['author_viaf']) > 1}
-multiple_authors_df = ttt[ttt['work_viaf'].isin(multiple_authors.keys())].sort_values(['work_viaf', 'cluster_viaf'])
+# multiple_authors = {k:v for k,v in org_and_trans_biblio.items() if len(v['author_viaf']) > 1}
+# multiple_authors_df = ttt[ttt['work_viaf'].isin(multiple_authors.keys())].sort_values(['work_viaf', 'cluster_viaf'])
 
 #hardcoding
-# #1097153063212219320003 -> author: 2958781
-# 1442145424587186830717 -> author: 34458072
-# 1719149619404004010000 -> 114463286
-# 176421014 -> 4931097
-# 183690272 -> 76500434
-# 2140157828009554550009 -> 2958781
-# 2503154801896656310000 -> 2958781
-# 306998033 -> 2958781
-# 307468389 -> 76500434
-# 310934436 -> 2958781
-# 310961694 -> 2958781
-# 5245158551010816540000 -> 2504978
-# 6999155566443813380005 -> 79081562
-# 9042154801924856310003 -> 2958781
-# 9728157828069554550001 -> 2958781
-
-
+proper_authors_dict = {'1097153063212219320003': ['2958781'],
+                       '1442145424587186830717': ['34458072'],
+                       '1719149619404004010000': ['114463286'],
+                       '176421014': ['4931097'],
+                       '183690272': ['76500434'],
+                       '2140157828009554550009': ['2958781'],
+                       '2503154801896656310000': ['2958781'],
+                       '306998033': ['2958781'],
+                       '307468389': ['76500434'],
+                       '310934436': ['2958781'],
+                       '310961694': ['2958781'],
+                       '5245158551010816540000': ['2504978'],
+                       '6999155566443813380005': ['79081562'],
+                       '9042154801924856310003': ['2958781'],
+                       '9728157828069554550001': ['2958781']}
+#hardcoding w słowniku biblio i słowniku viaf
+org_and_trans_biblio = {k: {k2:(proper_authors_dict[k] if k2 == 'author_viaf' and k in proper_authors_dict else v2) for k2,v2 in v.items()} \
+                        for k,v in org_and_trans_biblio.items()}
+org_and_trans_dict = {k: {k2:(proper_authors_dict[k][0] if k2 == 'author_viaf' and k in proper_authors_dict else v2) for k2,v2 in v.items()} \
+                        for k,v in org_and_trans_dict.items()}
+#hardcoding w tabeli
+ttt['cluster_viaf'] = ttt[['cluster_viaf', 'work_viaf']].apply(lambda x: proper_authors_dict[x['work_viaf']][0] if pd.notnull(x['work_viaf']) and x['work_viaf'] in proper_authors_dict else x['cluster_viaf'], axis=1)
+#czy hardcodować też w tabeli głównej?
+#???????????????
 #połączyć dicts
 
 org_and_trans_total = deepcopy(org_and_trans_biblio)
@@ -1135,22 +1142,70 @@ for k,v in tqdm(org_and_trans_total.items()):
     org_and_trans_total[k]['author_viaf'] = list(set(org_and_trans_total[k]['author_viaf']))
 
 #czemu i co to oznacza?
-roznica = {k:v for k,v in org_and_trans_dict.items() if k not in org_and_trans_total}
+# roznica = {k:v for k,v in org_and_trans_dict.items() if k not in org_and_trans_total}
 #problemy
 #tutaj trzeba manualnych prac
-multiple_authors2 = {k:v for k,v in org_and_trans_total.items() if len(v['author_viaf']) > 1 and k not in multiple_authors}
-multiple_authors_df2 = ttt_upgrade[ttt_upgrade['work_viaf'].isin(multiple_authors2.keys())].sort_values(['work_viaf', 'cluster_viaf'])
-#ondrej porządkuje, wczytać rezultaty jego pracy!
-temp_df = pd.DataFrame.from_dict(multiple_authors2, orient='index').reset_index().rename(columns={'index': 'work_viaf'})
-temp_df.to_excel('people_to_decide.xlsx', index=False)
+# multiple_authors2 = {k:v for k,v in org_and_trans_total.items() if len(v['author_viaf']) > 1}
+# multiple_authors_df2 = ttt[ttt['work_viaf'].isin(multiple_authors2.keys())].sort_values(['work_viaf', 'cluster_viaf'])
+# aaa = multiple_authors_df2[multiple_authors_df2['work_viaf'] == '5411153954900905680008']
 
-#jest largo desolato
-problemy_1 = multiple_authors_df2[multiple_authors_df2['work_viaf'] == '1598147270543735700005']
-#czy jest problem w słowniku?
-org_sample_test = {k:v for k,v in org_and_trans_total.items() if k == '1598147270543735700005'}
-org_sample_test2 = {k:v for k,v in org_and_trans_biblio.items() if k == '1598147270543735700005'}
-org_sample_test3 = {k:v for k,v in org_and_trans_dict.items() if k == '1598147270543735700005'}
-org_sample_test4 = {k:v for k,v in viaf_work_dict.items() if k == '1598147270543735700005'}
+records_to_delete = ['182253235', '309393708', '310216967']
+ttt = ttt[~(ttt['work_viaf'].isin(records_to_delete)) | (ttt['work_viaf'].isnull())]
+org_and_trans_total = {k:v for k,v in org_and_trans_total.items() if k not in records_to_delete}
+
+proper_authors_dict = {'1292152503080710800006': ['109312616'],
+'1598147270543735700005': ['109312616'],
+'1695145424610786831026': ['29835535'],
+'1750151474855100490002': ['66469255'],
+'1879145424609386831043': ['24614627'],
+'1885159764103408170004': ['66469255'],
+'2117152502880410800000': ['34499285'],
+'2529159764104908170009': ['29835535'],
+'2658156497246117740003': ['2958781'],
+'305991439': ['7402030'],
+'307099584': ['297343866'],
+'307145067344566631201': ['4931097'],
+'309258849': ['125283'],
+'309362028': ['24614627'],
+'309414843': ['2958781'],
+'310302495': ['2958781'],
+'310327107': ['45112529'],
+'310331147': ['76500434'],
+'310363659': ['12459159'],
+'310405572': ['2958781'],
+'310446156': ['34454129'],
+'310940822': ['2958781'],
+'310949849': ['4931097'],
+'314607673': ['24614627'],
+'315483043': ['96705622'],
+'316306628': ['3028585'],
+'316754488': ['62360050'],
+'3238151474902400490001': ['163185334'],
+'3514151656275808400009': ['66469255'],
+'3801152502723710800005': ['7423797'],
+'4327152502807510800006': ['54147355'],
+'4520159764085808170001': ['56651696'],
+'4792152502891410800002': ['34464240'],
+'5411153954900905680008': ['71466298'],
+'6005154076042011860009': ['39632022'],
+'7292159764092308170004': ['45112529'],
+'746145424543786830041': ['34454129'],
+'7905152502822210800000': ['116307890'],
+'8117154801963756310000': ['2958781'],
+'8394159764095008170007': ['4931097'],
+'8774154622417044710008': ['2958781'],
+'9165153289923132770009': ['56651696'],
+'9362157527304627300005': ['125283'],
+'9452151656217608400003': ['45112529'],
+'9672147727675064710000': ['29835535'],
+'9933151051972733530006': ['45112529']}
+#hardcoding w słowniku biblio i słowniku viaf
+org_and_trans_total = {k: {k2:(proper_authors_dict[k] if k2 == 'author_viaf' and k in proper_authors_dict else v2) for k2,v2 in v.items()} \
+                        for k,v in org_and_trans_total.items()}
+#hardcoding w tabeli
+ttt['cluster_viaf'] = ttt[['cluster_viaf', 'work_viaf']].apply(lambda x: proper_authors_dict[x['work_viaf']][0] if pd.notnull(x['work_viaf']) and x['work_viaf'] in proper_authors_dict else x['cluster_viaf'], axis=1)
+#czy hardcodować też w tabeli głównej?
+#???????????????
 
 # szukanie po target titles
 test = ttt.loc()[ttt['work_viaf'].isna()][['001', '245', 'cluster_viaf']].to_dict(orient='records')
@@ -1193,9 +1248,10 @@ ttt10 = ttt_upgrade[(ttt_upgrade['work_viaf'] == '7945157416866716710002') | (tt
 Counter((ttt_upgrade['cluster_titles'] != 0) | (ttt_upgrade['work_viaf'].notnull()))
 tttt = ttt_upgrade[ttt_upgrade['work_viaf'] == '12145911097927061907']
 
-#problemy
-problem_1 = [e for e in test if 'work_viaf' in e and e['work_viaf'] == '1598147270543735700005']
-problem_1 = pd.DataFrame([e for e in test_viaf if 'work_viaf' in e and e['work_viaf'] == '1598147270543735700005'])
+#!!!!!!!!TUTAJ!!!!!!!!!!!
+
+
+
 #co jeszcze?
 #zbudować dict dla original_title z cluster_titles i do tego target titles i przeszukać
 
