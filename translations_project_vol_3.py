@@ -928,7 +928,10 @@ df_with_original_titles.to_excel(f'df_with_title_clusters_{now}.xlsx', index=Fal
 #%% quality index
 # df_with_original_titles = pd.read_excel('df_with_title_clusters_2021-11-29.xlsx')
 # df_with_original_titles = pd.read_excel('df_with_title_clusters_2021-12-16.xlsx')
-    
+df_with_original_titles.loc()[df_with_original_titles['work_viaf'] == '1598147270543735700005', 'work_title'] = np.nan
+df_with_original_titles.loc()[df_with_original_titles['work_viaf'] == '1598147270543735700005', 'work_viaf'] = np.nan
+df_with_original_titles.loc()[df_with_original_titles['001'] == 908861268, 'cluster_titles'] = np.nan
+
 df_with_original_titles['quality_index'] = df_with_original_titles.apply(lambda x: quality_index(x), axis=1)  
 
 test = df_with_original_titles[['001', 'language', 'SRC', '240', '245', '260', '765', 'work_title', 'quality_index']]
@@ -1250,7 +1253,83 @@ tttt = ttt_upgrade[ttt_upgrade['work_viaf'] == '12145911097927061907']
 
 #!!!!!!!!TUTAJ!!!!!!!!!!!
 
+cluster_author_work = ttt_upgrade[(ttt_upgrade['work_viaf'].notnull()) &
+                                  (ttt_upgrade['cluster_titles'] != 0)][['cluster_viaf', 'work_viaf', 'cluster_titles']].drop_duplicates()
+cluster_viaf_title_grouped = cluster_author_work.groupby(['cluster_viaf', 'work_viaf'])
 
+work_viaf_and_cluster_titles = []
+for name, group in tqdm(cluster_viaf_title_grouped, total=len(cluster_viaf_title_grouped)):
+    work_viaf_and_cluster_titles.append({'cluster_viaf': (name[0],), 'viafs':tuple(sorted([name[-1]])), 'clusters':tuple(sorted([int('{:.0f}'.format(e)) if isinstance(e, float) else int(e) for e in list(set(group['cluster_titles'].to_list())) if pd.notnull(e) and e != 0]))})
+
+number = 0
+final_list = []
+control_list = work_viaf_and_cluster_titles[:]
+while len(control_list) != len(final_list):
+    list_of_merged_dicts = []
+    popped_dicts = []
+    for dict1 in tqdm(work_viaf_and_cluster_titles):
+        for dict2 in work_viaf_and_cluster_titles:
+            if dict1 != dict2:
+                temp_dict = merge_if_intersect(dict1, dict2)
+                if temp_dict:
+                    list_of_merged_dicts.append(temp_dict)
+                    popped_dicts.append({key: tuple(sorted(set(value + dict1[key]))) for key, value in dict1.items()})
+                    popped_dicts.append({key: tuple(sorted(set(value + dict2[key]))) for key, value in dict2.items()})
+        
+    popped_dicts = list(map(dict, set(tuple(sorted(sub.items())) for sub in popped_dicts)))  
+    list_of_merged_dicts = list(map(dict, set(tuple(sorted(sub.items())) for sub in list_of_merged_dicts)))  
+    
+    final_list = [e for e in work_viaf_and_cluster_titles if e not in popped_dicts]
+    final_list.extend(list_of_merged_dicts)
+    control_list = work_viaf_and_cluster_titles[:]
+    work_viaf_and_cluster_titles = final_list[:]
+    number += 1
+    print(number)
+
+test_df = ttt_upgrade.copy()  
+
+for dictionary in tqdm(final_list):
+    proper_work_viaf = min(dictionary['viafs'])
+    ttt_upgrade.loc()[(ttt_upgrade['work_viaf'].isin(dictionary['viafs'])) | 
+                      (ttt_upgrade['cluster_titles'].isin(dictionary['clusters'])), 'work_viaf'] = proper_work_viaf
+    ttt_upgrade.loc()[(ttt_upgrade['work_viaf'].isin(dictionary['viafs'])) | 
+                      (ttt_upgrade['cluster_titles'].isin(dictionary['clusters'])), 'cluster_titles'] = proper_work_viaf
+    proper_title = org_and_trans_total[proper_work_viaf]['work_title']
+    ttt_upgrade.loc()[(ttt_upgrade['work_viaf'].isin(dictionary['viafs'])) | 
+                      (ttt_upgrade['cluster_titles'].isin(dictionary['clusters'])), 'work_title'] = proper_title
+    
+  
+ttt_upgrade['cluster_titles'] = ttt_upgrade.apply(lambda x: x['work_viaf'] if x['cluster_titles'] == 0 and pd.notnull(x['work_viaf']) else x['cluster_titles'], axis=1)
+#statystyki
+Counter(test_df['cluster_titles'] != 0)
+Counter((ttt_upgrade['cluster_titles'] != 0))
+
+aaa = ttt_upgrade[ttt_upgrade['work_viaf'] == '176421014']
+
+df_with_original_titles = pd.merge(ttt_upgrade, df_with_original_titles.drop(columns=['cluster_viaf', '100_unidecode', '245', 'language', 'work_viaf', 'work_title', 'original title', 'cluster_titles', 'quality_index']), how='left', on='001')
+
+df_with_original_titles['quality_index2'] = df_with_original_titles.apply(lambda x: quality_index(x), axis=1)  
+
+df_with_original_titles.to_excel('translation_database_with_viaf_work.xlsx', index=False)
+
+correct = df_with_original_titles[df_with_original_titles['quality_index2'] > 0.7]
+not_correct = df_with_original_titles[df_with_original_titles['quality_index2'] <= 0.7]
+
+writer = pd.ExcelWriter(f'translation_database_clusters_with_quality_index_{now}.xlsx', engine = 'xlsxwriter')
+correct.to_excel(writer, index=False, sheet_name='HQ')
+not_correct.to_excel(writer, index=False, sheet_name='LQ')
+writer.save()
+writer.close()
+
+quality_results = Counter(df_with_original_titles['quality_index2'])
+
+#%%
+
+ttt_upgrade.at[48423,'cluster_titles'] != 0
+
+
+aaa = cluster_author_work[cluster_author_work['work_viaf'] == '1598147270543735700005']
+aaa = ttt_upgrade[ttt_upgrade['work_viaf'] == '312401949']
 
 #co jeszcze?
 #zbudować dict dla original_title z cluster_titles i do tego target titles i przeszukać
@@ -1259,8 +1338,10 @@ ttt_upgrade[ttt_upgrade['001'] == 1014060193].index
 ttt_upgrade[ttt_upgrade['001'] == 884653991].index
 
 
-
-
+#ręcznie trzeba usunąć largo desolato ze słownika dla tłumaczeń zahradni slavnost!!!!
+# może edytować problematyczne rekordy:
+#78118212 – bo ma zły viaf
+#908861268 – bo ma zły tytuł oryginału
 
 
 

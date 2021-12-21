@@ -1,12 +1,6 @@
 # przed kolejnym numerem:
-# jeśli są też publikowane tłumaczenia po angielsku, to zakomentować od wiersza 333 i 735, a kolejne wciąć mniej
+# problemy z bibliografią – zostają półpauzy, przetestować na tekście Sadowskiego
 # automatycznie aktualizować obraz dla strony głównej? https://pressto.amu.edu.pl/index.php/fp/management/settings/website
-
-#Dopisać na pressto:
-# nazwisko i imię również w wersji angielskiej
-# wersja angielska afiliacji
-# nazwisko właściciela praw autorskich w wersji angielskiej
-# biogram w wersji angielskiej
 
     
 #%% import
@@ -66,8 +60,9 @@ def abstrakt_bio(x):
 #%% check
 
 get_bool('Czy są zrobione pliki jpg dla artykułów? ')
-get_bool('Czy dodano pliki pdf do biblioteki wordpress (plików jpg nie dodawać)? ')
 get_bool('Czy nazwiska autorów w nazwach plików są poprawne? ')
+get_bool('Czy dodano pliki pdf do biblioteki wordpress (plików jpg nie dodawać)? ')
+czy_tlumaczenia_po_angielsku = get_bool('Czy w numerze są przekłady w angielskiej wersji? ')
 
 #%% connect go google drive
 
@@ -337,7 +332,7 @@ for index, row in aktualny_numer.iterrows():
         wprowadz_pdf_link = browser.find_element_by_id('metavalue').send_keys(aktualny_numer.at[index+1, 'link do pdf'])
         dodaj_pdf = browser.find_element_by_id("newmeta-submit").click()
         
-        if aktualny_numer.at[index+1, 'kategoria'] == 'Przekłady' and pd.isnull(aktualny_numer.at[index+1, 'ORCID']):
+        if czy_tlumaczenia_po_angielsku == False and aktualny_numer.at[index+1, 'kategoria'] == 'Przekłady' and pd.isnull(aktualny_numer.at[index+1, 'ORCID']):
             tagi_autorow = aktualny_numer.at[index+1, 'tag autora'].split('❦')
             autorzy = aktualny_numer.at[index+1, 'autor'].split('❦')
             
@@ -355,7 +350,7 @@ for index, row in aktualny_numer.iterrows():
             <hr />
             
             {abstrakt}"""
-        elif aktualny_numer.at[index+1, 'kategoria'] == 'Przekłady':
+        elif czy_tlumaczenia_po_angielsku == False and aktualny_numer.at[index+1, 'kategoria'] == 'Przekłady':
             tagi_autorow = aktualny_numer.at[index+1, 'tag autora'].split('❦')
             autorzy = aktualny_numer.at[index+1, 'autor'].split('❦')
             orcidy = aktualny_numer.at[index+1, 'ORCID'].split('❦')
@@ -632,7 +627,7 @@ print('Strona numeru na pressto opublikowana')
 #pressto dodawanie artykułów
 
 for i, row in aktualny_numer.iterrows():
-    # i = 0
+    # i = 16
     # row = aktualny_numer.iloc[i,:]
     if row['język'] == 'pl':
         nowe_zgloszenie = browser.get('https://pressto.amu.edu.pl/index.php/fp/management/importexport/plugin/QuickSubmitPlugin')
@@ -697,23 +692,51 @@ for i, row in aktualny_numer.iterrows():
             # browser.find_element_by_name('citations').clear()
             # bibliografia = browser.find_element_by_name('citations').send_keys(bibliografia_df, Keys.BACK_SPACE)
         
-        for a, o, af, b in zip(row['autor'].split('❦'), row['ORCID'].split('❦'), row['afiliacja'].split('❦'), row['biogram'].split('❦')):
+        for a_pl, a_en, o, af_pl, af_en, b_pl, b_en in zip(row['autor'].split('❦'), aktualny_numer.at[i+1, 'autor'].split('❦'), row['ORCID'].split('❦'), row['afiliacja'].split('❦'), aktualny_numer.at[i+1, 'afiliacja'].split('❦'), row['biogram'].split('❦'), aktualny_numer.at[i+1, 'biogram'].split('❦')):
+
             wspolautor_dodaj = browser.find_element_by_xpath("//a[@title = 'Dodaj autora']").click()
-            autor_imie = re.findall('.+(?= (?!.* ))', a)[0]
+            autor_imie_pl = re.findall('.+(?= (?!.* ))', a_pl)[0]
             time.sleep(2)
-            wprowadz_imie = browser.find_element_by_name('givenName[pl_PL]').send_keys(autor_imie)
-            autor_nazwisko = re.findall('(?<= (?!.* )).+', a)[0]
-            wprowadz_nazwisko = browser.find_element_by_name('familyName[pl_PL]').send_keys(autor_nazwisko)
-            kontakt = browser.find_element_by_name('email').send_keys('pressto@amu.edu.pl')
+            wprowadz_imie_pl = browser.find_element_by_name('givenName[pl_PL]')
+            wprowadz_imie_pl.send_keys(autor_imie_pl)
+            autor_imie_en = re.findall('.+(?= (?!.* ))', a_en)[0]
+            time.sleep(2)
+            wprowadz_imie_en = browser.find_element_by_name('givenName[en_US]')
+            wprowadz_imie_en.send_keys(autor_imie_en)
+            
+            autor_nazwisko_pl = re.findall('(?<= (?!.* )).+', a_pl)[0]
+            wprowadz_nazwisko_pl = browser.find_element_by_name('familyName[pl_PL]')
+            wprowadz_nazwisko_pl.send_keys(autor_nazwisko_pl)
+            time.sleep(2)
+            autor_nazwisko_en = re.findall('(?<= (?!.* )).+', a_pl)[0]
+            wprowadz_nazwisko_en = browser.find_element_by_name('familyName[en_US]')
+            wprowadz_nazwisko_en.send_keys(autor_nazwisko_en)
+            
+            kontakt = browser.find_element_by_name('email')
+            kontakt.send_keys('pressto@amu.edu.pl')
             kraj = browser.find_element_by_xpath("//select[@id = 'country']/option[text()='Polska']").click()
             if len(o) > 0:
                 orcid = f"https://orcid.org/{o}"
-            # TU PROBLEM, BO NIE MA POLA TEKSTOWEGO
                 wprowadz_orcid = browser.find_element_by_name('orcid').send_keys(orcid)
-            afiliacja = browser.find_element_by_xpath("//input[@name='affiliation[pl_PL]']").send_keys(af)
-            biogram = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[-2].click()
-            biogram = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(b)
-            biogram_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1].click()
+            
+            afiliacja_pl = browser.find_element_by_xpath("//input[@name='affiliation[pl_PL]']")
+            afiliacja_pl.send_keys(af_pl)
+            time.sleep(2)
+            afiliacja_en = browser.find_element_by_xpath("//input[@name='affiliation[en_US]']")
+            afiliacja_en.send_keys(af_en)
+            
+            biogram_pl = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[-2].click()
+            biogram_pl = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']")
+            biogram_pl.send_keys(b_pl)
+            biogram_pl_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1]
+            biogram_pl_ok.click()
+            time.sleep(2)
+            biogram_en = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[-1].click()
+            biogram_en = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']")
+            biogram_en.send_keys(b_en)
+            biogram_en_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1]
+            biogram_en_ok.click()
+
             kliknij_poza_biogram = browser.find_element_by_name('orcid').click()
             rola_autora = browser.find_element_by_xpath("//input[@name='userGroupId' and @value='14']").click()
             zapisz_autora = browser.find_elements_by_xpath("//button[@class = 'pkp_button submitFormButton']")[-1].click()
@@ -739,7 +762,7 @@ for i, row in aktualny_numer.iterrows():
         potwierdz_button = browser.find_element_by_id('continueButton').click()
         time.sleep(2)
         
-        if row['kategoria'] != 'Przekłady':
+        if row['kategoria'] != 'Przekłady' and czy_tlumaczenia_po_angielsku:
         
             while True:
                 try:
@@ -783,7 +806,11 @@ for i, row in aktualny_numer.iterrows():
         publikuj_strony = browser.find_element_by_name('pages').send_keys(row['strony'])
         
         opublikowany_data = browser.find_element_by_name('datePublished-removed').send_keys(f"{year}-{month}-{day}",Keys.ESCAPE)
-        prawa_autorskie = browser.find_element_by_name('copyrightHolder[pl_PL]').send_keys(row['autor'])
+        prawa_autorskie_pl = browser.find_element_by_name('copyrightHolder[pl_PL]')
+        prawa_autorskie_pl.send_keys(row['autor'].replace('❦', ', '))
+        time.sleep(2)
+        prawa_autorskie_en = browser.find_element_by_name('copyrightHolder[en_US]')
+        prawa_autorskie_en.send_keys(aktualny_numer.at[i+1, 'autor'].replace('❦', ', '))
         rok_praw = browser.find_element_by_name('copyrightYear').send_keys(year)        
         
         zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
