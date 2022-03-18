@@ -121,15 +121,18 @@ def marc_parser_dict_for_field(string, subfield_code):
     return dictionary_field
 
 #%% google drive
-file_list = drive.ListFile({'q': f"'{cr_projects}' in parents and trashed=false"}).GetList() 
-#[print(e['title'], e['id']) for e in file_list]
-translation_folder = [file['id'] for file in file_list if file['title'] == 'Vimr Project'][0]
-file_list = drive.ListFile({'q': f"'{translation_folder}' in parents and trashed=false"}).GetList() 
-#[print(e['title'], e['id']) for e in file_list]
-cz_authority_spreadsheet = [file['id'] for file in file_list if file['title'] == 'cz_authority'][0]
-cz_authority_spreadsheet = gc.open_by_key(cz_authority_spreadsheet)
+# file_list = drive.ListFile({'q': f"'{cr_projects}' in parents and trashed=false"}).GetList() 
+# #[print(e['title'], e['id']) for e in file_list]
+# translation_folder = [file['id'] for file in file_list if file['title'] == 'Vimr Project'][0]
+# file_list = drive.ListFile({'q': f"'{translation_folder}' in parents and trashed=false"}).GetList() 
+# #[print(e['title'], e['id']) for e in file_list]
+# cz_authority_spreadsheet = [file['id'] for file in file_list if file['title'] == 'cz_authority'][0]
+# cz_authority_spreadsheet = gc.open_by_key(cz_authority_spreadsheet)
 
-cz_authority_spreadsheet.worksheets()
+# cz_authority_spreadsheet.worksheets()
+
+# cz_authority_spreadsheet = pd.read_excel("C:\\Users\\Cezary\\Desktop\\new_cz_authority_df_2022-02-02.xlsx")
+cz_authority_spreadsheet = gsheet_to_df('1yKcilB7SEVUkcSmqiTPauPYtALciDKatMvgqiRoEBso', 'Sheet1')
 
 #%% Czech National Library - SKC set harvesting
 
@@ -326,25 +329,30 @@ skc_df['language'] = skc_df['008'].apply(lambda x: x[35:38])
 skc_df_translations = skc_df[skc_df['language'] != 'cze']
 skc_df_translations.to_excel(f'skc_translations_cz_authority_{year}-{month}-{day}.xlsx', index=False)
 
+#!!!!problemy:!!!!
+#1028612282 to w OCLC trafiło do selections, a w CLT ciągle jest, bo ci nie mają oryginalnych tytułów
+# propozycja – difficult records robić dla całości po deduplikacji po OCLC ID
+
 #%% load data
 list_of_records = []
+original_number_of_records = 0
 with open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
 #with open('C:/Users/User/Desktop/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
     reader = csv.reader(csv_file, delimiter=',')
     headers = next(reader)
     position_008 = headers.index('008')
     for row in reader:
+        original_number_of_records += 1
         if row[position_008][35:38] != 'cze':
             list_of_records.append(row)
             
 oclc_lang = pd.DataFrame(list_of_records, columns=headers)
 oclc_lang['language'] = oclc_lang['008'].apply(lambda x: x[35:38])
 oclc_viaf = pd.read_excel('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.xlsx')
-#oclc_viaf = pd.read_excel('C:/Users/User/Desktop/oclc_viaf.xlsx')
 oclc_viaf['language'] = oclc_viaf['008'].apply(lambda x: x[35:38])
 oclc_viaf = oclc_viaf[oclc_viaf['language'] != 'cze']
 
-oclc_other_languages = pd.concat([oclc_lang, oclc_viaf])
+oclc_other_languages = pd.concat([oclc_lang, oclc_viaf]).drop_duplicates()
 
 oclc_other_languages['nature_of_contents'] = oclc_other_languages['008'].apply(lambda x: x[24:27])
 oclc_other_languages = oclc_other_languages[oclc_other_languages['nature_of_contents'].isin(['\\\\\\', '6\\\\', '\\6\\', '\\\\6'])]
@@ -354,7 +362,8 @@ oclc_other_languages['fiction_type'] = oclc_other_languages['008'].apply(lambda 
 # cz_authority_df = get_as_dataframe(cz_authority_spreadsheet.worksheet('Sheet1'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
 # cz_authority_df = cz_authority_df[cz_authority_df['used in OCLC'] == True]
 # nowy arkusz Ondreja!!!
-cz_authority_df = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'incl_missing')
+# cz_authority_df = gsheet_to_df('1QB5EmMhg7qSWfWaJurafHdmXc5uohQpS-K5GBsiqerA', 'incl_missing')
+cz_authority_df = gsheet_to_df('1yKcilB7SEVUkcSmqiTPauPYtALciDKatMvgqiRoEBso', 'Sheet1')
 # cz_authority_df = pd.read_excel("C:/Users/Cezary/Downloads/cz_authority.xlsx", sheet_name='incl_missing')
 
 # tutaj wąsko
@@ -434,22 +443,31 @@ df_other_types = df[~df['001'].isin(df_language_materials_monographs['001'])]
 #                                                      (df_language_materials_monographs['fiction_type'].isin(fiction_types))]
 
 df_first_positive = df_language_materials_monographs[df_language_materials_monographs['041'].str.contains('\$hcz', na=False)]
+positive_1 = df_first_positive.drop(columns=['type of record + bibliographic level', 'nature_of_contents']).drop_duplicates().reset_index(drop=True)
 
 negative = negative[~negative['001'].isin(df_first_positive['001'])]
 df_second_positive = marc_parser_1_field(negative, '001', '100', '\$')[['001', '$1']]
+df_second_positive['$1'] = df_second_positive['$1'].apply(lambda x: re.findall('\d+', x)[0] if x != '' else x)
 df_second_positive = df_second_positive[df_second_positive['$1'].isin(viaf_positives)]
 df_second_positive = negative[negative['001'].isin(df_second_positive['001'])]
+positive_2 = df_second_positive.drop(columns=['type of record + bibliographic level', 'nature_of_contents']).drop_duplicates().reset_index(drop=True)
 
 negative = negative[~negative['001'].isin(df_second_positive['001'])].reset_index(drop=True)
 df_third_positive = "select * from negative a join positive_viafs_names b on a.'100' like '%'||b.all_names||'%'"
 df_third_positive = pandasql.sqldf(df_third_positive)
+positive_3 = df_third_positive.drop(columns=['all_names', 'type of record + bibliographic level', 'nature_of_contents', 'viaf_id']).drop_duplicates().reset_index(drop=True)
 
 negative = negative[~negative['001'].isin(df_third_positive['001'])].reset_index(drop=True)
 df_fourth_positive = "select * from negative a join positive_viafs_diacritics b on a.'100' like '%'||b.cz_name||'%'"
 df_fourth_positive = pandasql.sqldf(df_fourth_positive)
+positive_4 = df_fourth_positive.drop(columns=['cz_name', 'type of record + bibliographic level', 'nature_of_contents', 'viaf_id']).drop_duplicates().reset_index(drop=True)
 
 negative = negative[~negative['001'].isin(df_fourth_positive['001'])].reset_index(drop=True)
-df_all_positive = pd.concat([df_first_positive, df_second_positive, df_third_positive, df_fourth_positive])
+df_all_positive = pd.concat([df_first_positive, df_second_positive, df_third_positive, df_fourth_positive]).drop(columns=['all_names', 'cz_name', 'type of record + bibliographic level', 'nature_of_contents', 'viaf_id']).drop_duplicates().reset_index(drop=True)
+
+# has_viaf = df_second_positive = marc_parser_1_field(df_all_positive, '001', '100', '\$')[['001', '$1']]
+# has_viaf['yes no'] = has_viaf['$1'].apply(lambda x: "yes" if x!='' else 'no')
+# Counter(has_viaf['yes no'])
 
 df_all_positive['260'] = df_all_positive[['260', '264']].apply(lambda x: x['260'] if pd.notnull(x['260']) else x['264'], axis=1)
 df_all_positive['240'] = df_all_positive[['240', '246']].apply(lambda x: x['240'] if pd.notnull(x['240']) else x['246'], axis=1)

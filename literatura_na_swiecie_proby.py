@@ -1,15 +1,333 @@
 import pandas as pd
 import io
 import requests
-from sickle import Sickle
 import xml.etree.ElementTree as et
 import lxml.etree
-import pdfplumber
 import json
 from tqdm import tqdm
 import regex as re
+from more_itertools import split_at
+from docx import *
+from docx.shared import RGBColor
 
 
+#%% nowe podejście
+
+document = Document("C:\\Users\\Cezary\\Downloads\\X. 2  Albania - Peru.docx")
+#wydobywanie autorów po stylu czcionki
+total = []
+for paragraph in tqdm(document.paragraphs):
+    letters = []
+    sizes = []
+    styles = []
+    colours = []
+    italic = []
+    bold = []
+    for run in paragraph.runs:
+        try:
+            sizes.append(run.font.size.pt)
+        except AttributeError:
+            sizes.append(None)
+        colours.append(run.font.color.rgb)
+        styles.append(run.font.name)
+        letters.append(run.text)
+        italic.append(run.italic)
+        bold.append(run.bold)
+    total.append([paragraph.text, letters, styles, sizes, colours, italic, bold])
+
+literatury = []
+for ind, el in enumerate(total):
+    # el = total[5]
+    if RGBColor(0xff, 0x00, 0x00)in el[-3]:
+        good_indices = [i for i,e in enumerate(el[-3]) if e == RGBColor(0xff, 0x00, 0x00)]
+        is_italic = [el[-2][i] for i in good_indices]
+        is_bold = [el[-1][i] for i in good_indices]
+        if not any(is_italic) and not any(is_bold):
+            literatury.append((ind, el[0]))
+test = {}
+for i, (index, lit) in enumerate(literatury):
+    if i in range(len(literatury)-1):
+        test[lit] = (index, literatury[i+1][0])
+    else:
+        test[lit] = (index, ind)
+
+def check_if_all_none(list_of_elem):
+    """ Check if all elements in list are None """
+    result = True
+    for elem in list_of_elem:
+        if elem is not None:
+            return False
+    return result
+
+checklists = [['Arial Black'], [9]]
+
+for lit, (i_start, i_end) in test.items():
+    # i_start = 260
+    # i_end = 780
+    lit_list = total[i_start:i_end]
+    # paragraph = total[932]
+    
+    authors = []
+    for index, paragraph in enumerate(lit_list):
+        results = []
+        # for ind, sublist in enumerate(paragraph[2:4]):
+        #     iteration = 0
+        #     result = []
+        #     while iteration + len(checklists[ind]) <= len(sublist):
+        #         result.append(sublist[iteration:iteration+len(checklists[ind])] == checklists[ind])
+        #         iteration += 1
+        #     if any(result):
+        #         result = True
+        #         results.append(result)
+        #     else: results.append(False)
+        results.append(check_if_all_none(paragraph[5]) or bool(re.search('Nobel\s+\d+', paragraph[0])))
+        results.append(9 in paragraph[3])
+        # results.append(all([e == False for e in paragraph[-1]]))
+        results.append(any(el in [1,2] for el in [i for i, e in enumerate(paragraph[2]) if e == 'Arial Black']))
+        try:
+            results.append(paragraph[0].strip()[0] != '*')
+            results.append(paragraph[0].strip()[-1] != '*')
+            results.append(paragraph[0].strip()[0] != '→')
+        except IndexError:
+            results.append(False)
+        if all(results):
+            authors.append((index+i_start, paragraph[0]))
+    authors = [(e[0], authors[i+1][0] if i in range(len(authors)-1) else i_end, e[-1]) for i, e in enumerate(authors)]
+    temp_dict = {}
+    for st, end, aut in authors:
+        temp_dict[aut] = (st, end)
+    test[lit] = temp_dict
+    
+#TUTAJ
+    
+literatura = test['A L B A N I A   AL         ']
+
+info_o_publikacjach = []
+errors = []
+for key, value in literatura.items():
+    # key = '\tBASHA,  Eqrem   1948–                     '
+    # value = literatura[key]
+    zakres_autora = [e[0] for e in total[value[0]:value[-1]]]
+    zakres_autora = [e.strip() for e in zakres_autora]
+    
+    liczba_publikacji = len([e for e in zakres_autora if e.strip() == '.'])
+    indeksy_publikacji = [e[0] for e in enumerate(zakres_autora) if e[1].strip() == '.']
+    dlugosc_listy_osoby = [e[0] for e in enumerate(zakres_autora)]
+    zakresy_publikacji = [e for e in list(split_at(dlugosc_listy_osoby[2:], lambda x: x in indeksy_publikacji)) if e]
+    try:
+        if zakres_autora[1] == 'w i e r s z e':
+            for publikacja in zakresy_publikacji:
+                # publikacja = zakresy_publikacji[2]
+                autor = zakres_autora[0]
+                typ_pub = zakres_autora[1]
+                try:
+                    wspolpracownik_rola = re.findall("^.+?\t", zakres_autora[publikacja[0]])[0].strip()
+                    do_usuniecia = re.findall("^.+?\t", zakres_autora[publikacja[0]])[0]
+                except IndexError:
+                    pass
+                wspolpracownik_nazwisko = re.sub("^(.+?)(\p{Lu}.+)", r"\2", zakres_autora[publikacja[0]])
+                wspolpracownik_nazwisko = zakres_autora[publikacja[0]].replace(do_usuniecia, "")
+                for opis in publikacja[1:]:
+                    print(opis)
+                    opis_bibliograficzny = zakres_autora[opis].split(", ")[0].strip()
+                    if opis_bibliograficzny[0] != "~":
+                        rok_i_numer = opis_bibliograficzny.split("s.")[0].strip()
+                    else:
+                        opis_bibliograficzny = opis_bibliograficzny.replace("~", rok_i_numer)
+                
+                    tytuly = zakres_autora[opis].split(", ", maxsplit=1)[1].strip()
+                    temp_dict = {"autor": autor,
+                                 "typ publikacji": typ_pub,
+                                 "współpracownik - rola": wspolpracownik_rola,
+                                 "współpracownik - nazwisko": wspolpracownik_nazwisko,
+                                 "opis bibliograficzny": opis_bibliograficzny,
+                                 "tytuły utworów": tytuly}
+                    info_o_publikacjach.append(temp_dict)
+        else: errors.append(zakres_autora) 
+    except IndexError: errors.append(zakres_autora)
+
+    
+info_o_publikacjach = []
+errors = []
+for author in albania_lista[1:]:
+    # author = albania_lista[1]
+    author = [e.strip() for e in author.split("\n") if e!= ""]
+    liczba_publikacji = len([e for e in author if e == '.'])
+    indeksy_publikacji = [e[0] for e in enumerate(author) if e[1] == '.']
+    dlugosc_listy_osoby = [e[0] for e in enumerate(author)]
+    zakresy_publikacji = [e for e in list(split_at(dlugosc_listy_osoby[2:], lambda x: x in indeksy_publikacji)) if e]
+    if author[1] == 'w i e r s z e':
+        for publikacja in zakresy_publikacji:
+            # publikacja = zakresy_publikacji[2]
+            autor = author[0]
+            typ_pub = author[1]
+            try:
+                wspolpracownik_rola = re.findall("^.+?\t", author[publikacja[0]])[0].strip()
+                do_usuniecia = re.findall("^.+?\t", author[publikacja[0]])[0]
+            except IndexError:
+                pass
+            wspolpracownik_nazwisko = re.sub("^(.+?)(\p{Lu}.+)", r"\2", author[publikacja[0]])
+            wspolpracownik_nazwisko = author[publikacja[0]].replace(do_usuniecia, "")
+            for opis in publikacja[1:]:
+                print(opis)
+                opis_bibliograficzny = author[opis].split(", ")[0].strip()
+                if opis_bibliograficzny[0] != "~":
+                    rok_i_numer = opis_bibliograficzny.split("s.")[0].strip()
+                else:
+                    opis_bibliograficzny = opis_bibliograficzny.replace("~", rok_i_numer)
+            
+                tytuly = author[opis].split(", ", maxsplit=1)[1].strip()
+                temp_dict = {"autor": autor,
+                             "typ publikacji": typ_pub,
+                             "współpracownik - rola": wspolpracownik_rola,
+                             "współpracownik - nazwisko": wspolpracownik_nazwisko,
+                             "opis bibliograficzny": opis_bibliograficzny,
+                             "tytuły utworów": tytuly}
+                info_o_publikacjach.append(temp_dict)
+    else: errors.append(author 
+
+#tabela z danymi
+df = pd.DataFrame(info_o_publikacjach)
+df.to_excel("tabela.xlsx", index = False)
+
+#%% textract = praca z plikami word
+
+
+
+# Create list of paths to .doc files
+#w ścieżkach podwójne backslashe lub pojedyncze slashe
+file_path = "C:\\Users\\RivenDell\\Documents\\$Nauka\\HumCyf\\PROJEKT\\pliki od p. Bednarz\\lns_test.docx"
+
+
+text = textract.process(file_path)
+test = text.decode("utf-8")
+
+test2 = re.split('\n\t(?=\p{Lu} )+', test)
+
+albania = test2[1]
+#regex poniżej do poprawy
+# albania_lista = re.split('\n\t{2}(?=\p{Lu}{2,}.+\d+\–)', albania)
+albania_lista = re.split('\n\t{2}(?=\p{Lu}{2,},  \p{Lu})', albania)
+albania_lista = [re.sub("(;)(\n+\t+)",r"\1 ",e) for e in albania_lista]
+info_o_publikacjach = []
+errors = []
+for author in albania_lista[1:]:
+    # author = albania_lista[1]
+    author = [e.strip() for e in author.split("\n") if e!= ""]
+    liczba_publikacji = len([e for e in author if e == '.'])
+    indeksy_publikacji = [e[0] for e in enumerate(author) if e[1] == '.']
+    dlugosc_listy_osoby = [e[0] for e in enumerate(author)]
+    zakresy_publikacji = [e for e in list(split_at(dlugosc_listy_osoby[2:], lambda x: x in indeksy_publikacji)) if e]
+    if author[1] == 'w i e r s z e':
+        for publikacja in zakresy_publikacji:
+            # publikacja = zakresy_publikacji[2]
+            autor = author[0]
+            typ_pub = author[1]
+            try:
+                wspolpracownik_rola = re.findall("^.+?\t", author[publikacja[0]])[0].strip()
+                do_usuniecia = re.findall("^.+?\t", author[publikacja[0]])[0]
+            except IndexError:
+                pass
+            wspolpracownik_nazwisko = re.sub("^(.+?)(\p{Lu}.+)", r"\2", author[publikacja[0]])
+            wspolpracownik_nazwisko = author[publikacja[0]].replace(do_usuniecia, "")
+            for opis in publikacja[1:]:
+                print(opis)
+                opis_bibliograficzny = author[opis].split(", ")[0].strip()
+                if opis_bibliograficzny[0] != "~":
+                    rok_i_numer = opis_bibliograficzny.split("s.")[0].strip()
+                else:
+                    opis_bibliograficzny = opis_bibliograficzny.replace("~", rok_i_numer)
+            
+                tytuly = author[opis].split(", ", maxsplit=1)[1].strip()
+                temp_dict = {"autor": autor,
+                             "typ publikacji": typ_pub,
+                             "współpracownik - rola": wspolpracownik_rola,
+                             "współpracownik - nazwisko": wspolpracownik_nazwisko,
+                             "opis bibliograficzny": opis_bibliograficzny,
+                             "tytuły utworów": tytuly}
+                info_o_publikacjach.append(temp_dict)
+    else: errors.append(author) #w errors przypadki: artykuł w nrze LnŚ oraz publikacja (książka) z adnotacją o nagrodzie
+    #kolejny typ: recenzja
+    #kolejne: uruchomić pętlę dla wszystkich autorów (podział publikacji)
+basha = albania_lista[1]
+
+basha = albania_lista[2]
+
+#rozdzielić autora na części
+#kod poniżej usuwał pojedynczą kropkę w nowym wierszu
+# test_autor = [e.strip() for e in basha.split("\n") if e!= "" and e.strip() != "."]
+test_autor = [e.strip() for e in basha.split("\n") if e!= ""]
+
+autor = test_autor[0]
+
+# do zrobienia: lata_zycia
+typ_pub = test_autor[1]
+#pętla - wiele utworów / ile kropek, tyle utworów
+liczba_publikacji = len([e for e in test_autor if e == '.'])
+# co jest kropką - która pozycja na liście
+indeksy_publikacji = [e[0] for e in enumerate(test_autor) if e[1] == '.']
+#w miarę oczekiwany wynik: [(2,3),(5,6)]
+#jak działają tuple: indeks[0] + treść[1]
+# indeksy_publikacji = [e for e in enumerate(test_autor)]
+#ile elementów jest w jednym autorze [-1] zwróci ostatnią wartość
+dlugosc_listy_osoby = [e[0] for e in enumerate(test_autor)]
+
+zakresy_publikacji = [e for e in list(split_at(dlugosc_listy_osoby[2:], lambda x: x in indeksy_publikacji)) if e]
+
+info_o_publikacjach = []
+for publikacja in zakresy_publikacji:   
+    autor = test_autor[0]
+    typ_pub = test_autor[1]
+    try:
+        wspolpracownik_rola = re.findall("^.+?\t", test_autor[publikacja[0]])[0].strip()
+        do_usuniecia = re.findall("^.+?\t", test_autor[publikacja[0]])[0]
+    except IndexError:
+        pass
+    wspolpracownik_nazwisko = re.sub("^(.+?)(\p{Lu}.+)", r"\2", test_autor[publikacja[0]])
+    wspolpracownik_nazwisko = test_autor[publikacja[0]].replace(do_usuniecia, "") 
+    opis_bibliograficzny = test_autor[publikacja[1]].split(", ")[0].strip()
+    if opis_bibliograficzny[0] != "~":
+        rok_i_numer = opis_bibliograficzny.split("s.")[0].strip()
+    else:
+        opis_bibliograficzny = opis_bibliograficzny.replace("~", rok_i_numer)
+
+    tytuly = test_autor[publikacja[1]].split(", ")[1].strip()
+    temp_dict = {"autor": autor,
+                 "typ publikacji": typ_pub,
+                 "współpracownik - rola": wspolpracownik_rola,
+                 "współpracownik - nazwisko": wspolpracownik_nazwisko,
+                 "opis bibliograficzny": opis_bibliograficzny,
+                 "tytuły utworów": tytuly}
+    info_o_publikacjach.append(temp_dict)
+# rok = 
+# numer
+# numer_ciagly
+# strony
+
+#można dodać podział utworów: .split(" ; ")
+
+#słownik dla jednej osoby
+one_person_dict = {"autor": autor,
+                   "typ publikacji": typ_pub,
+                   "współpracownik - rola": wspolpracownik_rola,
+                   "współpracownik - nazwisko": wspolpracownik_nazwisko,
+                   "opis bibliograficzny": opis_bibliograficzny,
+                   "tytuły utworów": tytuly}
+
+#tabela dla jednej osoby
+one_person_df = pd.DataFrame([one_person_dict])
+one_person_df.to_excel("tabela.xlsx", index = False)
+
+#tabela dla wielu publikacji jednej osoby
+publications_df = pd.DataFrame(info_o_publikacjach)
+
+#tabela dla wielu osób
+people_publications_df = pd.DataFrame(info_o_publikacjach)
+
+
+
+
+#%% praca na pliku PDF
 # with open("lns1_1971-2014.pdf", 'wb') as fd:
 #             fd.write(r.content)
 with pdfplumber.open("lns1_1971-2014.pdf") as pdf:

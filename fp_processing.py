@@ -50,7 +50,7 @@ def build_author(x):
     try:
         return re.findall('(^.+?)(?=\. \„.+$)', x)[0]
     except IndexError:
-        return re.sub('(^.+?)(-|–|—|\p{Ll})(\..+$)', r'\1\2', x)
+        return re.sub('(^.+?)(-|–|—|\p{Ll}\.\)|\p{Ll})(\..+$)', r'\1\2', x)
     
 def abstrakt_bio(x):
     x = x.split('\n')
@@ -87,6 +87,9 @@ browser = webdriver.Firefox()
 #%% read new issue
 
 file_list = drive.ListFile({'q': f"'{cr_projects}' in parents and trashed=false"}).GetList() 
+#[print(e['title'], e['id']) for e in file_list]
+fp_folder = [file['id'] for file in file_list if file['title'] == 'Forum Poetyki – redakcja'][0]
+file_list = drive.ListFile({'q': f"'{fp_folder}' in parents and trashed=false"}).GetList() 
 #[print(e['title'], e['id']) for e in file_list]
 fp_folder = [file['id'] for file in file_list if file['title'] == 'redakcja FP'][0]
 file_list = drive.ListFile({'q': f"'{fp_folder}' in parents and trashed=false"}).GetList() 
@@ -661,7 +664,7 @@ for i, row in aktualny_numer.iterrows():
             finansowanie_pl.send_keys(row['finansowanie'])
             finansowanie_en = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[5]
             finansowanie_en.send_keys(aktualny_numer.at[i+1, 'finansowanie'])
-        except TypeError:
+        except (KeyError, TypeError):
             pass
             
         if len(row['bibliografia']) > 0:

@@ -9,6 +9,8 @@ import random
 import requests
 from bs4 import BeautifulSoup
 from difflib import SequenceMatcher
+import json
+from copy import deepcopy
 
 #%% VIAF IDs for people from Czech database
 
@@ -132,6 +134,9 @@ for row in tqdm(marc_list):
             clb_sh.append(sh)
         except IndexError:
             pass
+
+clb_sh_frequency = Counter(clb_sh)        
+        
 clb_sh = list(set(clb_sh))
 errors = list(set(errors))
 
@@ -162,7 +167,21 @@ for index, record in tqdm(enumerate(list_of_records, 1),total=len(list_of_record
 
 # filtering SH for literary science
            
-literary_sh_dict = {k:v for k,v in sh_dict.items() if marc_parser_dict_for_field(v['cz'], '\$\$')['$$7'] in clb_sh}                     
+literary_sh_dict = {k:v for k,v in sh_dict.items() if [e for e in marc_parser_dict_for_field(v['cz'], '\$\$') if '$$7' in e][0]['$$7'] in clb_sh}    
+
+#frequency for TU
+literary_sh_dict_freq = deepcopy(literary_sh_dict)
+for k,v in tqdm(literary_sh_dict_freq.items()):
+    # k = 1
+    # v = literary_sh_dict[k]
+    freq = [e for e in marc_parser_dict_for_field(v['cz'], '\$\$') if '$$7' in e][0]['$$7']
+    freq = clb_sh_frequency[freq]
+    literary_sh_dict_freq[k]['frequency'] = freq        
+    
+literary_sh_dict_freq = dict(sorted(literary_sh_dict_freq.items(), key = lambda item : item[1]['frequency'], reverse=True))
+
+with open("cz_literary_sh_dict_freq.json", 'w', encoding='utf-8') as f: 
+    json.dump(literary_sh_dict_freq, f, ensure_ascii=False, indent=4)
                 
 sh_dict = dict(list(literary_sh_dict.items())[:10])
 

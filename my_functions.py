@@ -3,7 +3,7 @@ import regex as re
 import math
 from collections import Counter
 from itertools import combinations
-# from Google import Create_Service
+from Google import Create_Service
 import pandas as pd
 import numpy as np
 import pymarc
@@ -451,9 +451,9 @@ def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8, ho
     # print(df[column_with_ids].dtype)
         df = df.merge(group_df, on=column_with_ids, how='left')
     except IndexError:
-        df['cluster'] = np.nan
+        df['cluster'] = ''
     # df['cluster'] = df[[column_with_ids, 'cluster']].apply(lambda x: x['cluster'] if pd.notnull(x['cluster']) else x[column_with_ids], axis=1).astype('int64')
-    df['cluster'] = df[[column_with_ids, 'cluster']].apply(lambda x: x['cluster'] if pd.notnull(x['cluster']) else x[column_with_ids], axis=1)
+    df['cluster'] = df[[column_with_ids, 'cluster']].apply(lambda x: x['cluster'] if pd.notnull(x['cluster']) else x[column_with_ids], axis=1).astype(np.int64).astype(str)
     
     return df
 
@@ -509,11 +509,35 @@ def marc_parser_dict_for_field(string, subfield_code):
         subfield_escape = re.escape(subfield)
         string = re.sub(f'({subfield_escape})', r'❦\1', string)
     string = [e.split('\n')[0] for e in string.split('❦') if e]
-    dictionary_fields = [e for e in string if re.escape(e[0]) == subfield_code]
+    dictionary_fields = [e for e in string if re.escape(e)[:len(subfield_code)] == subfield_code]
     dictionary_fields = [{subfield_list[i]:e[len(subfield_list[i]):]} for i, e in enumerate(dictionary_fields)]
     return dictionary_fields
 
 
+# szukanie NKC id dla VIAF id
+# authority_dict = {}
+# addendum_dict = {}
+# for el in tqdm(viaf_ids):
+#     url = f"http://viaf.org/viaf/{el}/viaf.json"
+#     response = requests.get(url).json()
+#     try:
+#         nkc_id = [e['@nsid'] for e in response['sources']['source'] if 'NKC' in e['#text']][0]
+#         authority_dict.update({el:nkc_id})
+#     except TypeError:
+#         nkc_id = response['sources']['source']['@nsid'] if 'NKC' in response['sources']['source']['#text'] else None
+#         authority_dict.update({el:nkc_id})
+#     except KeyError:
+#         print(f'VIAF_ID {el} is wrong! Replace with {response["redirect"]["directto"]}')
+#         new_el = response["redirect"]["directto"]
+#         new_url = f"http://viaf.org/viaf/{new_el}/viaf.json"
+#         new_response = requests.get(new_url).json()
+#         try:
+#             new_nkc_id = [e['@nsid'] for e in new_response['sources']['source'] if 'NKC' in e['#text']][0]
+#         except TypeError:
+#             new_nkc_id = new_response['sources']['source']['@nsid'] if 'NKC' in new_response['sources']['source']['#text'] else None
+#         addendum_dict.update({new_el:{'old_viaf':el, 'nkc_id':new_nkc_id}})
+#     except IndexError:
+#         print(f'VIAF_ID {el} has no NKC ID! Check it in the table!')
 
 
 

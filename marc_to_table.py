@@ -16,16 +16,24 @@ def year(row, field):
     return val
 
 #%% new approach
+    
+#mrc to mrk 
+path = 'F:/Cezary/Documents/IBL/BN/bn_all/2022-02-18/'
+files = [f for f in glob.glob(path + '*.mrc', recursive=True)]
+for file_path in tqdm(files):
+    path_mrk = file_path.replace('.mrc', '.mrk')
+    mrc_to_mrk(file_path, path_mrk)
 
 path = 'F:/Cezary/Documents/IBL/Migracja z BN/bn_all/2021-02-08/'
 path = 'F:/Cezary/Documents/IBL/Translations/Czech database/nkc_SKC_2021-08-05'
-#path = 'C:/Users/User/Documents/bn_all/'
+path = 'C:/Users/User/Documents/bn_all/2021-07-26/'
 files = [file for file in glob.glob(path + '*.mrk', recursive=True)]
+
+conditions = ['$aPogonowska, Anna$d(1922-2005)', '$aOleska, Lucyna', '$aPogonowska, Anna$d1922-2005', '$aPogonowska, Anna$d1922-']
 
 encoding = 'utf-8'
 new_list = []
-for i, file_path in enumerate(files):
-    print(f"{i+1}/{len(files)}")
+for file_path in tqdm(files):
     marc_list = io.open(file_path, 'rt', encoding = encoding).read().splitlines()
 
     mrk_list = []
@@ -37,16 +45,26 @@ for i, file_path in enumerate(files):
                 mrk_list[-1].append(row)
                 
     for sublist in mrk_list:
-        try:
-            year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
-            if year in range(2004,2021):
-                for el in sublist:
-                    if el.startswith('=773'):
-                        val = re.search('(\$t)(.+?)(\$|$)', el).group(2)
-                        if val in bn_magazines:
-                            new_list.append(sublist)
-        except (ValueError, AttributeError):
-            pass
+        for el in sublist:
+            if el.startswith('=490'):
+                if '$aBiblioteka Młodych' in el:
+                    new_list.append(sublist)
+    # for sublist in mrk_list:
+    #     for el in sublist:
+    #         if el.startswith(('=100', '=600', '=700')):
+    #             if any(e in el for e in conditions):
+    #                 new_list.append(sublist)
+    # for sublist in mrk_list:
+    #     try:
+    #         year = int(''.join([ele for ele in sublist if ele.startswith('=008')])[13:17])
+    #         if year in range(2004,2021):
+    #             for el in sublist:
+    #                 if el.startswith('=773'):
+    #                     val = re.search('(\$t)(.+?)(\$|$)', el).group(2)
+    #                     if val in bn_magazines:
+    #                         new_list.append(sublist)
+    #     except (ValueError, AttributeError):
+    #         pass
 
 final_list = []
 for lista in new_list:
@@ -64,6 +82,8 @@ fields = [i for i in fields if 'LDR' in i or re.compile('\d{3}').findall(i)]
 marc_df = marc_df.loc[:, marc_df.columns.isin(fields)]
 fields.sort(key = lambda x: ([str,int].index(type("a" if re.findall(r'\w+', x)[0].isalpha() else 1)), x))
 marc_df = marc_df.reindex(columns=fields)  
+
+marc_df.to_excel('Fala.xlsx', index=False)
 
 #%% liczenie rekordów dla lat
 path = 'F:/Cezary/Documents/IBL/BN/bn_books/'
