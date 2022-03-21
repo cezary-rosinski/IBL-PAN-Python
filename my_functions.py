@@ -16,6 +16,8 @@ from tqdm import tqdm
 import gspread as gs
 from gspread_dataframe import set_with_dataframe, get_as_dataframe
 
+#%%
+
 # parser kolumny marc
 def marc_parser_1_field(df, field_id, field_data, subfield_code, delimiter='❦'):
     marc_field = df.loc[df[field_data].notnull(),[field_id, field_data]]
@@ -368,57 +370,20 @@ def type_str(x):
     except ValueError:
         return str(x)    
 
-def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8, how_to_organise='cluster_first', show_time=False):
+def cluster_records(df, column_with_ids, column_to_cluster, similarity_lvl=0.85, how_to_organise='cluster_first', show_time=False):
     try:
         df.drop(columns='cluster',inplace=True)
     except KeyError:
         pass
-    list_of_matrixes = []
-    for i, column in enumerate(list_of_columns):
-        series = [str(e) for e in df[column].to_list()]
-# =============================================================================
-#         matrix = pd.DataFrame(index=pd.Index(series), columns=series)
-#         
-#         for index_row in range(matrix.shape[0]):
-#             for index_column in range(matrix.shape[1]):
-#                 m_row = matrix.index[index_row]
-#                 m_col = matrix.columns[index_column]
-#                 matrix.iloc[index_row,index_column] = difflib.SequenceMatcher(a=m_row,b=m_col).ratio()
-#         list_of_matrixes.append(matrix)
-#         
-#     ids = df[column_with_ids].to_list()            
-#     matrix = pd.DataFrame(index=pd.Index(ids), columns=ids) 
-#     
-#     for index_row in range(matrix.shape[0]):
-#         for index_column in range(matrix.shape[1]):
-#             list_of_values = []
-#             for matrix_df in list_of_matrixes:
-#                 list_of_values.append(matrix_df.iloc[index_row,index_column])
-#             mean_value = statistics.mean(list_of_values)
-#             matrix.iloc[index_row,index_column] = mean_value
-#                 
-#     matrix = pd.DataFrame(np.tril(matrix.to_numpy(), 0), index=matrix.index, columns=matrix.columns)
-# =============================================================================
-        series_len = len(series)
-        matrix = np.zeros((series_len, series_len))
-        if show_time:
-            for i in tqdm(range(series_len)):
-                for j in range(series_len):
-                    a = re.sub('[^\p{L}\d\s]', '', unidecode.unidecode(series[i]))
-                    b = re.sub('[^\p{L}\d\s]', '', unidecode.unidecode(series[j]))
-                    matrix[i,j] = difflib.SequenceMatcher(a=a,b=b).ratio()
-        else:                
-            for i in range(series_len):
-                for j in range(series_len):
-                    a = re.sub('[^\p{L}\d\s]', '', unidecode.unidecode(series[i]))
-                    b = re.sub('[^\p{L}\d\s]', '', unidecode.unidecode(series[j]))
-                    matrix[i,j] = difflib.SequenceMatcher(a=a,b=b).ratio()
-        list_of_matrixes.append(matrix)
-        
-    matrix = np.mean(list_of_matrixes, axis=0)
-        
-    ids = df[column_with_ids].to_list()          
-    matrix = pd.DataFrame(np.tril(matrix, 0), index=pd.Index(ids), columns=ids)
+    series = {}
+    for identifier, title in zip(df[column_with_ids].to_list(), df[column_to_cluster].to_list()):
+        if title not in series:
+            series[title] = [identifier]
+        else: series[title].append(identifier)
+    unique_series = list(series.keys())
+    list_of_matrixes = np.array([[difflib.SequenceMatcher(a=w1,b=w2).ratio() for w1 in unique_series] for w2 in unique_series])
+    matrix = np.mean(list_of_matrixes, axis=0)             
+    matrix = pd.DataFrame(np.tril(list_of_matrixes, 0), index=pd.Index(unique_series), columns=unique_series)
     
     stacked_matrix = matrix.stack().reset_index()
     stacked_matrix = stacked_matrix[stacked_matrix[0] >= similarity_lvl].rename(columns={'level_0':column_with_ids, 'level_1':'cluster'})
@@ -441,19 +406,26 @@ def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.8, ho
            clusters[[k for k, v in clusters.items() if t_cluster in v][0]].append(t_id)
         elif t_id not in [e for e in clusters.values() for e in e]:
             clusters[t_cluster] = [t_id, t_cluster]
+            
+    test = [e for e in unique_series if e not in clusters.keys() and e not in [el for sub in clusters.values() for el in sub]]
+    clusters.update(dict(zip([e for e in test], [[e] for e in test])))
+    clusters = {k:[el for sub in [series[e] for e in v] for el in sub] if len([series[e] for e in v]) > 1 else series[v[0]] for k,v in clusters.items()}
+    clusters = {min(v):v for k,v in clusters.items()}
+    
+    
 
-    df[column_with_ids] = df[column_with_ids].apply(lambda x: type_str(x))
-    try:
-        group_df = pd.DataFrame.from_dict(clusters, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster', 0:column_with_ids})
-        group_df[column_with_ids] = group_df[column_with_ids].apply(lambda x: type_str(x))
+    df[column_with_ids] = df[column_with_ids].astype(np.int64)
 
-    # print(group_df[column_with_ids].dtype)
-    # print(df[column_with_ids].dtype)
-        df = df.merge(group_df, on=column_with_ids, how='left')
-    except IndexError:
-        df['cluster'] = ''
+    group_df = pd.DataFrame.from_dict(clusters, orient='index').stack().reset_index(level=0).rename(columns={'level_0':'cluster', 0:column_with_ids})
+    group_df[column_with_ids] = group_df[column_with_ids].astype(np.int64)
+
+# print(group_df[column_with_ids].dtype)
+# print(df[column_with_ids].dtype)
+    
+    df = df.merge(group_df, on=column_with_ids, how='left')
+
     # df['cluster'] = df[[column_with_ids, 'cluster']].apply(lambda x: x['cluster'] if pd.notnull(x['cluster']) else x[column_with_ids], axis=1).astype('int64')
-    df['cluster'] = df[[column_with_ids, 'cluster']].apply(lambda x: x['cluster'] if pd.notnull(x['cluster']) else x[column_with_ids], axis=1).astype(np.int64).astype(str)
+    # df['cluster'] = df[[column_with_ids, 'cluster']].apply(lambda x: x['cluster'] if pd.notnull(x['cluster']) else x[column_with_ids], axis=1).astype(np.int64).astype(str)
     
     return df
 

@@ -234,6 +234,9 @@ print(Counter(df['new_cluster'].notnull()))
 print(Counter(df['cluster_titles'].notnull() | df['new_cluster'].notnull() | df['work_id'].notnull()))
 # Counter({True: 32090, False: 22836})
 
+# przetestować clustrowanie na tej autorce: 56763450, w mojej funkcji coś nie gra
+# poniżej są błędy
+
 new_clusters = sorted(df['new_cluster'].dropna().drop_duplicates().to_list())
 clusters_dict = {}
 dublety = []
@@ -270,21 +273,50 @@ for e in clusters_dict:
     else:
         not_ok.append(clusters_dict[e][-1])
         
+ok_size = []
+for el in tqdm(ok):
+    size = df[(df['new_cluster'].isin(el[0])) |
+              (df['work_id'].isin(el[1])) |
+              (df['cluster_titles'].isin(el[-1]))].shape[0]
+    ok_size.append((size, el))
+    
+ok_size = sorted(ok_size, key=lambda x: x[0])
+        
 not_ok_unique = []
 for el in not_ok:
     if el not in not_ok_unique:
         not_ok_unique.append(el)
 
+not_ok_size = []
+for el in tqdm(not_ok_unique):
+    size = df[(df['new_cluster'].isin(el[0])) |
+              (df['work_id'].isin(el[1])) |
+              (df['cluster_titles'].isin(el[-1]))].shape[0]
+    not_ok_size.append((size, el))
 
-bad_df = df[(df['new_cluster'] == not_ok_unique[3][0]) |
-            (df['work_id'].isin(not_ok_unique[3][1])) |
-            (df['cluster_titles'].isin(not_ok_unique[3][-1]))]
+not_ok_size = sorted(not_ok_size, key=lambda x: x[0])
 
-bad_df['new_cluster'] = bad_df[['001', 'new_cluster']].apply(lambda x: new_cluster_corrections[x['001']] if x['001'] in new_cluster_corrections else x['new_cluster'], axis=1)
+test = df[(df['new_cluster'].isin(ok_size[-1][-1][0])) |
+          (df['work_id'].isin(ok_size[-1][-1][1])) |
+          (df['cluster_titles'].isin(ok_size[-1][-1][-1]))]
 
+i = 0
+bad_df = df[(df['new_cluster'].isin(not_ok_size[i][-1][0])) |
+            (df['work_id'].isin(not_ok_size[i][-1][1])) |
+            (df['cluster_titles'].isin(not_ok_size[i][-1][-1]))]
 
 #assigning to new_cluster:
-new_cluster_corrections = {751359839: 28,
+new_cluster_corrections = {
+# Větev dobra
+751359839: 28,
+# I co?
+10000003075: 1883,
+993048942: 1883,
+
+1148056073: max(df['new_cluster'])+1,
+# Krtek a léto
+1016099470: 521,
+
 # Mach a Šebestová ve škole
 10000000745: 34,
 84940599: 34,
@@ -297,11 +329,11 @@ new_cluster_corrections = {751359839: 28,
 443259514: 1725,
 
 # Mach a Šebestová
-320690017: max(df['new_cluster'])+1,
-312686446: max(df['new_cluster'])+1,
+320690017: max(df['new_cluster'])+2,
+312686446: max(df['new_cluster'])+2,
 
  }
-
+bad_df['new_cluster'] = bad_df[['001', 'new_cluster']].apply(lambda x: new_cluster_corrections[x['001']] if x['001'] in new_cluster_corrections else x['new_cluster'], axis=1)
 
 #!!!!!!!!!!!tutaj!!!!!!!!!!!!!!
 

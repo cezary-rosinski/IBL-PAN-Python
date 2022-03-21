@@ -1086,8 +1086,11 @@ df_original_titles_simple_grouped = df_original_titles_simple.groupby('author_id
 
 df_original_titles_simple = pd.DataFrame(columns=['001', 'original title', 'author_id', 'work_id', 'work_title', 'cluster'], dtype=str)
 for name, group in tqdm(df_original_titles_simple_grouped, total=len(df_original_titles_simple_grouped)):
+    # name = '56763450'
+    # group = df_original_titles_simple_grouped.get_group(name)
+    group['simple_original_title'] = group['original title'].apply(lambda x: simplify_string(x))
     # group = df_original_titles_simple_grouped.get_group('25096219')
-    df = cluster_records(group, '001', ['original title'], similarity_lvl=0.81)
+    df = cluster_records(group, '001', 'simple_original_title')
     # df['cluster'] = df['cluster'].astype(np.int64).astype(str)
     df_original_titles_simple = df_original_titles_simple.append(df)
 
@@ -1095,9 +1098,154 @@ df_original_titles_simple = df_original_titles_simple.sort_values(['author_id', 
 # df_original_titles_simple['cluster_titles'] = df_original_titles_simple['cluster_titles'].astype(np.int64)
 df_original_titles_simple['001'] = df_original_titles_simple['001'].astype(np.int64)
 
-df_with_original_titles = pd.merge(translations_df, df_original_titles_simple[['001', 'original title', 'cluster_titles']], on='001', how='left')
+df_with_original_titles = pd.merge(translations_df, df_original_titles_simple[['001', 'original title', 'simple_original_title', 'cluster_titles']], on='001', how='left')
 
-df_with_original_titles.to_excel(f'df_with_title_clusters_{now}.xlsx', index=False)
+# df_with_original_titles.to_excel(f'df_with_title_clusters_{now}.xlsx', index=False)
+
+
+
+
+
+#!!!!to pokazać OV!!!!!!
+
+
+test = df_with_original_titles[df_with_original_titles['author_id'] == '56763450']
+#ile viaf
+print(Counter(test['work_id'].notnull()))
+#Counter({False: 511, True: 126}) 20%
+#ile clustrowanie
+print(Counter(test['cluster_titles'].notnull()))
+#Counter({False: 346, True: 291}) 46%
+
+test = test[['001', 'author_id', 'year', 'language', '245', 'work_id', 'work_title', 'original title', 'simple_original_title', 'cluster_titles']]
+
+test2 = test.groupby(['cluster_titles', 'simple_original_title']).size().reset_index(name="Time")
+
+def marc_parser_dict_for_field(string, subfield_code):
+    subfield_list = re.findall(f'{subfield_code}.', string)
+    for subfield in subfield_list:
+        subfield_escape = re.escape(subfield)
+        string = re.sub(f'({subfield_escape})', r'❦\1', string)
+    string = [e.split('\n')[0] for e in string.split('❦') if e]
+    dictionary_fields = [e for e in string if re.escape(e)[:len(subfield_code)] == subfield_code]
+    dictionary_fields = [{subfield_list[i]:e[len(subfield_list[i]):]} for i, e in enumerate(dictionary_fields)]
+    return dictionary_fields
+
+test['simple_target_title'] = test['245'].apply(lambda x: ' '.join([simplify_string(list(e.values())[0]).strip() for e in marc_parser_dict_for_field(x, '\$') if any(el == list(e.keys())[0] for el in ['$a', '$b'])]))
+
+df = cluster_records(test, '001', 'simple_target_title')
+
+cluster_freq = dict(Counter(test['cluster_titles']))
+
+groupby = df.groupby('cluster')
+relacje_clustrow = []
+df_final = pd.DataFrame()
+for name, group in groupby:
+    # name = 4094141
+    # group = groupby.get_group(name)
+
+    clusters_from_245 = list(set(group['cluster_titles'].dropna().to_list()))
+    try:
+        relacje_clustrow.append(tuple(sorted({k: v for k,v in cluster_freq.items() if k in clusters_from_245}.items(), key=lambda x: x[1], reverse=True)))
+        proper_cluster = max({k: v for k,v in cluster_freq.items() if k in clusters_from_245}, key=cluster_freq.get)
+        #czy relacje tych clustrów są czymś, co mogę wykorzytać?
+        group['cluster_titles'] = proper_cluster
+    except ValueError: 
+        if group.shape[0] > 1:
+            group['cluster_titles'] = name
+    df_final = df_final.append(group)
+
+print(Counter(df_final['cluster_titles'].notnull()))
+#Counter({True: 570, False: 67}) 89%
+
+#jak połączyć clustry, które odnoszą się do tego samego dzieła?
+relacje_clustrow = list(set([e for e in relacje_clustrow if e and len(e) > 1]))
+
+t = [[el[0] for el in e] for e in relacje_clustrow if e[0][0] == 1496749]
+t = list(set([e for sub in t for e in sub]))
+
+t = df[df['cluster_titles'].isin(t)]
+t = df[df['cluster_titles'].isin([244816843, 85143022, 76512129])]
+
+t = df[df['cluster_titles'].isin([320430736, 10000015208])]
+t = df[df['cluster_titles'].isin([51625712, 251769407, 71653533])] #??
+
+t = df[df['cluster_titles'].isin([76512129, 244816470, 85143022])]
+
+t = df[df['cluster_titles'].isin([76512129, 244816470, 85143022, 244816843, 85143022, 76512129])]
+
+
+
+#całość
+
+#stats
+#ile viaf
+print(Counter(df_with_original_titles['work_id'].notnull()))
+#Counter({False: 42506, True: 12420}) 23%
+#ile clustrowanie
+print(Counter(df_with_original_titles['cluster_titles'].notnull()))
+#Counter({False: 29430, True: 25496}) 46%
+
+df_translations_simple = df_with_original_titles[['001', 'author_id', 'year', 'language', '245', 'work_id', 'work_title', 'original title', 'simple_original_title', 'cluster_titles']]
+df_translations_simple['simple_target_title'] = df_translations_simple['245'].apply(lambda x: ' '.join([simplify_string(list(e.values())[0]).strip() for e in marc_parser_dict_for_field(x, '\$') if any(el == list(e.keys())[0] for el in ['$a', '$b'])]))
+
+df_translations_grouped = df_translations_simple.groupby('author_id')
+df_translations_simple = pd.DataFrame()
+for name, group in tqdm(df_translations_grouped, total=len(df_translations_grouped)):
+    group = cluster_records(group, '001', 'simple_target_title')
+    df_translations_simple = df_translations_simple.append(group)
+
+cluster_freq = dict(Counter(df_translations_simple['cluster_titles'].dropna()))
+
+df_translations_grouped = df_translations_simple.groupby(['author_id', 'cluster'])
+relacje_clustrow = []
+df_final = pd.DataFrame()
+for name, group in tqdm(df_translations_grouped, total=len(df_translations_grouped)):
+    # name = 4094141
+    # group = groupby.get_group(name)
+    clusters_from_245 = list(set(group['cluster_titles'].dropna().to_list()))
+    try:
+        relacje_clustrow.append(tuple(sorted({k: v for k,v in cluster_freq.items() if k in clusters_from_245}.items(), key=lambda x: x[1], reverse=True)))
+        proper_cluster = max({k: v for k,v in cluster_freq.items() if k in clusters_from_245}, key=cluster_freq.get)
+        group['cluster_titles'] = proper_cluster
+    except ValueError: 
+        if group.shape[0] > 1:
+            group['cluster_titles'] = name[-1]
+    df_final = df_final.append(group)
+
+print(Counter(df_final['cluster_titles'].notnull()))
+#Counter({True: 47478, False: 7448}) 86%
+
+relacje_clustrow = list(set([e for e in relacje_clustrow if e and len(e) > 1]))
+with open('relacje_clustrow.pickle', 'wb') as handle:
+    pickle.dump(relacje_clustrow, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+df_final['001'] = df_final['001'].astype(np.int64)
+
+df_with_original_titles = pd.merge(df_with_original_titles.drop(columns=['cluster_titles']), df_final[['001', 'simple_target_title', 'cluster_titles']], on='001', how='left')
+
+df_with_original_titles.rename(columns={'work_id':'work_viaf_id', 'cluster_titles':'work_id'}, inplace=True)
+
+df_with_original_titles.to_excel(f'translation_database_clusters_year_author_language_work_{now}.xlsx', index=False)
+
+
+with open('relacje_clustrow.pickle', 'rb') as handle:
+    relacje_clustrow = pickle.load(handle)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 #%% quality index
