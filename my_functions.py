@@ -370,20 +370,37 @@ def type_str(x):
     except ValueError:
         return str(x)    
 
-def cluster_records(df, column_with_ids, column_to_cluster, similarity_lvl=0.85, how_to_organise='cluster_first', show_time=False):
+
+def cluster_records(df, column_with_ids, list_of_columns, similarity_lvl=0.85, how_to_organise='cluster_first', show_time=False):
     try:
         df.drop(columns='cluster',inplace=True)
     except KeyError:
         pass
-    series = {}
-    for identifier, title in zip(df[column_with_ids].to_list(), df[column_to_cluster].to_list()):
-        if title not in series:
-            series[title] = [identifier]
-        else: series[title].append(identifier)
-    unique_series = list(series.keys())
-    list_of_matrixes = np.array([[difflib.SequenceMatcher(a=w1,b=w2).ratio() for w1 in unique_series] for w2 in unique_series])
+    list_of_matrixes = []
+    if len(list_of_columns) == 1:
+        for column in list_of_columns:
+            series = {}
+            for identifier, title in zip(df[column_with_ids].to_list(), df[column].to_list()):
+                if title not in series:
+                    series[title] = [identifier]
+                else: series[title].append(identifier)
+            unique_series = list(series.keys())
+            try:
+                list_of_matrixes.append(np.array([[difflib.SequenceMatcher(a=w1,b=w2).ratio() for w1 in unique_series] for w2 in unique_series]))
+            except TypeError:
+                print(f'Column: {column} dtype cannot be integer!')
+    else:
+        for column in list_of_columns:
+            if df[column].notnull().all():
+                series = df[column].to_list()
+                list_of_matrixes.append(np.array([[difflib.SequenceMatcher(a=w1,b=w2).ratio() for w1 in series] for w2 in series]))
+    
     matrix = np.mean(list_of_matrixes, axis=0)             
-    matrix = pd.DataFrame(np.tril(list_of_matrixes, 0), index=pd.Index(unique_series), columns=unique_series)
+    if len(list_of_columns) == 1:
+        matrix = pd.DataFrame(np.tril(matrix, 0), index=pd.Index(unique_series), columns=unique_series)
+    else:
+        ids = df[column_with_ids].to_list()
+        matrix = pd.DataFrame(np.tril(matrix, 0), index=pd.Index(ids), columns=ids)
     
     stacked_matrix = matrix.stack().reset_index()
     stacked_matrix = stacked_matrix[stacked_matrix[0] >= similarity_lvl].rename(columns={'level_0':column_with_ids, 'level_1':'cluster'})
@@ -407,12 +424,11 @@ def cluster_records(df, column_with_ids, column_to_cluster, similarity_lvl=0.85,
         elif t_id not in [e for e in clusters.values() for e in e]:
             clusters[t_cluster] = [t_id, t_cluster]
             
-    test = [e for e in unique_series if e not in clusters.keys() and e not in [el for sub in clusters.values() for el in sub]]
-    clusters.update(dict(zip([e for e in test], [[e] for e in test])))
-    clusters = {k:[el for sub in [series[e] for e in v] for el in sub] if len([series[e] for e in v]) > 1 else series[v[0]] for k,v in clusters.items()}
-    clusters = {min(v):v for k,v in clusters.items()}
-    
-    
+    if len(list_of_columns) == 1:
+        test = [e for e in unique_series if e not in clusters.keys() and e not in [el for sub in clusters.values() for el in sub]]
+        clusters.update(dict(zip([e for e in test], [[e] for e in test])))
+        clusters = {k:[el for sub in [series[e] for e in v] for el in sub] if len([series[e] for e in v]) > 1 else series[v[0]] for k,v in clusters.items()}
+        clusters = {min(v):v for k,v in clusters.items()}
 
     df[column_with_ids] = df[column_with_ids].astype(np.int64)
 

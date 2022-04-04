@@ -315,12 +315,15 @@ places_file.to_excel('samizdat_places_file.xlsx', index=False)
 #%% ostateczne scalenie plików i przygotowanie plików wsadowych
 
 country_classification = gsheet_to_df('1VT9vt0sIAcXZfL6BL0EBXj6Up54Q5JJtD_QY6TOb_X8', 'Sheet1')
+country_classification['Wikidata_ID'] = 'https://www.wikidata.org/wiki/' + country_classification['Wikidata_ID']
 country_classification.to_csv('samizdat_country_classification_to_nodegoat.csv', index=False, encoding='utf-8')
 
 
 places_file = gsheet_to_df('11MDsd1T9onk3tPz84Vb_8AxyHJxFLkuHozNfEer1Wto', 'Sheet1')
+places_file['Wikidata_ID'] = 'https://www.wikidata.org/wiki/' + places_file['Wikidata_ID']
 places_file['Geonames_ID'] = places_file['Geonames_ID'].apply(lambda x: ast.literal_eval(x))
 places_file['Geonames_ID'] = places_file['Geonames_ID'].apply(lambda x: x[0] if isinstance(x,list) else str(x))
+places_file['Geonames_ID'] = 'https://www.geonames.org/' + places_file['Geonames_ID']
 places_file['Located'] = places_file['Located'].apply(lambda x: ast.literal_eval(x))
 places_file['Latitude'] = places_file['Located'].apply(lambda x: x[0])
 places_file['Longitude'] = places_file['Located'].apply(lambda x: x[1])

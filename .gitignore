@@ -1,4 +1,14 @@
 ﻿/relacje_clustrow.pickle
+/translation_database_clusters_year_author_language_work_2022-03-28.xlsx
+/translation_database_clusters_year_author_language_work_genre_audience_2022-03-29.xlsx
+/translation_deduplicated_2022-03-28.xlsx
+/translations_places.pickle
+/translations_places_no_fuzzy.pickle
+/MARC21_country_codes.txt
+/kundera.xlsx
+/nemcova.xlsx
+/samizdat_country_classification_to_nodegoat.csv
+/samizdat_occupation_classification_to_nodegoat.csv
 /translation_database_clusters_year_author_language_work_2022-03-21.xlsx
 /translation_database_clusters_year_author_language_2022-03-14.xlsx
 /df_with_title_clusters_2022-03-15.xlsx

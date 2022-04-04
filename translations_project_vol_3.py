@@ -19,15 +19,29 @@ pd.set_option('display.float_format', lambda x: '%.3f' % x)
 
 #%% defs
 
+def get_audience(x):
+    audience_dict = {'a':'Juvenile', 'b':'Juvenile', 'c':'Juvenile', 'd':'Juvenile', 'j':'Juvenile', 'e':'General', 'f':'General', 'g':'General'}
+    try:
+        if '❦' not in x:
+            return audience_dict[x]
+        else:
+            audiences = []
+            for el in x.split('❦'):
+                if el not in ['|', '\\']:
+                    audiences.append(audience_dict[el])
+            return '❦'.join(audiences)
+    except KeyError:
+        return 'other'
+    
 def get_ISBNs(x):
-        try:
-            x = x.split('❦')
-            x = [marc_parser_dict_for_field(e, '\$')['$a'].replace('-','').strip().split(' ')[0] for e in x if '$a' in e]
-            x = [e.replace('❦', '') for e in x]
-            x = list(set([e if e[:3] != '978' else e[3:] for e in x]))
-            return '❦'.join(x)
-        except AttributeError:
-            return 'no ISBN'
+    try:
+        x = x.split('❦')
+        x = [[el['$a'].replace('-','').strip().split(' ')[0] for el in marc_parser_dict_for_field(e, '\$') if '$a' in el] for e in x]
+        x = [e for sub in x for e in sub]
+        x = list(set([e if e[:3] != '978' else e[3:] for e in x]))
+        return '❦'.join(x)
+    except AttributeError:
+        return 'no ISBN'
 
 def longest_string(s):
     return max(s, key=len)
@@ -127,7 +141,7 @@ def genre(x):
             for el in x.split('❦'):
                 if el not in ['|', '\\']:
                     genres.append(genres_dict[el])
-            return '❦'.join(list(set(genres)))
+            return '❦'.join(genres)
     except KeyError:
         return 'other'
 
@@ -1090,7 +1104,7 @@ for name, group in tqdm(df_original_titles_simple_grouped, total=len(df_original
     # group = df_original_titles_simple_grouped.get_group(name)
     group['simple_original_title'] = group['original title'].apply(lambda x: simplify_string(x))
     # group = df_original_titles_simple_grouped.get_group('25096219')
-    df = cluster_records(group, '001', 'simple_original_title')
+    df = cluster_records(group, '001', ['simple_original_title'])
     # df['cluster'] = df['cluster'].astype(np.int64).astype(str)
     df_original_titles_simple = df_original_titles_simple.append(df)
 
@@ -1102,25 +1116,6 @@ df_with_original_titles = pd.merge(translations_df, df_original_titles_simple[['
 
 # df_with_original_titles.to_excel(f'df_with_title_clusters_{now}.xlsx', index=False)
 
-
-
-
-
-#!!!!to pokazać OV!!!!!!
-
-
-test = df_with_original_titles[df_with_original_titles['author_id'] == '56763450']
-#ile viaf
-print(Counter(test['work_id'].notnull()))
-#Counter({False: 511, True: 126}) 20%
-#ile clustrowanie
-print(Counter(test['cluster_titles'].notnull()))
-#Counter({False: 346, True: 291}) 46%
-
-test = test[['001', 'author_id', 'year', 'language', '245', 'work_id', 'work_title', 'original title', 'simple_original_title', 'cluster_titles']]
-
-test2 = test.groupby(['cluster_titles', 'simple_original_title']).size().reset_index(name="Time")
-
 def marc_parser_dict_for_field(string, subfield_code):
     subfield_list = re.findall(f'{subfield_code}.', string)
     for subfield in subfield_list:
@@ -1131,48 +1126,92 @@ def marc_parser_dict_for_field(string, subfield_code):
     dictionary_fields = [{subfield_list[i]:e[len(subfield_list[i]):]} for i, e in enumerate(dictionary_fields)]
     return dictionary_fields
 
-test['simple_target_title'] = test['245'].apply(lambda x: ' '.join([simplify_string(list(e.values())[0]).strip() for e in marc_parser_dict_for_field(x, '\$') if any(el == list(e.keys())[0] for el in ['$a', '$b'])]))
 
-df = cluster_records(test, '001', 'simple_target_title')
 
-cluster_freq = dict(Counter(test['cluster_titles']))
+#!!!!to pokazać OV!!!!!!
 
-groupby = df.groupby('cluster')
-relacje_clustrow = []
-df_final = pd.DataFrame()
-for name, group in groupby:
-    # name = 4094141
-    # group = groupby.get_group(name)
 
-    clusters_from_245 = list(set(group['cluster_titles'].dropna().to_list()))
-    try:
-        relacje_clustrow.append(tuple(sorted({k: v for k,v in cluster_freq.items() if k in clusters_from_245}.items(), key=lambda x: x[1], reverse=True)))
-        proper_cluster = max({k: v for k,v in cluster_freq.items() if k in clusters_from_245}, key=cluster_freq.get)
-        #czy relacje tych clustrów są czymś, co mogę wykorzytać?
-        group['cluster_titles'] = proper_cluster
-    except ValueError: 
-        if group.shape[0] > 1:
-            group['cluster_titles'] = name
-    df_final = df_final.append(group)
+# test = df_with_original_titles[df_with_original_titles['author_id'] == '56763450']
+# test = df_with_original_titles[df_with_original_titles['author_id'] == '51691735']
 
-print(Counter(df_final['cluster_titles'].notnull()))
-#Counter({True: 570, False: 67}) 89%
+# #ile viaf
+# print(Counter(test['work_id'].notnull()))
+# #Counter({False: 511, True: 126}) 20%
+# #ile clustrowanie
+# print(Counter(test['cluster_titles'].notnull()))
+# #Counter({False: 346, True: 291}) 46%
 
-#jak połączyć clustry, które odnoszą się do tego samego dzieła?
-relacje_clustrow = list(set([e for e in relacje_clustrow if e and len(e) > 1]))
+# test = test[['001', 'author_id', 'year', 'language', '245', 'work_id', 'work_title', 'original title', 'simple_original_title', 'cluster_titles']]
 
-t = [[el[0] for el in e] for e in relacje_clustrow if e[0][0] == 1496749]
-t = list(set([e for sub in t for e in sub]))
+# test2 = test.groupby(['cluster_titles', 'simple_original_title']).size().reset_index(name="Time")
 
-t = df[df['cluster_titles'].isin(t)]
-t = df[df['cluster_titles'].isin([244816843, 85143022, 76512129])]
+# test['simple_target_title'] = test['245'].apply(lambda x: ' '.join([simplify_string(list(e.values())[0]).strip() for e in marc_parser_dict_for_field(x, '\$') if any(el == list(e.keys())[0] for el in ['$a', '$b'])]))
 
-t = df[df['cluster_titles'].isin([320430736, 10000015208])]
-t = df[df['cluster_titles'].isin([51625712, 251769407, 71653533])] #??
+# df = cluster_records(test, '001', ['simple_target_title'])
 
-t = df[df['cluster_titles'].isin([76512129, 244816470, 85143022])]
+# cluster_freq = dict(Counter(test['cluster_titles']))
+# for key, value in cluster_freq.items():
+#     proper_name = dict(Counter(df[df['cluster_titles'] == key]['simple_original_title'].to_list()))
+#     try:
+#         proper_name = max(proper_name, key=proper_name.get)
+#         cluster_freq[key] = (value, proper_name)
+#     except ValueError: pass
+    
+# groupby = df.groupby('cluster')
+# relacje_clustrow = []
+# df_final = pd.DataFrame()
+# for name, group in tqdm(groupby, total=len(groupby)):
+#     # 27960929, 49947079, 52796098
+#     # name = 50696693
+#     # name = 27745720
+#     # group = groupby.get_group(name)
 
-t = df[df['cluster_titles'].isin([76512129, 244816470, 85143022, 244816843, 85143022, 76512129])]
+#     clusters_from_245 = list(set(group['cluster_titles'].dropna().to_list()))
+#     temp_dict = dict(Counter(group['cluster_titles'].dropna().to_list()))
+#     temp_dict = {k:v/sum(temp_dict.values()) for k,v in temp_dict.items()}
+#     if any(e > 0.85 for e in temp_dict.values()):
+#         most_frequent_in_group = dict(Counter(group['cluster_titles'].dropna().to_list()))
+#         most_frequent_in_group = {k:v/sum(most_frequent_in_group.values()) for k,v in most_frequent_in_group.items()}
+#         most_frequent_in_group = max({k: v for k,v in most_frequent_in_group.items()}, key=most_frequent_in_group.get)
+        
+#         most_frequent_all = max({k: v for k,v in cluster_freq.items() if k in clusters_from_245}, key=cluster_freq.get)
+        
+#         mfg_title = cluster_freq[most_frequent_in_group][-1]
+#         mfa_title = cluster_freq[most_frequent_all][-1]
+        
+#         if SequenceMatcher(a=mfg_title, b=mfa_title).ratio() > 0.9:
+#             group['cluster_titles'] = most_frequent_all
+#         else:
+#             group['cluster_titles'] = most_frequent_in_group
+#     else:
+#         try:
+#             relacje_clustrow.append(tuple(sorted({k: v for k,v in cluster_freq.items() if k in clusters_from_245}.items(), key=lambda x: x[1], reverse=True)))
+#             proper_cluster = max({k: v for k,v in cluster_freq.items() if k in clusters_from_245}, key=cluster_freq.get)
+#             #czy relacje tych clustrów są czymś, co mogę wykorzytać?
+#             group['cluster_titles'] = proper_cluster
+#         except ValueError: 
+#             if group.shape[0] > 1:
+#                 group['cluster_titles'] = name
+#     df_final = df_final.append(group)
+
+# print(Counter(df_final['cluster_titles'].notnull()))
+# #Counter({True: 570, False: 67}) 89%
+
+# #jak połączyć clustry, które odnoszą się do tego samego dzieła?
+# relacje_clustrow = list(set([e for e in relacje_clustrow if e and len(e) > 1]))
+
+# t = [[el[0] for el in e] for e in relacje_clustrow if e[0][0] == 1496749]
+# t = list(set([e for sub in t for e in sub]))
+
+# t = df[df['cluster_titles'].isin(t)]
+# t = df[df['cluster_titles'].isin([244816843, 85143022, 76512129])]
+
+# t = df[df['cluster_titles'].isin([320430736, 10000015208])]
+# t = df[df['cluster_titles'].isin([51625712, 251769407, 71653533])] #??
+
+# t = df[df['cluster_titles'].isin([76512129, 244816470, 85143022])]
+
+# t = df[df['cluster_titles'].isin([76512129, 244816470, 85143022, 244816843, 85143022, 76512129])]
 
 
 
@@ -1192,25 +1231,49 @@ df_translations_simple['simple_target_title'] = df_translations_simple['245'].ap
 df_translations_grouped = df_translations_simple.groupby('author_id')
 df_translations_simple = pd.DataFrame()
 for name, group in tqdm(df_translations_grouped, total=len(df_translations_grouped)):
-    group = cluster_records(group, '001', 'simple_target_title')
+    group = cluster_records(group, '001', ['simple_target_title'])
     df_translations_simple = df_translations_simple.append(group)
 
 cluster_freq = dict(Counter(df_translations_simple['cluster_titles'].dropna()))
-
+for key, value in cluster_freq.items():
+    proper_name = dict(Counter(df_translations_simple[df_translations_simple['cluster_titles'] == key]['simple_original_title'].to_list()))
+    try:
+        proper_name = max(proper_name, key=proper_name.get)
+        cluster_freq[key] = (value, proper_name)
+    except ValueError: pass
+    
 df_translations_grouped = df_translations_simple.groupby(['author_id', 'cluster'])
 relacje_clustrow = []
 df_final = pd.DataFrame()
 for name, group in tqdm(df_translations_grouped, total=len(df_translations_grouped)):
-    # name = 4094141
-    # group = groupby.get_group(name)
     clusters_from_245 = list(set(group['cluster_titles'].dropna().to_list()))
-    try:
-        relacje_clustrow.append(tuple(sorted({k: v for k,v in cluster_freq.items() if k in clusters_from_245}.items(), key=lambda x: x[1], reverse=True)))
-        proper_cluster = max({k: v for k,v in cluster_freq.items() if k in clusters_from_245}, key=cluster_freq.get)
-        group['cluster_titles'] = proper_cluster
-    except ValueError: 
-        if group.shape[0] > 1:
-            group['cluster_titles'] = name[-1]
+    relacje_clustrow.append(tuple(sorted({k: v for k,v in cluster_freq.items() if k in clusters_from_245}.items(), key=lambda x: x[1], reverse=True)))
+    
+    temp_dict = dict(Counter(group['cluster_titles'].dropna().to_list()))
+    temp_dict = {k:v/sum(temp_dict.values()) for k,v in temp_dict.items()}
+    if any(e > 0.85 for e in temp_dict.values()):
+        most_frequent_in_group = dict(Counter(group['cluster_titles'].dropna().to_list()))
+        most_frequent_in_group = {k:v/sum(most_frequent_in_group.values()) for k,v in most_frequent_in_group.items()}
+        most_frequent_in_group = max({k: v for k,v in most_frequent_in_group.items()}, key=most_frequent_in_group.get)
+        
+        most_frequent_all = max({k: v for k,v in cluster_freq.items() if k in clusters_from_245}, key=cluster_freq.get)
+        
+        mfg_title = cluster_freq[most_frequent_in_group][-1]
+        mfa_title = cluster_freq[most_frequent_all][-1]
+        
+        if SequenceMatcher(a=mfg_title, b=mfa_title).ratio() > 0.9:
+            group['cluster_titles'] = most_frequent_all
+        else:
+            group['cluster_titles'] = most_frequent_in_group
+    else:
+        try:
+            # relacje_clustrow.append(tuple(sorted({k: v for k,v in cluster_freq.items() if k in clusters_from_245}.items(), key=lambda x: x[1], reverse=True)))
+            proper_cluster = max({k: v for k,v in cluster_freq.items() if k in clusters_from_245}, key=cluster_freq.get)
+            #czy relacje tych clustrów są czymś, co mogę wykorzytać?
+            group['cluster_titles'] = proper_cluster
+        except ValueError: 
+            if group.shape[0] > 1:
+                group['cluster_titles'] = name[-1]
     df_final = df_final.append(group)
 
 print(Counter(df_final['cluster_titles'].notnull()))
@@ -1232,6 +1295,344 @@ df_with_original_titles.to_excel(f'translation_database_clusters_year_author_lan
 
 with open('relacje_clustrow.pickle', 'rb') as handle:
     relacje_clustrow = pickle.load(handle)
+
+#%% deduplication
+
+def marc_parser_dict_for_field(string, subfield_code):
+    subfield_list = re.findall(f'{subfield_code}.', string)
+    for subfield in subfield_list:
+        subfield_escape = re.escape(subfield)
+        string = re.sub(f'({subfield_escape})', r'❦\1', string)
+    string = [e.split('\n')[0] for e in string.split('❦') if e]
+    dictionary_fields = [e for e in string if re.escape(e)[:len(subfield_code)] == subfield_code]
+    dictionary_fields = [{subfield_list[i]:e[len(subfield_list[i]):]} for i, e in enumerate(dictionary_fields)]
+    return dictionary_fields
+#56763450
+
+# records_df = translations_df[translations_df['author_id'] == '56763450']
+records_df = df_with_original_titles.copy()
+records_grouped = records_df.groupby(['author_id', 'language', 'work_id'], dropna=False)
+
+writer = pd.ExcelWriter(f'translation_deduplicated_{now}.xlsx', engine = 'xlsxwriter')
+records_df.to_excel(writer, index=False, sheet_name='phase_0') # original data
+
+# test = records_df.groupby(['author_id', 'language', 'work_id']).size().reset_index(name="Time")
+
+phase_1 = pd.DataFrame() # duplicates
+# phase_2 = pd.DataFrame() # multiple volumes
+phase_2 = pd.DataFrame() # fuzzyness
+phase_3 = pd.DataFrame() # ISBN
+
+# grupy = []
+for name, group in tqdm(records_grouped, total=len(records_grouped)):
+    # name = ('56763450', 'ger', 1496749)
+    # group = records_grouped.get_group(name)
+    
+    group['title'] = group['simple_target_title']
+    try:
+        group['place'] = group['260'].apply(lambda x: ' '.join([simplify_string(e['$a']).strip() for e in marc_parser_dict_for_field(x, '\$') if '$a' in e]))
+    except TypeError:
+        group['place'] = ''
+    try:
+        group['publisher'] = group['260'].apply(lambda x: ' '.join([simplify_string(e['$b']).strip() for e in marc_parser_dict_for_field(x, '\$') if '$b' in e]))
+    except TypeError:
+        group['publisher'] = ''
+    
+    df_oclc_duplicates = pd.DataFrame()
+    df_oclc_grouped = group.groupby(['title', 'place', 'year'])
+    for sub_name, sub_group in df_oclc_grouped:
+        if len(sub_group) > 1:
+            sub_group['groupby'] = str(sub_name)
+            group_ids = '❦'.join([str(e) for e in sub_group['001'].to_list()])
+            sub_group['group_ids'] = group_ids
+            df_oclc_duplicates = df_oclc_duplicates.append(sub_group)
+    df_oclc_duplicates = df_oclc_duplicates.drop_duplicates()
+    
+    if df_oclc_duplicates.shape[0] > 1:
+        oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
+        df_oclc_duplicates_grouped = df_oclc_duplicates.groupby(['title', 'place', 'year'])
+        
+        df_oclc_deduplicated = pd.DataFrame()
+        for sub_name, sub_group in df_oclc_duplicates_grouped:
+            for column in sub_group:
+                if column in ['fiction_type', 'audience', '490', '500', '650', '655', '700']:
+                    sub_group[column] = '❦'.join(sub_group[column].dropna().drop_duplicates().astype(str))
+                else:
+                    try:
+                        sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
+                    except ValueError:
+                        sub_group[column] = np.nan
+            df_oclc_deduplicated = df_oclc_deduplicated.append(sub_group)
+        
+        df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+        df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(np.int64)
+        group = group.loc[~group['001'].isin(oclc_duplicates_list)]
+        group = pd.concat([group, df_oclc_deduplicated])
+        group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+        group = group.drop_duplicates().reset_index(drop=True)
+        phase_1 = phase_1.append(group)
+    else:
+        group = group.drop_duplicates().reset_index(drop=True)
+        phase_1 = phase_1.append(group)
+    
+#phase_2: de-duplication 2: multiple volumes TO JUŻ NIEPOTRZEBNE
+        
+#phase_2: de-duplication 3: fuzzyness
+    group['year'] = group['year'].astype(str)
+    df_oclc_clusters = cluster_records(group, '001', ['title', 'publisher', 'year'], 0.85)
+    df_oclc_clusters['cluster'] = df_oclc_clusters['cluster'].fillna(0)
+    df_oclc_clusters['cluster'] = df_oclc_clusters['cluster'].astype(np.int64)
+        
+    df_oclc_duplicates = pd.DataFrame()
+    df_oclc_clusters_grouped = df_oclc_clusters.groupby(['cluster', 'year'])
+    for subname, subgroup in df_oclc_clusters_grouped:
+        # subname = (28788169, '1993')
+        # subgroup = df_oclc_clusters_grouped.get_group(subname)
+        if subgroup.shape[0] > 1 and [e for e in subgroup['cluster'].to_list() if e != 0]:
+            lowest_id = min(subgroup['001'].to_list())
+            subgroup['cluster'] = lowest_id
+            df_oclc_duplicates = df_oclc_duplicates.append(subgroup)
+    
+    if df_oclc_duplicates.shape[0] > 0:
+    
+        oclc_duplicates_list = df_oclc_duplicates['001'].drop_duplicates().tolist()
+        df_oclc_duplicates = df_oclc_duplicates.groupby(['cluster', 'year'])
+        
+        df_oclc_deduplicated = pd.DataFrame()
+        for sub_name, sub_group in df_oclc_duplicates:
+            # sub_group = df_oclc_duplicates.get_group((1108272735, '2016'))
+            try:
+                group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() + sub_group['group_ids'].to_list() if pd.notnull(e)]))
+            except KeyError:
+                group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() if pd.notnull(e)]))
+            sub_group['group_ids'] = group_ids
+            for column in sub_group:
+                if column in ['fiction_type', 'audience', '490', '500', '650', '655', '700']:
+                    sub_group[column] = '❦'.join(sub_group[column].dropna().drop_duplicates().astype(str))
+                elif column == '245':
+                    sub_group[column] = sub_group[column][sub_group[column].str.contains('$', regex=False)]
+                    try:
+                        sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
+                    except ValueError:
+                        sub_group[column] = np.nan
+                else:
+                    try:
+                        sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
+                    except ValueError:
+                        sub_group[column] = np.nan
+            df_oclc_deduplicated = df_oclc_deduplicated.append(sub_group)
+            
+        df_oclc_deduplicated = df_oclc_deduplicated.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+        df_oclc_deduplicated['001'] = df_oclc_deduplicated['001'].astype(np.int64)
+        
+        group = group.loc[~group['001'].isin(oclc_duplicates_list)]
+        group = pd.concat([group, df_oclc_deduplicated])
+        group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+        group = group.drop(columns=['cluster', 'title']).drop_duplicates().reset_index(drop=True)
+        phase_2 = phase_2.append(group)
+    else:
+        group = group.drop(columns='title').drop_duplicates().reset_index(drop=True)
+        phase_2 = phase_2.append(group)
+    
+#phase_3: ISBN  
+           
+    group['ISBN'] = group['020'].apply(lambda x: get_ISBNs(x))
+    
+    ISBN_dict = {}
+    for i, row in group.iterrows():
+        if row['ISBN'] != 'no ISBN':
+            x = row['ISBN'].split('❦')
+            for el in x:
+                if (el, row['year']) in ISBN_dict:
+                    ISBN_dict[(el, row['year'])].append(row['001'])
+                else:
+                    ISBN_dict[(el, row['year'])] = [row['001']]
+    ISBN_dict = {k:tuple(v) for k,v in ISBN_dict.items() if len(v) > 1}
+    ISBN_dict = list(set([v for k,v in ISBN_dict.items()]))
+    ISBN_dict = {e[0]:e[1] for e in ISBN_dict}
+    
+    group['001'] = group['001'].replace(ISBN_dict)
+    
+    ISBN_grouped = group.groupby('001')
+   
+    group = pd.DataFrame()
+    for sub_name, sub_group in ISBN_grouped:
+        try:
+            group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() + sub_group['group_ids'].to_list() if pd.notnull(e)]))
+        except KeyError:
+            group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() if pd.notnull(e)]))
+        sub_group['group_ids'] = group_ids
+        for column in sub_group:
+            if column in ['fiction_type', 'audience', '490', '500', '650', '655', '700']:
+                sub_group[column] = '❦'.join(sub_group[column].dropna().drop_duplicates().astype(str))
+            else:
+                try:
+                    sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
+                except ValueError:
+                    sub_group[column] = np.nan
+        group = group.append(sub_group)
+    
+    group = group.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+    group['001'] = group['001'].astype(np.int64)
+    
+    group['group_ids'] = group['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+    group = group.drop(columns='ISBN').drop_duplicates().reset_index(drop=True)
+    phase_3 = phase_3.append(group)
+         
+phase_3_grouped = phase_3.groupby(['author_id', 'language', 'work_id', 'year'], dropna=False).filter(lambda x: len(x) > 1)
+oclc_duplicates_list = phase_3_grouped['001'].drop_duplicates().tolist()
+phase_3_grouped = phase_3_grouped.groupby(['author_id', 'language', 'work_id', 'year'], dropna=False)
+
+groupby = pd.DataFrame()
+for sub_name, sub_group in tqdm(phase_3_grouped, total=len(phase_3_grouped)):
+    try:
+        group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() + sub_group['group_ids'].to_list() if pd.notnull(e)]))
+    except KeyError:
+        group_ids = '❦'.join(set([str(e) for e in sub_group['001'].to_list() if pd.notnull(e)]))
+    sub_group['group_ids'] = group_ids
+    for column in sub_group:
+        if column in ['fiction_type', 'audience', '490', '500', '650', '655', '700']:
+            sub_group[column] = '❦'.join(sub_group[column].dropna().drop_duplicates().astype(str))
+        else:
+            try:
+                sub_group[column] = max(sub_group[column].dropna().astype(str), key=len)
+            except ValueError:
+                sub_group[column] = np.nan
+    groupby = groupby.append(sub_group)
+      
+groupby = groupby.drop_duplicates().replace(r'^\s*$', np.nan, regex=True)
+groupby['001'] = groupby['001'].astype(np.int64)
+
+phase_4 = phase_3.loc[~phase_3['001'].isin(oclc_duplicates_list)]
+phase_4 = pd.concat([phase_4, groupby])
+phase_4['group_ids'] = phase_4['group_ids'].apply(lambda x: '❦'.join(set(x.split('❦'))) if pd.notnull(x) else x)
+
+phase_1.to_excel(writer, index=False, sheet_name='phase_1')    
+phase_2.to_excel(writer, index=False, sheet_name='phase_2')  
+phase_3.to_excel(writer, index=False, sheet_name='phase_3') 
+phase_4.to_excel(writer, index=False, sheet_name='phase_4') 
+writer.save()
+writer.close()  
+
+print(Counter(phase_4['work_id'] != 0))
+# Counter({True: 25375, False: 7197}) 78%
+
+#%% genre and audience
+
+translations_df = phase_4.copy()
+
+translations_df = pd.read_excel('translation_deduplicated_2022-03-28.xlsx', sheet_name='phase_4')
+ttt_df = translations_df.copy()
+translations_df = ttt_df.copy()
+#28523
+
+translations_df['cluster_genre'] = translations_df['fiction_type'].apply(lambda x: genre(x))
+# test = translations_df[['001', 'cluster_genre', 'fiction_type']]
+genre_groupby = translations_df.groupby(['author_id', 'work_id'], dropna=False)
+# ttt = translations_df.groupby(["author_id", "work_id"]).size()
+
+translations_df = pd.DataFrame()
+for name, group in tqdm(genre_groupby, total=len(genre_groupby)):
+    # name = ('4931097', 593302)
+    # group = genre_groupby.get_group(name)
+    if pd.notnull(name[-1]):
+        group['genre'] = genre_algorithm(group)
+    translations_df = translations_df.append(group)
+    
+# ttt = translations_df[['001', 'fiction_type', 'cluster_genre', 'genre']] 
+
+translations_df['audience_label'] = translations_df['audience'].apply(lambda x: get_audience(x))
+
+# ttt = translations_df[['001', 'audience', 'audience_label']]
+
+translations_df.to_excel(f'translation_database_clusters_year_author_language_work_genre_audience_{now}.xlsx', index=False)
+
+translations_df = pd.read_excel('translation_database_clusters_year_author_language_work_genre_audience_2022-03-29.xlsx')
+
+
+test = translations_df[['001', 'author_id', 'work_id', 'simple_original_title', 'simple_target_title', 'fiction_type', 'cluster_genre']]
+test.loc[test['cluster_genre'].isnull(), 'cluster_genre'] = 'other'
+test = test[test['work_id'].notnull()]
+
+genre_groupby = test.groupby(['author_id', 'work_id'], dropna=False)
+test = pd.DataFrame()
+for name, group in tqdm(genre_groupby, total=len(genre_groupby)):
+    # name = 122727892
+    # group = groupby.get_group(name)
+    original_title = Counter(group['simple_original_title'].to_list()).most_common(1)[0][0]
+    if pd.notnull(original_title):
+        group['simple_original_title'] = original_title
+    elif name != 0:
+        group['simple_original_title'] = Counter(group['simple_target_title'].to_list()).most_common(1)[0][0]
+    else:
+        group['simple_original_title'] = '[no title]'
+    test = test.append(group)
+
+genre_groupby = test.groupby(['author_id', 'work_id'], dropna=False)
+ttt = pd.DataFrame()
+for name, group in tqdm(genre_groupby, total=len(genre_groupby)):
+    # name = ('4931097', 593302)
+    # group = genre_groupby.get_group(name)
+    if pd.notnull(name[-1]):
+        tete = [e.split('❦') for e in group['cluster_genre'].to_list()]
+        tete = [e for sub in tete for e in sub]
+        length = len(tete)
+        tete = dict(Counter(tete))
+        tete = {k:v/length for k,v in tete.items()}
+        for el in tete:
+            group[el] = tete[el]
+    ttt = ttt.append(group)
+
+ttt2 = ttt.drop(columns=['001', 'fiction_type', 'cluster_genre', 'simple_target_title']).drop_duplicates().sort_values(['author_id', 'work_id'])
+
+languages = dict(Counter(translations_df['language'].to_list()))
+languages = dict(sorted(languages.items(), key=lambda item: item[1], reverse=True))
+languages = list(languages.items())
+
+
+
+
+
+
+
+test = translations_df[['001', 'author_id', 'work_id', 'simple_original_title', 'language', 'year', 'fiction_type', 'cluster_genre', 'genre', 'audience', 'audience_label', 'place']]
+
+
+
+
+
+
+
+
+
+
+
+def audience_algorithm(df):
+    x = [e.split('❦') for e in df['audience_label'].to_list()]
+    x = [e for sub in x for e in sub]
+    length = len(x)
+    x = Counter(x)
+    if x['Juvenile']/length > 0.1:
+        return 'Juvenile'
+    elif x['General']/length > 0.1:
+        return 'General'
+    else:
+        return 'other'
+
+audience_groupby = translations_df.groupby(['author_id', 'work_id'], dropna=False)
+test = pd.DataFrame()
+for name, group in tqdm(audience_groupby, total=len(audience_groupby)):
+    # name = ('4931097', 593302)
+    # group = genre_groupby.get_group(name)
+    if pd.notnull(name[-1]):
+        group['final_audience'] = audience_algorithm(group)
+    test = test.append(group)
+
+places = test['place'].drop_duplicates().to_list()
+
+
+ttt = translations_df[translations_df['place'] == 'praha bratislava'][['260', 'place']]
+
 
 
 
@@ -1269,16 +1670,7 @@ not_correct.to_excel(writer, index=False, sheet_name='LQ')
 writer.save()
 writer.close()
 
-#%% cluster genre – coś tu się dziwnego dzieje
 
-correct['cluster_genre'] = correct['fiction_type'].apply(lambda x: genre(x))
-
-correct_grouped = correct.groupby('cluster_titles')
-
-correct = pd.DataFrame()
-for name, group in tqdm(correct_grouped, total=len(correct_grouped)):
-    group['cluster_genre'] = genre_algorithm(group)
-    correct = correct.append(group)
 
 #%% sprawdzenie po wzbogaceniu o tytuły oryginałów
 

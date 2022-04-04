@@ -10,11 +10,21 @@ from more_itertools import split_at
 from docx import *
 from docx.shared import RGBColor
 
-
+#%%def
+def check_if_all_none(list_of_elem):
+    """ Check if all elements in list are None """
+    result = True
+    for elem in list_of_elem:
+        if elem is not None:
+            return False
+    return result
 #%% nowe podejście
 
 document = Document("C:\\Users\\Cezary\\Downloads\\X. 2  Albania - Peru.docx")
 #wydobywanie autorów po stylu czcionki
+
+#może zliczyć jeszcze rozkład lowercase i uppercase?
+
 total = []
 for paragraph in tqdm(document.paragraphs):
     letters = []
@@ -33,40 +43,39 @@ for paragraph in tqdm(document.paragraphs):
         letters.append(run.text)
         italic.append(run.italic)
         bold.append(run.bold)
-    total.append([paragraph.text, letters, styles, sizes, colours, italic, bold])
+        uppercases_chains = [len(e) for e in re.findall('\p{Lu}+', paragraph.text)]
+    total.append([paragraph.text, letters, styles, sizes, colours, italic, bold, uppercases_chains])
+
+# test dowolna pozycja z Total: print(total[5])
 
 literatury = []
 for ind, el in enumerate(total):
     # el = total[5]
-    if RGBColor(0xff, 0x00, 0x00)in el[-3]:
-        good_indices = [i for i,e in enumerate(el[-3]) if e == RGBColor(0xff, 0x00, 0x00)]
-        is_italic = [el[-2][i] for i in good_indices]
-        is_bold = [el[-1][i] for i in good_indices]
+    if RGBColor(0xff, 0x00, 0x00)in el[4]:
+        good_indices = [i for i,e in enumerate(el[4]) if e == RGBColor(0xff, 0x00, 0x00)]
+        is_italic = [el[5][i] for i in good_indices]
+        is_bold = [el[6][i] for i in good_indices]
         if not any(is_italic) and not any(is_bold):
             literatury.append((ind, el[0]))
-test = {}
+final_dict = {}
 for i, (index, lit) in enumerate(literatury):
+    lit = lit.replace("  ", "|").replace(" ", "").replace("|", " ").replace("  ", " ").strip()
     if i in range(len(literatury)-1):
-        test[lit] = (index, literatury[i+1][0])
+        final_dict[lit] = (index, literatury[i+1][0])
     else:
-        test[lit] = (index, ind)
+        final_dict[lit] = (index, ind)
+##final_dict czyszczenie białych znaków Literatura: "G R E C J A    w s p ó ł c z e s n a,  ś r e d n i o w i e c z n a,  s t a r o ż y t n a   GR".replace("  ", "|").replace(" ", "").replace("|", " ").replace("  ", " ")
 
-def check_if_all_none(list_of_elem):
-    """ Check if all elements in list are None """
-    result = True
-    for elem in list_of_elem:
-        if elem is not None:
-            return False
-    return result
 
 checklists = [['Arial Black'], [9]]
 
-for lit, (i_start, i_end) in test.items():
+for lit, (i_start, i_end) in final_dict.items():
     # i_start = 260
     # i_end = 780
     lit_list = total[i_start:i_end]
     # paragraph = total[932]
-    
+    # paragraph = total[39]
+    #7525, 11176, 58
     authors = []
     for index, paragraph in enumerate(lit_list):
         results = []
@@ -80,10 +89,15 @@ for lit, (i_start, i_end) in test.items():
         #         result = True
         #         results.append(result)
         #     else: results.append(False)
-        results.append(check_if_all_none(paragraph[5]) or bool(re.search('Nobel\s+\d+', paragraph[0])))
+        # try:
+        #     results.append(all([paragraph[3][0] != 10, paragraph[3][1] != 10 if paragraph[1][0] == '\t' else True]))
+        # except IndexError:
+        #     results.append(False)
+        results.append(any(e > 1 for e in paragraph[-1]))
+        results.append(check_if_all_none(paragraph[5]) or bool(re.search('Nobel\s+\d+', paragraph[0])) or not any(paragraph[5]))
         results.append(9 in paragraph[3])
         # results.append(all([e == False for e in paragraph[-1]]))
-        results.append(any(el in [1,2] for el in [i for i, e in enumerate(paragraph[2]) if e == 'Arial Black']))
+        results.append(any(el in [0,1,2] for el in [i for i, e in enumerate(paragraph[2]) if e == 'Arial Black']))
         try:
             results.append(paragraph[0].strip()[0] != '*')
             results.append(paragraph[0].strip()[-1] != '*')
@@ -95,9 +109,73 @@ for lit, (i_start, i_end) in test.items():
     authors = [(e[0], authors[i+1][0] if i in range(len(authors)-1) else i_end, e[-1]) for i, e in enumerate(authors)]
     temp_dict = {}
     for st, end, aut in authors:
+        aut = re.sub("\s+", " ", aut.strip())
         temp_dict[aut] = (st, end)
-    test[lit] = temp_dict
+    final_dict[lit] = temp_dict
+
+## test czyszczenie białych znaków Autor re.sub("\s+", " ", "	BASHA,  Eqrem   1948–                     ".strip())
     
+info_o_publikacjach = []
+errors = []
+
+for lit in tqdm(final_dict):
+    for aut, (i_start, i_end) in final_dict[lit].items():
+        # i_start = 28
+        # i_end = 34
+        
+        aut_list = total[i_start:i_end]
+        
+        zakres_autora = [e[0] for e in aut_list]
+        zakres_autora = [e.strip() for e in zakres_autora]
+        try:
+            zakres_autora = [f'{e} {zakres_autora[i+1]}' if e[-1] == ';' else e for i,e in enumerate(zakres_autora) if i != [ind for ind,el in enumerate(zakres_autora) if el[-1] == ';'][0]+1]
+        except IndexError: pass
+        
+        liczba_publikacji = len([e for e in zakres_autora if e.strip() == '.'])
+        indeksy_publikacji = [e[0] for e in enumerate(zakres_autora) if e[1].strip() == '.']
+        dlugosc_listy_osoby = [e[0] for e in enumerate(zakres_autora)]
+        zakresy_publikacji = [e for e in list(split_at(dlugosc_listy_osoby[2:], lambda x: x in indeksy_publikacji)) if e]
+        try:
+            if zakres_autora[1] == 'w i e r s z e':
+                for publikacja in zakresy_publikacji:
+                    # publikacja = zakresy_publikacji[2]
+                    autor = zakres_autora[0]
+                    typ_pub = zakres_autora[1]
+                    try:
+                        wspolpracownik_rola = re.findall("^.+?\t", zakres_autora[publikacja[0]])[0].strip()
+                        do_usuniecia = re.findall("^.+?\t", zakres_autora[publikacja[0]])[0]
+                    except IndexError:
+                        pass
+                    wspolpracownik_nazwisko = re.sub("^(.+?)(\p{Lu}.+)", r"\2", zakres_autora[publikacja[0]])
+                    wspolpracownik_nazwisko = zakres_autora[publikacja[0]].replace(do_usuniecia, "")
+                    for opis in publikacja[1:]:
+                        opis_bibliograficzny = zakres_autora[opis].split(", ")[0].strip()
+                        if opis_bibliograficzny[0] != "~":
+                            rok_i_numer = opis_bibliograficzny.split("s.")[0].strip()
+                        else:
+                            opis_bibliograficzny = opis_bibliograficzny.replace("~", rok_i_numer)
+                    
+                        tytuly = zakres_autora[opis].split(", ", maxsplit=1)[1].strip()
+                        temp_dict = {"autor": autor,
+                                     "typ publikacji": typ_pub,
+                                     "współpracownik - rola": wspolpracownik_rola,
+                                     "współpracownik - nazwisko": wspolpracownik_nazwisko,
+                                     "opis bibliograficzny": opis_bibliograficzny,
+                                     "tytuły utworów": tytuly}
+                        info_o_publikacjach.append(temp_dict)
+            else: errors.append((i_start, i_end, zakres_autora))
+        except IndexError: errors.append((i_start, i_end, zakres_autora))
+        
+#tabela z danymi
+df = pd.DataFrame(info_o_publikacjach)
+df.to_excel("tabela.xlsx", index = False)    
+
+
+
+
+##do uporządkowania: 1)publikacje uznane za autora na liście autorów - brak autorow PEPETELA 214 2)parsowanie całości 
+###inne: 1)oznaczenie kolorem niebieskim (kolor inny niz czarny lub czerwony)
+
 #TUTAJ
     
 literatura = test['A L B A N I A   AL         ']
