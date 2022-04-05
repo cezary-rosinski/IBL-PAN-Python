@@ -19,6 +19,7 @@ import pickle
 import sys
 sys.path.insert(1, 'C:/Users/Cezary/Documents/SPUB-project')
 from geonames_accounts import geoname_users
+from collections import Counter
 
 #%% date
 now = datetime.datetime.now()
@@ -40,52 +41,100 @@ places.drop(columns='008', inplace=True)
 places['country'] = places['country'].str.replace('\\', '', regex=False)
 places['country_name'] = places['country'].apply(lambda x: country_codes[x] if x in country_codes else 'unknown')
 
-places['places'] = places['260'].str.replace(' - ', '$a')
+# places['places'] = places['260'].str.replace(' - ', '$a')
+places['places'] = places['260'].apply(lambda x: re.sub('( : )(?!\$)', r' $b', x) if pd.notnull(x) else x)
+places['places'] = places['places'].apply(lambda x: re.sub('( ; )(?!\$)', r' $a', x) if pd.notnull(x) else x)
 places['places'] = places['places'].apply(lambda x: [list(e.values())[0] for e in marc_parser_dict_for_field(x, '\$') if '$a' in e] if pd.notnull(x) else x)
 places['places'] = places['places'].apply(lambda x: x if x else np.nan)
+
+test = places[places['places'].apply(lambda x: any([bool(re.search('\d', e)) for e in x]) if not(isinstance(x, float)) else False)]
+test['places'] = test['places'].apply(lambda x: [el for sub in [re.split('\d+', e) for e in x] for el in sub if el])
+places = places[~places['001'].isin(test['001'])]
+places = pd.concat([places, test])
+
+test = places[places['places'].apply(lambda x: any([bool(re.search(' - ', e)) for e in x]) if not(isinstance(x, float)) else False)]
+test['places'] = test['places'].apply(lambda x: [el for sub in [e.split(' - ') for e in x] for el in sub if el])
+places = places[~places['001'].isin(test['001'])]
+places = pd.concat([places, test])
+
+test = places[places['places'].apply(lambda x: any([bool(re.search(', ', e)) for e in x]) if not(isinstance(x, float)) else False)]
+test['places'] = test['places'].apply(lambda x: [el for sub in [e.split(', ') for e in x] for el in sub if el])
+places = places[~places['001'].isin(test['001'])]
+places = pd.concat([places, test])
+
+test = places[places['places'].apply(lambda x: any([bool(re.search('\[', e)) for e in x]) if not(isinstance(x, float)) else False)]
+test['places'] = test['places'].apply(lambda x: [el for sub in [e.split('[') for e in x] for el in sub if el])
+places = places[~places['001'].isin(test['001'])]
+places = pd.concat([places, test])
+
 places['simple'] = places['places'].apply(lambda x: [simplify_string(e).strip() for e in x] if (isinstance(x, list) and pd.notnull(x).all()) else x if pd.notnull(x) else x)
 
 places_dict = {}
 for i, row in tqdm(places.iterrows(), total=places.shape[0]):
     try:
         for el in row['simple']:
-            if el not in places_dict:
-                places_dict[el] = [row['001']]
-            else: places_dict[el].append(row['001'])
+            if el and el not in places_dict:
+                places_dict[el] = {'records': [row['001']],
+                                   'country': [row['country_name']]}
+            elif el: 
+                places_dict[el]['records'].append(row['001'])
+                places_dict[el]['country'].append(row['country_name'])
     except TypeError:
         pass
 
-frequency = {k:len(v) for k,v in places_dict.items()}
+places_dict = {k:{ka:va if ka=='records' else Counter(va).most_common(1)[0][0] for ka, va in v.items()} for k,v in places_dict.items()}
+               
+frequency = {k:len(v['records']) for k,v in places_dict.items()}
 
-places_ordered = [e for e in sorted([e for e in frequency], key=frequency.get, reverse=True) if e and not(e[0].isnumeric()) and len(e) > 2]
+places_ordered = [e for e in sorted([e for e in frequency], key=frequency.get, reverse=True)]
 
-places_clusters = cluster_strings(places_ordered, 0.7)
+places_clusters = cluster_strings(places_ordered, 0.65)
+
+# {k:v for k,v in places_clusters.items() if 'berlin ost' in v}
+
+#sprawdzić zilina czechoslovakia, zu beziehen ostermundigen, zurich  prag, zurich postfach, zurich seefeldstr
 
 places_geonames = {}
 users_index = 0
 
 for place in tqdm(places_ordered):
     # place = 'amsterdam'
+    # place = 'berlin ost'
+    # place = 'chicago'
+    # place = 'leningrad'
+    # place = 'pl 55 praha'
+    # place = 'izabelin'
     while True:
         url = 'http://api.geonames.org/searchJSON?'
-        params = {'username': geoname_users[users_index], 'q': place, 'featureClass': 'P'}
+        params = {'username': geoname_users[users_index], 'q': place, 'featureClass': 'P', 'fuzzy': '0.5'}
         result = requests.get(url, params=params).json()
         if 'status' in result:
             users_index += 1
             continue
-        if result['totalResultsCount'] > 0:
+        if result['totalResultsCount'] > 0:  
+            try:
+                best_selection = [e for e in result['geonames'] if e['countryName'] == {v['country'] for k,v in places_dict.items() if k == place}.pop()]
+                places_geonames.update({place: max(best_selection, key=lambda x: x['population'])})
+            except ValueError:
+                try:
+                    best_selection = [e for e in result['geonames'] if e['adminName1'] == {v['country'] for k,v in places_dict.items() if k == place}.pop()]
+                    places_geonames.update({place: max(best_selection, key=lambda x: x['population'])})
+                
+                except ValueError:
+                    places_geonames.update({place: max(result['geonames'], key=lambda x: x['population'])})
+            
             #nie mogę brać max population, bo dla amsterdamu to jest Nowy Jork
             #trzeba brać 1. sugestię geonames
             # places_geonames.update({place: max(result['geonames'], key=lambda x: x['population'])})
             #!!!!!tutaj dodać klucz państwa!!!!!!!
-            places_geonames.update({place: result['geonames'][0]})
+            # places_geonames.update({place: result['geonames'][0]})
         else: places_geonames.update({place: 'No geonames response'})
         break
 
-with open('translations_places_no_fuzzy.pickle', 'wb') as handle:
+with open('translations_places.pickle', 'wb') as handle:
     pickle.dump(places_geonames, handle, protocol=pickle.HIGHEST_PROTOCOL)
-with open('translations_places.pickle', 'rb') as handle:
-    places_geonames_old = pickle.load(handle)
+with open('translations_places_no_fuzzy.pickle', 'rb') as handle:
+    places_geonames = pickle.load(handle)
 
 
 x = ['beograd', 'v belgrad', 'u beogradu', 'petrograd', 'beograd nolit']
