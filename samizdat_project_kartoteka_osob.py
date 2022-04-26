@@ -148,12 +148,14 @@ groupby = kartoteka_osob.groupby('Project_ID')
 #DataSource – classification
 #sztorc
 
+#sub-objects - located - powiązać z kartoteką miejsc
+
 
 people_dict = {}
 for name, group in tqdm(groupby, total=len(groupby)):
     # 198, 346, 936, 1947, 1883, 1045, 520
-    # name = '2059'
-    # group = groupby.get_group(name)
+    name = '168'
+    group = groupby.get_group(name)
     try:
         sex_label = group['sexLabel.value'].dropna().drop_duplicates().to_list()[0]
     except IndexError: sex_label = np.nan
@@ -397,3 +399,57 @@ test = {k:v for k,v in dict(Counter(people_file['Project_ID'])).items() if v > 1
 viafy_osob = kartoteka_osob.loc()[kartoteka_osob['autor.value'].notnull()]['viaf_ID'].drop_duplicates().to_list()
 
 list_of_dicts = ask_wikidata_for_places(viafy_osob)
+
+
+#%% wszystkie osoby, których nie ma na przykładzie Bieleckiego po name_form_id
+
+etap1 = gsheet_to_df('1Y8Y_pfkuKiv5npL6QJAXWbDO6twIJqsK3ArvaokjFkU', 'samizdat')
+etap1_adresy = [e.split('|') for e in etap1['name_form_id'].to_list()]
+etap1_adresy = set([e for sub in etap1_adresy for e in sub])
+
+etap2 = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', 'dane_biblio')
+etap2_adresy = [e.split('|') for e in etap2['name_form_id'].to_list()]
+etap2_adresy = set([e for sub in etap2_adresy for e in sub])
+
+roznica = list(etap1_adresy - etap2_adresy)
+
+etap1_dict = dict(zip(etap1['name_form'].to_list(), etap1['name_form_id'].to_list()))
+etap1_dict = {k:v.split('|') for k,v in etap1_dict.items()}
+
+roznica_dict = {k:v for k,v in etap1_dict.items() if any(e in roznica for e in v)}
+roznica_dict = {k:'|'.join(v) for k,v in roznica_dict.items()}
+
+roznica_df = pd.DataFrame.from_dict(roznica_dict, orient='index')
+roznica_df.to_excel('test.xlsx')
+
+
+
+roznica_dict_bez_all_pbl = {k:v for k,v in roznica_dict.items() if len(v) != len([e for e in v if 'pbl' in e])}
+
+
+
+
+
+
+
+x = 'bn_books-27072-bnb1329-X100-%1|bn_books-27100-bnb1330-X100-%1|bn_books-27121-bnb1331-X100-%1|bn_books-27148-bnb1332-X100-%1|bn_books-27163-bnb1333-X100-%1|bn_books-27182-bnb1334-X100-%1|bn_books-27203-bnb1335-X100-%1|cz_books-2428302-czb202-X600-$$a|cz_books-2429199-czb618-X700-$$a|cz_articles-2367383-cza244-X100-$$a|cz_articles-2390770-cza248-X100-$$a|cz_articles-2167498-cza428-X600-$$a|cz_articles-2168390-cza454-X600-$$a|cz_articles-2168646-cza458-X600-$$a|cz_articles-2363295-cza629-X600-$$a|cz_articles-2363397-cza634-X600-$$a|cz_articles-2367749-cza670-X600-$$a|cz_articles-2393543-cza778-X600-$$a|cz_articles-2393570-cza783-X600-$$a|cz_articles-2421154-cza1015-X600-$$a|cz_articles-2115367-cza1164-X700-$$a|cz_articles-2389626-cza1314-X700-$$a|cz_articles-2397438-cza1334-X700-$$a|cz_articles-2404320-cza1394-X700-$$a'.split('|')
+len(x)
+
+[e for e in roznica_dict_bez_all_pbl["Havel V~'aclav|Havel, Vaclav"] if 'pbl' not in e]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

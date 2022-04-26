@@ -75,6 +75,7 @@ group_3 = df_parsed[(~df_parsed['index'].isin(group_1['index'])) &
 
 group_1['viaf_id'] = ''
 for i, row in tqdm(group_1.iterrows(), total=group_1.shape[0]):
+    'http://viaf.org/viaf/sourceID/NKC%7C{row['$7']}/viaf.json'
     url = f"http://viaf.org/viaf/sourceID/NKC%7C{row['$7']}/json"
     response = requests.get(url).url
     viaf_id = re.findall('\d+', response)[0]

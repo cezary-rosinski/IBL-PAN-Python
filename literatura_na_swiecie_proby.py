@@ -9,6 +9,7 @@ import regex as re
 from more_itertools import split_at
 from docx import *
 from docx.shared import RGBColor
+from xml.etree import ElementTree as ET
 
 #%%def
 def check_if_all_none(list_of_elem):
@@ -22,7 +23,8 @@ def check_if_all_none(list_of_elem):
 
 document = Document("C:\\Users\\Cezary\\Downloads\\X. 2  Albania - Peru.docx")
 #wydobywanie autorów po stylu czcionki
-
+# with open("filename.xml", "w", encoding='utf-8') as f:
+#     f.write(test)
 #może zliczyć jeszcze rozkład lowercase i uppercase?
 
 total = []
@@ -33,6 +35,10 @@ for paragraph in tqdm(document.paragraphs):
     colours = []
     italic = []
     bold = []
+    try:
+        tab_value = [e.position for e in paragraph.paragraph_format.tab_stops]#[0]
+    except IndexError:
+        tab_value = None
     for run in paragraph.runs:
         try:
             sizes.append(run.font.size.pt)
@@ -44,7 +50,7 @@ for paragraph in tqdm(document.paragraphs):
         italic.append(run.italic)
         bold.append(run.bold)
         uppercases_chains = [len(e) for e in re.findall('\p{Lu}+', paragraph.text)]
-    total.append([paragraph.text, letters, styles, sizes, colours, italic, bold, uppercases_chains])
+    total.append([paragraph.text, letters, styles, sizes, colours, italic, bold, uppercases_chains, tab_value])
 
 # test dowolna pozycja z Total: print(total[5])
 
@@ -93,7 +99,7 @@ for lit, (i_start, i_end) in final_dict.items():
         #     results.append(all([paragraph[3][0] != 10, paragraph[3][1] != 10 if paragraph[1][0] == '\t' else True]))
         # except IndexError:
         #     results.append(False)
-        results.append(any(e > 1 for e in paragraph[-1]))
+        results.append(any(e > 1 for e in paragraph[-2]))
         results.append(check_if_all_none(paragraph[5]) or bool(re.search('Nobel\s+\d+', paragraph[0])) or not any(paragraph[5]))
         results.append(9 in paragraph[3])
         # results.append(all([e == False for e in paragraph[-1]]))
@@ -113,6 +119,81 @@ for lit, (i_start, i_end) in final_dict.items():
         temp_dict[aut] = (st, end)
     final_dict[lit] = temp_dict
 
+# spróbować podzielić string przez liczbę elementów w liście z tabulatorami, dzieląc po \t lub wielokrotnej spacji
+# spodziewam się otrzymać schodki i chcę dziedziczyć info na wyższym schodku
+start_ind = 12
+end_ind = 20
+    
+test = [[e[-1][:-1], e[0]] for e in total[start_ind:end_ind]]
+test = [[e[0], e[1], [i for i, el in enumerate(re.finditer('\t', e[1]))]] for e in test]
+test = [[[el for i, el in enumerate(a) if i in c],b,c] for a,b,c in test]
+
+
+text = [e for e in '\n'.join([e[0] for e in total[start_ind:end_ind]]).split('\t') if e]
+text = [e for e in text if not(re.match('\s', e[0]))]
+test = [e[0] for e in test if e[0]]
+test = [int(e) for sub in test for e in sub]
+
+groups = []
+counter = 0
+for ind, number in enumerate(test):
+    if ind == 0 or number > test[ind-1]:
+        groups.append(counter)
+    else:
+        counter += 1
+        groups.append(counter)
+        
+order = []
+counter = 0
+for ind, number in enumerate(test):
+    if ind == 0 or number > test[ind-1]:
+        counter += 1
+        order.append(counter)
+    else:
+        counter = 1
+        order.append(counter)
+
+#teraz indeksy z order nie referują do tych samych elementów, trzeba je wyrównać do prawej (czyli do długości najdłuższej podlisty)
+    
+biblio_dict = {}
+for ind, string, group in zip(test, text, order):
+    if group not in biblio_dict:
+        biblio_dict[group] = {ind: string}
+    else:
+        biblio_dict[group].update({ind: string})       
+
+df = pd.DataFrame.from_dict(biblio_dict, orient= 'index').sort_index()
+columns = sorted(df.columns.values)
+df = df.reindex(columns=columns)
+df.to_excel('test.xlsx', index=False)
+
+
+
+test = [e[-1][:-1] for e in total[43:58] if e[-1][:-1]]
+test = [e for sub in test for e in sub]
+del test[-12]
+
+
+test = [(e[0][:-1], e[-1]) for e in test]
+test = [e for e in test if e[0]]
+[e[0] for e in test]
+
+# [(e[-1], e[0]) for e in total[7419:7441]]
+
+lista = []
+for ind, (t1, t2) in enumerate(test):
+    if t1 >= test[ind-1][0]:
+        lista[-1].append(t2)
+    else:
+        lista.append([t2])
+
+ mrk_list = []
+    for row in marc_list:
+        if row.startswith('=LDR'):
+            mrk_list.append([row])
+        else:
+            if row:
+                mrk_list[-1].append(row)
 ## test czyszczenie białych znaków Autor re.sub("\s+", " ", "	BASHA,  Eqrem   1948–                     ".strip())
     
 info_o_publikacjach = []
