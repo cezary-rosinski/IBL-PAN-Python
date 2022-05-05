@@ -1516,7 +1516,96 @@ writer.close()
 
 print(Counter(phase_4['work_id'] != 0))
 # Counter({True: 25375, False: 7197}) 78%
+#%% wizyta Czechów
+translations_df = pd.read_excel('translation_deduplicated_2022-03-28.xlsx', sheet_name='phase_4')
+with open('translations_ov_more_to_delete.txt', 'rt') as f:
+    to_del = f.read().splitlines()
+    
+translations_df = translations_df[~translations_df['001'].isin(to_del)]
 
+work_ids = dict(zip(translations_df['001'], translations_df['work_id']))
+
+work_ids_list = list(work_ids.values())
+
+#sizes of clusters
+work_ids_counter = dict(Counter(work_ids_list))
+work_ids_nan = {k:v for k,v in work_ids_counter.items() if pd.isnull(k)}
+work_ids_numbers = {k:v for k,v in work_ids_counter.items() if pd.notnull(k) and v >= 10}
+
+# max(work_ids_numbers, key=work_ids_numbers.get)
+# work_ids_numbers[max(work_ids_numbers, key=work_ids_numbers.get)]
+
+# temp_df = translations_df[translations_df['work_id'] == max(work_ids_numbers, key=work_ids_numbers.get)]
+
+# no_of_authors = Counter(translations_df[translations_df['work_id'].isin(work_ids_numbers)]['author_id'])
+
+# temp_df = translations_df[translations_df['work_id'].isin(work_ids_numbers)][['001', 'author_id', 'work_id']]
+
+# temp_df = translations_df[translations_df['author_id'].isin(no_of_authors)][['001', 'author_id', 'work_id']]
+
+#how many work_ids with more than 1 language
+
+work_id_more_lang = translations_df.groupby(['work_id']).filter(lambda x: len(x) and len(set(x['language'])) >= 2)[['001', 'author_id', 'work_id', 'language']]
+
+no_of_works = work_id_more_lang['work_id'].drop_duplicates().shape[0]
+works = set(work_id_more_lang['work_id'])
+
+#combining two approaches: size of a cluster >= 5 and at least 2 languages
+work_ids = [e for e in work_ids_numbers if e in works]
+
+proper_columns = ['001', '240', '245', '260', 'author_id', 'work_id', 'work_title', '490', '500', 'simple_original_title', '776', 'sorted']
+
+#testing Babicka
+author_df = translations_df[translations_df['author_id'] == '56763450']
+author_df = translations_df[translations_df['author_id'] == '52272']
+author_df = translations_df[translations_df['author_id'] == '51691735']
+author_df = translations_df[translations_df['author_id'] == '34458072']
+
+temp_groupby = author_df.groupby('work_id')
+
+test = dict(author_df.groupby('work_id')['work_id'].count())
+author_df['sorted'] = author_df['work_id'].apply(lambda x: test[x] if x in test else np.nan)
+author_df = author_df.sort_values(['sorted', 'work_id'], ascending=[False, False])
+author_df = author_df[author_df.columns.intersection(proper_columns)]
+
+
+# temp_df = sorted(temp_groupby,  # iterates pairs of (key, corresponding subDataFrame)
+#                  key=lambda x: len(x[1]),  # sort by number of rows (len of subDataFrame)
+#                  reverse=True)  # reverse the sort i.e. largest first
+
+# temp_df = pd.concat([e[-1] for e in temp_df])
+
+# temp_df = temp_df.append(author_df[~author_df['001'].isin(temp_df['001'])])
+
+# temp_df = temp_df[temp_df.columns.intersection(proper_columns)]
+import matplotlib.pyplot as plt
+from kneed import KneeLocator
+
+
+temp_dict = dict(author_df.groupby('work_id')['work_id'].count().div(len(author_df)))
+
+(x, y) = zip(*dict(sorted(temp_dict.items(), key=lambda item: item[1], reverse=True)).items())
+x = tuple([i for i, e in enumerate(x,1)])
+kn = KneeLocator(x, y, curve='convex', direction='decreasing')
+plt.plot(x, y, 'bx-')
+plt.vlines(round(kn.knee/2)-1, plt.ylim()[0], plt.ylim()[1], linestyles='dashed')
+
+
+plt.scatter(x, y, alpha=0.5)
+plt.show()
+plt.savefig('translations_works.jpg')
+
+
+fig = author_df.groupby('work_id')['work_id'].count().div(len(author_df)).plot(kind='scatter', figsize = (40,10), title='work_id', legend=True, grid=True, lw=4).get_figure()
+fig.savefig('translations_works.jpg')
+
+
+# Generate a rank column that will be used to sort
+# the dataframe numerically
+df['Tm_Rank'] = df['Tm'].map(sorterIndex)
+
+                                                                            
+                                                                            
 #%% genre and audience
 
 translations_df = phase_4.copy()
