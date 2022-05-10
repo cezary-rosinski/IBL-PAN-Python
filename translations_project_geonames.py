@@ -468,6 +468,12 @@ help_dict = {'belgrade': 'belehrad',
 countries = {k:[places_geonames_ok[v.lower()]['geonameId']] if v.lower() in places_geonames_ok else [help_dict[v.lower()]['geonameId']] if isinstance(help_dict[v.lower()], dict) else [places_geonames_ok[help_dict[v.lower()]]['geonameId']] for k,v in countries.items()}
 
 places['geonames'] = places[['001', 'geonames']].apply(lambda x: countries[x['001']] if x['001'] in countries else x['geonames'], axis=1)
+
+# places_copy = places.copy()
+
+places['geonames'] = places['geonames'].apply(lambda x: list(set([e for e in x if pd.notnull(e)])) if isinstance(x, list) else x)
+places['geonames'] = places['geonames'].apply(lambda x: x if x else np.nan)
+
 #w tabeli nowa kolumna z państwem z geonames
 
 geonames_ids = [e for e in places['geonames'].to_list() if not(isinstance(e, float))]
@@ -491,9 +497,53 @@ with ThreadPoolExecutor(max_workers=50) as executor:
     
 places['geonames_country'] = places['geonames'].apply(lambda x: [geonames_resp[e] for e in x if not(isinstance(e, float))] if not(isinstance(x, float)) else x)   
     
+#dodać koordynaty
     
+def get_geonames_name(geoname_id):
+    # geoname_id = list(geonames_ids)[0]
+    user = random.choice(geoname_users)
+    #w funkcję wpisać losowanie randomowego username
+    try:
+        geonames_resp[geoname_id] = requests.get(f'http://api.geonames.org/getJSON?geonameId={geoname_id}&username={user}').json()['name']
+    except KeyError:
+        get_geonames_name(geoname_id)    
+        
+def get_geonames_coordinates(geoname_id):
+    # geoname_id = list(geonames_ids)[0]
+    user = random.choice(geoname_users)
+    #w funkcję wpisać losowanie randomowego username
+    try:
+        response = requests.get(f'http://api.geonames.org/getJSON?geonameId={geoname_id}&username={user}').json()
+        lat = response['lat']
+        lng = response['lng']
+        geonames_resp[geoname_id] = {'lat': lat,
+                                     'lng': lng}
+    except KeyError:
+        get_geonames_coordinates(geoname_id) 
     
+geonames_resp = {}
+with ThreadPoolExecutor(max_workers=50) as executor:
+    list(tqdm(executor.map(get_geonames_name, geonames_ids), total=len(geonames_ids)))
+places['geonames_place_name'] = places['geonames'].apply(lambda x: [geonames_resp[e] for e in x if not(isinstance(e, float))] if not(isinstance(x, float)) else x)   
+
+geonames_resp = {}
+with ThreadPoolExecutor(max_workers=50) as executor:
+    list(tqdm(executor.map(get_geonames_coordinates, geonames_ids), total=len(geonames_ids)))
+places['geonames_lat'] = places['geonames'].apply(lambda x: [geonames_resp[e]['lat'] for e in x if not(isinstance(e, float))] if not(isinstance(x, float)) else x)   
+places['geonames_lng'] = places['geonames'].apply(lambda x: [geonames_resp[e]['lng'] for e in x if not(isinstance(e, float))] if not(isinstance(x, float)) else x)  
+
+#wybrać właściwe kolumny
+
+places = places[['001', 'geonames', 'geonames_place_name', 'geonames_country', 'geonames_lat', 'geonames_lng']].rename(columns={'geonames':'geonames_id','geonames_place_name':'geonames_name'})
+
+translations_df = pd.merge(translations_df, places, on='001')
+with open('translations_ov_more_to_delete.txt', 'rt') as f:
+    to_del = f.read().splitlines()
+to_del = [int(e) for e in to_del]
     
+translations_df = translations_df[~translations_df['001'].isin(to_del)]
+
+translations_df.to_excel(f'translation_deduplicated_with_geonames_{now}.xlsx', index=False)
 
 
 
@@ -507,35 +557,6 @@ places['geonames_country'] = places['geonames'].apply(lambda x: [geonames_resp[e
 
 
 
-
-test = places[places['geonames'].apply(lambda x: any(pd.isnull(e) for e in x) if not(isinstance(x, float)) else False)]
-places_ok = places[~places['001'].isin(test['001'])]
-places_ordered_rest = [e for e in places_ordered_rest_from_dict if e not in places_geonames_ok]
-
-with open('places_rest.txt', 'w') as f:
-    for el in places_ordered_rest:
-        f.write(el+'\n')
-
-test_df = places[places['001'].isin(places_dict['pennsylvania']['records'])]
-
-sample_df = places[(places['simple'].apply(lambda x: any('-' in e for e in x) if not(isinstance(x, float)) else False)) &
-                   (places['geonames'].apply(lambda x: any(pd.isnull(e) for e in x) if not(isinstance(x, float)) else False))]
-
-#staty
-print(f'total no. of records: {places.shape[0]}')
-print(f'no. of records without place in 260: {places[places["geonames"].isna()].shape[0]}')
-print(f'no. of records with at least one geonames ID: {places[places["geonames"].apply(lambda x: any(pd.notnull(e) for e in x) if not(isinstance(x, float)) else False)].shape[0]}')
-print(f'geonames coverage: {places[places["geonames"].apply(lambda x: any(pd.notnull(e) for e in x) if not(isinstance(x, float)) else False)].shape[0]/places.shape[0]}')
-places.to_excel(f'translations_geonames_{now}.xlsx', index=False)
-
-
-test_df = places[places['260'].str.contains('❦', na=False)]
-
-
-# drop nan from list
-# coordinates for geonames
-# deduplicate geonames and countries
-# harvest cnl and build clusters for works
 
 
 

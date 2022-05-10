@@ -13,6 +13,7 @@ import pickle
 from copy import deepcopy
 from difflib import SequenceMatcher
 from ast import literal_eval
+import gspread as gs
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -1517,14 +1518,10 @@ writer.close()
 print(Counter(phase_4['work_id'] != 0))
 # Counter({True: 25375, False: 7197}) 78%
 #%% wizyta Czechów
-translations_df = pd.read_excel('translation_deduplicated_2022-03-28.xlsx', sheet_name='phase_4')
-with open('translations_ov_more_to_delete.txt', 'rt') as f:
-    to_del = f.read().splitlines()
-    
-translations_df = translations_df[~translations_df['001'].isin(to_del)]
+# translations_df = pd.read_excel('translation_deduplicated_2022-03-28.xlsx', sheet_name='phase_4')
+translations_df = pd.read_excel('translation_deduplicated_with_geonames_2022-05-10.xlsx')
 
 work_ids = dict(zip(translations_df['001'], translations_df['work_id']))
-
 work_ids_list = list(work_ids.values())
 
 #sizes of clusters
@@ -1553,7 +1550,50 @@ works = set(work_id_more_lang['work_id'])
 #combining two approaches: size of a cluster >= 5 and at least 2 languages
 work_ids = [e for e in work_ids_numbers if e in works]
 
+work_ids_sizes = {}
+for el in work_ids:
+    size = translations_df[translations_df['work_id'] == el].shape[0]
+    work_ids_sizes[el] = size
+
+work_ids_sizes = sorted(work_ids_sizes.items(), key= lambda x: x[1], reverse=True)
+
 proper_columns = ['001', '240', '245', '260', 'author_id', 'work_id', 'work_title', '490', '500', 'simple_original_title', '776', 'sorted']
+
+work_id_author_id_dict = dict(zip(translations_df['work_id'], translations_df['author_id']))
+
+
+from my_functions import create_google_worksheet
+
+for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_sizes)),1):
+    # ind = 1
+    # work_id, size = work_ids_sizes[ind]
+    ind = '{:03d}'.format(ind)
+    sheet = gc.create(f'{ind}.{int(work_id)}', '1x1ywDyyV-YwozVuV0B38uG7CH6mOe3OF')
+    author_id = work_id_author_id_dict[work_id]
+    author_df = translations_df[translations_df['author_id'] == author_id]
+    author_df = author_df[author_df.columns.intersection(proper_columns)]
+    
+    temp_groupby = author_df.groupby('work_id')
+    work_cluster_sizes = dict(author_df.groupby('work_id')['work_id'].count())
+    author_df['sorted'] = author_df['work_id'].apply(lambda x: work_cluster_sizes[x] if x in work_cluster_sizes else np.nan)
+    author_df = author_df.sort_values(['sorted', 'work_id'], ascending=[False, False]).drop(columns='sorted')
+    
+    cluster_dictribution = dict(author_df.groupby('work_id')['work_id'].count().div(len(author_df)))
+    (clusters, y) = zip(*dict(sorted(cluster_dictribution.items(), key=lambda item: item[1], reverse=True)).items())
+    x = tuple([i for i, e in enumerate(clusters,1)])
+    kn = KneeLocator(x, y, curve='convex', direction='decreasing')
+    cluster_index = round(kn.knee/2)-1
+    clusters_to_filter = list(clusters)[cluster_index+1:]
+    clusters_to_filter.append(work_id)
+    cluster_df = author_df[(author_df['work_id'].isin(clusters_to_filter)) |
+                           (author_df['work_id'].isna())]
+    create_google_worksheet(sheet.id, str(int(work_id)), cluster_df)
+
+
+
+
+
+
 
 #testing Babicka
 author_df = translations_df[translations_df['author_id'] == '56763450']
@@ -1605,7 +1645,34 @@ fig.savefig('translations_works.jpg')
 df['Tm_Rank'] = df['Tm'].map(sorterIndex)
 
                                                                             
-                                                                            
+           
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                 
 #%% genre and audience
 
 translations_df = phase_4.copy()
@@ -1721,6 +1788,34 @@ places = test['place'].drop_duplicates().to_list()
 
 
 ttt = translations_df[translations_df['place'] == 'praha bratislava'][['260', 'place']]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
