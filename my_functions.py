@@ -527,6 +527,53 @@ def marc_parser_dict_for_field(string, subfield_code):
 #     except IndexError:
 #         print(f'VIAF_ID {el} has no NKC ID! Check it in the table!')
 
+def create_google_worksheet(sheet, worksheet_name, df):
+    try:
+        set_with_dataframe(sheet.worksheet(worksheet_name), df)
+    except gs.WorksheetNotFound:
+        sheet.add_worksheet(title=worksheet_name, rows="100", cols="20")
+        set_with_dataframe(sheet.worksheet(worksheet_name), df)  
+    worksheet = sheet.worksheet(worksheet_name)
+    sheet.batch_update({
+        "requests": [
+            {
+                "updateDimensionProperties": {
+                    "range": {
+                        "sheetId": worksheet._properties['sheetId'],
+                        "dimension": "ROWS",
+                        "startIndex": 0,
+                        #"endIndex": 100
+                    },
+                    "properties": {
+                        "pixelSize": 20
+                    },
+                    "fields": "pixelSize"
+                }
+            }
+        ]
+    })
+    worksheet.freeze(rows=1)
+    worksheet.set_basic_filter()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

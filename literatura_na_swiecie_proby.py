@@ -10,6 +10,7 @@ from more_itertools import split_at
 from docx import *
 from docx.shared import RGBColor
 from xml.etree import ElementTree as ET
+from collections import Counter
 
 #%%def
 def check_if_all_none(list_of_elem):
@@ -121,8 +122,8 @@ for lit, (i_start, i_end) in final_dict.items():
 
 # spróbować podzielić string przez liczbę elementów w liście z tabulatorami, dzieląc po \t lub wielokrotnej spacji
 # spodziewam się otrzymać schodki i chcę dziedziczyć info na wyższym schodku
-start_ind = 12
-end_ind = 20
+start_ind = 291
+end_ind = 443
     
 test = [[e[-1][:-1], e[0]] for e in total[start_ind:end_ind]]
 test = [[e[0], e[1], [i for i, el in enumerate(re.finditer('\t', e[1]))]] for e in test]
@@ -143,20 +144,46 @@ for ind, number in enumerate(test):
         counter += 1
         groups.append(counter)
         
-order = []
-counter = 0
-for ind, number in enumerate(test):
-    if ind == 0 or number > test[ind-1]:
-        counter += 1
-        order.append(counter)
-    else:
-        counter = 1
-        order.append(counter)
+#jeśli grupa ma 6 elementów, to w text trzeba 2 ostatnie scalić, a w test i groups ostatni element usunąć
+groups_set = set(groups)   
+indices_out = []
+for s in groups_set:
+    single_group = [e for e in groups if e == s]
+    group_len = len(single_group)
+    if group_len == 6:
+        indices = [i for i,e in enumerate(groups) if e == s][-2:]
+        text[indices[0]] = ' '.join([e.strip() for i,e in enumerate(text) if i in indices])
+        indices_out.append(indices[-1])
 
-#teraz indeksy z order nie referują do tych samych elementów, trzeba je wyrównać do prawej (czyli do długości najdłuższej podlisty)
+#usunąć elementy obiektów, które mają indeksy w zmiennej indices_out + jak połączyć rzeczy na tym samym wcięciu lub dwóch ostatnich wcięciach?
+
+del [e for i, e in enumerate(test) if e in indices_out]       
+del [e for i, e in enumerate(text) if e in indices_out]
+del [e for i, e in enumerate(groups) if e in indices_out]
+        
+    
+temp_dict = dict(Counter(groups))
+new_dict = {}
+max_length = Counter(groups).most_common(1)[-1][-1]
+for k,v in temp_dict.items():
+    if v == max_length:
+        new_dict[k] = list(range(v))
+    else:
+        diff = max_length - v
+        new_dict[k] = list(range(diff,v+diff))
+
+order = [e for sub in new_dict.values() for e in sub]
+
+for ind, (o, t) in enumerate(zip(order, text)):
+    if o == 4 and order[ind+1] == 5:
+        text[ind] = ' '.join([text[ind],text[ind+1]])
+        
+ttt = [(order[ind],text[ind],groups[ind]) for ind,(g,o,t) in enumerate(zip(groups,order,text)) if o != 5]
+    
+        
     
 biblio_dict = {}
-for ind, string, group in zip(test, text, order):
+for ind, string, group in ttt:
     if group not in biblio_dict:
         biblio_dict[group] = {ind: string}
     else:

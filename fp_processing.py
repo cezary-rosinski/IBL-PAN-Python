@@ -64,7 +64,7 @@ get_bool('Czy nazwiska autorów w nazwach plików są poprawne? ')
 get_bool('Czy dodano pliki pdf do biblioteki wordpress (plików jpg nie dodawać)? ')
 czy_tlumaczenia_po_angielsku = get_bool('Czy w numerze są przekłady w angielskiej wersji? ')
 
-#%% connect go google drive
+#%% connect google drive
 
 #autoryzacja do tworzenia i edycji plików
 gc = gs.oauth()
