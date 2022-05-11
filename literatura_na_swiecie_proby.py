@@ -11,6 +11,8 @@ from docx import *
 from docx.shared import RGBColor
 from xml.etree import ElementTree as ET
 from collections import Counter
+import numpy as np
+import math
 
 #%%def
 def check_if_all_none(list_of_elem):
@@ -20,9 +22,54 @@ def check_if_all_none(list_of_elem):
         if elem is not None:
             return False
     return result
+
+
+
+def paragraph_replace_text(paragraph, regex, replace_str):
+    while True:
+        text = paragraph.text
+        match = regex.search(text)
+        if not match:
+            break
+        runs = iter(paragraph.runs)
+        start, end = match.start(), match.end()
+        for run in runs:
+            run_len = len(run.text)
+            if start < run_len:
+                break
+            start, end = start - run_len, end - run_len
+        run_text = run.text
+        run_len = len(run_text)
+        run.text = "%s%s%s" % (run_text[:start], replace_str, run_text[end:])
+        end -= run_len  # --- note this is run-len before replacement ---
+        for run in runs:  # --- next and remaining runs, uses same iterator ---
+            if end <= 0:
+                break
+            run_text = run.text
+            run_len = len(run_text)
+            run.text = run_text[end:]
+            end -= run_len
+
+    return paragraph
+
+def round_down(x):
+    return int(math.floor(x / 100000)) * 100000
+#%% modyfikacje pliku .docx
+#zamienić: ^t\* na: ^t*^t
+
 #%% nowe podejście
 
 document = Document("C:\\Users\\Cezary\\Downloads\\X. 2  Albania - Peru.docx")
+
+#edycja pliku docx
+
+regex = re.compile("\t\* ")
+for paragraph in tqdm(document.paragraphs):
+    paragraph_replace_text(paragraph, regex, '\t*\t')
+    
+#POMYSŁ: wyrzucamy inicjalne gwiazdki i otaczające je tabulatory z tekstu
+#NA PRZYSZŁOŚĆ: gwiazdka na końcu oznacza dziedziczenie tłumacza z poprzedniego wersu
+
 #wydobywanie autorów po stylu czcionki
 # with open("filename.xml", "w", encoding='utf-8') as f:
 #     f.write(test)
@@ -124,31 +171,161 @@ for lit, (i_start, i_end) in final_dict.items():
 # spodziewam się otrzymać schodki i chcę dziedziczyć info na wyższym schodku
 start_ind = 291
 end_ind = 443
+
+# start_ind = 42
+# end_ind = 58
     
-test = [[e[-1][:-1], e[0]] for e in total[start_ind:end_ind]]
-test = [[e[0], e[1], [i for i, el in enumerate(re.finditer('\t', e[1]))]] for e in test]
-test = [[[el for i, el in enumerate(a) if i in c],b,c] for a,b,c in test]
+original = [[e[-1][:-1], e[0]] for e in total[start_ind:end_ind]]
+original = [[e[0], e[1], [i for i, el in enumerate(re.finditer('\t', e[1]))]] for e in original]
+original = [[[el for i, el in enumerate(a) if i in c],b,c] for a,b,c in original]
+
+a = [[int(el) for el in e[0]] for e in original]
+b = [e[1] for e in original]
 
 
-text = [e for e in '\n'.join([e[0] for e in total[start_ind:end_ind]]).split('\t') if e]
-text = [e for e in text if not(re.match('\s', e[0]))]
-test = [e[0] for e in test if e[0]]
-test = [int(e) for sub in test for e in sub]
+#opowieści o jeźdźcach i pojedynek nie mogą być razem
+#indeksuje się *, trzeba to zbiorczo usunąć
+order = []
+for el1, el2 in zip(a,b):
+    if len(el1) == 1:
+        # order.append((el1[0], el2.replace('*','').strip() if not el2[0] == '.' else el2.replace('*','').replace('.','').strip()))
+        order.append((el1[0], el2.strip() if not el2[0] == '.' else el2.replace('.','').strip()))
+    elif len(el1) > 1:
+        for subel1, subel2 in zip(el1, [e for e in el2.split('\t') if e]):
+            order.append((subel1, subel2.strip() if not subel2[0] == '.' else subel2.replace('.','').strip()))
+
+
+# for e, f in zip(test, text):
+#     if e[-1].strip() != f:
+#         print(f'{e} | {f}')
+
+# text = [e for e in '\n'.join([e[0] for e in total[start_ind:end_ind]]).split('\t') if e]
+# text = [e for e in text if not(re.match('\s', e[0]))]
+# test = [e[0] for e in original if e[0]]
+# test = [int(e) for sub in test for e in sub]
+            
+text = [e[-1] for e in order]
+order = [e[0] for e in order]
 
 groups = []
 counter = 0
-for ind, number in enumerate(test):
-    if ind == 0 or number > test[ind-1]:
+for ind, number in enumerate(order):
+    if ind == 0 or number > order[ind-1] or number > 1300000:
         groups.append(counter)
     else:
         counter += 1
         groups.append(counter)
-        
+
+groups_set = set(groups)           
+# groups_dict = {}
+indices_out = []
+for s in groups_set:
+    # s=0
+    group_indices = [i for i, e in enumerate(groups) if e == s]
+    single_group = [e for i, e in enumerate(order) if i in group_indices]
+    ind_list = [e for e,f in zip(group_indices, single_group) if f > 1300000]
+    if ind_list:
+        ind_list.insert(0,ind_list[0]-1)
+        merged_str = ' '.join([e for i, e in enumerate(text) if i in ind_list]) 
+        text[ind_list[0]] = merged_str
+        indices_out.extend(ind_list[1:])
+indices_out.extend([i for i, e in enumerate(text) if e == ''])
+                
+text = [e for i,e in enumerate(text) if i not in indices_out]  
+groups = [e for i,e in enumerate(groups) if i not in indices_out]
+order = [round_down(e) for i,e in enumerate(order) if i not in indices_out]
+
+set_order = sorted(list(set(order)))
+
+# temp_dict = dict(Counter(groups))
+# new_dict = {}
+# max_length = Counter(groups).most_common(1)[-1][-1]
+# for k,v in temp_dict.items():
+#     if v == max_length:
+#         new_dict[k] = list(range(v))
+#     else:
+#         diff = max_length - v
+#         new_dict[k] = list(range(diff,v+diff))
+
+# order = [e for sub in new_dict.values() for e in sub]
+
+total_info = list(zip(order, text, groups))
+
+biblio_dict = {}
+for ind, string, group in total_info:
+    if group not in biblio_dict:
+        biblio_dict[group] = {ind: string}
+    else:
+        biblio_dict[group].update({ind: string})       
+
+v_to_change = [[el for el in e.values()][-1] for e in biblio_dict.values()]
+v_changed = v_to_change[:]
+while any(e[0] == '~' for e in v_changed):
+    v_changed = [e if e[0] != '~' else f'{v_changed[i-1].split("s.")[0]}{e[2:]}' for i, e in enumerate(v_changed)]
+change_dict = dict(zip(v_to_change, v_changed))
+
+
+
+
+biblio_dict = {k:{ke:change_dict[va] if va in change_dict else va for ke,va in v.items()} for k,v in biblio_dict.items()}
+
+
+
+
+
+
+
+
+
+df = pd.DataFrame.from_dict(biblio_dict, orient= 'index').sort_index()
+columns = sorted(df.columns.values)
+df = df.reindex(columns=columns)
+# df['validate'] = df[4].apply(lambda x: 'ok' if x[:4].isnumeric() else 'not ok')
+df = df.replace(r'\*', np.nan, regex=True)
+
+
+df.columns.values
+df[500000] = df[500000].fillna(method='ffill')
+df[600000] = df[600000].fillna(method='ffill')
+
+# df = df.groupby([600000], as_index=False).apply(lambda group: group.ffill())
+df.to_excel('borges.xlsx', index=False)
+
+
+#nie ma: = Nueve ensayos dantescos
+# jeśli wiersz kończy się przecinkiem, powinien zostać połączony z kolejnym wierszem
+# nie ma: Ewangelia według świętego Marka,  ~ s. 74–8 *
+
+# kolejne kroki
+# manualnie ogarnąć scenariusze u Borgesa
+# dla każdego scenariusza wskazać zestaw instrukcji wrzucania treści do poszczególnych kolumn
+# dziedziczenie w tabeli
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
 #jeśli grupa ma 6 elementów, to w text trzeba 2 ostatnie scalić, a w test i groups ostatni element usunąć
-groups_set = set(groups)   
+
 indices_out = []
 for s in groups_set:
     single_group = [e for e in groups if e == s]
+    print(single_group)
+    
+    
     group_len = len(single_group)
     if group_len == 6:
         indices = [i for i,e in enumerate(groups) if e == s][-2:]

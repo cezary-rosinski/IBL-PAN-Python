@@ -14,6 +14,11 @@ from copy import deepcopy
 from difflib import SequenceMatcher
 from ast import literal_eval
 import gspread as gs
+from my_functions import create_google_worksheet
+import matplotlib.pyplot as plt
+from kneed import KneeLocator
+from googleapiclient.errors import HttpError
+import time
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
@@ -1521,6 +1526,12 @@ print(Counter(phase_4['work_id'] != 0))
 # translations_df = pd.read_excel('translation_deduplicated_2022-03-28.xlsx', sheet_name='phase_4')
 translations_df = pd.read_excel('translation_deduplicated_with_geonames_2022-05-10.xlsx')
 
+with open('translations_ov_more_to_delete.txt', 'rt') as f:
+    to_del = f.read().splitlines()
+to_del = [int(e) for e in to_del]
+    
+translations_df = translations_df[~translations_df['001'].isin(to_del)]
+
 work_ids = dict(zip(translations_df['001'], translations_df['work_id']))
 work_ids_list = list(work_ids.values())
 
@@ -1560,16 +1571,22 @@ work_ids_sizes = sorted(work_ids_sizes.items(), key= lambda x: x[1], reverse=Tru
 proper_columns = ['001', '240', '245', '260', 'author_id', 'work_id', 'work_title', '490', '500', 'simple_original_title', '776', 'sorted']
 
 work_id_author_id_dict = dict(zip(translations_df['work_id'], translations_df['author_id']))
+work_id_author_id_dict = {k:v for k,v in work_id_author_id_dict.items() if k in work_ids}
 
-
-from my_functions import create_google_worksheet
-
+gc = gs.oauth()
+authors_present = {}
+# na razie uwaględnione jest tylko pierwsze wystąpienie każdego autora
+# 
 for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_sizes)),1):
     # ind = 1
     # work_id, size = work_ids_sizes[ind]
     ind = '{:03d}'.format(ind)
-    sheet = gc.create(f'{ind}.{int(work_id)}', '1x1ywDyyV-YwozVuV0B38uG7CH6mOe3OF')
     author_id = work_id_author_id_dict[work_id]
+    if author_id in authors_present:
+        authors_present[author_id] += 1
+        continue
+    else:
+        authors_present[author_id] = 1
     author_df = translations_df[translations_df['author_id'] == author_id]
     author_df = author_df[author_df.columns.intersection(proper_columns)]
     
@@ -1581,17 +1598,28 @@ for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_si
     cluster_dictribution = dict(author_df.groupby('work_id')['work_id'].count().div(len(author_df)))
     (clusters, y) = zip(*dict(sorted(cluster_dictribution.items(), key=lambda item: item[1], reverse=True)).items())
     x = tuple([i for i, e in enumerate(clusters,1)])
-    kn = KneeLocator(x, y, curve='convex', direction='decreasing')
-    cluster_index = round(kn.knee/2)-1
-    clusters_to_filter = list(clusters)[cluster_index+1:]
-    clusters_to_filter.append(work_id)
-    cluster_df = author_df[(author_df['work_id'].isin(clusters_to_filter)) |
-                           (author_df['work_id'].isna())]
-    create_google_worksheet(sheet.id, str(int(work_id)), cluster_df)
-
-
-
-
+    try:
+        kn = KneeLocator(x, y, curve='convex', direction='decreasing')
+        try:
+            cluster_index = round(kn.knee/2)-1
+        except TypeError:
+            cluster_index = 1
+        clusters_to_filter = list(clusters)[cluster_index+1:]
+        clusters_to_filter.append(work_id)
+        cluster_df = author_df[(author_df['work_id'].isin(clusters_to_filter)) |
+                               (author_df['work_id'].isna())]
+    except ValueError:
+        cluster_df = author_df.copy()
+    cluster_df['to_retain'] = np.nan
+    
+    sheet = gc.create(f'{ind}_{author_id}_{int(work_id)}_{authors_present[author_id]}', '1x1ywDyyV-YwozVuV0B38uG7CH6mOe3OF')
+    try:
+        create_google_worksheet(sheet.id, str(int(work_id)), cluster_df)
+    except Exception:
+        time.sleep(60)
+        create_google_worksheet(sheet.id, str(int(work_id)), cluster_df)
+    except KeyboardInterrupt:
+        raise
 
 
 
@@ -1618,8 +1646,7 @@ author_df = author_df[author_df.columns.intersection(proper_columns)]
 # temp_df = temp_df.append(author_df[~author_df['001'].isin(temp_df['001'])])
 
 # temp_df = temp_df[temp_df.columns.intersection(proper_columns)]
-import matplotlib.pyplot as plt
-from kneed import KneeLocator
+
 
 
 temp_dict = dict(author_df.groupby('work_id')['work_id'].count().div(len(author_df)))
