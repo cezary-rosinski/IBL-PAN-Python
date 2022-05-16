@@ -17,6 +17,53 @@ import numpy as np
 from collections import defaultdict
 from difflib import SequenceMatcher
 
+#%% def
+def query_wikidata_person_with_viaf(viaf):
+    # viaf_id = 49338782
+    viaf_id = re.findall('\d+', viaf)[0]
+    user_agent = "WDQS-example Python/%s.%s" % (sys.version_info[0], sys.version_info[1])
+    sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent=user_agent)
+    sparql.setQuery(f"""PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+                SELECT distinct ?author WHERE {{ 
+                  ?author wdt:P214 "{viaf_id}" ;
+                SERVICE wikibase:label {{ bd:serviceParam wikibase:language "pl". }}}}""")
+    sparql.setReturnFormat(JSON)
+    while True:
+        try:
+            results = sparql.query().convert()
+            break
+        except HTTPError:
+            time.sleep(2)
+        except URLError:
+            time.sleep(5)
+    results = wikidata_simple_dict_resp(results)  
+    viafy_wiki[viaf] = results
+    return results
+
+def get_viaf_with_wikidata(wikidata_url):
+    try:
+        wikidata_id = re.findall('Q.+', wikidata_url)[0]
+        result = requests.get(f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json').json()
+        result = f"http://viaf.org/viaf/{result['entities'][f'{wikidata_id}']['claims']['P214'][0]['mainsnak']['datavalue']['value']}"
+        wiki_viafy[wikidata_url] = result
+    except KeyError:
+        print(wikidata_url)
+    
+    
+#%% uzupełnienia zapomnianych
+# temp_df = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', 'zapomniani')
+# viafy = temp_df['viaf_ID'].dropna().drop_duplicates().to_list()
+# wiki = temp_df['wikidata_ID'].dropna().drop_duplicates().to_list()
+
+# viafy_wiki = {}
+# with ThreadPoolExecutor() as executor:
+#     list(tqdm(executor.map(query_wikidata_person_with_viaf,viafy), total=len(viafy)))
+# viafy_wiki = {k:v['author'][0]['value'] for k,v in viafy_wiki.items() if v}
+    
+# wiki_viafy = {}
+# with ThreadPoolExecutor() as executor:
+#     list(tqdm(executor.map(get_viaf_with_wikidata,wiki), total=len(wiki)))
+
 #%% wczytanie zasobów bibliograficznych:
 records_dict = {}
 worksheets = ['bn_books', 'cz_books', 'cz_articles', 'pbl_articles', 'pbl_books']
@@ -29,7 +76,7 @@ for worksheet in tqdm(worksheets):
 #wczytanie kartoteki osób po pracach
 kartoteka_osob = pd.DataFrame()
 
-for worksheet in ['pojedyncze ok', 'grupy_ok', 'osoby_z_jednym_wierszem', 'reszta']:
+for worksheet in tqdm(['pojedyncze ok', 'grupy_ok', 'osoby_z_jednym_wierszem', 'reszta', 'zapomniani']):
     temp_df = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', worksheet)
     temp_df = temp_df[temp_df['decyzja'].isin(['tak', 'new'])]
     kartoteka_osob = kartoteka_osob.append(temp_df)  
@@ -40,7 +87,7 @@ wikidata_sex = {'mężczyzna': 'https://www.wikidata.org/wiki/Q8441',
                 'kobieta': 'https://www.wikidata.org/wiki/Q467',
                 'interpłciowość': 'https://www.wikidata.org/wiki/Q1097630'}
 sex_classification['Wikidata_ID'] = sex_classification['Typeofsex'].apply(lambda x: wikidata_sex[x])
-sex_classification.to_csv('samizdat_sex_classification_to_nodegoat.csv', index=False, encoding='utf-8') 
+# sex_classification.to_csv('samizdat_sex_classification_to_nodegoat.csv', index=False, encoding='utf-8') 
 
 #%%
 #klasyfikacja zawodów
@@ -107,9 +154,17 @@ sex_classification.to_csv('samizdat_sex_classification_to_nodegoat.csv', index=F
     
 occupation_classification = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIGTFI4Lc', 'occupation').drop(columns=['old_label_pl', 'old_id']).drop_duplicates()
 occupation_classification['Wikidata_ID'] = 'https://www.wikidata.org/wiki/' + occupation_classification['Wikidata_ID']
-occupation_classification.to_csv('samizdat_occupation_classification_to_nodegoat.csv', index=False, encoding='utf-8') 
+# occupation_classification.to_csv('samizdat_occupation_classification_to_nodegoat.csv', index=False, encoding='utf-8') 
 
 #%% tworzenie kartoteki osób
+#wczytanie kartoteki osób po pracach
+kartoteka_osob = pd.DataFrame()
+
+for worksheet in tqdm(['pojedyncze ok', 'grupy_ok', 'osoby_z_jednym_wierszem', 'reszta', 'zapomniani']):
+    temp_df = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', worksheet)
+    temp_df = temp_df[temp_df['decyzja'].isin(['tak', 'new'])]
+    kartoteka_osob = kartoteka_osob.append(temp_df)  
+
 occupation_classification = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIGTFI4Lc', 'occupation')
 
 data_sources_classification = ['PL_BN_books', 'PL_BN_journals', 'PL_BezCenzury_books', 'PL_BezCenzury_articles', 'CZ_books', 'CZ_articles']
@@ -126,6 +181,20 @@ instruction = {'Index Name': ['%1', '%2', '%3', '%4', '%5', '%6'],
                 'Numeration (arabic)': ['%n'],
                 'Birth': ['%d'],
                 'Death': ['%d']}
+
+#Uwaga do PW – są rekordy, które mają czy pseudonim == 'tak', ale nie mają wypełnionego 'pseudonym of'
+pseudonimy = kartoteka_osob[(kartoteka_osob['czy pseudonim'] == 'tak') &
+                            (kartoteka_osob['pseudonym of'].notnull())]
+
+pseudonimy_id = pseudonimy['Project_ID'].to_list()
+#pseudonimami zająć się na końcu jako uzupełnienia haseł
+
+test = kartoteka_osob[kartoteka_osob['Project_ID'].isin(pseudonimy_id)]
+# na podstawie zmiennej test będzie trzeba pozmieniać Project_ID pseudonimów, a przypisanie do właściwych haseł zmienić z identyfikatorów viaf na Project_ID – manualna robota
+
+kartoteka_osob = kartoteka_osob[~kartoteka_osob['Project_ID'].isin(pseudonimy['Project_ID'])]
+2664-2643
+
 groupby = kartoteka_osob.groupby('Project_ID')
 
 #ogarnąć pseudonimy w tabeli

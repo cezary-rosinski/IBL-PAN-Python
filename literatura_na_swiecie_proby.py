@@ -258,7 +258,13 @@ for ind, string, group in total_info:
     else:
         biblio_dict[group].update({ind: string})       
 
+test = biblio_dict[41]
+list(test.items())
 
+indeksy = []
+stringi = []
+for i, el in enumerate(test.items()):
+    
 
 
 #edycje pól może na później
@@ -276,13 +282,69 @@ columns = sorted(df.columns.values)
 df = df.reindex(columns=columns)
 # df['validate'] = df[4].apply(lambda x: 'ok' if x[:4].isnumeric() else 'not ok')
 # df = df.replace(r'\*', np.nan, regex=True)
+for i, row in df.iterrows():
+    if not(isinstance(row[600000],float)) and isinstance(row[700000],float) and not(isinstance(row[800000],float)):
+        df.at[i, 600000] = f"{row[600000]} {row[800000]}"
+        df.at[i, 800000] = np.nan
+        
 
-
+for i, row in df.iterrows():
+    # row = df.loc[80]
+    if not(isinstance(row[600000],float)) and isinstance(row[700000],float) and isinstance(row[800000],float) and not(isinstance(row[900000],float)) and row[900000][:5] != 'r e c':
+        df.at[i, 600000] = f"{row[600000]} {row[900000]}"
+        df.at[i, 900000] = np.nan
+        
 df[500000] = df[500000].fillna(method='ffill')
 df[600000] = df[600000].fillna(method='ffill')
 
+grouped = df.groupby([500000, 600000], as_index=False).apply(lambda group: group.ffill())
+
+grupy_dict = {5: 1,
+             2: 2,
+             'reszta': 3}
+
+grouped['grupowanie'] = grouped.apply(lambda x: grupy_dict[len(x.dropna())] if len(x.dropna()) in grupy_dict else grupy_dict['reszta'], axis=1)
+
+for i, row in grouped.iterrows():
+    # i = 29
+    # row = grouped.loc[i]
+    for ind, pole in row.iteritems():
+        # ind = 600000
+        # print(ind)
+        # ind = 900000
+        if isinstance(pole, str):
+            if '~' in pole:
+                # pole = grouped.loc[i][ind]
+                try:
+                    replacement = re.findall('\d{4}.+?\)', grouped.loc[i-1][ind])[0]
+                except IndexError:
+                    pass
+                except TypeError:
+                    try:
+                        replacement = re.findall('\d{4}.+?\)', grouped.loc[i][600000])[0]
+                    except (IndexError, TypeError):
+                        replacement = re.findall('\d{4}.+?\)', grouped.loc[i-1][600000])[0]
+                grouped.loc[i,ind] = grouped.loc[i][ind].replace('~', replacement)
+for i, row in grouped.iterrows():
+    for ind, pole in row.iteritems():
+        if isinstance(pole, str):
+            if '*' in pole:
+                # translator = [e for e in grouped.loc[28] if isinstance(e,str)]
+                translator = [e for e in grouped.loc[i-1] if isinstance(e,str)]
+                try:
+                    translator = [re.findall('tł\. \p{Lu}.+?\p{Lu}\.(?=,)', e)[0] for e in translator if re.findall('tł\. \p{Lu}.+?\p{Lu}\.(?=,)', e)][0]
+                except IndexError:
+                    translator = 'tł. ' + [re.findall('\p{Lu}.+?\p{Lu}\.(?=,)', e)[0] for e in translator if re.findall('\p{Lu}.+?\p{Lu}\.(?=,)', e)][0]
+                grouped.loc[i,ind] = grouped.loc[i][ind].replace('*', translator)
+                
+
+
 # df = df.groupby([600000], as_index=False).apply(lambda group: group.ffill())
-df.to_excel('borges.xlsx', index=False)
+grouped.to_excel('borges.xlsx', index=False)
+
+
+#dalsze kroki
+
 
 
 #nie ma: = Nueve ensayos dantescos
