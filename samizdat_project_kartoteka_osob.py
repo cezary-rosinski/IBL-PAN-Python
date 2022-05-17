@@ -170,7 +170,7 @@ occupation_classification = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIG
 data_sources_classification = ['PL_BN_books', 'PL_BN_journals', 'PL_BezCenzury_books', 'PL_BezCenzury_articles', 'CZ_books', 'CZ_articles']
 
 kolumny = list(kartoteka_osob.columns.values)
-instruction = {'Index Name': ['%1', '%2', '%3', '%4', '%5', '%6'],
+instruction_bn = {'Index Name': ['%1', '%2', '%3', '%4', '%5', '%6'],
                 'Name': ['%1', '%4', '%6'],
                 'Given Name': ['%2'],
                 'Pseudonyms': ['%p', '%k'],
@@ -182,6 +182,15 @@ instruction = {'Index Name': ['%1', '%2', '%3', '%4', '%5', '%6'],
                 'Birth': ['%d'],
                 'Death': ['%d']}
 
+instruction_cz = {'Index Name': ['$$a'],
+                  'Name': ['$$a'],
+                  'Given Name': ['$$a'],
+                  'Other Name Forms': ['$$n', '$$r', '$$c'],
+                  'Addition to Name': ['$$c', '$$4'],
+                  'Numeration': ['$$b'],
+                  'Birth': ['$$d'],
+                  'Death': ['$$d']}
+
 #Uwaga do PW – są rekordy, które mają czy pseudonim == 'tak', ale nie mają wypełnionego 'pseudonym of'
 pseudonimy = kartoteka_osob[(kartoteka_osob['czy pseudonim'] == 'tak') &
                             (kartoteka_osob['pseudonym of'].notnull())]
@@ -189,11 +198,10 @@ pseudonimy = kartoteka_osob[(kartoteka_osob['czy pseudonim'] == 'tak') &
 pseudonimy_id = pseudonimy['Project_ID'].to_list()
 #pseudonimami zająć się na końcu jako uzupełnienia haseł
 
-test = kartoteka_osob[kartoteka_osob['Project_ID'].isin(pseudonimy_id)]
+kartoteka_osob = kartoteka_osob[~kartoteka_osob['Project_ID'].isin(pseudonimy_id)]
+
 # na podstawie zmiennej test będzie trzeba pozmieniać Project_ID pseudonimów, a przypisanie do właściwych haseł zmienić z identyfikatorów viaf na Project_ID – manualna robota
 
-kartoteka_osob = kartoteka_osob[~kartoteka_osob['Project_ID'].isin(pseudonimy['Project_ID'])]
-2664-2643
 
 groupby = kartoteka_osob.groupby('Project_ID')
 
@@ -223,8 +231,8 @@ groupby = kartoteka_osob.groupby('Project_ID')
 people_dict = {}
 for name, group in tqdm(groupby, total=len(groupby)):
     # 198, 346, 936, 1947, 1883, 1045, 520
-    name = '168'
-    group = groupby.get_group(name)
+    # name = '168'
+    # group = groupby.get_group(name)
     try:
         sex_label = group['sexLabel.value'].dropna().drop_duplicates().to_list()[0]
     except IndexError: sex_label = np.nan
@@ -247,28 +255,56 @@ for name, group in tqdm(groupby, total=len(groupby)):
             for biblio_name in biblio_name_set:
                 # biblio_name = biblio_name_set[0]
                 # biblio_name = biblio_name_set[1]
+                # biblio_name = 'bn_books-86777-bnb4116-X100-%1'
+                # biblio_name = 'cz_articles-2323920-cza518-X600-$$a'
+                # biblio_name = 'pbl_books-1397940-pblt6590-tworcy-NA'
                 source = biblio_name.split('-')[0]
-                record_id = biblio_name.split('-')[1]
-                df = records_dict[source]
-                field = biblio_name.split('-')[-2]
-                temp = df[df['id'] == record_id][field].to_list()[0].split('|')
-                for pers in temp:
-                    # pers = temp[0]
-                    form_parsed = marc_parser_dict_for_field(pers, '%')
-                    dd = defaultdict(list)
-                    for d in form_parsed:
-                        for key, value in d.items():
-                            dd[key].append(value.strip())
-                    form_parsed = [{e:' '.join([el.strip() for el in dd[e]]) if e!='%p' else ';'.join([el.strip() for el in dd[e]])} for e in dd]
-                    use_of_instruction = instruction.copy()
-                    for form_dict in form_parsed:
-                        # form_dict = form_parsed[0]
-                        for key, value in form_dict.items():
-                            good_keys = {k:value.strip() for k,v in instruction.items() if key in v}
-                            use_of_instruction = {k:list(map(lambda x: x.replace(key, good_keys[k]), v)) if k in good_keys else v for k,v in use_of_instruction.items()}
-                    use_of_instruction = {k:' '.join([e for e in v if '%' not in e]) for k,v in use_of_instruction.items() if any('%' not in s for s in v)}
-                    if use_of_instruction:
-                        person_names_list.append(use_of_instruction)
+                if source == 'bn_books':
+                    record_id = biblio_name.split('-')[1]
+                    df = records_dict[source]
+                    field = biblio_name.split('-')[-2]
+                    temp = df[df['id'] == record_id][field].to_list()[0].split('|')
+                    for pers in temp:
+                        # pers = temp[0]
+                        form_parsed = marc_parser_dict_for_field(pers, '%')
+                        dd = defaultdict(list)
+                        for d in form_parsed:
+                            for key, value in d.items():
+                                dd[key].append(value.strip())
+                        form_parsed = [{e:' '.join([el.strip() for el in dd[e]]) if e!='%p' else ';'.join([el.strip() for el in dd[e]])} for e in dd]
+                        use_of_instruction = instruction_bn.copy()
+                        for form_dict in form_parsed:
+                            # form_dict = form_parsed[0]
+                            for key, value in form_dict.items():
+                                good_keys = {k:value.strip() for k,v in instruction_bn.items() if key in v}
+                                use_of_instruction = {k:list(map(lambda x: x.replace(key, good_keys[k]), v)) if k in good_keys else v for k,v in use_of_instruction.items()}
+                        use_of_instruction = {k:' '.join([e for e in v if '%' not in e]) for k,v in use_of_instruction.items() if any('%' not in s for s in v)}
+                        if use_of_instruction:
+                            person_names_list.append(use_of_instruction)
+                elif 'cz' in source:
+                    record_id = biblio_name.split('-')[1]
+                    df = records_dict[source]
+                    field = biblio_name.split('-')[-2]
+                    temp = df[df['id'] == record_id][field].to_list()[0].split('|')
+                    
+                    for pers in temp:
+                        # pers = temp[0]
+                        form_parsed = marc_parser_dict_for_field(pers, '\$\$')
+                        dd = defaultdict(list)
+                        for d in form_parsed:
+                            for key, value in d.items():
+                                dd[key].append(value.strip())
+                        form_parsed = [{e:' '.join([el.strip() for el in dd[e]]) if e!='%p' else ';'.join([el.strip() for el in dd[e]])} for e in dd]
+                        use_of_instruction = instruction_cz.copy()
+                        for form_dict in form_parsed:
+                            # form_dict = form_parsed[0]
+                            for key, value in form_dict.items():
+                                good_keys = {k:value.strip() for k,v in instruction_cz.items() if key in v}
+                                use_of_instruction = {k:list(map(lambda x: x.replace(key, good_keys[k]), v)) if k in good_keys else v for k,v in use_of_instruction.items()}
+                        use_of_instruction = {k:' '.join([e for e in v if '%' not in e]) for k,v in use_of_instruction.items() if any('%' not in s for s in v)}
+                        if use_of_instruction:
+                            person_names_list.append(use_of_instruction)
+                    
     
             test = Counter([tuple(e.items()) for e in person_names_list])
             temp_dict = {}
@@ -290,9 +326,13 @@ for name, group in tqdm(groupby, total=len(groupby)):
                             person_names_dict[key] = [value]
                         else:
                             person_names_dict[key].append(value)
+                            
+                #else: Na razie PBL jest poza
         person_names_dict = {k:list(set(v)) for k,v in person_names_dict.items()}
     except ValueError:
         person_names_dict = {}
+    except AttributeError:
+        person_names_dict = {'Index Name': group['Index_Name'].dropna().drop_duplicates().to_list()[0]}
     person_names_dict['nazwa z tabeli'] = group['Index_Name'].to_list()
     #dodatki z wikidaty
     try:
@@ -371,6 +411,8 @@ sex = {'mężczyzna': {'sex_label_pl': 'mężczyzna',
 people_dict = {k:{ke:sex[va]['Wikidata_ID'] if ke == 'sex' and pd.notnull(va) else va for ke,va in v.items()} for k,v in people_dict.items()}
 
 df = pd.DataFrame.from_dict(people_dict, orient='index')
+
+#dodać pseudonimy!!!
 df.to_excel('samizdat_osoby_plik_testowy.xlsx')    
     
 #dodać pole Wikidata Name – label osoby z wikidaty w językach [pl, en, język ojczysty osoby] (4 kolumny: wikidata name pl, wikidta name en, wikidata mother tongue form, wikidata mother tongue)

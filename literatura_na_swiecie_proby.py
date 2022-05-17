@@ -174,136 +174,162 @@ end_ind = 443
 
 # start_ind = 42
 # end_ind = 58
+
+lista_grup = []
+for e in tqdm(final_dict):
+    for k,v in final_dict[e].items():
+        start_ind = v[0]
+        end_ind = v[1]
     
-original = [[e[-1][:-1], e[0]] for e in total[start_ind:end_ind]]
-original = [[e[0], e[1], [i for i, el in enumerate(re.finditer('\t', e[1]))]] for e in original]
-original = [[[el for i, el in enumerate(a) if i in c],b,c] for a,b,c in original]
-
-a = [[int(el) for el in e[0]] for e in original]
-b = [e[1] for e in original]
-
-#opowieści o jeźdźcach i pojedynek nie mogą być razem
-#indeksuje się *, trzeba to zbiorczo usunąć
-order = []
-for el1, el2 in zip(a,b):
-    if len(el1) == 1:
-        # order.append((el1[0], el2.replace('*','').strip() if not el2[0] == '.' else el2.replace('*','').replace('.','').strip()))
-        order.append((el1[0], el2.strip() if not el2[0] == '.' else el2.replace('.','').strip()))
-    elif len(el1) > 1:
-        for subel1, subel2 in zip(el1, [e for e in el2.split('\t') if e]):
-            order.append((subel1, subel2.strip() if not subel2[0] == '.' else subel2.replace('.','').strip()))
-    else:
-        order.append((min([e for sub in a for e in sub]), el2.strip() if not el2[0] == '.' else el2.replace('.','').strip()))
-
-# for e, f in zip(test, text):
-#     if e[-1].strip() != f:
-#         print(f'{e} | {f}')
-
-# text = [e for e in '\n'.join([e[0] for e in total[start_ind:end_ind]]).split('\t') if e]
-# text = [e for e in text if not(re.match('\s', e[0]))]
-# test = [e[0] for e in original if e[0]]
-# test = [int(e) for sub in test for e in sub]
+        original = [[e[-1][:-1], e[0]] for e in total[start_ind:end_ind]]
+        original = [[e[0], e[1], [i for i, el in enumerate(re.finditer('\t', e[1]))]] for e in original]
+        original = [[[el for i, el in enumerate(a) if i in c],b,c] for a,b,c in original]
+        
+        a = [[int(el) for el in e[0]] for e in original]
+        if all(not(e) for e in a):
+            wartosci = [500000, 600000, 700000, 800000, 900000, 1000000]
+            a = [[e] for i, e in enumerate(wartosci) if i in range(len(a))]
+        if not(a[0]) and a[1]:
+            a[0] = [600000]
             
-text = [e[-1] for e in order]
-order = [e[0] for e in order]
-
-groups = []
-counter = 0
-for ind, number in enumerate(order):
-    if ind == 0 or number > order[ind-1] or number > 1300000:
-        groups.append(counter)
-    else:
-        counter += 1
-        groups.append(counter)
-
-groups_set = set(groups)           
-# groups_dict = {}
-indices_out = []
-for s in groups_set:
-    # s=0
-    group_indices = [i for i, e in enumerate(groups) if e == s]
-    single_group = [e for i, e in enumerate(order) if i in group_indices]
-    ind_list = [e for e,f in zip(group_indices, single_group) if f > 1300000]
-    if ind_list:
-        ind_list.insert(0,ind_list[0]-1)
-        merged_str = ' '.join([e for i, e in enumerate(text) if i in ind_list]) 
-        text[ind_list[0]] = merged_str
-        indices_out.extend(ind_list[1:])
-indices_out.extend([i for i, e in enumerate(text) if e in ['', '*']])
-                
-text = [e for i,e in enumerate(text) if i not in indices_out]  
-groups = [e for i,e in enumerate(groups) if i not in indices_out]
-order = [round_down(e) for i,e in enumerate(order) if i not in indices_out]
-
-#tu trzeba uważać, bo jeśli w rekordzie jest 9 i 10, to się nadpisze, ale u Borgesa nie ma, więc u kogo może być?
-order = [e if e != 1000000 else 900000 for e in order]
-
-set_order = sorted(list(set(order)))
-
-# tu sprawdzam, czy w grupie frazy się na siebie nie nakładają
-# for g in groups_set:
-#     if any(el[-1] > 1 for el in Counter([f for e,f in zip(groups, order) if e == g]).most_common(1)):
-#         print(g)
-    
-total_info = list(zip(order, text, groups))
-
-
-biblio_dict = {}
-for ind, string, group in total_info:
-    if group not in biblio_dict:
-        biblio_dict[group] = {ind: string}
-    elif ind in biblio_dict[group]:
-        ind -= 100000
-        biblio_dict[group].update({ind: string})
-    else:
-        biblio_dict[group].update({ind: string})       
-
-test = biblio_dict[41]
-list(test.items())
-
-indeksy = []
-stringi = []
-for i, el in enumerate(test.items()):
-    
-
-
-#edycje pól może na później
-# v_to_change = [[el for el in e.values()][-1] for e in biblio_dict.values()]
-# v_changed = v_to_change[:]
-# while any(e[0] == '~' for e in v_changed):
-#     v_changed = [e if e[0] != '~' else f'{v_changed[i-1].split("s.")[0]}{e[2:]}' for i, e in enumerate(v_changed)]
-# change_dict = dict(zip(v_to_change, v_changed))
-
-# biblio_dict = {k:{ke:change_dict[va] if va in change_dict else va for ke,va in v.items()} for k,v in biblio_dict.items()}
-
-
-df = pd.DataFrame.from_dict(biblio_dict, orient= 'index').sort_index()
-columns = sorted(df.columns.values)
-df = df.reindex(columns=columns)
-# df['validate'] = df[4].apply(lambda x: 'ok' if x[:4].isnumeric() else 'not ok')
-# df = df.replace(r'\*', np.nan, regex=True)
-for i, row in df.iterrows():
-    if not(isinstance(row[600000],float)) and isinstance(row[700000],float) and not(isinstance(row[800000],float)):
-        df.at[i, 600000] = f"{row[600000]} {row[800000]}"
-        df.at[i, 800000] = np.nan
+        b = [e[1] for e in original]
         
-
-for i, row in df.iterrows():
-    # row = df.loc[80]
-    if not(isinstance(row[600000],float)) and isinstance(row[700000],float) and isinstance(row[800000],float) and not(isinstance(row[900000],float)) and row[900000][:5] != 'r e c':
-        df.at[i, 600000] = f"{row[600000]} {row[900000]}"
-        df.at[i, 900000] = np.nan
+        #opowieści o jeźdźcach i pojedynek nie mogą być razem
+        #indeksuje się *, trzeba to zbiorczo usunąć
+        order = []
+        for el1, el2 in zip(a,b):
+            if len(el1) == 1:
+                # order.append((el1[0], el2.replace('*','').strip() if not el2[0] == '.' else el2.replace('*','').replace('.','').strip()))
+                order.append((el1[0], el2.strip() if not el2[0] == '.' else el2.replace('.','').strip()))
+            elif len(el1) > 1:
+                for subel1, subel2 in zip(el1, [e for e in el2.split('\t') if e]):
+                    order.append((subel1, subel2.strip() if not subel2[0] == '.' else subel2.replace('.','').strip()))
+            else:
+                try:
+                    order.append((min([e for sub in a for e in sub]), el2.strip() if not el2[0] == '.' else el2.replace('.','').strip()))
+                except IndexError:
+                    pass
         
-df[500000] = df[500000].fillna(method='ffill')
-df[600000] = df[600000].fillna(method='ffill')
+        # for e, f in zip(test, text):
+        #     if e[-1].strip() != f:
+        #         print(f'{e} | {f}')
+        
+        # text = [e for e in '\n'.join([e[0] for e in total[start_ind:end_ind]]).split('\t') if e]
+        # text = [e for e in text if not(re.match('\s', e[0]))]
+        # test = [e[0] for e in original if e[0]]
+        # test = [int(e) for sub in test for e in sub]
+                    
+        text = [e[-1] for e in order]
+        order = [e[0] for e in order]
+        
+        groups = []
+        counter = 0
+        for ind, number in enumerate(order):
+            if ind == 0 or number > order[ind-1] or number > 1300000:
+                groups.append(counter)
+            else:
+                counter += 1
+                groups.append(counter)
+        
+        groups_set = set(groups)           
+        # groups_dict = {}
+        indices_out = []
+        for s in groups_set:
+            # s=0
+            group_indices = [i for i, e in enumerate(groups) if e == s]
+            single_group = [e for i, e in enumerate(order) if i in group_indices]
+            ind_list = [e for e,f in zip(group_indices, single_group) if f > 1300000]
+            if ind_list:
+                ind_list.insert(0,ind_list[0]-1)
+                merged_str = ' '.join([e for i, e in enumerate(text) if i in ind_list]) 
+                text[ind_list[0]] = merged_str
+                indices_out.extend(ind_list[1:])
+        indices_out.extend([i for i, e in enumerate(text) if e in ['', '*']])
+                        
+        text = [e for i,e in enumerate(text) if i not in indices_out]  
+        groups = [e for i,e in enumerate(groups) if i not in indices_out]
+        order = [round_down(e) for i,e in enumerate(order) if i not in indices_out]
+        
+        #tu trzeba uważać, bo jeśli w rekordzie jest 9 i 10, to się nadpisze, ale u Borgesa nie ma, więc u kogo może być?
+        order = [e if e != 1000000 else 900000 for e in order]
+        
+        set_order = sorted(list(set(order)))
+        if len(set_order) == 1:
+            wartosci = [500000, 600000, 700000, 800000, 900000, 1000000]
+            order = [e for i, e in enumerate(wartosci) if i in range(len(order))]
+            set_order = sorted(list(set(order)))
+        
+        # tu sprawdzam, czy w grupie frazy się na siebie nie nakładają
+        # for g in groups_set:
+        #     if any(el[-1] > 1 for el in Counter([f for e,f in zip(groups, order) if e == g]).most_common(1)):
+        #         print(g)
+            
+        total_info = list(zip(order, text, groups))
+        
+        
+        biblio_dict = {}
+        for ind, string, group in total_info:
+            if group not in biblio_dict:
+                biblio_dict[group] = {ind: string}
+            elif ind in biblio_dict[group]:
+                ind -= 100000
+                biblio_dict[group].update({ind: string})
+            else:
+                biblio_dict[group].update({ind: string})       
+        
+        # test = biblio_dict[41]
+        # list(test.items())
+        
+        #edycje pól może na później
+        # v_to_change = [[el for el in e.values()][-1] for e in biblio_dict.values()]
+        # v_changed = v_to_change[:]
+        # while any(e[0] == '~' for e in v_changed):
+        #     v_changed = [e if e[0] != '~' else f'{v_changed[i-1].split("s.")[0]}{e[2:]}' for i, e in enumerate(v_changed)]
+        # change_dict = dict(zip(v_to_change, v_changed))
+        
+        # biblio_dict = {k:{ke:change_dict[va] if va in change_dict else va for ke,va in v.items()} for k,v in biblio_dict.items()}
+        
+        
+        df = pd.DataFrame.from_dict(biblio_dict, orient= 'index').sort_index()
+        columns = sorted(df.columns.values)
+        df = df.reindex(columns=columns)
+        # df['validate'] = df[4].apply(lambda x: 'ok' if x[:4].isnumeric() else 'not ok')
+        # df = df.replace(r'\*', np.nan, regex=True)
+        try:
+            for i, row in df.iterrows():
+                if not(isinstance(row[600000],float)) and isinstance(row[700000],float) and not(isinstance(row[800000],float)):
+                    df.at[i, 600000] = f"{row[600000]} {row[800000]}"
+                    df.at[i, 800000] = np.nan
+        except KeyError:
+            pass
+                        
+        try:
+            for i, row in df.iterrows():
+                # row = df.loc[80]
+                if not(isinstance(row[600000],float)) and isinstance(row[700000],float) and isinstance(row[800000],float) and not(isinstance(row[900000],float)) and row[900000][:5] != 'r e c':
+                    df.at[i, 600000] = f"{row[600000]} {row[900000]}"
+                    df.at[i, 900000] = np.nan
+        except KeyError:
+            pass
+        
+        if df.shape[0] > 1:
+            df[500000] = df[500000].fillna(method='ffill')
+            df[600000] = df[600000].fillna(method='ffill')
+        
+        try:
+            grouped = df.groupby([500000, 600000], as_index=False).apply(lambda group: group.ffill())
+        except KeyError:
+            grouped = df.groupby([500000], as_index=False).apply(lambda group: group.ffill())
+        
+        grupy_dict = {5: 1,
+                     2: 2,
+                     'reszta': 3}
+        
+        grouped['grupowanie'] = grouped.apply(lambda x: grupy_dict[len(x.dropna())] if len(x.dropna()) in grupy_dict else grupy_dict['reszta'], axis=1)
+        
+        lista_grup.append(Counter(grouped['grupowanie']))
 
-grouped = df.groupby([500000, 600000], as_index=False).apply(lambda group: group.ffill())
-
-grupy_dict = {5: 1,
-             2: 2,
-             'reszta': 3}
-
-grouped['grupowanie'] = grouped.apply(lambda x: grupy_dict[len(x.dropna())] if len(x.dropna()) in grupy_dict else grupy_dict['reszta'], axis=1)
+sum(lista_grup, Counter())
 
 for i, row in grouped.iterrows():
     # i = 29
@@ -344,17 +370,9 @@ grouped.to_excel('borges.xlsx', index=False)
 
 
 #dalsze kroki
+# - wykorzystać podział na grupy i dla każdej z grup zaproponować parsowanie materiału (przy pomocy struktury, np. wiersze, lub przy pomocy regexów)
 
 
-
-#nie ma: = Nueve ensayos dantescos
-# jeśli wiersz kończy się przecinkiem, powinien zostać połączony z kolejnym wierszem
-# nie ma: Ewangelia według świętego Marka,  ~ s. 74–8 *
-
-# kolejne kroki
-# manualnie ogarnąć scenariusze u Borgesa
-# dla każdego scenariusza wskazać zestaw instrukcji wrzucania treści do poszczególnych kolumn
-# dziedziczenie w tabeli
 
 
 
