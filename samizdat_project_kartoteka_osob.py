@@ -16,6 +16,8 @@ from my_functions import marc_parser_dict_for_field
 import numpy as np
 from collections import defaultdict
 from difflib import SequenceMatcher
+from fuzzywuzzy import fuzz, process
+import Levenshtein
 
 #%% def
 def query_wikidata_person_with_viaf(viaf):
@@ -156,14 +158,63 @@ occupation_classification = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIG
 occupation_classification['Wikidata_ID'] = 'https://www.wikidata.org/wiki/' + occupation_classification['Wikidata_ID']
 # occupation_classification.to_csv('samizdat_occupation_classification_to_nodegoat.csv', index=False, encoding='utf-8') 
 
-#%% tworzenie kartoteki osób
-#wczytanie kartoteki osób po pracach
-kartoteka_osob = pd.DataFrame()
+#%% korekta kodowania nazw osób:
+# with open('samizdat_bn_mak.txt', 'rt', encoding='utf-8') as f:
+#     records = f.read().splitlines()
 
-for worksheet in tqdm(['pojedyncze ok', 'grupy_ok', 'osoby_z_jednym_wierszem', 'reszta', 'zapomniani']):
-    temp_df = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', worksheet)
-    temp_df = temp_df[temp_df['decyzja'].isin(['tak', 'new'])]
-    kartoteka_osob = kartoteka_osob.append(temp_df)  
+# list_of_items_unique = []
+# for row in records:
+#     if row.startswith('001'):
+#         list_of_items_unique.append([row])
+#     else:
+#         if row:
+#             list_of_items_unique[-1].append(row)
+    
+# people_names = [[re.findall('\%.+$', el)[0] for el in e if el.startswith(('100', '700', '701')) and '%' in el] for e in list_of_items_unique]
+# people_names = list(set([e for sub in people_names for e in sub]))
+
+# people_names_tilde = []
+# for column in ['X100', 'X700', 'X701']:
+#     temp_list = records_dict['bn_books'][column].dropna().drop_duplicates().to_list()
+#     people_names_tilde.extend(temp_list)
+
+# people_names_tilde = [e.split('|') for e in people_names_tilde]
+# people_names_tilde = list(set([e for sub in people_names_tilde for e in sub if e]))
+# people_names_tilde = [re.split('\d{3}\p{L}{2}', e) for e in people_names_tilde]
+# people_names_tilde = list(set([e for sub in people_names_tilde for e in sub if e]))
+
+# people_names_tilde = [e for e in people_names_tilde if '~' in e]
+
+# effect_dict = {}
+# for tilde in tqdm(people_names_tilde):
+#     effect_dict[tilde] = process.extractOne(tilde, people_names)[0]
+    
+# effect_dict.update({'%1Kup~5cin~7skij %2Roman %kR.K.': "%1Kupčins'kij %2Roman %kR.K.",
+#  "%1Masaryk %2Tom~'a~5s %2Garrigue": "%1Masaryk %2Tomáš %2Garrigue",
+#  "%1Josemari~'a Escriv~'a de Balaguer %5bł. %wEscriv~'a de Balaguer      Josemari~'a": "%1Josemariá Escrivá de Balaguer %5bł. %wEscrivá de Balaguer Josemariá",
+#  "%1T~5re~5s~5n~'ak %2Vlastimil": "%1Třešňák %2Vlastimil",
+#  "%1Fejt~:o %2Fran~9cois": "%1Fejtö %2François",
+#  "%1Gru~5sa %2Ji~5r~'i": "%1Gruša %2Jiří",
+#  "%1Sad~3unait~'e %2Nijol~'e": "%1Sadūnaité %2Nijolé",
+#  "%1Mlyn~'a~5r %2Zden~5ek %d1930-": "%1Mlynář %2Zdeněk %d1930-",
+#  "%1~5Cern~'y %2V~0aclav": "%1Černý %2Vàclav",
+#  "%1Harn~'i~5cek %2Martin": "%1Harníček %2Martin",
+#  "%1Ko~5sel~0ivec %2~0Ivan %sKoszeliwec Iwan": "%1Košelìvec %2Ìvan %sKoszeliwec Iwan",
+#  "%1~5Sime~5cka %2Milan": "%1Šimečka %2Milan",
+#  "%1Gruntor~'ad %2Ji~5r~'i": "%1Gruntorád %2Jiří",
+#  "%1Carr~0ere d' %1Encausse %2H~'el~0ene": "%1Carrère d' %1Encausse %2Hélène",
+#  "%1Hv~'i~5zd~'ala %2Karel %vop %mHv~'i~5zd'ala Karel": "%1Hvíždála %2Karel %vop %mHvíždála Karel"})
+
+# bn_books = records_dict['bn_books']
+# for column in bn_books:
+#     if column in ['X100', 'X700', 'X701']:
+#         bn_books[column] = bn_books[column].apply(lambda x: effect_dict[x] if x in effect_dict else x)
+        
+# bn_books.to_excel('bn_books.xlsx', index=False)
+#%% tworzenie kartoteki osób
+
+#wczytanie kartoteki osób po pracach
+# Counter(kartoteka_osob['Project_ID']).most_common(10)
 
 occupation_classification = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIGTFI4Lc', 'occupation')
 
@@ -202,7 +253,6 @@ kartoteka_osob = kartoteka_osob[~kartoteka_osob['Project_ID'].isin(pseudonimy_id
 
 # na podstawie zmiennej test będzie trzeba pozmieniać Project_ID pseudonimów, a przypisanie do właściwych haseł zmienić z identyfikatorów viaf na Project_ID – manualna robota
 
-
 groupby = kartoteka_osob.groupby('Project_ID')
 
 #ogarnąć pseudonimy w tabeli
@@ -231,7 +281,7 @@ groupby = kartoteka_osob.groupby('Project_ID')
 people_dict = {}
 for name, group in tqdm(groupby, total=len(groupby)):
     # 198, 346, 936, 1947, 1883, 1045, 520
-    # name = '168'
+    # name = '943'
     # group = groupby.get_group(name)
     try:
         sex_label = group['sexLabel.value'].dropna().drop_duplicates().to_list()[0]
@@ -378,6 +428,8 @@ for dictionary in people_dict:
     difference = set(klucze) - set(keys)
     for el in difference:
         people_dict[dictionary].update({el:np.nan})
+        
+#tutaj dodać pseudonimy!!!
 
 #occupation for matching with classification
 occupation_to_delete = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIGTFI4Lc', 'Sheet1')
