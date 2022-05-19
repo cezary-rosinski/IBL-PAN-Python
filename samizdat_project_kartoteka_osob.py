@@ -246,6 +246,9 @@ instruction_cz = {'Index Name': ['$$a'],
 pseudonimy = kartoteka_osob[(kartoteka_osob['czy pseudonim'] == 'tak') &
                             (kartoteka_osob['pseudonym of'].notnull())]
 
+# !!! dać im znacznik do nodegoat
+pseudonimy_do_oznaczenia = kartoteka_osob[(kartoteka_osob['czy pseudonim'] == 'tak')]
+
 pseudonimy_id = pseudonimy['Project_ID'].to_list()
 #pseudonimami zająć się na końcu jako uzupełnienia haseł
 
@@ -281,7 +284,7 @@ groupby = kartoteka_osob.groupby('Project_ID')
 people_dict = {}
 for name, group in tqdm(groupby, total=len(groupby)):
     # 198, 346, 936, 1947, 1883, 1045, 520
-    # name = '943'
+    # name = '2204'
     # group = groupby.get_group(name)
     try:
         sex_label = group['sexLabel.value'].dropna().drop_duplicates().to_list()[0]
