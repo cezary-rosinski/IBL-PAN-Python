@@ -172,6 +172,8 @@ for lit, (i_start, i_end) in final_dict.items():
 start_ind = 291
 end_ind = 443
 
+start_ind = 454
+end_ind = 568
 # start_ind = 42
 # end_ind = 58
 
@@ -210,6 +212,38 @@ for e in tqdm(final_dict):
                 except IndexError:
                     pass
         
+        test = []
+        for ind, tex in order:
+            if tex != '' and tex != '*':
+                if ind < 650000 or tex == '——':
+                    test.append([(ind, tex)])
+                else: test[-1].append((ind, tex))
+                
+                
+                
+                
+    # opracować warunki łączenia treści w całostki bibliograficzne
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
+                
         # for e, f in zip(test, text):
         #     if e[-1].strip() != f:
         #         print(f'{e} | {f}')
@@ -225,30 +259,94 @@ for e in tqdm(final_dict):
         groups = []
         counter = 0
         for ind, number in enumerate(order):
-            if ind == 0 or number > order[ind-1] or number > 1300000:
+            # if ind == 0 or number > order[ind-1] or number > 1300000:
+            if ind == 0 or number > order[ind-1]:
                 groups.append(counter)
             else:
                 counter += 1
                 groups.append(counter)
         
-        groups_set = set(groups)           
-        # groups_dict = {}
-        indices_out = []
-        for s in groups_set:
-            # s=0
-            group_indices = [i for i, e in enumerate(groups) if e == s]
-            single_group = [e for i, e in enumerate(order) if i in group_indices]
-            ind_list = [e for e,f in zip(group_indices, single_group) if f > 1300000]
-            if ind_list:
-                ind_list.insert(0,ind_list[0]-1)
-                merged_str = ' '.join([e for i, e in enumerate(text) if i in ind_list]) 
-                text[ind_list[0]] = merged_str
-                indices_out.extend(ind_list[1:])
-        indices_out.extend([i for i, e in enumerate(text) if e in ['', '*']])
+        # groups_set = set(groups)           
+        # # groups_dict = {}
+        # indices_out = []
+        # for s in groups_set:
+        #     # s=0
+        #     group_indices = [i for i, e in enumerate(groups) if e == s]
+        #     single_group = [e for i, e in enumerate(order) if i in group_indices]
+        #     ind_list = [e for e,f in zip(group_indices, single_group) if f > 1300000]
+        #     if ind_list:
+        #         ind_list.insert(0,ind_list[0]-1)
+        #         merged_str = ' '.join([e for i, e in enumerate(text) if i in ind_list]) 
+        #         text[ind_list[0]] = merged_str
+        #         indices_out.extend(ind_list[1:])
+        # indices_out.extend([i for i, e in enumerate(text) if e in ['', '*']])
                         
-        text = [e for i,e in enumerate(text) if i not in indices_out]  
-        groups = [e for i,e in enumerate(groups) if i not in indices_out]
-        order = [round_down(e) for i,e in enumerate(order) if i not in indices_out]
+        # text = [e for i,e in enumerate(text) if i not in indices_out]  
+        # groups = [e for i,e in enumerate(groups) if i not in indices_out]
+        # order = [round_down(e) for i,e in enumerate(order) if i not in indices_out]
+        
+        order = [round_down(e) for i,e in enumerate(order)]
+        order_indices = [(e,i) for i,e in enumerate(sorted(list(set(order))),1)]
+        order_indices = dict(zip([e[0] for e in order_indices], [e[1] for e in order_indices]))
+        order_indices = [order_indices[e] for e in order]
+        
+        # tu trzeba by połączyć to, co stanowi całość
+        
+        groups_set = set(groups)
+        new_order = []
+        for group in groups_set:
+            group = 4
+            print([o for o, g in zip(order_indices, groups) if g == group])
+            length = len([o for o, g in zip(order_indices, groups) if g == group])
+            min_value = [o for o, g in zip(order_indices, groups) if g == group][0]
+            max_value = [o for o, g in zip(order_indices, groups) if g == group][-1]
+            old_set = set([o for o, g in zip(order_indices, groups) if g == group])
+            
+            new_set = set(list(range(min_value, max_value+1)[:length]))
+            if dict(zip(old_set-new_set, new_set-old_set)):
+                difference = dict(zip(old_set-new_set, new_set-old_set))
+            update = [difference[e] if e in difference else e for e in list(range(min_value, max_value+1)[:length])]
+            
+            new_order.extend(update)
+            print(new_order)
+        
+        
+        total_info = list(zip(new_order, text, groups))
+        
+        biblio_dict = {}
+        for ind, string, group in total_info:
+            if group not in biblio_dict:
+                biblio_dict[group] = {ind: string}
+            elif ind in biblio_dict[group]:
+                ind -= 1
+                biblio_dict[group].update({ind: string})
+            else:
+                biblio_dict[group].update({ind: string})
+        
+        df = pd.DataFrame.from_dict(biblio_dict, orient='index').sort_index()
+        
+        lista_grup.append(biblio_dict)
+
+test = [list(e.values()) for e in lista_grup]        
+test = [e for sub in test for e in sub]
+df = pd.DataFrame(test)
+columns = sorted(df.columns.values)
+df = df.reindex(columns=columns)
+        # teksty = []
+        # for group in groups_set:
+        #     test = '|'.join([te for gr, te in zip(groups, text) if gr == group])
+        #     teksty.append(test)
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
         
         #tu trzeba uważać, bo jeśli w rekordzie jest 9 i 10, to się nadpisze, ale u Borgesa nie ma, więc u kogo może być?
         order = [e if e != 1000000 else 900000 for e in order]
@@ -327,7 +425,10 @@ for e in tqdm(final_dict):
         
         grouped['grupowanie'] = grouped.apply(lambda x: grupy_dict[len(x.dropna())] if len(x.dropna()) in grupy_dict else grupy_dict['reszta'], axis=1)
         
-        lista_grup.append(Counter(grouped['grupowanie']))
+        # lista_grup.append(Counter(grouped['grupowanie']))
+        lista_grup.append(grouped)
+
+df = pd.concat([e for e in lista_grup])
 
 sum(lista_grup, Counter())
 
