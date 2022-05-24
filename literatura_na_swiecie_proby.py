@@ -212,13 +212,69 @@ for e in tqdm(final_dict):
                 except IndexError:
                     pass
         
+        #wyznaczanie całostek
+        
         test = []
         for ind, tex in order:
             if tex != '' and tex != '*':
                 if ind < 650000 or tex == '——':
                     test.append([(ind, tex)])
                 else: test[-1].append((ind, tex))
+        
+        #łączenie opisów bibliograficznych
+        
+        new_test = []
+        for el in test:
+            # el = test[21]
+            if len(set([e[0] for e in el])) > 1:
+                max_ind_in_el = max([e[0] for e in el])
+            else: max_ind_in_el = 0
+            temp_list = []
+            for i, (ind, tex) in enumerate(el):
+                if tex != '——' and (ind > 1300000 or el[i-1][-1].endswith((';',',')) or (ind == max_ind_in_el if not(bool(re.search('s\. {d}', el[i-1][-1]))) else False) or (el[i-1][-1].endswith(':') if not(bool(re.search('s\. {d}', tex))) else False)) and not tex.startswith('='):
+                    temp_list[-1].append((ind, tex))
+                else: temp_list.append([(ind, tex)])
+            new_test.append(temp_list)
+            
+       #sprawdzić, czy borgesa nie popsuje 
+       # czy w literaturze przedmiotowej mam z automatu łączyć nazwiska z rekordami?
+        
+       
+        
+       
+        
+       
+        
+       
+        
+       
+        nowe_wiersze = []
+        for i, (ind, tex) in enumerate(wiersze):
+            if ind > 1300000 or wiersze[i-1][-1].endswith((';',',')):
+                nowe_wiersze[-1].append((ind, tex))
+            else: nowe_wiersze.append([(ind, tex)])
                 
+        rex = 'W osiemdziesiąt światów dookoła dnia,  Czyt. 1976'
+        tex = 'La vuelta al dia en ochenta mundos'
+        ind = 895350
+        
+        tex != '——' and (ind > 1300000 or rex.endswith((';',',')) or (ind == max_ind_in_el if not(bool(re.search('s\. {d}', rex))) else False) or (rex.endswith(':') if not(bool(re.search('s\. {d}', tex))) else False)) and not tex.startswith('=')
+        
+        
+        
+        
+                         
+                         '~' not in tex and (not(bool(re.search('\d{4}', tex))) and not(bool(re.search('\d{4}', rex)))) else False)
+        
+        
+        bool(re.search('s\. {d}', tex)) and not(bool(re.search('s\. {d}', rex)))
+        
+        rex = 'Chorób nie ma, są tylko chorzy,  ~ s. 276–7'
+        tex = 'Chorób nie ma, są tylko chorzy,  ~ s. 276–7'
+        
+        
+        
+        tex != '——' and (ind > 1300000 or el[i-1][-1].endswith((';',',')) or ind == max_ind_in_el if '~' not in tex and (not(bool(re.search('\d{4}', tex))) and not(bool(re.search('\d{4}', rex)))) else False)
                 
                 
                 
