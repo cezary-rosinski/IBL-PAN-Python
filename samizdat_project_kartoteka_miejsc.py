@@ -50,10 +50,10 @@ def ask_wikidata_for_places(list_of_viafs):
 # z każdego arkusza biorę tylko te osoby, które mają tak lub new i z nich wyjmuję informacje nt. miejsc
 kartoteka_osob = pd.DataFrame()
 
-for worksheet in ['pojedyncze ok', 'grupy_ok', 'osoby_z_jednym_wierszem', 'reszta']:
+for worksheet in ['pojedyncze ok', 'grupy_ok', 'osoby_z_jednym_wierszem', 'reszta', 'zapomniani']:
     temp_df = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', worksheet)
     temp_df = temp_df[temp_df['decyzja'].isin(['tak', 'new'])]
-    kartoteka_osob = kartoteka_osob.append(temp_df)
+    kartoteka_osob = pd.concat([kartoteka_osob, temp_df])
     
 # test = [e.split('❦') for e in kartoteka_osob['occupationLabel.value'].dropna().to_list()]
 # test = pd.DataFrame(sorted(list(set([e for sub in test for e in sub]))), columns=['occupation'])
@@ -239,6 +239,58 @@ places_from_bibliographical_records = ["http://www.wikidata.org/wiki/Q761",
 
 places_from_bibliographical_records = [re.findall('Q.+', e)[0] for e in places_from_bibliographical_records]
 places_from_bibliographical_records = [e for e in places_from_bibliographical_records if e not in df['wikidata_id'].to_list()]
+
+# places_from_bibliographical_records = ["Q36600",
+# "Q93323",
+# "Q611784",
+# "Q28587",
+# "Q894440",
+# "Q21",
+# "Q577867",
+# "Q4093",
+# "Q1818270",
+# "Q104407",
+# "Q430864",
+# "Q207074",
+# "Q40219",
+# "Q101616",
+# "Q241475",
+# "Q996881",
+# "Q3564800",
+# "Q242000",
+# "Q1460",
+# "Q464763",
+# "Q1632616",
+# "Q104302",
+# "Q456",
+# "Q104074",
+# "Q46787",
+# "Q40416",
+# "Q378120",
+# "Q10815719",
+# "Q992481",
+# "Q203645",
+# "Q4423536",
+# "Q754773",
+# "Q9365",
+# "Q942842",
+# "Q1000475",
+# "Q393251",
+# "Q7599331",
+# "Q7067131",
+# "Q917836",
+# "Q184163",
+# "Q661996",
+# "Q1025109",
+# "Q2749",
+# "Q741876",
+# "Q242105",
+# "Q193929",
+# "Q271858",
+# "Q158280",
+# "Q171800",
+# "Q807",
+# "Q1794"]
 
 languages = ['pl', 'en', 'fr', 'de', 'es', 'cs']
 

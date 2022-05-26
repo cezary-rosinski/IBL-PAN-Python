@@ -81,7 +81,7 @@ kartoteka_osob = pd.DataFrame()
 for worksheet in tqdm(['pojedyncze ok', 'grupy_ok', 'osoby_z_jednym_wierszem', 'reszta', 'zapomniani']):
     temp_df = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', worksheet)
     temp_df = temp_df[temp_df['decyzja'].isin(['tak', 'new'])]
-    kartoteka_osob = kartoteka_osob.append(temp_df)  
+    kartoteka_osob = pd.concat([kartoteka_osob, temp_df])  
     
 #%% klasyfikacja płci    
 sex_classification = kartoteka_osob[['sexLabel.value']].dropna().drop_duplicates().rename(columns={'sexLabel.value': 'Typeofsex'})
@@ -91,68 +91,67 @@ wikidata_sex = {'mężczyzna': 'https://www.wikidata.org/wiki/Q8441',
 sex_classification['Wikidata_ID'] = sex_classification['Typeofsex'].apply(lambda x: wikidata_sex[x])
 # sex_classification.to_csv('samizdat_sex_classification_to_nodegoat.csv', index=False, encoding='utf-8') 
 
-#%%
-#klasyfikacja zawodów
-# samizdat_occupation = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIGTFI4Lc', 'Sheet1')
-# occupations = samizdat_occupation['occupation'].to_list()
+#%% klasyfikacja zawodów
+samizdat_occupation = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIGTFI4Lc', 'Sheet1')
+occupations = samizdat_occupation['occupation'].to_list()
 
-# final = {}
-# url = 'https://query.wikidata.org/sparql'
-# for occupation in tqdm(occupations):
-#     if not re.search('Q\d+', occupation):
-#         while True:
-#             try:
-#                 sparql_query = f"""SELECT distinct ?item ?itemLabel ?itemDescription WHERE{{  
-#                   ?item ?label "{occupation}"@pl.
-#                     SERVICE wikibase:label {{ bd:serviceParam wikibase:language "pl". }}    
-#                 }}"""
-#                 results = requests.get(url, params = {'format': 'json', 'query': sparql_query})
-#                 results = results.json()
-#                 try:
-#                     wd_id = re.findall('Q\d+', [e['item']['value'] for e in results['results']['bindings'] if e['itemLabel']['value'] == occupation][0])[0]
-#                 except IndexError:
-#                     wd_id = re.findall('Q\d+', [e['item']['value'] for e in results['results']['bindings'] if 'wikidata' in e['item']['value'] and 'Q' in e['item']['value']][0])[0]
-#                 sparql_query = f"""select distinct ?item ?label (lang(?label) as ?lang) where {{
-#                   wd:{wd_id} rdfs:label ?label
-#                   filter(lang(?label) = 'pl' || lang(?label) = 'en')
-#                 }}"""  
-#                 results = requests.get(url, params = {'format': 'json', 'query': sparql_query})
-#                 results = results.json()     
-#                 temp = [[e['label']['xml:lang'], e['label']['value']] for e in results['results']['bindings']]
-#                 for el in temp:
-#                     if wd_id not in final:
-#                         final[wd_id] = {el[0]:el[-1]}
-#                     else:
-#                         final[wd_id].update({el[0]:el[-1]})
-#             except ValueError:
-#                 time.sleep(4)
-#                 continue
-#             break
-#     else:
-#         url2 = f'https://www.wikidata.org/wiki/Special:EntityData/{occupation}.json'
-#         result = requests.get(url2).json()
-#         try:
-#             final[occupation] = {k:v['value'] for k,v in result['entities'][occupation]['labels'].items() if k in ['en', 'pl']}
-#         except KeyError:
-#             final[list(result['entities'].keys())[0]] = {k:v['value'] for k,v in result['entities'][list(result['entities'].keys())[0]]['labels'].items() if k in ['en', 'pl']}
+final = {}
+url = 'https://query.wikidata.org/sparql'
+for occupation in tqdm(occupations):
+    if not re.search('Q\d+', occupation):
+        while True:
+            try:
+                sparql_query = f"""SELECT distinct ?item ?itemLabel ?itemDescription WHERE{{  
+                  ?item ?label "{occupation}"@pl.
+                    SERVICE wikibase:label {{ bd:serviceParam wikibase:language "pl". }}    
+                }}"""
+                results = requests.get(url, params = {'format': 'json', 'query': sparql_query})
+                results = results.json()
+                try:
+                    wd_id = re.findall('Q\d+', [e['item']['value'] for e in results['results']['bindings'] if e['itemLabel']['value'] == occupation][0])[0]
+                except IndexError:
+                    wd_id = re.findall('Q\d+', [e['item']['value'] for e in results['results']['bindings'] if 'wikidata' in e['item']['value'] and 'Q' in e['item']['value']][0])[0]
+                sparql_query = f"""select distinct ?item ?label (lang(?label) as ?lang) where {{
+                  wd:{wd_id} rdfs:label ?label
+                  filter(lang(?label) = 'pl' || lang(?label) = 'en')
+                }}"""  
+                results = requests.get(url, params = {'format': 'json', 'query': sparql_query})
+                results = results.json()     
+                temp = [[e['label']['xml:lang'], e['label']['value']] for e in results['results']['bindings']]
+                for el in temp:
+                    if wd_id not in final:
+                        final[wd_id] = {el[0]:el[-1]}
+                    else:
+                        final[wd_id].update({el[0]:el[-1]})
+            except ValueError:
+                time.sleep(4)
+                continue
+            break
+    else:
+        url2 = f'https://www.wikidata.org/wiki/Special:EntityData/{occupation}.json'
+        result = requests.get(url2).json()
+        try:
+            final[occupation] = {k:v['value'] for k,v in result['entities'][occupation]['labels'].items() if k in ['en', 'pl']}
+        except KeyError:
+            final[list(result['entities'].keys())[0]] = {k:v['value'] for k,v in result['entities'][list(result['entities'].keys())[0]]['labels'].items() if k in ['en', 'pl']}
         
-# test = pd.DataFrame.from_dict(final, orient='index')     
-# test.to_excel('test.xlsx')  
+test = pd.DataFrame.from_dict(final, orient='index')     
+test.to_excel('test.xlsx')  
         
-# uzupelnienia = ['Q48282', 'Q846430', 'Q7019111', 'Q33999', 'Q33999', 'Q33999', 'Q111017237', 'Q5197818', 'Q1397808', 'Q25393460', 'Q152002', 'Q36180', 'Q17167049', 'Q49757', 'Q1238570', 'Q1650915', 'Q1397808', 'Q9379869']
+uzupelnienia = ['Q48282', 'Q846430', 'Q7019111', 'Q33999', 'Q33999', 'Q33999', 'Q111017237', 'Q5197818', 'Q1397808', 'Q25393460', 'Q152002', 'Q36180', 'Q17167049', 'Q49757', 'Q1238570', 'Q1650915', 'Q1397808', 'Q9379869']
 
 
-# final2 = {}
-# for occupation in tqdm(uzupelnienia):
-#     url2 = f'https://www.wikidata.org/wiki/Special:EntityData/{occupation}.json'
-#     result = requests.get(url2).json()
-#     try:
-#         final2[occupation] = {k:v['value'] for k,v in result['entities'][occupation]['labels'].items() if k in ['en', 'pl']}
-#     except KeyError:
-#         final2[list(result['entities'].keys())[0]] = {k:v['value'] for k,v in result['entities'][list(result['entities'].keys())[0]]['labels'].items() if k in ['en', 'pl']}
+final2 = {}
+for occupation in tqdm(uzupelnienia):
+    url2 = f'https://www.wikidata.org/wiki/Special:EntityData/{occupation}.json'
+    result = requests.get(url2).json()
+    try:
+        final2[occupation] = {k:v['value'] for k,v in result['entities'][occupation]['labels'].items() if k in ['en', 'pl']}
+    except KeyError:
+        final2[list(result['entities'].keys())[0]] = {k:v['value'] for k,v in result['entities'][list(result['entities'].keys())[0]]['labels'].items() if k in ['en', 'pl']}
 
-# test2 = pd.DataFrame.from_dict(final2, orient='index')     
-# test2.to_excel('test2.xlsx')  
+test2 = pd.DataFrame.from_dict(final2, orient='index')     
+test2.to_excel('test2.xlsx')  
     
 occupation_classification = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIGTFI4Lc', 'occupation').drop(columns=['old_label_pl', 'old_id']).drop_duplicates()
 occupation_classification['Wikidata_ID'] = 'https://www.wikidata.org/wiki/' + occupation_classification['Wikidata_ID']
@@ -211,9 +210,105 @@ occupation_classification['Wikidata_ID'] = 'https://www.wikidata.org/wiki/' + oc
 #         bn_books[column] = bn_books[column].apply(lambda x: effect_dict[x] if x in effect_dict else x)
         
 # bn_books.to_excel('bn_books.xlsx', index=False)
-#%% tworzenie kartoteki osób
+#%% uzupełnienia
+with open('text1.txt', 'wt', encoding='utf8') as f:
+    for pseudo, correct in pseudonimy_match:
+        f.write(pseudo + '\t')
+        f.write(correct + '\n')
+        f.write(str(pseudonyms_dict[pseudo]) + '\t')
 
-#wczytanie kartoteki osób po pracach
+correct_list = []    
+with open('text2.txt', 'wt', encoding='utf8') as f:
+    for pseudo, correct in pseudonimy_match:
+        f.write(pseudo + '\t')
+        f.write(correct + '\n')
+        f.write(str(people_dict[correct]) + '\n')
+        if pd.notnull(people_dict[correct]['wikidata_id']):
+            correct_list.append(people_dict[correct])
+
+test_df = kartoteka_osob[(kartoteka_osob['wikidata_ID'].notnull()) &
+                         (kartoteka_osob['birthdate.value'].isnull())]['wikidata_ID'].to_list()
+
+
+
+lista = []      
+for ind, el in tqdm(enumerate(test_df), total=len(test_df)):
+    # wikidata_id = re.findall('Q\d+', el['wikidata_id'])[0]
+    wikidata_id = re.findall('Q\d+', el)[0]
+    # wikidata_id = 'Q74718593'
+    url = f"https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json"
+    result = requests.get(url).json()
+    try:
+        birthplace_id = result['entities'][wikidata_id]['claims']['P19'][0]['mainsnak']['datavalue']['value']['id']
+        url_temp = f"https://www.wikidata.org/wiki/Special:EntityData/{birthplace_id}.json"
+        birthplace_result = requests.get(url_temp).json()
+        birthplace = birthplace_result['entities'][birthplace_id]['labels']['pl']['value']
+    except KeyError:
+        birthplace = np.nan
+        birthplace_id = np.nan
+    # correct_list[ind]['birthplace'] = birthplace
+    try:
+        deathplace_id = result['entities'][wikidata_id]['claims']['P20'][0]['mainsnak']['datavalue']['value']['id']
+        url_temp = f"https://www.wikidata.org/wiki/Special:EntityData/{deathplace_id}.json"
+        deathplace_result = requests.get(url_temp).json()
+        deathplace = deathplace_result['entities'][deathplace_id]['labels']['pl']['value']
+    except KeyError:
+        deathplace = np.nan
+        deathplace_id = np.nan
+    # correct_list[ind]['deathplace'] = deathplace
+    try:
+        birthdate = result['entities'][wikidata_id]['claims']['P569'][0]['mainsnak']['datavalue']['value']['time']
+    except KeyError:
+        birthdate = np.nan
+    # correct_list[ind]['birthdate'] = birthdate
+    try:
+        deathdate = result['entities'][wikidata_id]['claims']['P570'][0]['mainsnak']['datavalue']['value']['time']
+    except KeyError:
+        deathdate = np.nan
+    # correct_list[ind]['deathdate'] = deathdate
+    try:
+        sex = result['entities'][wikidata_id]['claims']['P21'][0]['mainsnak']['datavalue']['value']['id']
+        url_temp = f"https://www.wikidata.org/wiki/Special:EntityData/{sex}.json"
+        sex_result = requests.get(url_temp).json()
+        sex = sex_result['entities'][sex]['labels']['pl']['value']
+    except KeyError:
+        sex = np.nan
+    # correct_list[ind]['sex'] = sex   
+    try:
+        occupations = [e['mainsnak']['datavalue']['value']['id'] for e in result['entities'][wikidata_id]['claims']['P106']]
+        occupation = []
+        for o in occupations:
+            url_temp = f"https://www.wikidata.org/wiki/Special:EntityData/{o}.json"
+            o_result = requests.get(url_temp).json()
+            occ = o_result['entities'][o]['labels']['pl']['value']
+            occupation.append(occ)
+    except KeyError:
+        occupation = []
+    # correct_list[ind]['occupation'] = occupation  
+    try:
+        pseudonym = [e['mainsnak']['datavalue']['value'] for e in result['entities'][wikidata_id]['claims']['P742']]
+    except KeyError:
+        pseudonym = np.nan
+    temp_dict = {'wikidata_id': wikidata_id,
+                 'birthplace': birthplace,
+                 'birthplace_id': birthplace_id,
+                 'deathplace': deathplace,
+                 'deathplace_id': deathplace_id,
+                 'birthdate': birthdate,
+                 'deathdate': deathdate,
+                 'sex': sex,
+                 'occupation': occupation,
+                 'pseudonym': pseudonym}
+    lista.append(temp_dict)
+    # correct_list[ind]['pseudonym'] = pseudonym 
+
+df = pd.DataFrame(lista)   
+df['birthdate'] =  df['birthdate'].apply(lambda x: x[1:] if not(isinstance(x,float)) else x)
+df['deathdate'] =  df['deathdate'].apply(lambda x: x[1:] if not(isinstance(x,float)) else x)    
+df['occupation'] = df['occupation'].apply(lambda x: '❦'.join(x) if isinstance(x, list) and x else np.nan)
+df['pseudonym'] = df['pseudonym'].apply(lambda x: '❦'.join(x) if isinstance(x, list) and x else np.nan)#%% tworzenie kartoteki osób
+
+#%%main
 # Counter(kartoteka_osob['Project_ID']).most_common(10)
 
 occupation_classification = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIGTFI4Lc', 'occupation')
@@ -247,7 +342,8 @@ pseudonimy = kartoteka_osob[(kartoteka_osob['czy pseudonim'] == 'tak') &
                             (kartoteka_osob['pseudonym of'].notnull())]
 
 # !!! dać im znacznik do nodegoat
-pseudonimy_do_oznaczenia = kartoteka_osob[(kartoteka_osob['czy pseudonim'] == 'tak')]
+pseudonimy_do_oznaczenia = kartoteka_osob[(kartoteka_osob['czy pseudonim'] == 'tak') &
+                                          (kartoteka_osob['pseudonym of'].isnull())]
 
 pseudonimy_id = pseudonimy['Project_ID'].to_list()
 #pseudonimami zająć się na końcu jako uzupełnienia haseł
@@ -256,7 +352,7 @@ kartoteka_osob = kartoteka_osob[~kartoteka_osob['Project_ID'].isin(pseudonimy_id
 
 # na podstawie zmiennej test będzie trzeba pozmieniać Project_ID pseudonimów, a przypisanie do właściwych haseł zmienić z identyfikatorów viaf na Project_ID – manualna robota
 
-groupby = kartoteka_osob.groupby('Project_ID')
+
 
 #ogarnąć pseudonimy w tabeli
 
@@ -279,161 +375,210 @@ groupby = kartoteka_osob.groupby('Project_ID')
 #sztorc
 
 #sub-objects - located - powiązać z kartoteką miejsc
+groupby = kartoteka_osob.groupby('Project_ID')
+groupby2 = pseudonimy.groupby('Project_ID')
 
-
-people_dict = {}
-for name, group in tqdm(groupby, total=len(groupby)):
-    # 198, 346, 936, 1947, 1883, 1045, 520
-    # name = '2204'
-    # group = groupby.get_group(name)
-    try:
-        sex_label = group['sexLabel.value'].dropna().drop_duplicates().to_list()[0]
-    except IndexError: sex_label = np.nan
-    project_id = group['Project_ID'].dropna().drop_duplicates().to_list()[0]
-    try:
-        viaf_id = f"http://viaf.org/viaf/{group['viaf_ID'].dropna().drop_duplicates().to_list()[0]}"
-    except IndexError: viaf_id = np.nan
-    try:
-        wikidata_id = f"https://www.wikidata.org/wiki/{group['wikidata_ID'].dropna().drop_duplicates().to_list()[0]}"
-    except IndexError: wikidata_id = np.nan
-
-    biblio_names = group['name_form_id'].to_list()
-    try:
-        biblio_names = [e.split('|') for e in biblio_names]
+people_groupbys = [groupby, groupby2]
+people_list_of_dicts = []
+for groupby in people_groupbys:
+    people_dict = {}
+    for name, group in tqdm(groupby, total=len(groupby)):
+        # 198, 346, 936, 1947, 1883, 1045, 520
+        # name = '502204'
+        # group = groupby.get_group(name)
+        project_id = name
+        try:
+            sex_label = group['sexLabel.value'].dropna().drop_duplicates().to_list()[0]
+        except IndexError: sex_label = np.nan
+        project_id = group['Project_ID'].dropna().drop_duplicates().to_list()[0]
+        try:
+            viaf_id = "http://viaf.org/viaf/" + re.findall('\d+', group['viaf_ID'].dropna().drop_duplicates().to_list()[0])[0]
+        except IndexError: viaf_id = np.nan
+        try:
+            wikidata_id = "https://www.wikidata.org/wiki/" + re.findall('Q\d+', group['wikidata_ID'].dropna().drop_duplicates().to_list()[0])[0]
+        except IndexError: wikidata_id = np.nan
     
-        person_names_list = []
-        for biblio_name_set in biblio_names:
-            # biblio_name_set = biblio_names[0]
-            # biblio_name_set = biblio_names[-1]
-            for biblio_name in biblio_name_set:
-                # biblio_name = biblio_name_set[0]
-                # biblio_name = biblio_name_set[1]
-                # biblio_name = 'bn_books-86777-bnb4116-X100-%1'
-                # biblio_name = 'cz_articles-2323920-cza518-X600-$$a'
-                # biblio_name = 'pbl_books-1397940-pblt6590-tworcy-NA'
-                source = biblio_name.split('-')[0]
-                if source == 'bn_books':
-                    record_id = biblio_name.split('-')[1]
-                    df = records_dict[source]
-                    field = biblio_name.split('-')[-2]
-                    temp = df[df['id'] == record_id][field].to_list()[0].split('|')
-                    for pers in temp:
-                        # pers = temp[0]
-                        form_parsed = marc_parser_dict_for_field(pers, '%')
-                        dd = defaultdict(list)
-                        for d in form_parsed:
-                            for key, value in d.items():
-                                dd[key].append(value.strip())
-                        form_parsed = [{e:' '.join([el.strip() for el in dd[e]]) if e!='%p' else ';'.join([el.strip() for el in dd[e]])} for e in dd]
-                        use_of_instruction = instruction_bn.copy()
-                        for form_dict in form_parsed:
-                            # form_dict = form_parsed[0]
-                            for key, value in form_dict.items():
-                                good_keys = {k:value.strip() for k,v in instruction_bn.items() if key in v}
-                                use_of_instruction = {k:list(map(lambda x: x.replace(key, good_keys[k]), v)) if k in good_keys else v for k,v in use_of_instruction.items()}
-                        use_of_instruction = {k:' '.join([e for e in v if '%' not in e]) for k,v in use_of_instruction.items() if any('%' not in s for s in v)}
-                        if use_of_instruction:
-                            person_names_list.append(use_of_instruction)
-                elif 'cz' in source:
-                    record_id = biblio_name.split('-')[1]
-                    df = records_dict[source]
-                    field = biblio_name.split('-')[-2]
-                    temp = df[df['id'] == record_id][field].to_list()[0].split('|')
-                    
-                    for pers in temp:
-                        # pers = temp[0]
-                        form_parsed = marc_parser_dict_for_field(pers, '\$\$')
-                        dd = defaultdict(list)
-                        for d in form_parsed:
-                            for key, value in d.items():
-                                dd[key].append(value.strip())
-                        form_parsed = [{e:' '.join([el.strip() for el in dd[e]]) if e!='%p' else ';'.join([el.strip() for el in dd[e]])} for e in dd]
-                        use_of_instruction = instruction_cz.copy()
-                        for form_dict in form_parsed:
-                            # form_dict = form_parsed[0]
-                            for key, value in form_dict.items():
-                                good_keys = {k:value.strip() for k,v in instruction_cz.items() if key in v}
-                                use_of_instruction = {k:list(map(lambda x: x.replace(key, good_keys[k]), v)) if k in good_keys else v for k,v in use_of_instruction.items()}
-                        use_of_instruction = {k:' '.join([e for e in v if '%' not in e]) for k,v in use_of_instruction.items() if any('%' not in s for s in v)}
-                        if use_of_instruction:
-                            person_names_list.append(use_of_instruction)
-                    
-    
-            test = Counter([tuple(e.items()) for e in person_names_list])
-            temp_dict = {}
-            for k,v in test.items():
-                k = {key:value for key, value in k}['Index Name']
-                if k not in temp_dict:
-                    temp_dict[k] = v
-                else: temp_dict[k] += v
-            if len(set(temp_dict.values())) == 1:
-                proper_person = max([(e, SequenceMatcher(a=group['Index_Name'].to_list()[0],b=e).ratio()) for e in temp_dict.keys()], key=lambda x: x[-1])[0]
-            else:
-                proper_person = max({k: v for k,v in temp_dict.items()}, key=temp_dict.get)
-            
+        biblio_names = group['name_form_id'].to_list()
+        try:
+            biblio_names = [e.split('|') for e in biblio_names]
+        
+            person_names_list = []
+            for biblio_name_set in biblio_names:
+                # biblio_name_set = biblio_names[0]
+                # biblio_name_set = biblio_names[-1]
+                for biblio_name in biblio_name_set:
+                    # biblio_name = biblio_name_set[0]
+                    # biblio_name = biblio_name_set[1]
+                    # biblio_name = 'bn_books-86777-bnb4116-X100-%1'
+                    # biblio_name = 'cz_articles-2323920-cza518-X600-$$a'
+                    # biblio_name = 'pbl_books-1397940-pblt6590-tworcy-NA'
+                    source = biblio_name.split('-')[0]
+                    if source == 'bn_books':
+                        record_id = biblio_name.split('-')[1]
+                        df = records_dict[source]
+                        field = biblio_name.split('-')[-2]
+                        temp = df[df['id'] == record_id][field].to_list()[0].split('|')
+                        for pers in temp:
+                            # pers = temp[0]
+                            form_parsed = marc_parser_dict_for_field(pers, '%')
+                            dd = defaultdict(list)
+                            for d in form_parsed:
+                                for key, value in d.items():
+                                    dd[key].append(value.strip())
+                            form_parsed = [{e:' '.join([el.strip() for el in dd[e]]) if e!='%p' else ';'.join([el.strip() for el in dd[e]])} for e in dd]
+                            use_of_instruction = instruction_bn.copy()
+                            for form_dict in form_parsed:
+                                # form_dict = form_parsed[0]
+                                for key, value in form_dict.items():
+                                    good_keys = {k:value.strip() for k,v in instruction_bn.items() if key in v}
+                                    use_of_instruction = {k:list(map(lambda x: x.replace(key, good_keys[k]), v)) if k in good_keys else v for k,v in use_of_instruction.items()}
+                            use_of_instruction = {k:' '.join([e for e in v if '%' not in e]) for k,v in use_of_instruction.items() if any('%' not in s for s in v)}
+                            if use_of_instruction:
+                                person_names_list.append(use_of_instruction)
+                    elif 'cz' in source:
+                        record_id = biblio_name.split('-')[1]
+                        df = records_dict[source]
+                        field = biblio_name.split('-')[-2]
+                        temp = df[df['id'] == record_id][field].to_list()[0].split('|')
+                        
+                        for pers in temp:
+                            # pers = temp[0]
+                            form_parsed = marc_parser_dict_for_field(pers, '\$\$')
+                            dd = defaultdict(list)
+                            for d in form_parsed:
+                                for key, value in d.items():
+                                    dd[key].append(value.strip())
+                            form_parsed = [{e:' '.join([el.strip() for el in dd[e]]) if e!='%p' else ';'.join([el.strip() for el in dd[e]])} for e in dd]
+                            use_of_instruction = instruction_cz.copy()
+                            for form_dict in form_parsed:
+                                # form_dict = form_parsed[0]
+                                for key, value in form_dict.items():
+                                    good_keys = {k:value.strip() for k,v in instruction_cz.items() if key in v}
+                                    use_of_instruction = {k:list(map(lambda x: x.replace(key, good_keys[k]), v)) if k in good_keys else v for k,v in use_of_instruction.items()}
+                            use_of_instruction = {k:' '.join([e for e in v if '%' not in e]) for k,v in use_of_instruction.items() if any('%' not in s for s in v)}
+                            if use_of_instruction:
+                                person_names_list.append(use_of_instruction)
+                        
+        
+                test = Counter([tuple(e.items()) for e in person_names_list])
+                temp_dict = {}
+                for k,v in test.items():
+                    k = {key:value for key, value in k}['Index Name']
+                    if k not in temp_dict:
+                        temp_dict[k] = v
+                    else: temp_dict[k] += v
+                if len(set(temp_dict.values())) == 1:
+                    proper_person = max([(e, SequenceMatcher(a=group['Index_Name'].to_list()[0],b=e).ratio()) for e in temp_dict.keys()], key=lambda x: x[-1])[0]
+                else:
+                    proper_person = max({k: v for k,v in temp_dict.items()}, key=temp_dict.get)
+                
+                person_names_dict = {}
+                for dictionary in person_names_list:
+                    if dictionary['Index Name'] == proper_person:
+                        for key, value in dictionary.items():
+                            if key not in person_names_dict:
+                                person_names_dict[key] = [value]
+                            else:
+                                person_names_dict[key].append(value)
+                                
+                    #else: Na razie PBL jest poza
+            person_names_dict = {k:list(set(v)) for k,v in person_names_dict.items()}
+        except ValueError:
             person_names_dict = {}
-            for dictionary in person_names_list:
-                if dictionary['Index Name'] == proper_person:
-                    for key, value in dictionary.items():
-                        if key not in person_names_dict:
-                            person_names_dict[key] = [value]
-                        else:
-                            person_names_dict[key].append(value)
-                            
-                #else: Na razie PBL jest poza
-        person_names_dict = {k:list(set(v)) for k,v in person_names_dict.items()}
-    except ValueError:
-        person_names_dict = {}
-    except AttributeError:
-        person_names_dict = {'Index Name': group['Index_Name'].dropna().drop_duplicates().to_list()[0]}
-    person_names_dict['nazwa z tabeli'] = group['Index_Name'].to_list()
-    #dodatki z wikidaty
-    try:
-        wiki_pseudonym = group['pseudonym.value'].dropna().drop_duplicates().to_list()[0]
-    except IndexError: wiki_pseudonym = np.nan
-    wiki_occupation = [e.split('❦') for e in group['occupationLabel.value'].dropna().drop_duplicates().to_list()]
-    wiki_occupation = list(set([e for sub in wiki_occupation for e in sub]))
+        except AttributeError:
+            person_names_dict = {'Index Name': group['Index_Name'].dropna().drop_duplicates().to_list()[0]}
+        person_names_dict['nazwa z tabeli'] = group['Index_Name'].to_list()
+        #dodatki z wikidaty
+        try:
+            wiki_pseudonym = group['pseudonym.value'].dropna().drop_duplicates().to_list()[0]
+        except IndexError: wiki_pseudonym = np.nan
+        wiki_occupation = [e.split('❦') for e in group['occupationLabel.value'].dropna().drop_duplicates().to_list()]
+        wiki_occupation = list(set([e for sub in wiki_occupation for e in sub]))
+        
+        try:
+            wiki_birthplace = group['birthplaceLabel.value'].dropna().drop_duplicates().to_list()[0]
+        except IndexError: wiki_birthplace = np.nan
+        try:
+            wiki_deathplace = group['deathplaceLabel.value'].dropna().drop_duplicates().to_list()[0]
+        except IndexError: wiki_deathplace = np.nan
+        try:
+            wiki_birthdate = group['birthdate.value'].dropna().drop_duplicates().to_list()[0]
+        except IndexError: wiki_birthdate = np.nan
+        try:
+            wiki_deathdate = group['deathdate.value'].dropna().drop_duplicates().to_list()[0]
+        except IndexError: wiki_deathdate = np.nan
+        
+        wiki = {'pseudonym': wiki_pseudonym,
+                'occupation': wiki_occupation,
+                'birthplace': wiki_birthplace,
+                'deathplace': wiki_deathplace,
+                'birthdate': wiki_birthdate,
+                'deathdate': wiki_deathdate,
+                'sex': sex_label,
+                'wikidata_id': wikidata_id,
+                'viaf_id': viaf_id,
+                'Project_ID': project_id}
+        person_names_dict.update(wiki)
+        people_dict[name] = person_names_dict
+        
+    klucze = []
+    for dictionary in people_dict:
+        for key in people_dict[dictionary]:
+            if key not in klucze:
+                klucze.append(key)
+    klucze = tuple(klucze)
+                
+    for dictionary in people_dict:
+        keys = tuple(people_dict[dictionary].keys())
+        difference = set(klucze) - set(keys)
+        for el in difference:
+            people_dict[dictionary].update({el:np.nan})
     
-    try:
-        wiki_birthplace = group['birthplaceLabel.value'].dropna().drop_duplicates().to_list()[0]
-    except IndexError: wiki_birthplace = np.nan
-    try:
-        wiki_deathplace = group['deathplaceLabel.value'].dropna().drop_duplicates().to_list()[0]
-    except IndexError: wiki_deathplace = np.nan
-    try:
-        wiki_birthdate = group['birthdate.value'].dropna().drop_duplicates().to_list()[0]
-    except IndexError: wiki_birthdate = np.nan
-    try:
-        wiki_deathdate = group['deathdate.value'].dropna().drop_duplicates().to_list()[0]
-    except IndexError: wiki_deathdate = np.nan
-    
-    wiki = {'pseudonym': wiki_pseudonym,
-            'occupation': wiki_occupation,
-            'birthplace': wiki_birthplace,
-            'deathplace': wiki_deathplace,
-            'birthdate': wiki_birthdate,
-            'deathdate': wiki_deathdate,
-            'sex': sex_label,
-            'wikidata_id': wikidata_id,
-            'viaf_id': viaf_id}
-    person_names_dict.update(wiki)
-    people_dict[name] = person_names_dict
-    
-klucze = []
-for dictionary in people_dict:
-    for key in people_dict[dictionary]:
-        if key not in klucze:
-            klucze.append(key)
-klucze = tuple(klucze)
-            
-for dictionary in people_dict:
-    keys = tuple(people_dict[dictionary].keys())
-    difference = set(klucze) - set(keys)
-    for el in difference:
-        people_dict[dictionary].update({el:np.nan})
+    people_list_of_dicts.append(people_dict)
         
 #tutaj dodać pseudonimy!!!
+pseudonimy_list = list(zip(pseudonimy['Project_ID'], [e.split('|') for e in pseudonimy['pseudonym of'].to_list()]))
+pseudonimy_match = []
+for d, list_i in pseudonimy_list:
+    for i in list_i:
+        pseudonimy_match.append((d, i))
 
+people_dict = people_list_of_dicts[0]
+pseudonyms_dict = people_list_of_dicts[1]
+
+for pseudo, correct in pseudonimy_match:
+    if isinstance(people_dict[correct]['Pseudonyms'], list) and isinstance(pseudonyms_dict[pseudo]['Index Name'], list):
+        new = list(set(people_dict[correct]['Pseudonyms'] + pseudonyms_dict[pseudo]['Index Name']))
+        people_dict[correct]['Pseudonyms'] = new
+        
+    elif isinstance(people_dict[correct]['Pseudonyms'], float) and isinstance(pseudonyms_dict[pseudo]['Index Name'], list):
+        people_dict[correct]['Pseudonyms'] = list(set(pseudonyms_dict[pseudo]['Index Name']))
+
+    pseudonyms_dict[pseudonimy_match[2][0]]
+    people_dict[pseudonimy_match[2][1]]
+
+pseudonimy_do_oznaczenia = pseudonimy_do_oznaczenia['Project_ID'].to_list()
+
+{k:v.update({'sztorc':True}) if v['Project_ID'] in pseudonimy_do_oznaczenia else v.update({'sztorc':False}) for k,v in people_dict.items()}
+    
+#Index Name – string – longest nazwa z tabeli + sztorc lub nazwa z tabeli
+#Project ID – string
+#VIAF ID – external
+#Wikidata ID – external
+#Sex Label – classification
+#Occupation – classification
+#Name – string
+#Given Name – string
+#Pseudonym, Kryptonym – string
+#True Name – string
+#Other Name Forms – string
+#Addition to name – string
+#Name Numeration – string
+#Name Numeration – string
+#Name Numeration (Arabic) – number
+#DataSource – classification
+#sztorc 
+        
 #occupation for matching with classification
 occupation_to_delete = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIGTFI4Lc', 'Sheet1')
 occupation_to_delete = occupation_to_delete[occupation_to_delete['PL'] == 'delete']['occupation'].to_list()
@@ -464,6 +609,41 @@ sex = {'mężczyzna': {'sex_label_pl': 'mężczyzna',
                           'Wikidata_ID': 'https://www.wikidata.org/wiki/Q1097630'}}
 
 people_dict = {k:{ke:sex[va]['Wikidata_ID'] if ke == 'sex' and pd.notnull(va) else va for ke,va in v.items()} for k,v in people_dict.items()}
+
+
+#przygotować właściwe typy danych
+#ujednolicić daty
+#zlepić pseudonimy
+#zostawić tylko potrzebne pola
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 df = pd.DataFrame.from_dict(people_dict, orient='index')
 

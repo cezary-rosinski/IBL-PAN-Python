@@ -13,6 +13,7 @@ from xml.etree import ElementTree as ET
 from collections import Counter
 import numpy as np
 import math
+from itertools import zip_longest
 
 #%%def
 def check_if_all_none(list_of_elem):
@@ -177,6 +178,9 @@ end_ind = 568
 # start_ind = 42
 # end_ind = 58
 
+start_ind = 71
+end_ind = 90
+
 lista_grup = []
 for e in tqdm(final_dict):
     for k,v in final_dict[e].items():
@@ -200,24 +204,31 @@ for e in tqdm(final_dict):
         #indeksuje się *, trzeba to zbiorczo usunąć
         order = []
         for el1, el2 in zip(a,b):
+            # el1 = a[0]
+            # el2 = b[0]
             if len(el1) == 1:
                 # order.append((el1[0], el2.replace('*','').strip() if not el2[0] == '.' else el2.replace('*','').replace('.','').strip()))
                 order.append((el1[0], el2.strip() if not el2[0] == '.' else el2.replace('.','').strip()))
             elif len(el1) > 1:
-                for subel1, subel2 in zip(el1, [e for e in el2.split('\t') if e]):
-                    order.append((subel1, subel2.strip() if not subel2[0] == '.' else subel2.replace('.','').strip()))
+                if (list(zip_longest(el1, [e for e in el2.split('\t') if e])) == list(zip(el1, [e for e in el2.split('\t') if e]))) and all(e[-1] for e in list(zip_longest(el1, [e for e in el2.split('\t') if e]))):
+                    for subel1, subel2 in zip(el1, [e for e in el2.split('\t') if e]):
+                        order.append((subel1, subel2.strip() if not subel2[0] == '.' else subel2.replace('.','').strip()))
+                else:
+                    for subel1, subel2 in zip(el1, [e for e in el2.split('\t') if not bool(re.search('^\s+$', e)) and e]):
+                        order.append((subel1, subel2.strip() if not subel2[0] == '.' else subel2.replace('.','').strip()))
             else:
                 try:
                     order.append((min([e for sub in a for e in sub]), el2.strip() if not el2[0] == '.' else el2.replace('.','').strip()))
                 except IndexError:
                     pass
         
+        order = [(ind, text.replace('♦','').strip()) for ind, text in order]
         #wyznaczanie całostek
         
         test = []
-        for ind, tex in order:
+        for i, (ind, tex) in enumerate(order):
             if tex != '' and tex != '*':
-                if ind < 650000 or tex == '——':
+                if i == 0 or ((ind < 650000 and not bool(re.search('^\d{4}', tex))) or tex == '——' or bool(re.search('^(\p{Ll} )+.{0,1}$', tex))):
                     test.append([(ind, tex)])
                 else: test[-1].append((ind, tex))
         
@@ -231,14 +242,38 @@ for e in tqdm(final_dict):
             else: max_ind_in_el = 0
             temp_list = []
             for i, (ind, tex) in enumerate(el):
-                if tex != '——' and (ind > 1300000 or el[i-1][-1].endswith((';',',')) or (ind == max_ind_in_el if not(bool(re.search('s\. {d}', el[i-1][-1]))) else False) or (el[i-1][-1].endswith(':') if not(bool(re.search('s\. {d}', tex))) else False)) and not tex.startswith('='):
+                if i != 0 and tex != '——' and ((ind > 1300000 and not bool(re.search('^(\p{Ll} )+.{0,1}$', tex))) or (el[i-1][-1].endswith((';',',')) if el[i-1] != tex else False) or (ind == max_ind_in_el if not(bool(re.search('s\. {d}', el[i-1][-1]))) else False) or (el[i-1][-1].endswith(':') if not(bool(re.search('s\. {d}', tex))) else False)) and not tex.startswith('='):
                     temp_list[-1].append((ind, tex))
                 else: temp_list.append([(ind, tex)])
             new_test.append(temp_list)
             
+        lista_grup.append(new_test)
+            
        #sprawdzić, czy borgesa nie popsuje 
        # czy w literaturze przedmiotowej mam z automatu łączyć nazwiska z rekordami?
         
+       wiersze = new_test[1]
+       wiersze_tylko_tekst = []
+       for lista in wiersze:
+           # lista = wiersze[0]
+           if len(lista) > 1:
+               wiersze_tylko_tekst.append((lista[0][0], ' '.join([e[-1] for e in lista])))
+           else: wiersze_tylko_tekst.append(lista[-1])
+           
+for i, t in wiersze_tylko_tekst:
+    print(i, t)
+               
+           for indeks, tresc in lista:
+               print(tresc)
+           print(lista)
+        
+       
+        tekst = 'w i e r s z e|tł.|Baterowicz, M.|1973 nr 12 (32)  s. 246–7,  Aluzja do śmierci pułkownika Francisco Borgesa ; Ajedrez'
+        
+        tekst.split('|')[3]
+       
+        new = []
+        [new.append(e[0][0][-1]) for e in new_test if len(e) == 1]
        
         
        
