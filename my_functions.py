@@ -496,7 +496,7 @@ def marc_parser_dict_for_field(string, subfield_code):
     for subfield in subfield_list:
         subfield_escape = re.escape(subfield)
         string = re.sub(f'({subfield_escape})', r'❦\1', string)
-    string = [e.split('\n')[0] for e in string.split('❦') if e]
+    string = [e.split('\n')[0].strip() for e in string.split('❦') if e]
     dictionary_fields = [e for e in string if re.escape(e)[:len(subfield_code)] == subfield_code]
     dictionary_fields = [{subfield_list[i]:e[len(subfield_list[i]):]} for i, e in enumerate(dictionary_fields)]
     return dictionary_fields
