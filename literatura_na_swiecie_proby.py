@@ -24,8 +24,6 @@ def check_if_all_none(list_of_elem):
             return False
     return result
 
-
-
 def paragraph_replace_text(paragraph, regex, replace_str):
     while True:
         text = paragraph.text
@@ -236,25 +234,114 @@ for e in tqdm(final_dict):
         
         new_test = []
         for el in test:
-            # el = test[21]
+            # el = test[43]
             if len(set([e[0] for e in el])) > 1:
                 max_ind_in_el = max([e[0] for e in el])
             else: max_ind_in_el = 0
             temp_list = []
             for i, (ind, tex) in enumerate(el):
-                if i != 0 and tex != '——' and ((ind > 1300000 and not bool(re.search('^(\p{Ll} )+.{0,1}$', tex))) or (el[i-1][-1].endswith((';',',')) if el[i-1] != tex else False) or (ind == max_ind_in_el if not(bool(re.search('s\. {d}', el[i-1][-1]))) else False) or (el[i-1][-1].endswith(':') if not(bool(re.search('s\. {d}', tex))) else False)) and not tex.startswith('='):
+                # i, (ind, tex) = 2, el[2]
+                if i != 0 and tex != '——' and ((ind > 1300000 and not bool(re.search('^(\p{Ll} )+.{0,1}$', tex))) or (el[i-1][-1].endswith((';',',')) if el[i-1] != tex else False) or (ind == max_ind_in_el if (not(bool(re.search('s\. {d}', el[i-1][-1]))) and not(bool(re.search('\p{Lu}\.$', el[i-1][-1]))) and len(el[i-1][-1]) > 3) else False) or (el[i-1][-1].endswith(':') if (not(bool(re.search('s\. {d}', tex))) and len(tex) > 3) else False)) and not tex.startswith('='):
                     temp_list[-1].append((ind, tex))
                 else: temp_list.append([(ind, tex)])
             new_test.append(temp_list)
-            
-        lista_grup.append(new_test)
+
+        new = []
+        for blok in new_test:
+            nowy_blok = []
+            for lista in blok:
+                if len(lista) == 1:
+                    nowy_blok.append(lista[0])
+                else:
+                    ind = lista[0][0]
+                    text = ' '.join([e[-1].strip() for e in lista])
+                    nowy_blok.append((ind, text))
+            new.append(nowy_blok)
             
        #sprawdzić, czy borgesa nie popsuje 
        # czy w literaturze przedmiotowej mam z automatu łączyć nazwiska z rekordami?
+
+# to rozwiązanie dla bloków dłuższych niż 1
+       
+        for ind, blok in enumerate(new):
+            # blok = new[1]
+            order = []
+            value = 1
+            groups = []
+            group = 0
+            for i, (no, tex) in enumerate(blok):
+                # liczba = 0
+                # i, (no, tex) = liczba, blok[liczba]
+                if i != 0 and no > blok[i-1][0]:
+                    value += 1
+                    order.append(value)
+                    groups.append(group)
+                else:
+                    value = 1
+                    order.append(value)
+                    group += 1
+                    groups.append(group)
+            max_order = max(order)
+            
+            neww = []
+            groups_set = set(groups)
+            for group in groups_set:
+                # group = 1
+                max_in_group = max([o for g, o in zip(groups, order) if g == group])
+                if max_in_group < max_order:
+                    diff = max_order - max_in_group
+                    neww.extend([(g, o+diff) for g, o in zip(groups, order) if g == group])
+                else:
+                    neww.extend([(g, o) for g, o in zip(groups, order) if g == group])
+            
+            group_dict = {}
+            for group in groups_set:
+                # group = 1
+                temp_list = [(o[1], t[1]) for t, o in zip(blok, neww) if o[0] == group]
+                group_dict.update({group: dict(temp_list)})
+             
+            for k,v in group_dict.items():
+                # k = 2
+                # v = group_dict[k]
+                if k > 1:
+                    diff = set(group_dict[k-1].keys()) - set(v.keys())
+                    v.update({ka:va for ka,va in group_dict[k-1].items() if ka in diff})
+                
+            group_dict = {k:dict(sorted(v.items())) for k,v in group_dict.items()}
+            blok = ['|'.join(group_dict[e].values()) for e in group_dict]
+            new[ind] = blok
         
-       wiersze = new_test[1]
-       wiersze_tylko_tekst = []
-       for lista in wiersze:
+        new = [e for sub in new for e in sub]
+        
+        lista_grup.append(new)
+                
+            
+        #Borges wygląda dobrze, teraz zastosować do wszystkich i wprowadzić poziom literatury i autora   
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+       
+        
+       
+        
+           
+           
+        
+        wiersze = new_test[1]
+        wiersze_tylko_tekst = []
+        for lista in wiersze:
            # lista = wiersze[0]
            if len(lista) > 1:
                wiersze_tylko_tekst.append((lista[0][0], ' '.join([e[-1] for e in lista])))
