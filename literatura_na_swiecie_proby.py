@@ -59,6 +59,7 @@ def round_down(x):
 #%% nowe podejście
 
 document = Document("C:\\Users\\Cezary\\Downloads\\X. 2  Albania - Peru.docx")
+document = Document("C:\\Users\\Cezary\\Downloads\\X.3 Portoryko - łac.docx")
 
 #edycja pliku docx
 
@@ -168,16 +169,16 @@ for lit, (i_start, i_end) in final_dict.items():
 
 # spróbować podzielić string przez liczbę elementów w liście z tabulatorami, dzieląc po \t lub wielokrotnej spacji
 # spodziewam się otrzymać schodki i chcę dziedziczyć info na wyższym schodku
-start_ind = 291
-end_ind = 443
+# start_ind = 291
+# end_ind = 443
 
-start_ind = 454
-end_ind = 568
-# start_ind = 42
-# end_ind = 58
+# start_ind = 454
+# end_ind = 568
+# # start_ind = 42
+# # end_ind = 58
 
-start_ind = 71
-end_ind = 90
+# start_ind = 71
+# end_ind = 90
 
 lista_grup = []
 for e in tqdm(final_dict):
@@ -204,7 +205,7 @@ for e in tqdm(final_dict):
         for el1, el2 in zip(a,b):
             # el1 = a[0]
             # el2 = b[0]
-            if len(el1) == 1:
+            if len(el1) == 1 and el2 != '':
                 # order.append((el1[0], el2.replace('*','').strip() if not el2[0] == '.' else el2.replace('*','').replace('.','').strip()))
                 order.append((el1[0], el2.strip() if not el2[0] == '.' else el2.replace('.','').strip()))
             elif len(el1) > 1:
@@ -300,27 +301,59 @@ for e in tqdm(final_dict):
                 temp_list = [(o[1], t[1]) for t, o in zip(blok, neww) if o[0] == group]
                 group_dict.update({group: dict(temp_list)})
              
-            for k,v in group_dict.items():
-                # k = 2
-                # v = group_dict[k]
-                if k > 1:
-                    diff = set(group_dict[k-1].keys()) - set(v.keys())
-                    v.update({ka:va for ka,va in group_dict[k-1].items() if ka in diff})
+            for ka, va in group_dict.items():
+                # ka = 2
+                # va = group_dict[ka]
+                if ka > 1:
+                    diff = set(group_dict[ka-1].keys()) - set(va.keys())
+                    va.update({kal:val for kal,val in group_dict[ka-1].items() if kal in diff})
                 
             group_dict = {k:dict(sorted(v.items())) for k,v in group_dict.items()}
             blok = ['|'.join(group_dict[e].values()) for e in group_dict]
             new[ind] = blok
         
         new = [e for sub in new for e in sub]
+        # e = 'Argentyna'
+        # k = 'Borges'
+        temp_dict = {'literatura': e,
+                     'pisarz': k,
+                     'zapisy bibliograficzne': new[1:]}
         
-        lista_grup.append(new)
+        lista_grup.append(temp_dict)
                 
             
         #Borges wygląda dobrze, teraz zastosować do wszystkich i wprowadzić poziom literatury i autora   
             
+for ind, slownik in enumerate(lista_grup):
+    # slownik = lista_grup[22]
+    byla_gwiazdka = ['nie' for e in range(len(slownik['zapisy bibliograficzne']))]
+    for i, zapis in enumerate(slownik['zapisy bibliograficzne']):
+        # zapis = slownik['zapisy bibliograficzne'][3]
+        try: 
+            rok_i_numer = re.findall('\d{4}.+?(?=s\.)', zapis)[0].strip()
+        except IndexError:
+            pass
+        if '~' in zapis:
+            lista_grup[ind]['zapisy bibliograficzne'][i] = zapis.replace('~', rok_i_numer)
+        try:
+            translator = '; ' + re.findall('tł\.[ \|]\p{Lu}.+?\p{Lu}\.(?=,|\|)', zapis)[0].strip().replace('|', ' ')
+        except IndexError:
+            pass
+        if '*' in zapis:
+            lista_grup[ind]['zapisy bibliograficzne'][i] = lista_grup[ind]['zapisy bibliograficzne'][i].replace('*', translator)
+            byla_gwiazdka[i] = 'tak'
+            lista_grup[ind].update({'była gwiazdka': byla_gwiazdka})
+
+
+
+
+df = pd.DataFrame(lista_grup)
+
+df['była gwiazdka'] = df[['była gwiazdka', 'zapisy bibliograficzne']].apply(lambda x: x['była gwiazdka'] if not(isinstance(x['była gwiazdka'], float)) else ['nie' for e in range(len(x['zapisy bibliograficzne']))], axis=1)
+
+df = df.explode(['zapisy bibliograficzne', 'była gwiazdka'])
             
-            
-            
+df.to_excel('literatura_na_swiecie_df.xlsx', index=False)            
             
             
             
