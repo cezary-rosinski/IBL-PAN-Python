@@ -1,4 +1,6 @@
-﻿/fbc_ssh_extract.py
+﻿/geonames_accounts.py
+/miasto_wieś_bn_dict.pickle
+/fbc_ssh_extract.py
 /geckodriver.exe
 /translation_deduplicated_with_geonames_2022-05-10.xlsx
 /relacje_clustrow.pickle
