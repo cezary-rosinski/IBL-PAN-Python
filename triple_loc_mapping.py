@@ -29,7 +29,8 @@ def get_desk_name(el):
 deskryptory = pd.DataFrame()
 worksheets = ['BD', 'BL', 'AW']
 for wsh in worksheets:
-    temp_df = gsheet_to_df('1NDckQjp8OpqSKJN4-AWYJRpPPkFqL7toKy3Emafpdug', wsh)
+    # temp_df = gsheet_to_df('1NDckQjp8OpqSKJN4-AWYJRpPPkFqL7toKy3Emafpdug', wsh)
+    temp_df = gsheet_to_df('1KKzWSdtLMXQCRoPkZ90UqZxp14H-k8u1-zZEO1PRA4A', wsh)
     deskryptory = deskryptory.append(temp_df)
     
 deskryptory['link LCSH'] = deskryptory['link LCSH'].apply(lambda x: link_locsh(x))
@@ -49,7 +50,9 @@ with ThreadPoolExecutor() as executor:
 
 desk_df = pd.DataFrame.from_dict(deskryptory_dict, orient='index').reset_index().rename(columns={0:'eng name', 'index':'link LCSH'})
 
-df = pd.merge(deskryptory_ok[['desk BN', 'link LCSH']], desk_df, on='link LCSH')[['link LCSH', 'desk BN', 'eng name']].sort_values('link LCSH')
+# df = pd.merge(deskryptory_ok[['desk BN', 'link LCSH']], desk_df, on='link LCSH')[['link LCSH', 'desk BN', 'eng name']].sort_values('link LCSH')
+df = pd.merge(deskryptory_ok[['exact terms', 'link LCSH']], desk_df, on='link LCSH')[['link LCSH', 'exact terms', 'eng name']].sort_values('link LCSH')
+
 
 #%% connect google drive
 

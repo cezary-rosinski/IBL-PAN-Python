@@ -16,22 +16,12 @@ import random
 
 # bazować na danych stąd: https://docs.google.com/spreadsheets/d/1U7vjHwLI7BQ7OHtM7x7NodW0t2vqnNOqkrALuyXSWw8/edit#gid=0
 
-#%% wczytanie zasobów json
+#%% def
 
-# path = r'C:\Users\Cezary\Downloads\miasto_wieś_metadata/'
-# files = [f for f in glob.glob(path + '*.json', recursive=True)]
-
-
-novels_df = gsheet_to_df('1U7vjHwLI7BQ7OHtM7x7NodW0t2vqnNOqkrALuyXSWw8', 'Arkusz1')
-polona_ids = [e for e in novels_df['id'].to_list() if not(isinstance(e, float))]
-
-bn_dict = {}
-errors = []
-# for polona_identifier in tqdm(polona_ids[580:620]):
-    # polona_identifier = polona_ids[203]
-    
 def get_bn_and_polona_response(polona_identifier):
     # file = polona_ids[0]
+    # polona_identifier = 'pl-92889483'
+# for polona_identifier in tqdm(polona_ids[30:40]):
     try:
         polona_id = re.findall('\d+', polona_identifier)[0]
         query = f'https://polona.pl/api/entities/{polona_id}'
@@ -40,44 +30,107 @@ def get_bn_and_polona_response(polona_identifier):
         query = f'http://khw.data.bn.org.pl/api/polona-lod/{bn_id}'
         polona_lod = requests.get(query).json()
         query = f'https://data.bn.org.pl/api/institutions/bibs.json?id={bn_id}'
-        bn_response = requests.get(query).json()['bibs'][0]  
-        temp_dict = {polona_identifier:{'polona_id':polona_id,
-                                        'bn_id':bn_id,
-                                        'polona_response':polona_response,
-                                        'polona_lod':polona_lod,
-                                        'bn_response':bn_response}}
-        bn_dict.update(temp_dict)
-    except (ValueError, KeyError, IndexError, AttributeError):
+        try:
+            try:
+                bn_response = requests.get(query).json()['bibs'][0]  
+            except IndexError:
+                query = f'https://data.bn.org.pl/api/institutions/bibs.json?id={bn_id[:-1]}'
+                bn_response = requests.get(query).json()['bibs'][0]
+            temp_dict = {polona_identifier:{'polona_id':polona_id,
+                                            'bn_id':bn_id,
+                                            'polona_response':polona_response,
+                                            'polona_lod':polona_lod,
+                                            'bn_response':bn_response}}
+            bn_dict.update(temp_dict)
+        except IndexError:
+            errors.append(polona_identifier)
+    except (ValueError, KeyError, AttributeError):
         errors.append(polona_identifier)
     # except ValueError:
     #     time.sleep(2)
     #     get_bn_and_polona_response(polona_identifier)
 
-with ThreadPoolExecutor() as excecutor:
-    list(tqdm(excecutor.map(get_bn_and_polona_response, polona_ids),total=len(polona_ids)))
+#%% load
+novels_df = gsheet_to_df('1U7vjHwLI7BQ7OHtM7x7NodW0t2vqnNOqkrALuyXSWw8', 'Arkusz1')
 
+with open('miasto_wieś_bn_dict.pickle', 'rb') as handle:
+    bn_dict = pickle.load(handle)
 
-    
-with open('miasto_wieś_bn_dict.pickle', 'wb') as handle:
-    pickle.dump(bn_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-with open('miasto_wieś_bn_errors', 'w', encoding='utf-8') as f:
-    for e in errors:
-        f.write(f'{e}\n')
-
-test = bn_dict[list(bn_dict.keys())[200]]
-
-
-
-test['polona_lod']['Twórca/współtwórca'][list(test['polona_lod']['Twórca/współtwórca'].keys())[0]]['Identyfikator Wikidata (URI)']['link']
-
-place = [el for el in [e for e in test['bn_response']['marc']['fields'] if '260' in e][0]['260']['subfields'] if 'a' in el][0]['a']
-place = simplify_string(place, nodiacritics=False).strip()
-country_code = [e for e in test['bn_response']['marc']['fields'] if '008' in e][0]['008'][15:18].strip()
-
+with open('miasto_wieś_bn_errors.txt', 'rt', encoding='utf-8') as f:
+    errors = f.read()    
+  
 country_codes = pd.read_excel('translation_country_codes.xlsx')
 country_codes = [list(e[-1]) for e in country_codes.iterrows()]
 country_codes = dict(zip([e[0] for e in country_codes], [{'MARC_name': e[1], 'iso_alpha_2': e[2], 'Geonames_name': e[-1]} for e in country_codes]))
+
+#%% main
+
+polona_ids = [e for e in novels_df['id'].to_list() if not(isinstance(e, float))]
+# errors = []
+errors = [e for e in polona_ids if not e.startswith('pl')]
+polona_ids = [e for e in polona_ids if e not in errors]
+
+bn_dict = {}
+
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_bn_and_polona_response, polona_ids),total=len(polona_ids)))
+
+with open('miasto_wieś_bn_dict.pickle', 'wb') as handle:
+    pickle.dump(bn_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+with open('miasto_wieś_bn_errors.txt', 'w', encoding='utf-8') as f:
+    for e in errors:
+        f.write(f'{e}\n')
+        
+
+#podtytuły
+#linki do polony
+#wikidata
+#geonames
+#wikidata płeć
+
+
+test = bn_dict[list(bn_dict.keys())[200]]
+
+new_dict = {}
+for d in tqdm(bn_dict):
+    # d = list(bn_dict.keys())[0]
+    polona_id = re.findall('\d+', d)[0]
+    polona_url = f'polona.pl/item/{polona_id}'
+    
+    try:
+        author_wikidata = bn_dict[d]['polona_lod']['Twórca/współtwórca'][list(bn_dict[d]['polona_lod']['Twórca/współtwórca'].keys())[0]]['Identyfikator Wikidata (URI)']['link']
+    except KeyError:
+        author_wikidata = np.nan
+
+    try:
+        subtitle = [el for el in [e for e in bn_dict[d]['bn_response']['marc']['fields'] if '245' in e][0]['245']['subfields'] if 'b' in el][0]['b']
+    except IndexError:
+        subtitle = np.nan
+
+    place = [el for el in [e for e in bn_dict[d]['bn_response']['marc']['fields'] if '260' in e][0]['260']['subfields'] if 'a' in el][0]['a']
+    place = simplify_string(place, nodiacritics=False).strip()
+
+    country_code = [e for e in bn_dict[d]['bn_response']['marc']['fields'] if '008' in e][0]['008'][15:18].strip()
+    
+    temp_dict = {d:{'author_wikidata': author_wikidata,
+                    'subtitle': subtitle,
+                    'place_of_publication': place,
+                    'country_code': country_code,
+                    'polona_url': polona_url}}
+    new_dict.update(temp_dict)
+
+df = pd.DataFrame.from_dict(new_dict, orient='index').reset_index()[['index', 'author_wikidata', 'polona_url', 'subtitle']]
+df.to_excel('test.xlsx', index=False)
+
+
+#tutaj dać tylko set miejscowości
+
+#płeć z wikidaty
+#geonames id
+#miejsce urodzenia - miasto + wikidata ID + koordynaty
+
+
 
 
 
