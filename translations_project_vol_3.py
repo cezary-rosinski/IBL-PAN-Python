@@ -22,6 +22,7 @@ import time
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
+pd.options.mode.chained_assignment = None
 
 #%% defs
 
@@ -1522,7 +1523,7 @@ writer.close()
 
 print(Counter(phase_4['work_id'] != 0))
 # Counter({True: 25375, False: 7197}) 78%
-#%% wizyta Czechów
+#%% wizyta Czechów – przygotowanie do manualnego clustrowania
 # translations_df = pd.read_excel('translation_deduplicated_2022-03-28.xlsx', sheet_name='phase_4')
 translations_df = pd.read_excel('translation_deduplicated_with_geonames_2022-05-10.xlsx')
 
@@ -1568,7 +1569,7 @@ for el in work_ids:
 
 work_ids_sizes = sorted(work_ids_sizes.items(), key= lambda x: x[1], reverse=True)
 
-proper_columns = ['001', '240', '245', '260', 'author_id', 'work_id', 'work_title', '490', '500', 'simple_original_title', '776', 'sorted']
+proper_columns = ['001', '240', '245', '245a', 'language', '260', 'author_id', 'work_id', 'work_title', '490', '500', 'simple_original_title', '776', 'sorted']
 
 work_id_author_id_dict = dict(zip(translations_df['work_id'], translations_df['author_id']))
 work_id_author_id_dict = {k:v for k,v in work_id_author_id_dict.items() if k in work_ids}
@@ -1588,6 +1589,7 @@ for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_si
     else:
         authors_present[author_id] = 1
     author_df = translations_df[translations_df['author_id'] == author_id]
+    author_df['245a'] = author_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'])
     author_df = author_df[author_df.columns.intersection(proper_columns)]
     
     temp_groupby = author_df.groupby('work_id')
@@ -1611,8 +1613,10 @@ for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_si
     except ValueError:
         cluster_df = author_df.copy()
     cluster_df['to_retain'] = np.nan
+    cluster_df = cluster_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
     
-    sheet = gc.create(f'{ind}_{author_id}_{int(work_id)}_{authors_present[author_id]}', '1x1ywDyyV-YwozVuV0B38uG7CH6mOe3OF')
+    # sheet = gc.create(f'{ind}_{author_id}_{int(work_id)}_{authors_present[author_id]}', '1x1ywDyyV-YwozVuV0B38uG7CH6mOe3OF')
+    sheet = gc.create(f'{ind}_{author_id}_{int(work_id)}_{authors_present[author_id]}', '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
     try:
         create_google_worksheet(sheet.id, str(int(work_id)), cluster_df)
     except Exception:
@@ -1620,6 +1624,44 @@ for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_si
         create_google_worksheet(sheet.id, str(int(work_id)), cluster_df)
     except KeyboardInterrupt:
         raise
+
+#wprowadzić system aktualizacji na podstawie manualnych prac Ondreja!!!
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
