@@ -19,8 +19,11 @@ import matplotlib.pyplot as plt
 from kneed import KneeLocator
 from googleapiclient.errors import HttpError
 import time
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
 pd.options.mode.chained_assignment = None
 
@@ -1532,7 +1535,7 @@ with open('translations_ov_more_to_delete.txt', 'rt') as f:
 to_del = [int(e) for e in to_del]
     
 translations_df = translations_df[~translations_df['001'].isin(to_del)]
-
+# translations_df.to_excel(f'translation_before_manual_{now}.xlsx', index=False)
 work_ids = dict(zip(translations_df['001'], translations_df['work_id']))
 work_ids_list = list(work_ids.values())
 
@@ -1626,18 +1629,211 @@ for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_si
         raise
 
 #wprowadzić system aktualizacji na podstawie manualnych prac Ondreja!!!
+translations_df = pd.read_excel('translation_before_manual_2022-06-27.xlsx')
+work_ids = dict(zip(translations_df['001'], translations_df['work_id']))
+work_ids_list = list(work_ids.values())
+#sizes of clusters
+work_ids_counter = dict(Counter(work_ids_list))
+work_ids_nan = {k:v for k,v in work_ids_counter.items() if pd.isnull(k)}
+work_ids_numbers = {k:v for k,v in work_ids_counter.items() if pd.notnull(k) and v >= 10}
+work_id_more_lang = translations_df.groupby(['work_id']).filter(lambda x: len(x) and len(set(x['language'])) >= 2)[['001', 'author_id', 'work_id', 'language']]
+no_of_works = work_id_more_lang['work_id'].drop_duplicates().shape[0]
+works = set(work_id_more_lang['work_id'])
+#combining two approaches: size of a cluster >= 5 and at least 2 languages
+work_ids = [e for e in work_ids_numbers if e in works]
+work_ids_sizes = {}
+for el in work_ids:
+    size = translations_df[translations_df['work_id'] == el].shape[0]
+    work_ids_sizes[el] = size
+
+work_ids_sizes = sorted(work_ids_sizes.items(), key= lambda x: x[1], reverse=True)
+proper_columns = ['001', '240', '245', '245a', 'language', '260', 'author_id', 'work_id', 'work_title', '490', '500', 'simple_original_title', '776', 'sorted']
+work_id_author_id_dict = dict(zip(translations_df['work_id'], translations_df['author_id']))
+work_id_author_id_dict = {k:v for k,v in work_id_author_id_dict.items() if k in work_ids}
+
+#wprowadzanie zmian
+gc = gs.oauth()
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()
+drive = GoogleDrive(gauth)
+
+files_list = drive.ListFile({'q': f"'1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m' in parents and trashed=false"}).GetList() 
+
+#wybieranie edytowanych plików
+#ten warunek musi być zmieniony, bo musi uwzględnić dodane później kolejne work_id dla autorów
+
+#może po prostu przechowywać listę lp, które są już zrobiono?
+
+modified_sheets = [e for e in files_list if parser.parse(e['modifiedDate']) > parser.parse('2022-06-26T19:15:10.012Z')]
+used_clusters = [int(e['title'].split('_')[2]) for e in files_list]
+
+edited_clusters = []
+for e in tqdm(modified_sheets):
+    cluster_no, author_id, work_id, author_fequency = e['title'].split('_')
+    edited_clusters.append(work_id)
+    temp_df = gsheet_to_df(e['id'], work_id)[[1, 'to_retain']].rename(columns={1:'001'})
+    temp_dict = dict(zip(temp_df['001'].to_list(), temp_df['to_retain'].to_list()))
+    temp_dict = {int(k):int(work_id) if v == 'x' else v for k,v in temp_dict.items()}
+    translations_df['work_id'] = translations_df[['001', 'work_id']].apply(lambda x: temp_dict[x['001']] if x['001'] in temp_dict else x['work_id'], axis=1)
+     
+with open('translation_edited_clusters.txt', 'wt', encoding='utf-8') as f:
+    for el in edited_clusters:
+        f.write(f'{el}/n')
+
+# work_id_author_id_dict = {k:v for k,v in work_id_author_id_dict.items() if k not in used_clusters}
+# work_ids_sizes = [e for e in work_ids_sizes if e[0] not in used_clusters]
+
+used_authors_dict = {}
+for el in modified_sheets:
+    author_id = el['title'].split('_')[1]
+    if author_id not in used_authors_dict:
+        used_authors_dict[author_id] = 1
+    else:
+        used_authors_dict[author_id] += 1
+        
+used_authors_dict = {k:[e['title'] for e in modified_sheets if k in e['title'] and str(v) == e['title'].split('_')[-1]][0] for k,v in used_authors_dict.items()}
+
+latest_work_id_for_author = [e.split('_')[2] for e in used_authors_dict.values()]
+
+#tutaj dodać krok, że z edited clusters zostaje tylko ten, który ma największą lp
+
+for work_id in latest_work_id_for_author:
+    work_id = latest_work_id_for_author[-2]
+    author_id = work_id_author_id_dict[int(work_id)]
+    sheet_id = [e for e in files_list if all(el in e['title'] for el in [work_id, author_id])][0]['id']
+    temp_df = gsheet_to_df(sheet_id, work_id)[[1, 'to_retain', 'work_id']].rename(columns={1:'001'})
+    temp_df = temp_df.loc[(temp_df['to_retain'] != 'x') &
+                          (temp_df['work_id'] != work_id)]
+    
+    work_id_size = [e[1] for e in work_ids_sizes if e[0] == int(work_id)][0]
+    
+    new_cluster = [e for e in work_ids_sizes if e[0] in {k for k,v in work_id_author_id_dict.items() if v == author_id} and e[1] < work_id_size][0][0]
+    new_cluster_df = translations_df.loc[translations_df['work_id'] == new_cluster]
+    
+    temp_df = pd.concat([new_cluster_df, temp_df])
+    temp_df['to_retain'] = np.nan
+    temp_df['245a'] = temp_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'] if not(isinstance(x, float)) and '$a' in x else np.nan)
+    temp_df = temp_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
+    
+    ind = [i for i,e in enumerate(work_ids_sizes) if e[0] == new_cluster][0]
+    ind = '{:03d}'.format(ind)
+    
+    sheet = gc.create(f'{ind}_{author_id}_{int(work_id)}_{authors_present[author_id]}', '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
+    
+   
 
 
 
 
 
+authors_for_edited_clusters = {v for k,v in work_id_author_id_dict.items() if k in [int(e) for e in edited_clusters]}
+next_cluster_to_be_edited = []
+for author in authors_for_edited_clusters:
+    author_id = list(authors_for_edited_clusters)[0]
+    author_id = '51691735'
+    temp_cluster = {k for k,v in work_id_author_id_dict.items() if v == author_id and k not in [int(e) for e in edited_clusters]}
+    temp_cluster = [e for e in work_ids_sizes if e[0] in temp_cluster]
+    new_cluster = max(temp_cluster, key=lambda item:item[1])[0]
+    ind = [i for i,e in enumerate(work_ids_sizes) if e[0] == new_cluster][0]
+    ind = '{:03d}'.format(ind)
+    
+    author_df = translations_df[translations_df['author_id'] == author_id]
+    author_df['245a'] = author_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'])
+    author_df = author_df[author_df.columns.intersection(proper_columns)]
+    author_df = author_df.loc[~author_df['work_id'].isin([int(e) for e in edited_clusters])]
+
+    temp_groupby = author_df.groupby('work_id')
+    work_cluster_sizes = dict(author_df.groupby('work_id')['work_id'].count())
+    author_df['sorted'] = author_df['work_id'].apply(lambda x: work_cluster_sizes[x] if x in work_cluster_sizes else np.nan)
+    author_df = author_df.sort_values(['sorted', 'work_id'], ascending=[False, False]).drop(columns='sorted')
+    
+    cluster_dictribution = dict(author_df.groupby('work_id')['work_id'].count().div(len(author_df)))
+    (clusters, y) = zip(*dict(sorted(cluster_dictribution.items(), key=lambda item: item[1], reverse=True)).items())
+    x = tuple([i for i, e in enumerate(clusters,1)])
+    try:
+        kn = KneeLocator(x, y, curve='convex', direction='decreasing')
+        try:
+            cluster_index = round(kn.knee/2)-1
+        except TypeError:
+            cluster_index = 1
+        clusters_to_filter = list(clusters)[cluster_index+1:]
+        clusters_to_filter.append(work_id)
+        cluster_df = author_df[(author_df['work_id'].isin(clusters_to_filter)) |
+                               (author_df['work_id'].isna())]
+    except ValueError:
+        cluster_df = author_df.copy()
+    cluster_df['to_retain'] = np.nan
+    cluster_df = cluster_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
+
+    
+    
+#przygotować tylko kolejne tabele dla autorów, którzy zostali zedytowani
+
+from operator import i
+
+        
 
 
-
-
-
-
-
+for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_sizes)),1):
+    # ind = 1
+    # work_id, size = work_ids_sizes[ind]
+    ind = '{:03d}'.format(ind)
+    author_id = work_id_author_id_dict[work_id]
+    if author_id in authors_present:
+        authors_present[author_id] += 1
+        continue
+    else:
+        authors_present[author_id] = 1
+    author_df = translations_df[translations_df['author_id'] == author_id]
+    author_df['245a'] = author_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'])
+    author_df = author_df[author_df.columns.intersection(proper_columns)]
+    
+    temp_groupby = author_df.groupby('work_id')
+    work_cluster_sizes = dict(author_df.groupby('work_id')['work_id'].count())
+    author_df['sorted'] = author_df['work_id'].apply(lambda x: work_cluster_sizes[x] if x in work_cluster_sizes else np.nan)
+    author_df = author_df.sort_values(['sorted', 'work_id'], ascending=[False, False]).drop(columns='sorted')
+    
+    cluster_dictribution = dict(author_df.groupby('work_id')['work_id'].count().div(len(author_df)))
+    (clusters, y) = zip(*dict(sorted(cluster_dictribution.items(), key=lambda item: item[1], reverse=True)).items())
+    x = tuple([i for i, e in enumerate(clusters,1)])
+    try:
+        kn = KneeLocator(x, y, curve='convex', direction='decreasing')
+        try:
+            cluster_index = round(kn.knee/2)-1
+        except TypeError:
+            cluster_index = 1
+        clusters_to_filter = list(clusters)[cluster_index+1:]
+        clusters_to_filter.append(work_id)
+        cluster_df = author_df[(author_df['work_id'].isin(clusters_to_filter)) |
+                               (author_df['work_id'].isna())]
+    except ValueError:
+        cluster_df = author_df.copy()
+    cluster_df['to_retain'] = np.nan
+    cluster_df = cluster_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
+    
+    # sheet = gc.create(f'{ind}_{author_id}_{int(work_id)}_{authors_present[author_id]}', '1x1ywDyyV-YwozVuV0B38uG7CH6mOe3OF')
+    sheet = gc.create(f'{ind}_{author_id}_{int(work_id)}_{authors_present[author_id]}', '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
+    try:
+        create_google_worksheet(sheet.id, str(int(work_id)), cluster_df)
+    except Exception:
+        time.sleep(60)
+        create_google_worksheet(sheet.id, str(int(work_id)), cluster_df)
+    except KeyboardInterrupt:
+        raise
 
 
 
