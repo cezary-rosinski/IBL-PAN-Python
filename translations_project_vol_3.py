@@ -21,6 +21,7 @@ from googleapiclient.errors import HttpError
 import time
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
+from concurrent.futures import ThreadPoolExecutor
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
@@ -1630,6 +1631,7 @@ for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_si
 
 #wprowadzić system aktualizacji na podstawie manualnych prac Ondreja!!!
 translations_df = pd.read_excel('translation_before_manual_2022-06-27.xlsx')
+# translations_df = gsheet_to_df('1wy64th7IjF0ktAqjz3NQcflNYLAkStD3', 'Arkusz1')
 work_ids = dict(zip(translations_df['001'], translations_df['work_id']))
 work_ids_list = list(work_ids.values())
 #sizes of clusters
@@ -1663,18 +1665,25 @@ files_list = drive.ListFile({'q': f"'1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m' in paren
 #ten warunek musi być zmieniony, bo musi uwzględnić dodane później kolejne work_id dla autorów
 
 #może po prostu przechowywać listę lp, które są już zrobiono?
-
-modified_sheets = [e for e in files_list if parser.parse(e['modifiedDate']) > parser.parse('2022-06-26T19:15:10.012Z')]
+done = ['001', '002', '008', '009']
+modified_sheets = [e for e in files_list if e['title'].split('_')[0] in done]
 used_clusters = [int(e['title'].split('_')[2]) for e in files_list]
 
-edited_clusters = []
-for e in tqdm(modified_sheets):
-    cluster_no, author_id, work_id, author_fequency = e['title'].split('_')
+
+# for modified_sheet in tqdm(modified_sheets):
+def collect_modification(modified_sheet):
+    cluster_no, author_id, work_id, author_fequency = modified_sheet['title'].split('_')
     edited_clusters.append(work_id)
-    temp_df = gsheet_to_df(e['id'], work_id)[[1, 'to_retain']].rename(columns={1:'001'})
+    temp_df = gsheet_to_df(modified_sheet['id'], work_id)[[1, 'to_retain']].rename(columns={1:'001'})
     temp_dict = dict(zip(temp_df['001'].to_list(), temp_df['to_retain'].to_list()))
     temp_dict = {int(k):int(work_id) if v == 'x' else v for k,v in temp_dict.items()}
     translations_df['work_id'] = translations_df[['001', 'work_id']].apply(lambda x: temp_dict[x['001']] if x['001'] in temp_dict else x['work_id'], axis=1)
+    
+edited_clusters = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(collect_modification, modified_sheets),total=len(modified_sheets)))
+    
+translations_df.to_excel(f'translations_after_manual_{now}.xlsx', index=False)
      
 with open('translation_edited_clusters.txt', 'wt', encoding='utf-8') as f:
     for el in edited_clusters:
@@ -1692,41 +1701,45 @@ for el in modified_sheets:
         used_authors_dict[author_id] += 1
         
 used_authors_dict = {k:[e['title'] for e in modified_sheets if k in e['title'] and str(v) == e['title'].split('_')[-1]][0] for k,v in used_authors_dict.items()}
-
 latest_work_id_for_author = [e.split('_')[2] for e in used_authors_dict.values()]
 
-#tutaj dodać krok, że z edited clusters zostaje tylko ten, który ma największą lp
-
-for work_id in latest_work_id_for_author:
-    work_id = latest_work_id_for_author[-2]
+# for work_id in latest_work_id_for_author:
+    # work_id = latest_work_id_for_author[-2]
+def upload_next_clusters(work_id):
     author_id = work_id_author_id_dict[int(work_id)]
     sheet_id = [e for e in files_list if all(el in e['title'] for el in [work_id, author_id])][0]['id']
+    sheet_for_author_no = int([e['title'].split('_')[-1] for e in files_list if e['id'] == sheet_id][0])
     temp_df = gsheet_to_df(sheet_id, work_id)[[1, 'to_retain', 'work_id']].rename(columns={1:'001'})
     temp_df = temp_df.loc[(temp_df['to_retain'] != 'x') &
                           (temp_df['work_id'] != work_id)]
     
     work_id_size = [e[1] for e in work_ids_sizes if e[0] == int(work_id)][0]
     
-    new_cluster = [e for e in work_ids_sizes if e[0] in {k for k,v in work_id_author_id_dict.items() if v == author_id} and e[1] < work_id_size][0][0]
-    new_cluster_df = translations_df.loc[translations_df['work_id'] == new_cluster]
+    try:
+        new_cluster = [e for e in work_ids_sizes if e[0] in {k for k,v in work_id_author_id_dict.items() if v == author_id} and e[1] < work_id_size][0][0]
+        new_cluster_df = translations_df.loc[translations_df['work_id'] == new_cluster]
+        
+        temp_df = pd.concat([new_cluster_df, temp_df])
+        temp_df['to_retain'] = np.nan
+        temp_df['245a'] = temp_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'] if not(isinstance(x, float)) and '$a' in x else np.nan)
+        temp_df = temp_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
+        
+        ind = [i for i,e in enumerate(work_ids_sizes) if e[0] == new_cluster][0]
+        ind = '{:03d}'.format(ind)
+        
+        sheet = gc.create(f'{ind}_{author_id}_{int(work_id)}_{sheet_for_author_no+1}', '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
+        try:
+            create_google_worksheet(sheet.id, str(int(work_id)), temp_df)
+        except Exception:
+            time.sleep(60)
+            create_google_worksheet(sheet.id, str(int(work_id)), temp_df)
+        except KeyboardInterrupt:
+            raise
+    except IndexError:
+        pass
     
-    temp_df = pd.concat([new_cluster_df, temp_df])
-    temp_df['to_retain'] = np.nan
-    temp_df['245a'] = temp_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'] if not(isinstance(x, float)) and '$a' in x else np.nan)
-    temp_df = temp_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
-    
-    ind = [i for i,e in enumerate(work_ids_sizes) if e[0] == new_cluster][0]
-    ind = '{:03d}'.format(ind)
-    
-    sheet = gc.create(f'{ind}_{author_id}_{int(work_id)}_{authors_present[author_id]}', '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
-    
-   
-    
-   
-    
-   
-    
-   
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(upload_next_clusters, latest_work_id_for_author),total=len(latest_work_id_for_author)))   
     
    
     

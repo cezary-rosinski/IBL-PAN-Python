@@ -107,6 +107,48 @@ def get_missing_person(missing_person):
         wikidata_id = np.nan
         print(missing_person)
     missing_people_dict.update({missing_person:wikidata_id})
+    
+def harvest_first_edition(author, title):
+    # author, title = novels_pl_list[0]
+    # author, title = "Sienkiewicz, Henryk", "Ogniem i mieczem"
+    url = 'https://data.bn.org.pl/api/networks/bibs.json?'
+    params = {'author': author, 'title': title, 'limit': 100}
+    result = requests.get(url, params = params).json()
+    #next pages
+    bibs = result['bibs']
+    while result['nextPage'] != '':
+        result = requests.get(result['nextPage']).json()
+        if result['bibs']:
+            bibs.extend(result['bibs'])
+    try:
+        bibs = min(bibs, key=lambda item: int(item['publicationYear']))
+        publication_year = bibs['publicationYear']
+        publication_place = bibs['placeOfPublication'].split(' : ')[0]
+        publication_country = bibs['placeOfPublication'].split(' : ')[-1]
+    except ValueError:
+        publication_year = publication_place = publication_country = np.nan
+    novels_pl_dict[(author, title)] = {'year': publication_year,
+                                       'place': publication_place,
+                                       'country': publication_country}  
+    
+def harvest_geonames(place):
+    fuzzy = 1
+    # place = 'Wisła'
+    url = 'http://api.geonames.org/searchJSON?'
+    params = {'username': random.choice(geonames_users), 'q': place, 'featureClass': 'P'}
+    result = requests.get(url, params=params).json()
+    try:
+        while result['totalResultsCount'] == 0:
+            fuzzy -= 0.1
+            params = {'username': random.choice(geonames_users), 'q': place, 'featureClass': 'P', 'fuzzy': fuzzy}
+            result = requests.get(url, params=params).json()
+        temp_resp = {k:v for k,v in max(result['geonames'], key=lambda x: x['population']).items() if k in ['lng', 'lat', 'name', 'geonameId']}
+    except KeyError:
+        temp_resp = {'lng': np.nan,
+                     'geonameId': np.nan,
+                     'name': np.nan,
+                     'lat': np.nan}
+    places_dict[place] = temp_resp  
 #%% load
 novels_df = gsheet_to_df('1U7vjHwLI7BQ7OHtM7x7NodW0t2vqnNOqkrALuyXSWw8', 'Arkusz1')
 
@@ -272,22 +314,46 @@ len([e for e in geonames_resp.values() if e == 'No geonames response'])
 
 #grupowanie i wybór pierwowzoru
 
-groupby = novels_df.groupby(['creator', 'title'])
+novels_pl_list = gsheet_to_df('1U7vjHwLI7BQ7OHtM7x7NodW0t2vqnNOqkrALuyXSWw8', 'uniq_novels_pl')[['creator', 'title']].values.tolist()
+        
+novels_pl_dict = {}    
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(lambda p: harvest_first_edition(*p), novels_pl_list),total=len(novels_pl_list)))          
+        
+places = {v['place'] for k,v in novels_pl_dict.items()}
+places = [re.split(',|;', e.strip()) for e in places if not(isinstance(e,float))]
+places = set([e.replace('[etc.]', '').replace('[','').replace(']','').replace('etc.','').strip() for sub in places for e in sub])
+places = set(simplify_string(e, nodiacritics=False) for e in places)
 
-for name, group in tqdm(groupby, total = len(groupby)):
-    name = ('Żeromski, Stefan', 'Syzyfowe prace')
-    group = groupby.get_group(name)
-    first_date = min(group['date'].to_list())
-    first_edition_id = group[group['date'] == first_date]['id'].to_list()[0]
-    last_date = max(group['date'].to_list())
-    last_edition_id = group[group['date'] == last_date]['id'].to_list()[0]
-    no_of_editions = len(group['id'].to_list()) - 1
-    temp_dict = {'name':name,
-                 'id':first_edition_id,
-                 'last_edition_id':last_edition_id,
-                 'last_edition_date':last_date,
-                 'no_of_editions':no_of_editions}
-    first_edition_row
+places_dict = {}       
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(harvest_geonames, places),total=len(places))) 
+    
+for key in tqdm(novels_pl_dict):
+    test = [places_dict[e] for e in places_dict if not(isinstance(novels_pl_dict[key]['place'], float)) and e in novels_pl_dict[key]['place'].lower()]
+    novels_pl_dict[key].update({'geonames':test})
+
+df = pd.DataFrame.from_dict(novels_pl_dict, orient='index').reset_index()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     
     
     
