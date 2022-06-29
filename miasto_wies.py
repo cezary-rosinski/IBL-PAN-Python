@@ -13,7 +13,11 @@ from my_functions import simplify_string
 import pandas as pd
 from geonames_accounts import geonames_users
 import random
-import viapy
+import warnings
+from ast import literal_eval
+import time
+
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 # bazować na danych stąd: https://docs.google.com/spreadsheets/d/1U7vjHwLI7BQ7OHtM7x7NodW0t2vqnNOqkrALuyXSWw8/edit#gid=0
 
@@ -149,6 +153,29 @@ def harvest_geonames(place):
                      'name': np.nan,
                      'lat': np.nan}
     places_dict[place] = temp_resp  
+    
+def get_no_of_editions(lp, author, title, year):
+    while True:
+        try:
+            url = 'https://data.bn.org.pl/api/networks/bibs.json?'
+            params = {'author': author, 'title': title, 'limit': 100}
+            result = requests.get(url, params = params).json()
+            #next pages
+            bibs = result['bibs']
+            while result['nextPage'] != '':
+                result = requests.get(result['nextPage']).json()
+                if result['bibs']:
+                    bibs.extend(result['bibs'])
+                    
+                    '????'.isnumeric()
+            no_of_editions = len([e for e in bibs if e['publicationYear'].replace('u','0').replace('X','0').isnumeric() and  int(e['publicationYear'].replace('u','0').replace('X','0')) > year])
+            pierwodruki_dict[lp] = no_of_editions
+            break
+        except KeyboardInterrupt as exc:
+            raise exc
+        except:
+            time.sleep(10)
+            continue
 #%% load
 novels_df = gsheet_to_df('1U7vjHwLI7BQ7OHtM7x7NodW0t2vqnNOqkrALuyXSWw8', 'Arkusz1')
 
@@ -257,62 +284,7 @@ with ThreadPoolExecutor() as excecutor:
     list(tqdm(excecutor.map(get_wikidata_info_for_person, missing_people),total=len(missing_people)))  
 df = pd.DataFrame.from_dict(wikidata_response, orient='index')
  
-#geonames
-
-places_dict = {k:{ka:va for ka,va in v.items() if ka in ['country_code', 'place_of_publication']} for k,v in new_dict.items()} 
-czy_pl = {k:v for k,v in dict(zip(novels_df['id'], novels_df['PL/nie-PL'])).items() if v == 'PL'}
-
-places_dict = {k:v for k,v in places_dict.items() if k in czy_pl}
-
-places_set = set(zip([places_dict[e]['place_of_publication'] for e in places_dict], [places_dict[e]['country_code'] for e in places_dict]))    
- 
-
-test = [e for e in places_set if e[-1] == 'lt'][0]
-list(places_dict.keys())[list(places_dict.values()).index({'place_of_publication':test[0], 'country_code':test[1]})]
-list(places_dict.keys())[list(places_dict.values()).index({'place_of_publication':'bruxella', 'country_code':'be'})]
-country_codes['lt']['iso_alpha_2']
-
-
-#ta funkcja jest skopana
-def get_geonames_response(place, country_code, count=0):
-    # place_and_country_code = ('bruxella', 'be')
-    # place = 'bruxella'
-    # country_code = 'be'
-    while True:
-        url = 'http://api.geonames.org/searchJSON?'
-        try:
-            q_country = country_codes[country_code.lower()]['iso_alpha_2']
-            params = {'username': random.choice(geonames_users), 'q': place, 'featureClass': 'P', 'country': q_country}
-        except (AttributeError, KeyError):
-            params = {'username': random.choice(geonames_users), 'q': place, 'featureClass': 'P', 'fuzzy': 0.8}
-        # params = {'username': geoname_users[users_index], 'q': place, 'featureClass': 'P', 'fuzzy': 0.4}
-        result = requests.get(url, params=params).json()
-        if 'status' in result or result['totalResultsCount'] == 0:
-            count += 1
-            if count == 2:
-                geonames_resp.update({(place, country_code): 'No geonames response'})
-                count = 0
-                break
-            country_code = np.nan
-            get_geonames_response(place, country_code)
-        if result['totalResultsCount'] > 0:  
-            geonames_resp.update({(place, country_code): {k:v for k,v in max(result['geonames'], key=lambda x: x['population']).items() if k in ['lng', 'lat', 'name', 'geonameId']}})
-        else:
-            geonames_resp.update({(place, country_code): 'No geonames response'})
-        break    
-
-# get_geonames_response(*('bruxella', 'be'))
-geonames_resp = {}        
-with ThreadPoolExecutor() as excecutor:
-    list(tqdm(excecutor.map(lambda p: get_geonames_response(*p), places_set),total=len(places_set)))  
-
- 
-len([e for e in geonames_resp.values() if e == 'No geonames response'])
-# geonames do poprawy
-
-#uzupełnienie
-
-#grupowanie i wybór pierwowzoru
+#%%grupowanie i wybór pierwowzoru
 
 novels_pl_list = gsheet_to_df('1U7vjHwLI7BQ7OHtM7x7NodW0t2vqnNOqkrALuyXSWw8', 'uniq_novels_pl')[['creator', 'title']].values.tolist()
         
@@ -320,6 +292,7 @@ novels_pl_dict = {}
 with ThreadPoolExecutor() as excecutor:
     list(tqdm(excecutor.map(lambda p: harvest_first_edition(*p), novels_pl_list),total=len(novels_pl_list)))          
         
+#%% harvestowanie geonames
 places = {v['place'] for k,v in novels_pl_dict.items()}
 places = [re.split(',|;', e.strip()) for e in places if not(isinstance(e,float))]
 places = set([e.replace('[etc.]', '').replace('[','').replace(']','').replace('etc.','').strip() for sub in places for e in sub])
@@ -335,28 +308,27 @@ for key in tqdm(novels_pl_dict):
 
 df = pd.DataFrame.from_dict(novels_pl_dict, orient='index').reset_index()
 
+#%% licznik edycji
+novels_pl_list = gsheet_to_df('1U7vjHwLI7BQ7OHtM7x7NodW0t2vqnNOqkrALuyXSWw8', 'pierwodruki BN')[['creator', 'title']].values.tolist()
 
+pierwodruki = pd.read_excel(r"C:\Users\Cezary\Downloads\Powieści i opowiadania.xlsx", sheet_name='pierwodruki BN')
 
+pierwodruki_lista = pierwodruki[['lp', 'creator', 'title', 'year']].values.tolist()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+pierwodruki_dict = {}
+with ThreadPoolExecutor() as executor:
+    list(tqdm(executor.map(lambda p: get_no_of_editions(*p), pierwodruki_lista), total=len(pierwodruki_lista)))
     
-    
-    
+df = pd.DataFrame.from_dict(pierwodruki_dict, orient='index')
+
+#%% unique geonames
+geonames_df = pd.read_excel(r"C:\Users\Cezary\Downloads\Powieści i opowiadania.xlsx", sheet_name='pierwodruki BN')
+
+geonames_list = [literal_eval(e) for e in geonames_df['geonames'].to_list()]
+geonames_list = list(set([tuple(e.items()) for sub in geonames_list for e in sub]))
+geonames_list = [dict(e) for e in geonames_list]
+
+df = pd.DataFrame(geonames_list)
 
 
 
@@ -371,35 +343,6 @@ df = pd.DataFrame.from_dict(novels_pl_dict, orient='index').reset_index()
 
 
 
-           
-            try:
-                country_from_dict = {v['geonames_country'] for k,v in places_dict.items() if k == place}.pop()
-                if pd.notnull(country_from_dict):
-                    best_selection = [e for e in result['geonames'] if e['countryName'] == country_from_dict]
-                else: 
-                    best_selection = [e for e in result['geonames'] if e['countryName'] == {v['country'] for k,v in places_dict.items() if k == place}.pop()]
-                places_geonames.update({place: max(best_selection, key=lambda x: x['population'])})
-            except ValueError:
-                try:
-                    best_selection = [e for e in result['geonames'] if e['adminName1'] == {v['country'] for k,v in places_dict.items() if k == place}.pop()]
-                    places_geonames.update({place: max(best_selection, key=lambda x: x['population'])})
-                
-                except ValueError:
-                    # places_geonames.update({place: max(result['geonames'], key=lambda x: x['population'])})
-                    places_geonames.update({place: 'No geonames response'})
-            
-            #nie mogę brać max population, bo dla amsterdamu to jest Nowy Jork
-            #trzeba brać 1. sugestię geonames
-            # places_geonames.update({place: max(result['geonames'], key=lambda x: x['population'])})
-            #!!!!!tutaj dodać klucz państwa!!!!!!!
-            # places_geonames.update({place: result['geonames'][0]})
-        else: places_geonames.update({place: 'No geonames response'})
-        break
-
-
-
-
-# w tabeli uzupełnić wikidatę dla autora przy wszystkich wystąpieniach osoby
 
 
 
@@ -408,70 +351,6 @@ df = pd.DataFrame.from_dict(novels_pl_dict, orient='index').reset_index()
 
 
 
-
-
-
-def get_viaf_name(viaf_url):
-    url = viaf_url + '/viaf.json'
-    r = requests.get(url)
-    try:
-        if r.json().get('mainHeadings'):
-            if isinstance(r.json()['mainHeadings']['data'], list):
-                name = r.json()['mainHeadings']['data'][0]['text']
-            else:
-                name = r.json()['mainHeadings']['data']['text']
-            viaf_names_resp[viaf_url] = name
-        elif r.json().get('redirect'):
-            new_viaf = r.json()['redirect']['directto']
-            new_url = 'https://www.viaf.org/viaf/' + new_viaf
-            viaf_names_resp[viaf_url] = new_url
-            get_viaf_name(new_url)
-    except KeyboardInterrupt as exc:
-        raise exc
-    except:
-        raise print(url)
-
-viaf_names_resp = {}
-viaf_url_set = set(df['related_viaf'])
-
-with ThreadPoolExecutor(max_workers=50) as excecutor:
-    list(tqdm(excecutor.map(get_viaf_name, viaf_url_set)))
-
-
-
-
-
-
-
-
-
-
-
-
-    dict_data.update({'katalog_bn_info': response})
-    
-    
-    # file = files[0]
-    with open(file, encoding='utf-8') as d:
-        dict_data = json.load(d)
-        try:
-            pl_id = dict_data['pl_record_no']
-        except KeyError:
-            query = f'https://polona.pl/api/entities/{dict_data["pl_id"]}'
-            pl_id = requests.get(query).json()
-            
-        query = f'http://khw.data.bn.org.pl/api/polona-lod/{pl_id}'
-        # query = f'http://khw.data.bn.org.pl/api/nlp_id/bibs?id=b1935990{pl_id}'
-        # response = requests.get(query)
-        # tree = ElementTree.fromstring(response.content)
-        # for e in tree:
-        #     print(e)
-        response = requests.get(query).json()
-        dict_data.update({'polona_lod_info': response})
-        query = f'https://data.bn.org.pl/api/institutions/bibs.json?id={pl_id}'
-        response = requests.get(query).json()
-        dict_data.update({'katalog_bn_info': response})
-        bn_dict[dict_data['pl_id']] = dict_data
         
         
     
