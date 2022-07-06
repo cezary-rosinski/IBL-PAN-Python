@@ -311,12 +311,15 @@ occupation_classification.to_csv('samizdat_occupation_classification_to_nodegoat
 #%%main
 # Counter(kartoteka_osob['Project_ID']).most_common(10)
 kartoteka_miejsc = gsheet_to_df('11MDsd1T9onk3tPz84Vb_8AxyHJxFLkuHozNfEer1Wto', 'final')
-kartoteka_osob = pd.DataFrame()
+# kartoteka_osob = pd.DataFrame()
 
-for worksheet in tqdm(['pojedyncze ok', 'grupy_ok', 'osoby_z_jednym_wierszem', 'reszta', 'zapomniani']):
-    temp_df = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', worksheet)
-    temp_df = temp_df[temp_df['decyzja'].isin(['tak', 'new'])]
-    kartoteka_osob = pd.concat([kartoteka_osob, temp_df])  
+# for worksheet in tqdm(['pojedyncze ok', 'grupy_ok', 'osoby_z_jednym_wierszem', 'reszta', 'zapomniani']):
+#     temp_df = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', worksheet)
+#     temp_df = temp_df[temp_df['decyzja'].isin(['tak', 'new'])]
+#     kartoteka_osob = pd.concat([kartoteka_osob, temp_df])  
+
+# kartoteka_osob.to_excel('test.xlsx', index=False)
+kartoteka_osob = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', 'final')
     
 occupation_classification = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIGTFI4Lc', 'occupation')
 
@@ -395,7 +398,7 @@ for groupby in people_groupbys:
     people_dict = {}
     for name, group in tqdm(groupby, total=len(groupby)):
         # 198, 346, 936, 1947, 1883, 1045, 520
-        # name = '12'
+        # name = '501390'
         # group = groupby.get_group(name)
         project_id = name
         try:
@@ -483,10 +486,12 @@ for groupby in people_groupbys:
                     if k not in temp_dict:
                         temp_dict[k] = v
                     else: temp_dict[k] += v
-                if len(set(temp_dict.values())) == 1:
-                    proper_person = max([(e, SequenceMatcher(a=group['Index_Name'].to_list()[0],b=e).ratio()) for e in temp_dict.keys()], key=lambda x: x[-1])[0]
-                else:
-                    proper_person = max({k: v for k,v in temp_dict.items()}, key=temp_dict.get)
+                proper_person = max([(e, SequenceMatcher(a=group['Index_Name'].to_list()[0],b=e).ratio()) for e in temp_dict.keys()], key=lambda x: x[-1])[0]
+                #dlaczego to było tak?    
+                # if len(set(temp_dict.values())) == 1:
+                #     proper_person = max([(e, SequenceMatcher(a=group['Index_Name'].to_list()[0],b=e).ratio()) for e in temp_dict.keys()], key=lambda x: x[-1])[0]
+                # else:
+                #     proper_person = max({k: v for k,v in temp_dict.items()}, key=temp_dict.get)
                 
                 person_names_dict = {}
                 for dictionary in person_names_list:
@@ -518,10 +523,10 @@ for groupby in people_groupbys:
             wiki_deathplace = group['deathplaceLabel.value'].dropna().drop_duplicates().to_list()[0]
         except IndexError: wiki_deathplace = np.nan
         try:
-            wiki_birthdate = group['birthdate.value'].dropna().drop_duplicates().to_list()[0]
+            wiki_birthdate = group['birthdate.value'].dropna().drop_duplicates().to_list()[0][:10]
         except IndexError: wiki_birthdate = np.nan
         try:
-            wiki_deathdate = group['deathdate.value'].dropna().drop_duplicates().to_list()[0]
+            wiki_deathdate = group['deathdate.value'].dropna().drop_duplicates().to_list()[0][:10]
         except IndexError: wiki_deathdate = np.nan
         
         wiki = {'pseudonym': wiki_pseudonym,
@@ -612,11 +617,11 @@ people_dict = {k:{ke:sex[va]['Wikidata_ID'] if ke == 'Sex Label' and pd.notnull(
 errors = []
 
 for k,v in people_dict.items():
-    # k = '8'
-    # v = people_dict['8']
+    # k = '200090'
+    # v = people_dict[k]
     for ka, va in v.items():
-        # ka = 'Pseudonyms'
-        # va = people_dict['8'][ka]
+        # ka = 'Index Name'
+        # va = people_dict[k][ka]
         if ka == 'Pseudonym, Kryptonym':
             a = va if not(isinstance(va, float)) else []
             b = v['pseudonym'] if isinstance(v['pseudonym'], list) else v['pseudonym'].split('❦') if isinstance(v['pseudonym'], str) else []
@@ -651,10 +656,14 @@ for k,v in people_dict.items():
         elif ka in ['Given Name', 'Name'] and isinstance(va, list):
             people_dict[k][ka] = ' '.join(va)
         elif ka == 'Index Name':
-            try:
+
+                #to jest do przemodelowania
+            if not isinstance(ka,str):
                 people_dict[k][ka] = va[0]
-            except TypeError:
-                people_dict[k][ka] = v['nazwa z tabeli'][0]
+            elif not isinstance(ka,float) : 
+                people_dict[k][ka] = va
+            else:
+                people_dict[k][ka] = v['nazwa z tabeli'][0]        
         elif ka in ['Occupation', 'Other Name Forms'] and isinstance(va, list):
             people_dict[k][ka] = '|'.join(va)
 
@@ -680,6 +689,14 @@ people_df.to_csv('samizdat_people_to_nodegoat.csv', index=False, encoding='utf-8
 #zlepić pseudonimy
 #zostawić tylko potrzebne pola
 
+selection = ['1271', '1383', '1945']
+selection = ['1390', '501390', '200090']
+selection = ['252', '253']
+selection = ['1744', '501744', '931']
+selection = ['844', '843']
+selection = ['1506']
+
+test = people_df[people_df.index.isin(selection)]
 
 
 #Index Name – string – longest nazwa z tabeli + sztorc lub nazwa z tabeli
