@@ -568,6 +568,8 @@ for d, list_i in pseudonimy_list:
 people_dict = people_list_of_dicts[0]
 pseudonyms_dict = people_list_of_dicts[1]
 
+test = [((pseudonyms_dict[p]['Index Name'],pseudonyms_dict[p]['nazwa z tabeli'],pseudonyms_dict[p]['Other Name Forms']),c) for p,c in pseudonimy_match]
+
 for pseudo, correct in pseudonimy_match:
     if isinstance(people_dict[correct]['Pseudonym, Kryptonym'], list) and isinstance(pseudonyms_dict[pseudo]['Index Name'], list):
         new = list(set(people_dict[correct]['Pseudonym, Kryptonym'] + pseudonyms_dict[pseudo]['Index Name']))
@@ -655,15 +657,17 @@ for k,v in people_dict.items():
                      errors.append({k:v})
         elif ka in ['Given Name', 'Name'] and isinstance(va, list):
             people_dict[k][ka] = ' '.join(va)
-        elif ka == 'Index Name':
+        # elif ka == 'Index Name':
 
-                #to jest do przemodelowania
-            if not isinstance(ka,str):
-                people_dict[k][ka] = va[0]
-            elif not isinstance(ka,float) : 
-                people_dict[k][ka] = va
-            else:
-                people_dict[k][ka] = v['nazwa z tabeli'][0]        
+        #         #to jest do przemodelowania
+        #     if not isinstance(ka,str):
+        #         people_dict[k][ka] = va[0]
+        #     elif isinstance(ka,list):
+        #         people_dict[k][ka] = va[0]
+        #     elif not isinstance(ka,float) : 
+        #         people_dict[k][ka] = va
+        #     else:
+        #         people_dict[k][ka] = v['nazwa z tabeli'][0]        
         elif ka in ['Occupation', 'Other Name Forms'] and isinstance(va, list):
             people_dict[k][ka] = '|'.join(va)
 
@@ -696,7 +700,15 @@ selection = ['1744', '501744', '931']
 selection = ['844', '843']
 selection = ['1506']
 
+selection = ['1594', '501594']
+selection = ['2110', '101142']
+selection = ['1744', '501744']
+selection = ['1125', '301125', '301438']
+selection = ['2039', '502039', '302039', '302041']
+
 test = people_df[people_df.index.isin(selection)]
+
+test = {k:v for k,v in people_dict.items() if k in selection}
 
 
 #Index Name – string – longest nazwa z tabeli + sztorc lub nazwa z tabeli
