@@ -76,12 +76,12 @@ for worksheet in tqdm(worksheets):
     records_dict.update({worksheet: temp_df})
     
 #wczytanie kartoteki osób po pracach
-kartoteka_osob = pd.DataFrame()
+# kartoteka_osob = pd.DataFrame()
 
-for worksheet in tqdm(['pojedyncze ok', 'grupy_ok', 'osoby_z_jednym_wierszem', 'reszta', 'zapomniani']):
-    temp_df = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', worksheet)
-    temp_df = temp_df[temp_df['decyzja'].isin(['tak', 'new'])]
-    kartoteka_osob = pd.concat([kartoteka_osob, temp_df])  
+# for worksheet in tqdm(['pojedyncze ok', 'grupy_ok', 'osoby_z_jednym_wierszem', 'reszta', 'zapomniani']):
+#     temp_df = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', worksheet)
+#     temp_df = temp_df[temp_df['decyzja'].isin(['tak', 'new'])]
+#     kartoteka_osob = pd.concat([kartoteka_osob, temp_df])  
     
 #%% klasyfikacja płci    
 sex_classification = kartoteka_osob[['sexLabel.value']].dropna().drop_duplicates().rename(columns={'sexLabel.value': 'Typeofsex'})
@@ -567,6 +567,8 @@ for d, list_i in pseudonimy_list:
 
 people_dict = people_list_of_dicts[0]
 pseudonyms_dict = people_list_of_dicts[1]
+
+#tutaj dodać nazwę correct i zostawić tylko te pseudonimy, które != nazwa podstawowa
 
 test = [((pseudonyms_dict[p]['Index Name'],pseudonyms_dict[p]['nazwa z tabeli'],pseudonyms_dict[p]['Other Name Forms']),c) for p,c in pseudonimy_match]
 
