@@ -18,6 +18,7 @@ from collections import defaultdict
 from difflib import SequenceMatcher
 from fuzzywuzzy import fuzz, process
 import Levenshtein
+from collections import Counter
 
 #%% def
 def query_wikidata_person_with_viaf(viaf):
@@ -570,20 +571,46 @@ pseudonyms_dict = people_list_of_dicts[1]
 
 #tutaj dodać nazwę correct i zostawić tylko te pseudonimy, które != nazwa podstawowa
 
-test = [((pseudonyms_dict[p]['Index Name'],pseudonyms_dict[p]['nazwa z tabeli'],pseudonyms_dict[p]['Other Name Forms']),c) for p,c in pseudonimy_match]
+test = [[[pseudonyms_dict[p]['Index Name'],pseudonyms_dict[p]['nazwa z tabeli'],pseudonyms_dict[p]['Other Name Forms']],c, people_dict[c]['Index Name'] if not isinstance(people_dict[c]['Index Name'], float) else people_dict[c]['nazwa z tabeli']] for p,c in pseudonimy_match]
 
-for pseudo, correct in pseudonimy_match:
-    if isinstance(people_dict[correct]['Pseudonym, Kryptonym'], list) and isinstance(pseudonyms_dict[pseudo]['Index Name'], list):
-        new = list(set(people_dict[correct]['Pseudonym, Kryptonym'] + pseudonyms_dict[pseudo]['Index Name']))
-        people_dict[correct]['Pseudonym, Kryptonym'] = new
+test = [[[e for e in a if not isinstance(e,float)], b, c if isinstance(c, str) else c[0]] for a,b,c in test]
+test = [[list(set([e for sub in a for e in sub])),b,c] for a,b,c in test]
+test = [[[e for e in a if e != c],b,c] for a,b,c in test]
+
+pseudonimy = {}
+for e in test:
+    if e[1] not in pseudonimy:
+        pseudonimy[e[1]] = e[0]
+    else:
+        pseudonimy[e[1]].extend(e[0])
+
+pseudonimy = {k:list(set([f for sub in [e.split('|') for e in v] for f in sub])) for k,v in pseudonimy.items()}
+
+for k,v in people_dict.items():
+    if k in pseudonimy:
+        if isinstance(v['Pseudonym, Kryptonym'], list):
+            people_dict[k]['Pseudonym, Kryptonym'].extend(pseudonimy[k])
+        else:
+            people_dict[k]['Pseudonym, Kryptonym'] == pseudonimy[k]
+
+# {k:v['Pseudonym, Kryptonym'].extend(pseudonimy[k] if k in pseudonimy and isinstance(v['Pseudonym, Kryptonym'], list) else v['Pseudonym, Kryptonym'] == pseudonimy[k]) for k,v in people_dict.items()}
+
+
+
+
+
+# for pseudo, correct in pseudonimy_match:
+#     if isinstance(people_dict[correct]['Pseudonym, Kryptonym'], list) and isinstance(pseudonyms_dict[pseudo]['Index Name'], list):
+#         new = list(set(people_dict[correct]['Pseudonym, Kryptonym'] + pseudonyms_dict[pseudo]['Index Name']))
+#         people_dict[correct]['Pseudonym, Kryptonym'] = new
         
-    elif isinstance(people_dict[correct]['Pseudonym, Kryptonym'], float) and isinstance(pseudonyms_dict[pseudo]['Index Name'], list):
-        people_dict[correct]['Pseudonym, Kryptonym'] = list(set(pseudonyms_dict[pseudo]['Index Name']))
+#     elif isinstance(people_dict[correct]['Pseudonym, Kryptonym'], float) and isinstance(pseudonyms_dict[pseudo]['Index Name'], list):
+#         people_dict[correct]['Pseudonym, Kryptonym'] = list(set(pseudonyms_dict[pseudo]['Index Name']))
 
-    pseudonyms_dict[pseudonimy_match[2][0]]
-    people_dict[pseudonimy_match[2][1]]
+#     pseudonyms_dict[pseudonimy_match[2][0]]
+#     people_dict[pseudonimy_match[2][1]]
 
-pseudonimy_do_oznaczenia = pseudonimy_do_oznaczenia['Project_ID'].to_list()
+# pseudonimy_do_oznaczenia = pseudonimy_do_oznaczenia['Project_ID'].to_list()
 
 {k:v.update({'sztorc':True}) if v['Project ID'] in pseudonimy_do_oznaczenia else v.update({'sztorc':False}) for k,v in people_dict.items()}
         
