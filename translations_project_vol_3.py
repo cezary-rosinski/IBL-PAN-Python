@@ -1631,6 +1631,7 @@ for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_si
 
 #wprowadzić system aktualizacji na podstawie manualnych prac Ondreja!!!
 translations_df = pd.read_excel('translation_before_manual_2022-06-27.xlsx')
+translations_df_new = translations_df.copy()
 # translations_df = gsheet_to_df('1wy64th7IjF0ktAqjz3NQcflNYLAkStD3', 'Arkusz1')
 work_ids = dict(zip(translations_df['001'], translations_df['work_id']))
 work_ids_list = list(work_ids.values())
@@ -1661,29 +1662,49 @@ drive = GoogleDrive(gauth)
 
 files_list = drive.ListFile({'q': f"'1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m' in parents and trashed=false"}).GetList() 
 
+# sorted([e['title'].split('_')[0] for e in files_list])
+
 #wybieranie edytowanych plików
 #ten warunek musi być zmieniony, bo musi uwzględnić dodane później kolejne work_id dla autorów
 
 #może po prostu przechowywać listę lp, które są już zrobiono?
-done = ['001', '002', '008', '009']
+done = ['001', '002', '008', '009', '011', '014', '015', '021', '024', '026', '028', '030', '033', '034', '037', '040', '041', '044', '045', '050', '052', '054', '055', '056', '058', '062', '064', '065', '066', '068', '073', '075', '076', '078', '080', '084', '085', '087', '088', '089', '090', '096', '099', '100', '101', '104', '109', '112', '114', '116', '124', '125', '128', '139', '142', '143', '148', '154', '156', '159', '160', '165', '166', '168', '170', '181', '182', '185', '187', '188', '189', '198', '199', '203', '209', '217', '218', '221', '224', '225', '228', '230', '232', '234', '235', '238', '242', '243', '245', '247', '251', '252', '254', '259', '262', '264', '265', '266', '267', '269', '273', '274', '275', '276', '278', '280']  
 modified_sheets = [e for e in files_list if e['title'].split('_')[0] in done]
 used_clusters = [int(e['title'].split('_')[2]) for e in files_list]
 
 
 # for modified_sheet in tqdm(modified_sheets):
+#!!!!!!!!!!tutaj!!!!!!!! obejść błąd 429
 def collect_modification(modified_sheet):
+# for modified_sheet in tqdm(modified_sheets):
+    # modified_sheet = modified_sheets[22]
+    # modified_sheet = [e for e in modified_sheets if e['title'].split('_')[0] == '230'][0]
     cluster_no, author_id, work_id, author_fequency = modified_sheet['title'].split('_')
     edited_clusters.append(work_id)
+    # print(cluster_no)
+    # time.sleep(3)
+    # try:
+    #     gsheet_to_df(modified_sheet['id'], work_id)[[1, 'to_retain']].rename(columns={1:'001'})
+    # except KeyError:
+    #     print(modified_sheet['title'])
     temp_df = gsheet_to_df(modified_sheet['id'], work_id)[[1, 'to_retain']].rename(columns={1:'001'})
     temp_dict = dict(zip(temp_df['001'].to_list(), temp_df['to_retain'].to_list()))
     temp_dict = {int(k):int(work_id) if v == 'x' else v for k,v in temp_dict.items()}
-    translations_df['work_id'] = translations_df[['001', 'work_id']].apply(lambda x: temp_dict[x['001']] if x['001'] in temp_dict else x['work_id'], axis=1)
+    temp_dict = {k:v for k,v in temp_dict.items() if not isinstance(v, float)}
+    temp_ids = translations_df_new.loc[translations_df_new['work_id'] == int(work_id)]['001'].to_list()
+    translations_df_new.loc[translations_df_new['001'].isin(temp_ids), 'work_id'] = np.nan
+    # translations_df_new['work_id'] = translations_df_new[['001', 'work_id']].apply(lambda x: temp_dict[x['001']] if x['001'] in temp_dict else x['work_id'], axis=1)  
+    try:
+        translations_df_new[['001', 'work_id']].apply(lambda x: temp_dict[x['001']] if x['001'] in temp_dict else x['work_id'], axis=1)
+    except IndexError:
+        print(cluster_no)
     
 edited_clusters = []
 with ThreadPoolExecutor() as excecutor:
     list(tqdm(excecutor.map(collect_modification, modified_sheets),total=len(modified_sheets)))
-    
-translations_df.to_excel(f'translations_after_manual_{now}.xlsx', index=False)
+
+translations_df_new['work_id'] = translations_df_new['work_id'].apply(lambda x: np.int64(x) if isinstance(x, int) else x)    
+translations_df_new.to_excel(f'translations_after_manual_{now}.xlsx', index=False)
      
 with open('translation_edited_clusters.txt', 'wt', encoding='utf-8') as f:
     for el in edited_clusters:
