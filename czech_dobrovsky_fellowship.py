@@ -128,6 +128,7 @@ clb_sh = []
 errors = []
 for row in tqdm(marc_list):
     if row.startswith('=650  07'):
+        row = total[0]
         if re.findall('(?<=\$7)(.+?)(?=\$|$)', row):
             errors.append((row, re.findall('(?<=\$7)(.+?)(?=\$|$)', row)[0]))
         try:
@@ -136,7 +137,7 @@ for row in tqdm(marc_list):
         except IndexError:
             pass
 
-clb_sh_frequency = Counter(clb_sh)        
+clb_sh_frequency = Counter(clb_sh)      
         
 clb_sh = list(set(clb_sh))
 errors = list(set(errors))
@@ -183,6 +184,8 @@ literary_sh_dict_freq = dict(sorted(literary_sh_dict_freq.items(), key = lambda 
 
 with open("cz_literary_sh_dict_freq.json", 'w', encoding='utf-8') as f: 
     json.dump(literary_sh_dict_freq, f, ensure_ascii=False, indent=4)
+
+#end of frequency
                 
 sh_dict = dict(list(literary_sh_dict.items())[:10])
 
@@ -198,10 +201,10 @@ for key, value in tqdm(sh_dict.items()):
     response = requests.get(query).text
     soup = BeautifulSoup(response, 'html.parser')
     
-    links = zip(soup.select('.tbody-group a'), soup.select('type'))
+    links = zip(soup.select('.tbody-group a'), soup.select('.underline:nth-child(4)'))
     locsh_dict = {}
     for i, (name, kind) in enumerate(links, 1):
-        if kind.text == 'Topic':
+        if 'Topic' in kind.text:
             locsh_dict[i] = {'label': name.text}
             locsh_dict[i].update({'ID': re.findall('sh\d+$', name['href'])[0]})
         
