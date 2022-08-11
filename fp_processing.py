@@ -2,6 +2,8 @@
 # problemy z bibliografią – zostają półpauzy, przetestować na tekście Sadowskiego
 # automatycznie aktualizować obraz dla strony głównej? https://pressto.amu.edu.pl/index.php/fp/management/settings/website
 
+# dlaczego w numerze 27 na pressto zostały wysłane z poziomu kodu tylko teksty po polsku?
+
     
 #%% import
 import pandas as pd
@@ -182,8 +184,8 @@ aktualny_numer['biogram'] = aktualny_numer['biogram'].apply(lambda x: abstrakt_b
     
 browser.get("http://fp.amu.edu.pl/admin")    
 browser.implicitly_wait(5)
-username_input = browser.find_element_by_id('user_login')
-password_input = browser.find_element_by_id('user_pass')
+username_input = browser.find_element('id', 'user_login')
+password_input = browser.find_element('id', 'user_pass')
 
 username = fp_credentials.wordpress_username
 password = fp_credentials.wordpress_password
@@ -191,37 +193,37 @@ time.sleep(1)
 username_input.send_keys(username)
 password_input.send_keys(password)
 
-login_button = browser.find_element_by_id('wp-submit').click()
+login_button = browser.find_element('id', 'wp-submit').click()
 
 for index, row in aktualny_numer.iterrows():
     if row['język'] == 'pl':
       
         browser.get('http://fp.amu.edu.pl/wp-admin/post-new.php')
-        tekstowy = browser.find_element_by_id('content-html').click()
+        tekstowy = browser.find_element('id', 'content-html').click()
 
-        wprowadz_tytul = browser.find_element_by_name('post_title')
+        wprowadz_tytul = browser.find_element('name', 'post_title')
         wprowadz_tytul.send_keys(row['tytuł artykułu'])
 
-        jezyk_pl_button = browser.find_element_by_id('xili_language_check_pl_pl').click()
+        jezyk_pl_button = browser.find_element('id', 'xili_language_check_pl_pl').click()
 
         kategoria_id = kategorie_wpisow.copy()[kategorie_wpisow['kategoria'] == row['kategoria']]['id'].to_string(index=False).strip()
         time.sleep(1)
-        kategoria = browser.find_element_by_id(kategoria_id)
+        kategoria = browser.find_element('id', kategoria_id)
         time.sleep(1)
         if kategoria.get_attribute('id') == kategoria_id:
             kategoria.click()
         else:
             print(f"Błąd w artytule o tytule: {row['tytuł artykułu']}")
 
-        tagi = browser.find_element_by_id('new-tag-post_tag')
+        tagi = browser.find_element('id', 'new-tag-post_tag')
         tagi_wpisu = ','.join(row['autor'].split('❦')) + ',' + row['tag numeru']
         tagi.send_keys(tagi_wpisu)
-        dodaj_tagi = browser.find_element_by_xpath("//input[@class = 'button tagadd']").click()
+        dodaj_tagi = browser.find_element('xpath', "//input[@class = 'button tagadd']").click()
         
-        wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
-        wybierz_pliki = browser.find_element_by_xpath("//input[starts-with(@id,'html5_')]")
+        wybierz_obrazek = browser.find_element('id', 'set-post-thumbnail').click()
+        wybierz_pliki = browser.find_element('xpath', "//input[starts-with(@id,'html5_')]")
         wybierz_pliki.send_keys(f"{row['folder lokalny']}\\{row['jpg']}")
-        zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
+        zaakceptuj_obrazek = browser.find_element('xpath', "//button[@class = 'button media-button button-primary button-large media-button-select']")
         zaakceptuj_obrazek.click()
         
 # =============================================================================
@@ -244,15 +246,15 @@ for index, row in aktualny_numer.iterrows():
 
         while True:
             try:
-                zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
+                zaakceptuj_obrazek = browser.find_element('xpath', "//button[@class = 'button media-button button-primary button-large media-button-select']")
                 zaakceptuj_obrazek.click()
-                wybierz_pdf = browser.find_element_by_xpath("//select[@id = 'metakeyselect']/option[text()='pdf-url']").click()
+                wybierz_pdf = browser.find_element('xpath', "//select[@id = 'metakeyselect']/option[text()='pdf-url']").click()
             except ElementClickInterceptedException:
                 time.sleep(5)
                 continue
             break
-        wprowadz_pdf_link = browser.find_element_by_id('metavalue').send_keys(row['link do pdf'])
-        dodaj_pdf = browser.find_element_by_id("newmeta-submit").click()
+        wprowadz_pdf_link = browser.find_element('id', 'metavalue').send_keys(row['link do pdf'])
+        dodaj_pdf = browser.find_element('id', "newmeta-submit").click()
         
         if row['kategoria'] == 'Przekłady' and pd.isnull(row['ORCID']):
             tagi_autorow = row['tag autora'].split('❦')
@@ -285,55 +287,55 @@ for index, row in aktualny_numer.iterrows():
         
         {abstrakt}"""
 
-        content = browser.find_element_by_id('content').send_keys(body)
+        content = browser.find_element('id', 'content').send_keys(body)
 
-        opublikuj = browser.find_element_by_id('publish').click()
+        opublikuj = browser.find_element('id', 'publish').click()
         
-        caly_link = browser.find_element_by_id('edit-slug-buttons').click()
-        odnosnik = browser.find_element_by_id('new-post-slug')
+        caly_link = browser.find_element('id', 'edit-slug-buttons').click()
+        odnosnik = browser.find_element('id', 'new-post-slug')
         odnosnik = odnosnik.get_attribute('value')
         aktualny_numer.at[index, 'odnosnik'] = odnosnik
         
         url_edycji = browser.current_url
         aktualny_numer.at[index, 'url_edycji'] = url_edycji
 
-        create_english = browser.find_element_by_xpath("//a[@title = 'For create a linked draft translation in en_US']").click()
+        create_english = browser.find_element('xpath', "//a[@title = 'For create a linked draft translation in en_US']").click()
 #English
-        tekstowy = browser.find_element_by_id('content-html').click()
+        tekstowy = browser.find_element('id', 'content-html').click()
 
-        wprowadz_tytul = browser.find_element_by_name('post_title').clear()
-        wprowadz_tytul = browser.find_element_by_name('post_title').send_keys(aktualny_numer.at[index+1, 'tytuł artykułu'])
+        wprowadz_tytul = browser.find_element('name', 'post_title').clear()
+        wprowadz_tytul = browser.find_element('name', 'post_title').send_keys(aktualny_numer.at[index+1, 'tytuł artykułu'])
         
-        tagi = browser.find_element_by_id('new-tag-post_tag')
+        tagi = browser.find_element('id', 'new-tag-post_tag')
         tagi_wpisu = ','.join(aktualny_numer.at[index+1, 'autor'].split('❦')) + ',' + aktualny_numer.at[index+1, 'tag numeru']
         tagi.send_keys(tagi_wpisu)
-        dodaj_tagi = browser.find_element_by_xpath("//input[@class = 'button tagadd']").click()
+        dodaj_tagi = browser.find_element('xpath', "//input[@class = 'button tagadd']").click()
         
         try:
-            usun_obrazek = browser.find_element_by_id('remove-post-thumbnail').click()
+            usun_obrazek = browser.find_element('id', 'remove-post-thumbnail').click()
         except NoSuchElementException:
             pass
         
-        wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
-        wybierz_pliki = browser.find_element_by_xpath("//input[starts-with(@id,'html5_')]")
+        wybierz_obrazek = browser.find_element('id', 'set-post-thumbnail').click()
+        wybierz_pliki = browser.find_element('xpath', "//input[starts-with(@id,'html5_')]")
         try:
             wybierz_pliki.send_keys(f"{aktualny_numer.at[index+1, 'folder lokalny']}\\{aktualny_numer.at[index+1, 'jpg']}")
         except InvalidArgumentException:
             wybierz_pliki.send_keys(f"{row['folder lokalny']}\\{row['jpg']}")
-        zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
+        zaakceptuj_obrazek = browser.find_element('xpath', "//button[@class = 'button media-button button-primary button-large media-button-select']")
         zaakceptuj_obrazek.click()
 
         while True:
             try:
-                zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
+                zaakceptuj_obrazek = browser.find_element('xpath', "//button[@class = 'button media-button button-primary button-large media-button-select']")
                 zaakceptuj_obrazek.click()
-                wybierz_pdf = browser.find_element_by_xpath("//select[@id = 'metakeyselect']/option[text()='pdf-url']").click()
+                wybierz_pdf = browser.find_element('xpath', "//select[@id = 'metakeyselect']/option[text()='pdf-url']").click()
             except ElementClickInterceptedException:
                 time.sleep(5)
                 continue
             break
-        wprowadz_pdf_link = browser.find_element_by_id('metavalue').send_keys(aktualny_numer.at[index+1, 'link do pdf'])
-        dodaj_pdf = browser.find_element_by_id("newmeta-submit").click()
+        wprowadz_pdf_link = browser.find_element('id', 'metavalue').send_keys(aktualny_numer.at[index+1, 'link do pdf'])
+        dodaj_pdf = browser.find_element('id', "newmeta-submit").click()
         
         if czy_tlumaczenia_po_angielsku == False and aktualny_numer.at[index+1, 'kategoria'] == 'Przekłady' and pd.isnull(aktualny_numer.at[index+1, 'ORCID']):
             tagi_autorow = aktualny_numer.at[index+1, 'tag autora'].split('❦')
@@ -392,13 +394,13 @@ for index, row in aktualny_numer.iterrows():
             
             {abstrakt}"""
         
-        content = browser.find_element_by_id('content').clear()
-        content = browser.find_element_by_id('content').send_keys(body)      
+        content = browser.find_element('id', 'content').clear()
+        content = browser.find_element('id', 'content').send_keys(body)      
 
-        opublikuj = browser.find_element_by_id('publish').click()
+        opublikuj = browser.find_element('id', 'publish').click()
         
-        caly_link = browser.find_element_by_id('edit-slug-buttons').click()
-        odnosnik = browser.find_element_by_id('new-post-slug')
+        caly_link = browser.find_element('id', 'edit-slug-buttons').click()
+        odnosnik = browser.find_element('id', 'new-post-slug')
         odnosnik = odnosnik.get_attribute('value')
         aktualny_numer.at[index+1, 'odnosnik'] = odnosnik
         
@@ -430,13 +432,13 @@ for i, row in aktualny_numer.iterrows():
 nowe_tagi_osob = []            
 for lp, a, t in tagi_osob:
     browser.get('http://fp.amu.edu.pl/wp-admin/edit-tags.php?taxonomy=post_tag')
-    szukaj_tagu = browser.find_element_by_id('tag-search-input').send_keys(a)
-    szukaj_tagu_button = browser.find_element_by_id('search-submit').click()
-    wybierz_osobe = browser.find_elements_by_css_selector('.row-title')[0].click()
-    opis_tagu = browser.find_element_by_id('description').clear()
-    opis_tagu = browser.find_element_by_id('description').send_keys(t)
-    zaktualizuj = browser.find_element_by_xpath("//input[@class = 'button button-primary' and @value = 'Aktualizuj']").click()
-    opis_tagu = browser.find_element_by_id('description').get_attribute('value')
+    szukaj_tagu = browser.find_element('id', 'tag-search-input').send_keys(a)
+    szukaj_tagu_button = browser.find_element('id', 'search-submit').click()
+    wybierz_osobe = browser.find_elements('css selector', '.row-title')[0].click()
+    opis_tagu = browser.find_element('id', 'description').clear()
+    opis_tagu = browser.find_element('id', 'description').send_keys(t)
+    zaktualizuj = browser.find_element('xpath', "//input[@class = 'button button-primary' and @value = 'Aktualizuj']").click()
+    opis_tagu = browser.find_element('id', 'description').get_attribute('value')
     tag_pl = re.sub('(.+)(\|)(.+)', r'\1', opis_tagu)
     tag_eng = re.sub('(.+)(\|)(.+)', r'\3', opis_tagu)
     nowe_tagi_osob.append((int(lp), a, tag_pl))
@@ -500,18 +502,18 @@ for index, row in strona_numeru.iterrows():
     if row['język'] == 'pl':
       
         browser.get('http://fp.amu.edu.pl/wp-admin/post-new.php?post_type=page')
-        tekstowy = browser.find_element_by_id('content-html').click()
+        tekstowy = browser.find_element('id', 'content-html').click()
 
-        wprowadz_tytul = browser.find_element_by_name('post_title')
+        wprowadz_tytul = browser.find_element('name', 'post_title')
         wprowadz_tytul.send_keys(row['tytuł numeru'])
 
-        jezyk_pl_button = browser.find_element_by_id('xili_language_check_pl_pl').click()
+        jezyk_pl_button = browser.find_element('id', 'xili_language_check_pl_pl').click()
         time.sleep(1)
-        wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
-        wybierz_pliki = browser.find_element_by_xpath("//input[starts-with(@id,'html5_')]")
+        wybierz_obrazek = browser.find_element('id', 'set-post-thumbnail').click()
+        wybierz_pliki = browser.find_element('xpath', "//input[starts-with(@id,'html5_')]")
         wybierz_pliki.send_keys(f"{row['folder lokalny']}\\{row['jpg']}")
         time.sleep(10)
-        zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
+        zaakceptuj_obrazek = browser.find_element('xpath', "//button[@class = 'button media-button button-primary button-large media-button-select']")
         zaakceptuj_obrazek.click()
         
         body = f"""<a href="{row['link do pdf']}"><img class="alignleft wp-image-3823" src="{row['link do jpg']}" alt="" width="166" height="235" /></a>{row['wstęp']}
@@ -519,35 +521,35 @@ for index, row in strona_numeru.iterrows():
         <h3>Spis treści:</h3>
         {row['spis treści']}"""
 
-        content = browser.find_element_by_id('content').send_keys(body)
+        content = browser.find_element('id', 'content').send_keys(body)
 
-        opublikuj = browser.find_element_by_id('publish').click()
+        opublikuj = browser.find_element('id', 'publish').click()
         
-        caly_link = browser.find_element_by_id('edit-slug-buttons').click()
-        odnosnik = browser.find_element_by_id('new-post-slug')
+        caly_link = browser.find_element('id', 'edit-slug-buttons').click()
+        odnosnik = browser.find_element('id', 'new-post-slug')
         odnosnik = odnosnik.get_attribute('value')
         strona_numeru.at[index, 'odnosnik'] = odnosnik
         
         url_edycji = browser.current_url
         strona_numeru.at[index, 'url_edycji'] = url_edycji
 
-        create_english = browser.find_element_by_xpath("//a[@title = 'For create a linked draft translation in en_US']").click()
+        create_english = browser.find_element('xpath', "//a[@title = 'For create a linked draft translation in en_US']").click()
 #English
-        tekstowy = browser.find_element_by_id('content-html').click()
+        tekstowy = browser.find_element('id', 'content-html').click()
 
-        wprowadz_tytul = browser.find_element_by_name('post_title').clear()
-        wprowadz_tytul = browser.find_element_by_name('post_title').send_keys(strona_numeru.at[index+1, 'tytuł numeru'])
+        wprowadz_tytul = browser.find_element('name', 'post_title').clear()
+        wprowadz_tytul = browser.find_element('name', 'post_title').send_keys(strona_numeru.at[index+1, 'tytuł numeru'])
         
         try:
-            usun_obrazek = browser.find_element_by_id('remove-post-thumbnail').click()
+            usun_obrazek = browser.find_element('id', 'remove-post-thumbnail').click()
         except NoSuchElementException:
             pass
         
-        wybierz_obrazek = browser.find_element_by_id('set-post-thumbnail').click()
-        wybierz_pliki = browser.find_element_by_xpath("//input[starts-with(@id,'html5_')]")
+        wybierz_obrazek = browser.find_element('id', 'set-post-thumbnail').click()
+        wybierz_pliki = browser.find_element('xpath', "//input[starts-with(@id,'html5_')]")
         wybierz_pliki.send_keys(f"{strona_numeru.at[index+1, 'folder lokalny']}\\{strona_numeru.at[index+1, 'jpg']}")
         time.sleep(10)
-        zaakceptuj_obrazek = browser.find_element_by_xpath("//button[@class = 'button media-button button-primary button-large media-button-select']")
+        zaakceptuj_obrazek = browser.find_element('xpath', "//button[@class = 'button media-button button-primary button-large media-button-select']")
         zaakceptuj_obrazek.click()
         
         body = f"""<a href="{strona_numeru.at[index+1, 'link do pdf']}"><img class="alignleft wp-image-3823" src="{strona_numeru.at[index+1, 'link do jpg']}" alt="" width="166" height="235" /></a>{strona_numeru.at[index+1, 'wstęp']}
@@ -555,13 +557,13 @@ for index, row in strona_numeru.iterrows():
         <h3>Table of Contents:</h3>
         {strona_numeru.at[index+1, 'spis treści']}"""
         
-        content = browser.find_element_by_id('content').clear()
-        content = browser.find_element_by_id('content').send_keys(body)      
+        content = browser.find_element('id', 'content').clear()
+        content = browser.find_element('id', 'content').send_keys(body)      
 
-        opublikuj = browser.find_element_by_id('publish').click()
+        opublikuj = browser.find_element('id', 'publish').click()
         
-        caly_link = browser.find_element_by_id('edit-slug-buttons').click()
-        odnosnik = browser.find_element_by_id('new-post-slug')
+        caly_link = browser.find_element('id', 'edit-slug-buttons').click()
+        odnosnik = browser.find_element('id', 'new-post-slug')
         odnosnik = odnosnik.get_attribute('value')
         strona_numeru.at[index+1, 'odnosnik'] = odnosnik
         
@@ -576,8 +578,8 @@ print('Strona numeru na wordpressie opublikowana')
 
 browser.get("https://pressto.amu.edu.pl/index.php/index/login") 
 browser.implicitly_wait(5)
-username_input = browser.find_element_by_id('login-username')
-password_input = browser.find_element_by_id('login-password')
+username_input = browser.find_element('id', 'login-username')
+password_input = browser.find_element('id', 'login-password')
 
 username = fp_credentials.pressto_username
 password = fp_credentials.pressto_password
@@ -585,43 +587,43 @@ password = fp_credentials.pressto_password
 username_input.send_keys(username)
 password_input.send_keys(password)
 
-login_button = browser.find_element_by_css_selector('.btn-primary').click()
+login_button = browser.find_element('css selector', '.btn-primary').click()
 
 browser.get("https://pressto.amu.edu.pl/index.php/fp/manageIssues#futureIssues")
 
-utworz_numer = browser.find_element_by_css_selector('.pkp_linkaction_icon_add_category').click()
+utworz_numer = browser.find_element('css selector', '.pkp_linkaction_icon_add_category').click()
 time.sleep(1)
-odznacz_tom = browser.find_element_by_id('showVolume').click()
+odznacz_tom = browser.find_element('id', 'showVolume').click()
     
-wprowadz_numer = browser.find_element_by_xpath("//input[@name='number']")
+wprowadz_numer = browser.find_element('xpath', "//input[@name='number']")
 wprowadz_numer.send_keys('{:.0f}'.format(strona_numeru.at[0, 'numer']))
-rok = browser.find_element_by_xpath("//input[@name='year']")
+rok = browser.find_element('xpath', "//input[@name='year']")
 rok.send_keys('{:.0f}'.format(strona_numeru.at[0, 'rok']))
 tytul_pl = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[0, 'tytuł numeru']).strip()
 
 nazwa_numeru = f"Nr {'{:.0f}'.format(strona_numeru.at[0, 'numer'])} ({'{:.0f}'.format(strona_numeru.at[0, 'rok'])}): {tytul_pl}"
 
-tytul_pl = browser.find_element_by_xpath("//input[@name='title[pl_PL]']").send_keys(tytul_pl)
+tytul_pl = browser.find_element('xpath', "//input[@name='title[pl_PL]']").send_keys(tytul_pl)
 tytul_eng = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[1, 'tytuł numeru']).strip()
-tytul_eng = browser.find_element_by_xpath("//input[@name='title[en_US]']").send_keys(tytul_eng)
+tytul_eng = browser.find_element('xpath', "//input[@name='title[en_US]']").send_keys(tytul_eng)
 
-wstep_pl_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[0].click()
-wstep_pl_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(strona_numeru.at[0, 'wstęp'])
-wstep_pl_ok = browser.find_element_by_xpath("//span[contains(text(),'Ok')]").click()
+wstep_pl_source = browser.find_elements('xpath', "//i[@class='mce-ico mce-i-code']")[0].click()
+wstep_pl_source = browser.find_element('xpath', "//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(strona_numeru.at[0, 'wstęp'])
+wstep_pl_ok = browser.find_element('xpath', "//span[contains(text(),'Ok')]").click()
 
-wstep_eng_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[1].click()
-wstep_eng_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(strona_numeru.at[1, 'wstęp'])
-wstep_eng_ok = browser.find_element_by_xpath("//span[contains(text(),'Ok')]").click()
+wstep_eng_source = browser.find_elements('xpath', "//i[@class='mce-ico mce-i-code']")[1].click()
+wstep_eng_source = browser.find_element('xpath', "//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(strona_numeru.at[1, 'wstęp'])
+wstep_eng_ok = browser.find_element('xpath', "//span[contains(text(),'Ok')]").click()
 
 okladka_na_dysku = f"{strona_numeru.at[0, 'folder lokalny']}\{strona_numeru.at[0, 'jpg']}"
-przeslij_okladke = browser.find_element_by_xpath("//input[@type='file']").send_keys(okladka_na_dysku)
+przeslij_okladke = browser.find_element('xpath', "//input[@type='file']").send_keys(okladka_na_dysku)
 time.sleep(2)
-zapisz_numer = browser.find_element_by_xpath("//button[@class='pkp_button submitFormButton']").click()
+zapisz_numer = browser.find_element('xpath', "//button[@class='pkp_button submitFormButton']").click()
 time.sleep(1)
-numer_strzalka = browser.find_element_by_xpath("//a[@class='show_extras']").click()
-opublikuj_numer = browser.find_element_by_xpath("//a[@title='Opublikuj numer']").click()
-odznacz_mail = browser.find_element_by_id('sendIssueNotification').click()
-opublikuj_numer_ok = browser.find_element_by_xpath("//button[@class='pkp_button submitFormButton']").click()
+numer_strzalka = browser.find_element('xpath', "//a[@class='show_extras']").click()
+opublikuj_numer = browser.find_element('xpath', "//a[@title='Opublikuj numer']").click()
+odznacz_mail = browser.find_element('id', 'sendIssueNotification').click()
+opublikuj_numer_ok = browser.find_element('xpath', "//button[@class='pkp_button submitFormButton']").click()
 
 print('Strona numeru na pressto opublikowana')
 
@@ -630,39 +632,40 @@ print('Strona numeru na pressto opublikowana')
 #pressto dodawanie artykułów
 
 for i, row in aktualny_numer.iterrows():
-    # i = 16
+    # i = 12
     # row = aktualny_numer.iloc[i,:]
     if row['język'] == 'pl':
         nowe_zgloszenie = browser.get('https://pressto.amu.edu.pl/index.php/fp/management/importexport/plugin/QuickSubmitPlugin')
         dzial_fp = row['kategoria']
-        dzial = browser.find_element_by_xpath(f"//select[@id = 'sectionId']/option[text()='{dzial_fp}']").click()
+        dzial = browser.find_element('xpath', f"//select[@id = 'sectionId']/option[text()='{dzial_fp}']").click()
         time.sleep(1)
         pressto_tytul_art_pl = row['tytuł artykułu'].replace('<i>', '').replace('</i>', '')
-        pressto_tytul_art_pl = browser.find_element_by_xpath("//input[@name='title[pl_PL]']").send_keys(pressto_tytul_art_pl)
+        pressto_tytul_art_pl = browser.find_element('xpath', "//input[@name='title[pl_PL]']").send_keys(pressto_tytul_art_pl)
+        time.sleep(1)
         pressto_tytul_art_eng = aktualny_numer.at[i+1, 'tytuł artykułu'].replace('<i>', '').replace('</i>', '')
-        pressto_tytul_art_eng = browser.find_element_by_xpath("//input[@name='title[en_US]']").send_keys(pressto_tytul_art_eng)
+        pressto_tytul_art_eng = browser.find_element('xpath', "//input[@name='title[en_US]']").send_keys(pressto_tytul_art_eng)
         
-        abstrakt_pl_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[0].click()
-        abstrakt_pl_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(row['abstrakt'])
-        abstrakt_pl_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1].click()
-        abstrakt_eng_source = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[1].click()
-        abstrakt_eng_source = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(aktualny_numer.at[i+1, 'abstrakt'])
-        abstrakt_eng_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1].click()
-        kliknij_poza_abstrakt = browser.find_element_by_xpath("//input[@name='title[pl_PL]']").click()
+        abstrakt_pl_source = browser.find_elements('xpath', "//i[@class='mce-ico mce-i-code']")[0].click()
+        abstrakt_pl_source = browser.find_element('xpath', "//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(row['abstrakt'])
+        abstrakt_pl_ok = browser.find_elements('xpath', "//span[contains(text(),'Ok')]")[-1].click()
+        abstrakt_eng_source = browser.find_elements('xpath', "//i[@class='mce-ico mce-i-code']")[1].click()
+        abstrakt_eng_source = browser.find_element('xpath', "//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(aktualny_numer.at[i+1, 'abstrakt'])
+        abstrakt_eng_ok = browser.find_elements('xpath', "//span[contains(text(),'Ok')]")[-1].click()
+        kliknij_poza_abstrakt = browser.find_element('xpath', "//input[@name='title[pl_PL]']").click()
         
-        metadane_jezyk_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[0].send_keys('pl')
-        metadane_jezyk_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[1].send_keys('en') 
+        metadane_jezyk_pl = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[0].send_keys('pl')
+        metadane_jezyk_eng = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[1].send_keys('en') 
         for s in row['słowa kluczowe'].split(', '):
             s = re.sub(',+', ',', s)
-            slowa_kluczowe_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[2].send_keys(s, Keys.TAB)
+            slowa_kluczowe_pl = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[2].send_keys(s, Keys.TAB)
         for s in aktualny_numer.at[i+1, 'słowa kluczowe'].split(', '):
             s = re.sub(',+', ',', s)
-            slowa_kluczowe_eng = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[3].send_keys(s, Keys.TAB)
+            slowa_kluczowe_eng = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[3].send_keys(s, Keys.TAB)
             
         try:
-            finansowanie_pl = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[4]
+            finansowanie_pl = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[4]
             finansowanie_pl.send_keys(row['finansowanie'])
-            finansowanie_en = browser.find_elements_by_xpath("//input[@class='ui-widget-content ui-autocomplete-input']")[5]
+            finansowanie_en = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[5]
             finansowanie_en.send_keys(aktualny_numer.at[i+1, 'finansowanie'])
         except (KeyError, TypeError):
             pass
@@ -682,7 +685,7 @@ for i, row in aktualny_numer.iterrows():
             bibliografia_df['autor pozycji'] = bibliografia_df['autor pozycji'].replace('---|- - - |–––|– – –|———|— — —', np.nan, regex=True).ffill()
             bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: re.sub(f"{x['autor pozycji']}.", '', x['bibliografia']).strip(), axis=1)
             bibliografia_df['pozycja'] = bibliografia_df.apply(lambda x: x['bibliografia'] if x['pozycja'] == '' else x['pozycja'], axis=1)
-            bibliografia_df['pozycja'] = bibliografia_df['pozycja'].str.replace('-{2,}|—{2,}|—{2,}', '', regex=True)
+            bibliografia_df['pozycja'] = bibliografia_df['pozycja'].str.replace('[- ]{2,}|[— ]{2,}|[— ]{2,}|[– ]{2,}', '', regex=True)
             bibliografia_df['id'] = bibliografia_df.index+1
             bibliografia_df['id'] = bibliografia_df['id']
             bibliografia_df = bibliografia_df.replace(r'^\s*$', np.nan, regex=True)
@@ -690,148 +693,148 @@ for i, row in aktualny_numer.iterrows():
             bibliografia_df = bibliografia_df['bibliografia']
             bibliografia_df = '\n'.join(bibliografia_df.str.replace('(\. )+', '. ', regex=True).to_list())
             
-            bibliografia = browser.find_element_by_name('citations').send_keys(bibliografia_df, Keys.BACK_SPACE)
-            # bibliografia_df = re.sub('\n+', '\n', browser.find_element_by_name('citations').get_attribute('value'))
-            # browser.find_element_by_name('citations').clear()
-            # bibliografia = browser.find_element_by_name('citations').send_keys(bibliografia_df, Keys.BACK_SPACE)
+            bibliografia = browser.find_element('name', 'citations').send_keys(bibliografia_df, Keys.BACK_SPACE)
+            # bibliografia_df = re.sub('\n+', '\n', browser.find_element('name', 'citations').get_attribute('value'))
+            # browser.find_element('name', 'citations').clear()
+            # bibliografia = browser.find_element('name', 'citations').send_keys(bibliografia_df, Keys.BACK_SPACE)
         
         for a_pl, a_en, o, af_pl, af_en, b_pl, b_en in zip(row['autor'].split('❦'), aktualny_numer.at[i+1, 'autor'].split('❦'), row['ORCID'].split('❦'), row['afiliacja'].split('❦'), aktualny_numer.at[i+1, 'afiliacja'].split('❦'), row['biogram'].split('❦'), aktualny_numer.at[i+1, 'biogram'].split('❦')):
 
-            wspolautor_dodaj = browser.find_element_by_xpath("//a[@title = 'Dodaj autora']").click()
+            wspolautor_dodaj = browser.find_element('xpath', "//a[@title = 'Dodaj autora']").click()
             autor_imie_pl = re.findall('.+(?= (?!.* ))', a_pl)[0]
             time.sleep(2)
-            wprowadz_imie_pl = browser.find_element_by_name('givenName[pl_PL]')
+            wprowadz_imie_pl = browser.find_element('name', 'givenName[pl_PL]')
             wprowadz_imie_pl.send_keys(autor_imie_pl)
             autor_imie_en = re.findall('.+(?= (?!.* ))', a_en)[0]
             time.sleep(2)
-            wprowadz_imie_en = browser.find_element_by_name('givenName[en_US]')
+            wprowadz_imie_en = browser.find_element('name', 'givenName[en_US]')
             wprowadz_imie_en.send_keys(autor_imie_en)
             
             autor_nazwisko_pl = re.findall('(?<= (?!.* )).+', a_pl)[0]
-            wprowadz_nazwisko_pl = browser.find_element_by_name('familyName[pl_PL]')
+            wprowadz_nazwisko_pl = browser.find_element('name', 'familyName[pl_PL]')
             wprowadz_nazwisko_pl.send_keys(autor_nazwisko_pl)
             time.sleep(2)
             autor_nazwisko_en = re.findall('(?<= (?!.* )).+', a_pl)[0]
-            wprowadz_nazwisko_en = browser.find_element_by_name('familyName[en_US]')
+            wprowadz_nazwisko_en = browser.find_element('name', 'familyName[en_US]')
             wprowadz_nazwisko_en.send_keys(autor_nazwisko_en)
             
-            kontakt = browser.find_element_by_name('email')
+            kontakt = browser.find_element('name', 'email')
             kontakt.send_keys('pressto@amu.edu.pl')
-            kraj = browser.find_element_by_xpath("//select[@id = 'country']/option[text()='Polska']").click()
+            kraj = browser.find_element('xpath', "//select[@id = 'country']/option[text()='Polska']").click()
             if len(o) > 0:
                 orcid = f"https://orcid.org/{o}"
-                wprowadz_orcid = browser.find_element_by_name('orcid').send_keys(orcid)
+                wprowadz_orcid = browser.find_element('name', 'orcid').send_keys(orcid)
             
-            afiliacja_pl = browser.find_element_by_xpath("//input[@name='affiliation[pl_PL]']")
+            afiliacja_pl = browser.find_element('xpath', "//input[@name='affiliation[pl_PL]']")
             afiliacja_pl.send_keys(af_pl)
             time.sleep(2)
-            afiliacja_en = browser.find_element_by_xpath("//input[@name='affiliation[en_US]']")
+            afiliacja_en = browser.find_element('xpath', "//input[@name='affiliation[en_US]']")
             afiliacja_en.send_keys(af_en)
             
-            biogram_pl = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[-2].click()
-            biogram_pl = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']")
+            biogram_pl = browser.find_elements('xpath', "//i[@class='mce-ico mce-i-code']")[-2].click()
+            biogram_pl = browser.find_element('xpath', "//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']")
             biogram_pl.send_keys(b_pl)
-            biogram_pl_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1]
+            biogram_pl_ok = browser.find_elements('xpath', "//span[contains(text(),'Ok')]")[-1]
             biogram_pl_ok.click()
             time.sleep(2)
-            biogram_en = browser.find_elements_by_xpath("//i[@class='mce-ico mce-i-code']")[-1].click()
-            biogram_en = browser.find_element_by_xpath("//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']")
+            biogram_en = browser.find_elements('xpath', "//i[@class='mce-ico mce-i-code']")[-1].click()
+            biogram_en = browser.find_element('xpath', "//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']")
             biogram_en.send_keys(b_en)
-            biogram_en_ok = browser.find_elements_by_xpath("//span[contains(text(),'Ok')]")[-1]
+            biogram_en_ok = browser.find_elements('xpath', "//span[contains(text(),'Ok')]")[-1]
             biogram_en_ok.click()
 
-            kliknij_poza_biogram = browser.find_element_by_name('orcid').click()
-            rola_autora = browser.find_element_by_xpath("//input[@name='userGroupId' and @value='14']").click()
-            zapisz_autora = browser.find_elements_by_xpath("//button[@class = 'pkp_button submitFormButton']")[-1].click()
+            kliknij_poza_biogram = browser.find_element('name', 'orcid').click()
+            rola_autora = browser.find_element('xpath', "//input[@name='userGroupId' and @value='14']").click()
+            zapisz_autora = browser.find_elements('xpath', "//button[@class = 'pkp_button submitFormButton']")[-1].click()
             time.sleep(2)
    
-        dodaj_plik_pl = browser.find_element_by_xpath("//a[@title='Dodaj plik do publikacji']").click()
+        dodaj_plik_pl = browser.find_element('xpath', "//a[@title='Dodaj plik do publikacji']").click()
         time.sleep(2)
-        etykieta = browser.find_element_by_xpath("//input[@class='field text required' and @name = 'label']").send_keys('PDF')
-        jezyk_publikacji = browser.find_element_by_xpath("//select[@id = 'galleyLocale']/option[text()='Język Polski']").click()
+        etykieta = browser.find_element('xpath', "//input[@class='field text required' and @name = 'label']").send_keys('PDF')
+        jezyk_publikacji = browser.find_element('xpath', "//select[@id = 'galleyLocale']/option[text()='Język Polski']").click()
         
-        zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
+        zapisz = browser.find_elements('xpath', "//button[@class='pkp_button submitFormButton']")
         zapisz[-1].click()
         time.sleep(2)
         
-        element_artykulu = browser.find_element_by_xpath("//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
-        przeslij_pdf = browser.find_element_by_xpath("//input[@type='file']")
+        element_artykulu = browser.find_element('xpath', "//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
+        przeslij_pdf = browser.find_element('xpath', "//input[@type='file']")
         przeslij_pdf.send_keys(f"{row['folder lokalny']}\\{row['pdf']}")
         time.sleep(2)
-        kontunuuj_button = browser.find_element_by_id('continueButton').click()
+        kontunuuj_button = browser.find_element('id', 'continueButton').click()
         time.sleep(2)
-        kontunuuj_button = browser.find_element_by_id('continueButton').click()
+        kontunuuj_button = browser.find_element('id', 'continueButton').click()
         time.sleep(2)
-        potwierdz_button = browser.find_element_by_id('continueButton').click()
+        potwierdz_button = browser.find_element('id', 'continueButton').click()
         time.sleep(2)
         
         if row['kategoria'] != 'Przekłady' and czy_tlumaczenia_po_angielsku:
         
             while True:
                 try:
-                    dodaj_plik_eng = browser.find_element_by_xpath("//a[@title='Dodaj plik do publikacji']").click()
+                    dodaj_plik_eng = browser.find_element('xpath', "//a[@title='Dodaj plik do publikacji']").click()
                     time.sleep(2)
                 except ElementClickInterceptedException:
-                    potwierdz_button = browser.find_element_by_id('continueButton').click()
+                    potwierdz_button = browser.find_element('id', 'continueButton').click()
                     time.sleep(2)
                     continue
                 break
                 
-            etykieta = browser.find_element_by_xpath("//input[@class='field text required' and @name = 'label']").send_keys('PDF')
-            jezyk_publikacji = browser.find_element_by_xpath("//select[@id = 'galleyLocale']/option[text()='English']").click()
+            etykieta = browser.find_element('xpath', "//input[@class='field text required' and @name = 'label']").send_keys('PDF')
+            jezyk_publikacji = browser.find_element('xpath', "//select[@id = 'galleyLocale']/option[text()='English']").click()
             
-            zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
+            zapisz = browser.find_elements('xpath', "//button[@class='pkp_button submitFormButton']")
             zapisz[-1].click()
             time.sleep(2)
             
-            element_artykulu = browser.find_element_by_xpath("//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
-            przeslij_pdf = browser.find_element_by_xpath("//input[@type='file']")
+            element_artykulu = browser.find_element('xpath', "//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
+            przeslij_pdf = browser.find_element('xpath', "//input[@type='file']")
             przeslij_pdf.send_keys(f"{aktualny_numer.at[i+1, 'folder lokalny']}\\{aktualny_numer.at[i+1, 'pdf']}")
             time.sleep(2)
-            kontunuuj_button = browser.find_element_by_id('continueButton').click()
+            kontunuuj_button = browser.find_element('id', 'continueButton').click()
             time.sleep(2)
-            kontunuuj_button = browser.find_element_by_id('continueButton').click()
+            kontunuuj_button = browser.find_element('id', 'continueButton').click()
             time.sleep(2)
-            potwierdz_button = browser.find_element_by_id('continueButton').click()
+            potwierdz_button = browser.find_element('id', 'continueButton').click()
             time.sleep(2)
         
         while True:
             try:
-                breakzaplanuj_do_publikacji = browser.find_element_by_id('articlePublished').click()
+                breakzaplanuj_do_publikacji = browser.find_element('id', 'articlePublished').click()
                 time.sleep(2)
             except ElementClickInterceptedException:
-                potwierdz_button = browser.find_element_by_id('continueButton').click()
+                potwierdz_button = browser.find_element('id', 'continueButton').click()
                 time.sleep(2)
                 continue
             break
         
-        publikuj_w = browser.find_element_by_xpath(f"//select[@id = 'issueId']/option[text()='{nazwa_numeru}']").click()
-        publikuj_strony = browser.find_element_by_name('pages').send_keys(row['strony'])
+        publikuj_w = browser.find_element('xpath', f"//select[@id = 'issueId']/option[text()='{nazwa_numeru}']").click()
+        publikuj_strony = browser.find_element('name', 'pages').send_keys(row['strony'])
         
-        opublikowany_data = browser.find_element_by_name('datePublished-removed').send_keys(f"{year}-{month}-{day}",Keys.ESCAPE)
-        prawa_autorskie_pl = browser.find_element_by_name('copyrightHolder[pl_PL]')
+        opublikowany_data = browser.find_element('name', 'datePublished-removed').send_keys(f"{year}-{month}-{day}",Keys.ESCAPE)
+        prawa_autorskie_pl = browser.find_element('name', 'copyrightHolder[pl_PL]')
         prawa_autorskie_pl.send_keys(row['autor'].replace('❦', ', '))
         time.sleep(2)
-        prawa_autorskie_en = browser.find_element_by_name('copyrightHolder[en_US]')
+        prawa_autorskie_en = browser.find_element('name', 'copyrightHolder[en_US]')
         prawa_autorskie_en.send_keys(aktualny_numer.at[i+1, 'autor'].replace('❦', ', '))
-        rok_praw = browser.find_element_by_name('copyrightYear').send_keys(year)        
+        rok_praw = browser.find_element('name', 'copyrightYear').send_keys(year)        
         
-        zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
+        zapisz = browser.find_elements('xpath', "//button[@class='pkp_button submitFormButton']")
         zapisz[-1].click()
         
-        wroc_do_zgloszenia = browser.find_element_by_xpath("//a[contains(text(),'Go to Submission')]").click()
-        metadane = browser.find_element_by_xpath("//a[@title = 'Wyświetl metadane zgłoszenia']").click()
+        wroc_do_zgloszenia = browser.find_element('xpath', "//a[contains(text(),'Go to Submission')]").click()
+        metadane = browser.find_element('xpath', "//a[@title = 'Wyświetl metadane zgłoszenia']").click()
         time.sleep(2)
-        identyfikatory = browser.find_element_by_xpath("//a[@name = 'catalog' and @class = 'ui-tabs-anchor']").click()
-        doi_artykulu = browser.find_element_by_xpath("//p[contains(text(), 'fp')]").text
-        zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button submitFormButton']")
+        identyfikatory = browser.find_element('xpath', "//a[@name = 'catalog' and @class = 'ui-tabs-anchor']").click()
+        doi_artykulu = browser.find_element('xpath', "//p[contains(text(), 'fp')]").text
+        zapisz = browser.find_elements('xpath', "//button[@class='pkp_button submitFormButton']")
         time.sleep(2)
         zapisz[1].click()
         time.sleep(2)
-        bibliografia = browser.find_element_by_xpath("//a[@name = 'citations' and @class = 'ui-tabs-anchor']")
+        bibliografia = browser.find_element('xpath', "//a[@name = 'citations' and @class = 'ui-tabs-anchor']")
         bibliografia.click()
         time.sleep(2)
-        zapisz = browser.find_elements_by_xpath("//button[@class='pkp_button parse']")
+        zapisz = browser.find_elements('xpath', "//button[@class='pkp_button parse']")
         time.sleep(2)
         zapisz[0].click()
         time.sleep(2)
@@ -839,24 +842,24 @@ for i, row in aktualny_numer.iterrows():
 #dodanie doi do wordpressa
         browser.get(row['url_edycji'])
         
-        content = browser.find_element_by_id('content').get_attribute('value')
+        content = browser.find_element('id', 'content').get_attribute('value')
         
         doi_row = f"""<div><strong><strong>DOI:</strong></strong> <a href=" https://doi.org/{doi_artykulu}"> https://doi.org/{doi_artykulu} </a></div>\n"""
         
         body = re.sub('(?=\n {0,}<hr \/>)', doi_row, content)
-        content = browser.find_element_by_id('content').clear()
-        content = browser.find_element_by_id('content').send_keys(body)
+        content = browser.find_element('id', 'content').clear()
+        content = browser.find_element('id', 'content').send_keys(body)
         
-        opublikuj = browser.find_element_by_id('publish').click()
+        opublikuj = browser.find_element('id', 'publish').click()
         
         browser.get(aktualny_numer.at[i+1, 'url_edycji'])
-        content = browser.find_element_by_id('content').get_attribute('value')
+        content = browser.find_element('id', 'content').get_attribute('value')
         body = re.sub('(?=\n {0,}<hr \/>)', doi_row, content)
         
-        content = browser.find_element_by_id('content').clear()
-        content = browser.find_element_by_id('content').send_keys(body)
+        content = browser.find_element('id', 'content').clear()
+        content = browser.find_element('id', 'content').send_keys(body)
         
-        opublikuj = browser.find_element_by_id('publish').click()
+        opublikuj = browser.find_element('id', 'publish').click()
         
 print('Artykuły na pressto opublikowane i dodane DOI na wordpressie')
 
