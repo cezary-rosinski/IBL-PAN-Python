@@ -14,7 +14,6 @@ import gspread as gs
 from google_drive_research_folders import PBL_folder
 from gspread_dataframe import get_as_dataframe, set_with_dataframe
 import datetime
-import cx_Oracle
 import pickle
 import sys
 sys.path.insert(1, 'C:/Users/Cezary/Documents/SPUB-project')
