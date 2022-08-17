@@ -9,13 +9,15 @@ from ast import literal_eval
 import numpy as np
 from datetime import datetime
 
+#%% download geojsons
+
 with open(r"C:\Users\Cezary\Downloads\germany_1_sehr_hoch.geo.json", 'r', encoding='utf-8') as f:
   germany_json = json.load(f)
   
 with open(r"C:\Users\Cezary\Downloads\bundeslands_1_sehr_hoch.geo.json", 'r', encoding='utf-8') as f:
   germany_states_json = json.load(f)
   
-#%%
+#%% date
 now = datetime.now().date()
 year = now.year
 month = '{:02}'.format(now.month)
@@ -57,6 +59,8 @@ polygon.contains(kehl_point)
 # wgranie danych translations
 
 translations_df = pd.read_excel('translations_after_first_manual_2022-08-11.xlsx')
+
+# test = translations_df.sample(100)
 
 geo_translations_df = translations_df[['001', 'geonames_id', 'geonames_name', 'geonames_country', 'geonames_lat', 'geonames_lng']]
 geo_translations_df = geo_translations_df[geo_translations_df['geonames_id'].notnull()]
@@ -132,6 +136,12 @@ data = {'001': 924780891,
 
 data_series = pd.Series(data)
 
+[{data_series[1:].index.values[i]:el for i, el in enumerate(e)} for e in zip(*data_series[1:])]
+
+[{data_series[1:].index.values[i]:el for i, el in enumerate(e)} for e in zip(*data_series[1:])]
+
+list(zip(*data_series[1:]))
+list(zip(*data_series[1:].index))
 
 {924780891: [{'geonames_id': 6951076,
               'geonames_name': 'Harmondsworth',
