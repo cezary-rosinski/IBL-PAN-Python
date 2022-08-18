@@ -8,7 +8,6 @@ from tqdm import tqdm
 from ast import literal_eval
 import numpy as np
 from datetime import datetime
-
 #%% download geojsons
 
 with open(r"C:\Users\Cezary\Downloads\germany_1_sehr_hoch.geo.json", 'r', encoding='utf-8') as f:
@@ -135,13 +134,10 @@ data = {'001': 924780891,
  'geonames_lng': ['-0.47757', '-0.12574']}
 
 data_series = pd.Series(data)
-
-[{data_series[1:].index.values[i]:el for i, el in enumerate(e)} for e in zip(*data_series[1:])]
-
-[{data_series[1:].index.values[i]:el for i, el in enumerate(e)} for e in zip(*data_series[1:])]
-
 list(zip(*data_series[1:]))
-list(zip(*data_series[1:].index))
+list(zip(*data_series[1:].index.values))
+
+[{data_series[1:].index.values[i]:el for i, el in enumerate(e)} for e in zip(*data_series[1:])]
 
 {924780891: [{'geonames_id': 6951076,
               'geonames_name': 'Harmondsworth',
