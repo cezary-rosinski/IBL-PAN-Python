@@ -586,12 +586,14 @@ for e in test:
 
 pseudonimy = {k:list(set([f for sub in [e.split('|') for e in v] for f in sub])) for k,v in pseudonimy.items()}
 
-for k,v in people_dict.items():
+for k,v in tqdm(people_dict.items()):
+    # k = '1357'
+    # v = people_dict.get(k)
     if k in pseudonimy:
         if isinstance(v['Pseudonym, Kryptonym'], list):
             people_dict[k]['Pseudonym, Kryptonym'].extend(pseudonimy[k])
         else:
-            people_dict[k]['Pseudonym, Kryptonym'] == pseudonimy[k]
+            people_dict[k]['Pseudonym, Kryptonym'] = pseudonimy[k]
 
 # {k:v['Pseudonym, Kryptonym'].extend(pseudonimy[k] if k in pseudonimy and isinstance(v['Pseudonym, Kryptonym'], list) else v['Pseudonym, Kryptonym'] == pseudonimy[k]) for k,v in people_dict.items()}
 
@@ -686,7 +688,11 @@ for k,v in people_dict.items():
                      errors.append({k:v})
         elif ka in ['Given Name', 'Name'] and isinstance(va, list):
             people_dict[k][ka] = ' '.join(va)
-        # elif ka == 'Index Name':
+        elif ka == 'Index Name':
+            if isinstance(va, list):
+                people_dict[k][ka] = va[0]
+            elif isinstance(va, float):
+                people_dict[k][ka] = v['nazwa z tabeli'][0]
 
         #         #to jest do przemodelowania
         #     if not isinstance(ka,str):
@@ -701,6 +707,14 @@ for k,v in people_dict.items():
             people_dict[k][ka] = '|'.join(va)
 
 
+# ttt = [v['Index Name'] for k,v in people_dict.items()]
+# tttt = {}
+# for k,v in people_dict.items():
+#     if str(type(v.get('Index Name'))) not in tttt:
+#         tttt[str(type(v.get('Index Name')))] = [v.get('Index Name'), v.get('nazwa z tabeli')]
+
+# ttt = set([str(type(e)) for e in ttt])
+
 # test = list(set([{v for k,v in list(e.values())[0].items() if k in ['birthplace', 'deathplace']}.pop() for e in errors]))
 # test = [e for e in test if e not in kartoteka_miejsc['Name'].to_list() and e not in kartoteka_miejsc['Wikidata_ID'].to_list()]
 
@@ -711,6 +725,13 @@ for k,v in people_dict.items():
 # test = [e for e in test if e]
 
 people_dict = {k:{ka:va for ka,va in v.items() if ka not in ['nazwa z tabeli', 'pseudonym', 'birthdate', 'deathdate']} for k,v in people_dict.items()}
+
+#tutaj trzeba zdeduplikować pseudonimy
+
+# poszukać jeszcze tyld!!!
+# ttt = {k:v for k,v in people_dict.items() if isinstance(v.get('Index Name'),float)}
+# ttt = [(k,v) for k,v in people_dict.items() if isinstance(v.get('Index Name'),str) and '~' in v.get('Index Name')]
+# ttt = [e[-1].get('Index Name') for e in ttt]
 
 people_df = pd.DataFrame.from_dict(people_dict, orient='index')
 people_df = people_df.replace(r'^\s*$', np.NaN, regex=True)
