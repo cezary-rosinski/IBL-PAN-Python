@@ -1629,9 +1629,10 @@ for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_si
     except KeyboardInterrupt:
         raise
 
-#wprowadzić system aktualizacji na podstawie manualnych prac Ondreja!!!
+#%%wprowadzić system aktualizacji na podstawie manualnych prac Ondreja!!!
 translations_df = pd.read_excel('translation_before_manual_2022-06-27.xlsx')
-translations_df_new = translations_df.copy()
+next_translations_df = pd.read_excel('translations_after_first_manual_with_germany_2022-08-12.xlsx')
+# translations_df_new = next_translations_df .copy()
 # translations_df = gsheet_to_df('1wy64th7IjF0ktAqjz3NQcflNYLAkStD3', 'Arkusz1')
 work_ids = dict(zip(translations_df['001'], translations_df['work_id']))
 work_ids_list = list(work_ids.values())
@@ -1668,12 +1669,12 @@ files_list = drive.ListFile({'q': f"'1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m' in paren
 #ten warunek musi być zmieniony, bo musi uwzględnić dodane później kolejne work_id dla autorów
 
 #może po prostu przechowywać listę lp, które są już zrobiono?
-done = ['001', '002', '008', '009', '011', '014', '015', '021', '024', '026', '028', '030', '033', '034', '037', '040', '041', '044', '045', '050', '052', '054', '055', '056', '058', '062', '064', '065', '066', '068', '073', '075', '076', '078', '080', '084', '085', '087', '088', '089', '090', '096', '099', '100', '101', '104', '109', '112', '114', '116', '124', '125', '128', '139', '142', '143', '148', '154', '156', '159', '160', '165', '166', '168', '170', '181', '182', '185', '187', '188', '189', '198', '199', '203', '209', '217', '218', '221', '224', '225', '228', '230', '232', '234', '235', '238', '242', '243', '245', '247', '251', '252', '254', '259', '262', '264', '265', '266', '267', '269', '273', '274', '275', '276', '278', '280']  
+done = ['001', '002', '008', '009', '011', '014', '015', '021', '024', '026', '028', '030', '033', '034', '037', '040', '041', '044', '045', '050', '052', '054', '055', '056', '058', '062', '064', '065', '066', '068', '073', '075', '076', '078', '080', '084', '085', '087', '088', '089', '090', '096', '099', '100', '101', '104', '109', '112', '114', '116', '124', '125', '128', '139', '142', '143', '148', '154', '156', '159', '160', '165', '166', '168', '170', '181', '182', '185', '187', '188', '189', '198', '199', '203', '209', '217', '218', '221', '224', '225', '228', '230', '232', '234', '235', '238', '242', '243', '245', '247', '251', '252', '254', '259', '262', '264', '265', '266', '267', '269', '273', '274', '275', '276', '278', '280', '126', '131', '210', '281', '183', '111', '244', '233', '223', '222', '219', '205', '175', '169', '155', '153', '152', '141', '138', '137', '130', '127', '117', '108', '105', '092', '077', '070', '061', '057', '053', '047', '018', '013', '003', ]  
 modified_sheets = [e for e in files_list if e['title'].split('_')[0] in done]
 used_clusters = [int(e['title'].split('_')[2]) for e in files_list]
 
 # problems = ['034', '273', '276', '050', '185', '252']
-translations_df_new = translations_df.copy()  
+translations_df_new = next_translations_df .copy()  
 # for modified_sheet in tqdm(modified_sheets):
 # def collect_modification(modified_sheet):
 edited_clusters = []
@@ -1706,6 +1707,7 @@ for modified_sheet in tqdm(modified_sheets):
             raise error
         except Exception as error:
             time.sleep(10)
+            print(modified_sheet['title'])
             # collect_modification(modified_sheet)
             continue
 
@@ -1714,9 +1716,9 @@ for modified_sheet in tqdm(modified_sheets):
 #     list(tqdm(excecutor.map(collect_modification, modified_sheets),total=len(modified_sheets)))
 
 translations_df_new['work_id'] = translations_df_new['work_id'].apply(lambda x: np.int64(x) if isinstance(x, int) else x)  
-translations_df_new = translations_df_new.loc[translations_df_new['author_id'] != '46774385']
-to_be_changed = translations_df_new.loc[translations_df_new['work_id'] == 57775596]['001'].to_list()
-translations_df_new.loc[translations_df_new['001'].isin(to_be_changed), ['author_id', 'work_id']] = ['95207407', 2592307]
+# translations_df_new = translations_df_new.loc[translations_df_new['author_id'] != '46774385']
+# to_be_changed = translations_df_new.loc[translations_df_new['work_id'] == 57775596]['001'].to_list()
+# translations_df_new.loc[translations_df_new['001'].isin(to_be_changed), ['author_id', 'work_id']] = ['95207407', 2592307]
 translations_df_new.to_excel(f'translations_after_first_manual_{now}.xlsx', index=False)
    
 edited_clusters = list(set(edited_clusters))  
@@ -1737,15 +1739,18 @@ for el in modified_sheets:
         used_authors_dict[author_id] += 1
 
 used_authors_dict = {k:[e['title'] for e in modified_sheets if k in e['title'] and str(v) == e['title'].split('_')[-1]][0] for k,v in used_authors_dict.items()}
-latest_work_id_for_author = [e.split('_')[2] for e in used_authors_dict.values()]
+max_books_per_author = max([e[-1] for e in used_authors_dict.values()])
+latest_work_id_for_author = [e.split('_')[2] for e in used_authors_dict.values() if e[-1] == max_books_per_author]
 
 # for work_id in latest_work_id_for_author:
     # work_id = latest_work_id_for_author[-2]
 # def upload_next_clusters(work_id):
 for work_id in tqdm(latest_work_id_for_author):
+    # work_id = latest_work_id_for_author[1]
     while True:
         # work_id = latest_work_id_for_author[4]
         # work_id = '10072333'
+        # work_id = '514957'
         author_id = work_id_author_id_dict[int(work_id)]
         sheet_id = [e for e in files_list if all(el in e['title'] for el in [work_id, author_id])][0]['id']
         sheet_for_author_no = int([e['title'].split('_')[-1] for e in files_list if e['id'] == sheet_id][0])
@@ -1757,17 +1762,18 @@ for work_id in tqdm(latest_work_id_for_author):
             try:
                 new_cluster = [e for e in work_ids_sizes if e[0] in {k for k,v in work_id_author_id_dict.items() if v == author_id} and e[1] < work_id_size][0][0]
                 new_cluster_df = translations_df_new.loc[translations_df_new['work_id'] == new_cluster]
-                rest_df = translations_df_new.loc[translations_df_new['001'].isin(temp_ids)].sort_values('work_id')
-                
+                rest_df = translations_df_new.loc[translations_df_new['001'].isin(temp_ids)].sort_values('work_id')                
                 temp_df = pd.concat([new_cluster_df, rest_df])
                 temp_df['to_retain'] = np.nan
                 temp_df['245a'] = temp_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'] if not(isinstance(x, float)) and '$a' in x else np.nan)
                 temp_df = temp_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
+                temp_df['work_id'] = temp_df['work_id'].apply(lambda x: str(x) if isinstance(x, np.int64) else x) 
                 
                 ind = [i for i,e in enumerate(work_ids_sizes,1) if e[0] == new_cluster][0]
                 ind = '{:03d}'.format(ind)
                 
                 sheet = gc.create(f'{ind}_{author_id}_{int(new_cluster)}_{sheet_for_author_no+1}', '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
+                # create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
                 try:
                     create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
                 except Exception:
