@@ -19,6 +19,9 @@ from difflib import SequenceMatcher
 from fuzzywuzzy import fuzz, process
 import Levenshtein
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
+import Levenshtein as lev
+from my_functions import get_cosine_result
 
 #%% def
 def query_wikidata_person_with_viaf(viaf):
@@ -51,7 +54,18 @@ def get_viaf_with_wikidata(wikidata_url):
         wiki_viafy[wikidata_url] = result
     except KeyError:
         print(wikidata_url)
-    
+
+def get_wikidata_label(wikidata_id):
+    languages = ['pl', 'en', 'fr', 'de', 'es', 'cs']
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    try:
+        result = requests.get(url).json()
+        for lang in languages:
+            label = result['entities'][wikidata_id]['labels'][lang]['value']
+            break
+    except ValueError:
+        label = None
+    return label    
     
 #%% uzupełnienia zapomnianych
 # temp_df = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', 'zapomniani')
@@ -77,6 +91,7 @@ for worksheet in tqdm(worksheets):
     records_dict.update({worksheet: temp_df})
     
 #wczytanie kartoteki osób po pracach
+kartoteka_osob = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', 'final')
 # kartoteka_osob = pd.DataFrame()
 
 # for worksheet in tqdm(['pojedyncze ok', 'grupy_ok', 'osoby_z_jednym_wierszem', 'reszta', 'zapomniani']):
@@ -320,7 +335,7 @@ kartoteka_miejsc = gsheet_to_df('11MDsd1T9onk3tPz84Vb_8AxyHJxFLkuHozNfEer1Wto', 
 #     kartoteka_osob = pd.concat([kartoteka_osob, temp_df])  
 
 # kartoteka_osob.to_excel('test.xlsx', index=False)
-kartoteka_osob = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', 'final')
+# kartoteka_osob = gsheet_to_df('1xOAccj4SK-4olYfkubvittMM8R-jwjUjVhZXi9uGqdQ', 'final')
     
 occupation_classification = gsheet_to_df('1-oBjrUytvx4LGSkuRJEUYDkmNx3l7sjdA0wIGTFI4Lc', 'occupation')
 
@@ -399,7 +414,8 @@ for groupby in people_groupbys:
     people_dict = {}
     for name, group in tqdm(groupby, total=len(groupby)):
         # 198, 346, 936, 1947, 1883, 1045, 520
-        # name = '501390'
+        # 200068, 200069
+        # name = '1645'
         # group = groupby.get_group(name)
         project_id = name
         try:
@@ -436,7 +452,7 @@ for groupby in people_groupbys:
                         field = biblio_name.split('-')[-2]
                         temp = df[df['id'] == record_id][field].to_list()[0].split('|')
                         for pers in temp:
-                            # pers = temp[0]
+                            # pers = temp[-1]
                             form_parsed = marc_parser_dict_for_field(pers, '%')
                             dd = defaultdict(list)
                             for d in form_parsed:
@@ -494,14 +510,50 @@ for groupby in people_groupbys:
                 # else:
                 #     proper_person = max({k: v for k,v in temp_dict.items()}, key=temp_dict.get)
                 
+                person_names_list = [dict(el) for el in set([tuple(e.items()) for e in person_names_list])]
+                if len(person_names_list) == 2:
+                    smaller_dict = min(person_names_list, key=lambda x: len(x))
+                    bigger_dict = max(person_names_list, key=lambda x: len(x))
+                    
+                    shared_items = {k: bigger_dict[k] for k in bigger_dict if k in smaller_dict and bigger_dict[k] == smaller_dict[k]}
+                    if len(shared_items) == len(smaller_dict):
+                        person_names_list = [max(person_names_list, key=lambda x: len(x))]
+                
+                no_of_the_same_names = len([e for e in person_names_list if e.get('Index Name') == proper_person])
                 person_names_dict = {}
-                for dictionary in person_names_list:
-                    if dictionary['Index Name'] == proper_person:
-                        for key, value in dictionary.items():
-                            if key not in person_names_dict:
-                                person_names_dict[key] = [value]
-                            else:
-                                person_names_dict[key].append(value)
+                try:
+                    if no_of_the_same_names == 1:
+                        for dictionary in person_names_list:
+                            if dictionary['Index Name'] == proper_person:
+                                for key, value in dictionary.items():
+                                    if key not in person_names_dict:
+                                        person_names_dict[key] = [value]
+                                    else:
+                                        person_names_dict[key].append(value)
+                    elif no_of_the_same_names > 1:
+                        for dictionary in person_names_list:
+                            if dictionary['Index Name'] == proper_person and dictionary.get('Birth') in group['Index_Name'].to_list()[0]:
+                                for key, value in dictionary.items():
+                                    if key not in person_names_dict:
+                                        person_names_dict[key] = [value]
+                                    else:
+                                        person_names_dict[key].append(value)
+                    if not person_names_dict:
+                        for dictionary in person_names_list:
+                            if dictionary.get('Birth') in group['Index_Name'].to_list()[0]:
+                                for key, value in dictionary.items():
+                                    if key not in person_names_dict:
+                                        person_names_dict[key] = [value]
+                                    else:
+                                        person_names_dict[key].append(value)     
+                except TypeError:
+                    for dictionary in person_names_list:
+                        if dictionary['Index Name'] == proper_person:
+                            for key, value in dictionary.items():
+                                if key not in person_names_dict:
+                                    person_names_dict[key] = [value]
+                                else:
+                                    person_names_dict[key].append(value)
                                 
                     #else: Na razie PBL jest poza
             person_names_dict = {k:list(set(v)) for k,v in person_names_dict.items()}
@@ -726,6 +778,18 @@ for k,v in people_dict.items():
 
 people_dict = {k:{ka:va for ka,va in v.items() if ka not in ['nazwa z tabeli', 'pseudonym', 'birthdate', 'deathdate']} for k,v in people_dict.items()}
 
+people_dict = {k:{ka:re.sub('(\-)( )(\p{Lu})', r'\1\3', va) if isinstance(va,str) else va for ka,va in v.items()} for k,v in people_dict.items()}
+
+people_dict = {k:{ka:re.sub('^\[|\]$', '', va) if isinstance(va,str) else va for ka,va in v.items()} for k,v in people_dict.items()}
+
+# sprawdzanie, kto się zgubił
+
+missing = kartoteka_osob.loc[~kartoteka_osob['Project_ID'].isin(list(people_dict.keys()))]
+
+
+
+
+
 #tutaj trzeba zdeduplikować pseudonimy
 
 # poszukać jeszcze tyld!!!
@@ -737,6 +801,113 @@ people_df = pd.DataFrame.from_dict(people_dict, orient='index')
 people_df = people_df.replace(r'^\s*$', np.NaN, regex=True)
 
 people_df.to_csv('samizdat_people_to_nodegoat.csv', index=False, encoding='utf-8')
+
+#%% wikidata uzupełnienia
+
+new_wikidata_ids = ['Q100386065', 'Q112418091', 'Q11718043', 'Q11778819', 'Q2609052', 'Q28123988', 'Q370721', 'Q4938032',  'Q7156231', 'Q7385386', 'Q85132033', 'Q85863455', 'Q9382588', 'Q989']
+
+wikidata_supplement = {}
+
+for wikidata_id in tqdm(new_wikidata_ids):
+    # wikidata_id = new_wikidata_ids[0]
+    # wikidata_id = 'Q240174'
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    result = requests.get(url).json()
+    try:
+        birthdate_value = result.get('entities').get(wikidata_id).get('claims').get('P569')[0].get('mainsnak').get('datavalue').get('value').get('time')[1:11]
+    except TypeError:
+        birthdate_value = None
+    try:
+        deathdate_value = result.get('entities').get(wikidata_id).get('claims').get('P570')[0].get('mainsnak').get('datavalue').get('value').get('time')[1:11]
+    except TypeError:
+        deathdate_value = None
+    try:
+        birthplaceLabel_value = get_wikidata_label(result.get('entities').get(wikidata_id).get('claims').get('P19')[0].get('mainsnak').get('datavalue').get('value').get('id'))
+    except TypeError:
+        birthplaceLabel_value = None
+    try:
+        deathplaceLabel_value = get_wikidata_label(result.get('entities').get(wikidata_id).get('claims').get('P20')[0].get('mainsnak').get('datavalue').get('value').get('id'))
+    except TypeError:
+        deathplaceLabel_value = None
+    try:
+        sexLabel_value = get_wikidata_label(result.get('entities').get(wikidata_id).get('claims').get('P21')[0].get('mainsnak').get('datavalue').get('value').get('id'))
+    except TypeError:
+        sexLabel_value = None
+    try:
+        pseudonym_value = '❦'.join([e.get('mainsnak').get('datavalue').get('value') for e in result.get('entities').get(wikidata_id).get('claims').get('P742')])
+    except (TypeError, AttributeError):
+        pseudonym_value = None
+    try:
+        occupationLabel_value = '❦'.join([get_wikidata_label(e.get('mainsnak').get('datavalue').get('value').get('id')) for e in result.get('entities').get(wikidata_id).get('claims').get('P106')])
+    except AttributeError:
+        occupationLabel_value = None
+    temp_dict = {wikidata_id: {'autor.value': f'http://www.wikidata.org/entity/{wikidata_id}',
+                               'birthdate.value': birthdate_value,
+                               'deathdate.value': deathdate_value,
+                               'birthplaceLabel.value': birthplaceLabel_value,
+                               'deathplaceLabel.value': deathplaceLabel_value,
+                               'sexLabel.value': sexLabel_value,
+                               'pseudonym.value': pseudonym_value,
+                               'occupationLabel.value': occupationLabel_value}}
+    wikidata_supplement.update(temp_dict)
+    
+df_supplement = pd.DataFrame.from_dict(wikidata_supplement, orient='index')
+
+#%% wikidata -- kontrola nazewnictw
+
+wikidata_df = kartoteka_osob.loc[kartoteka_osob['wikidata_ID'].notnull()]
+wikidata_dict = {}
+for i, row in wikidata_df.iterrows():
+    if row['wikidata_ID'] not in wikidata_dict:
+        wikidata_dict[row['wikidata_ID']] = [row['Index_Name']]
+    else:
+        wikidata_dict[row['wikidata_ID']].append(row['Index_Name'])
+wikidata_dict = {k:set([el for sub in [e.split('|') for e in v] for el in sub]) for k,v in wikidata_dict.items()}
+
+# wikidata_dict_resp = {}
+# for k in tqdm(wikidata_dict):
+def compare_wiki_project_labels(wikidata_id):
+    # wikidata_id = 'Q95347069'
+    try:
+        wikidata_label = get_wikidata_label(wikidata_id)
+    except UnboundLocalError:
+        print(wikidata_id)
+    temp_dict = {wikidata_id: {'project labels': wikidata_dict.get(wikidata_id),
+                               'wikidata label': wikidata_label}}
+    wikidata_dict_resp.update(temp_dict)
+
+wikidata_dict_resp = {}
+with ThreadPoolExecutor() as executor:
+    list(tqdm(executor.map(compare_wiki_project_labels,wikidata_dict), total=len(wikidata_dict)))
+
+
+
+def get_wikidata_label(wikidata_id):
+    languages = ['pl', 'en', 'fr', 'de', 'es', 'cs']
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    try:
+        result = requests.get(url).json()
+        for lang in languages:
+            try:
+                label = result['entities'][wikidata_id]['labels'][lang]['value']
+            except KeyError:
+                continue
+            break
+    except ValueError:
+        label = None
+    return label  
+
+
+
+        
+{k:v.update({'ratio': max([get_cosine_result(e, v.get('wikidata label')) for e in v.get('project labels')])}) for k,v in wikidata_dict_resp.items()}
+        
+ratio_df = pd.DataFrame.from_dict(wikidata_dict_resp, orient='index').sort_values(['ratio', 'wikidata label'], ascending=[False, True])
+ratio_df.to_excel('samizdat_ratio.xlsx')
+
+
+
+
 
 #przygotować właściwe typy danych
 #ujednolicić daty
