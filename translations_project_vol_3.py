@@ -1631,7 +1631,7 @@ for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_si
         raise
 
 #%%wprowadzić system aktualizacji na podstawie manualnych prac Ondreja!!!
-translations_df = pd.read_excel('translation_before_manual_2022-06-27.xlsx')
+translations_df = pd.read_excel('translation_before_manual_2022-09-20.xlsx')
 # next_translations_df = pd.read_excel('translations_after_first_manual_with_germany_2022-08-12.xlsx')
 # translations_df_new = next_translations_df .copy()
 # translations_df = gsheet_to_df('1wy64th7IjF0ktAqjz3NQcflNYLAkStD3', 'Arkusz1')

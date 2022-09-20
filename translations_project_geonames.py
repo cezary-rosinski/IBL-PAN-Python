@@ -945,17 +945,14 @@ for k,v in test.items():
 
 #teraz muszę wpisać dd to tabeli
 
-test = translations_df.copy()
-
 #to rozwiązanie!!!
 for k,v in new_dict.items():
     for ka, va in v.items():
+        # places.at[places.loc[places['001'] == 561629681].index.values[0], 'places'] = ['London', 'Glasgow']
+        translations_df.at[translations_df.loc[translations_df['001'] == k].index.values[0], ka] = va
         #tutaj muszę zastosować .at; vide: places.at[places.loc[places['001'] == 561629681].index.values[0], 'places'] = ['London', 'Glasgow']
-        test.loc[test['001'] == k, ka] = va
-    
 
-
-
+translations_df.to_excel(f'translation_before_manual_{now}.xlsx', index=False)    
 
 
 
