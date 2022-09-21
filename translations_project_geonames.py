@@ -705,6 +705,9 @@ for place in tqdm(places_ordered):
 
 with open('translations_places_2.pickle', 'wb') as handle:
     pickle.dump(places_geonames, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    
+# with open('translations_places_2.pickle', 'rb') as f:
+#     places_geonames = pickle.load(f)
 
 places_geonames_ok = {k:v for k,v in places_geonames.items() if isinstance(v, dict)}
 places_ordered_rest = [e for e in places_ordered if e not in places_geonames_ok]

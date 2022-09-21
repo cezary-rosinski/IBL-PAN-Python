@@ -1631,6 +1631,16 @@ for ind, (work_id, size) in enumerate(tqdm(work_ids_sizes, total=len(work_ids_si
         raise
 
 #%%wprowadzić system aktualizacji na podstawie manualnych prac Ondreja!!!
+#połączenie z dyskiem
+gc = gs.oauth()
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()
+drive = GoogleDrive(gauth)
+#%%
+files_list = drive.ListFile({'q': f"'1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m' in parents and trashed=false"}).GetList() 
+
+# wgranie danych
+
 translations_df = pd.read_excel('translation_before_manual_2022-09-20.xlsx')
 # next_translations_df = pd.read_excel('translations_after_first_manual_with_germany_2022-08-12.xlsx')
 # translations_df_new = next_translations_df .copy()
@@ -1688,12 +1698,7 @@ with open('authors_with_works.json', 'w', encoding='utf-8') as f:
 
 
 #%% zbieranie informacji z pracy manualnej
-gc = gs.oauth()
-gauth = GoogleAuth()
-gauth.LocalWebserverAuth()
-drive = GoogleDrive(gauth)
 
-files_list = drive.ListFile({'q': f"'1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m' in parents and trashed=false"}).GetList() 
 
 # zmiana nazewnictwa arkuszy
 # numery = [e['title'] for e in files_list]
@@ -1722,6 +1727,13 @@ files_list = drive.ListFile({'q': f"'1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m' in paren
 
 # done = ['001', '002', '008', '009', '011', '014', '015', '021', '024', '026', '029', '030', '032', '034', '035', '040', '041', '044', '045', '049', '051', '054', '055', '056', '058', '062', '064', '065', '066', '068', '073', '075', '076', '078', '080', '084', '085', '087', '088', '089', '090', '096', '099', '100', '101', '104', '109', '112', '114', '116', '124', '125', '128', '139', '142', '143', '148', '154', '156', '159', '160', '165', '166', '168', '170', '181', '182', '185', '187', '188', '189', '198', '199', '203', '209', '217', '218', '221', '224', '225', '228', '230', '232', '234', '235', '238', '242', '243', '245', '247', '251', '252', '254', '259', '262', '264', '265', '266', '267', '269', '273', '274', '275', '276', '278', '280', '126', '131', '210', '281', '183', '111', '244', '233', '223', '222', '219', '205', '175', '169', '155', '153', '152', '141', '138', '137', '130', '127', '117', '108', '105', '092', '077', '070', '061', '057', '053', '050', '018', '013', '003', '164', '272', '234', '217', '216', '203', '198', '194', '187', '168', '163', '162', '123', '087', '079', '074', '071', '059', '022', '020', '004']  
 # modified_sheets = [e for e in files_list if e['title'].split('_')[0] in done]
+
+#!!!usunięte clustry:
+    # 265_34469656_26799077_4 -- był pusty
+    # 258_76500434_13205408_6 -- był pusty, bo wszystkie rekordy zostały przypisane do 054_76500434_19029585_1
+
+files_list = drive.ListFile({'q': f"'1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m' in parents and trashed=false"}).GetList() 
+
 used_clusters = [int(e['title'].split('_')[2]) for e in files_list]
 
 modified_sheets = files_list.copy()
@@ -1772,7 +1784,7 @@ translations_df_new['work_id'] = translations_df_new['work_id'].apply(lambda x: 
 translations_df_new = translations_df_new.loc[translations_df_new['author_id'] != '46774385']
 to_be_changed = translations_df_new.loc[translations_df_new['work_id'] == 57775596]['001'].to_list()
 translations_df_new.loc[translations_df_new['001'].isin(to_be_changed), ['author_id', 'work_id']] = ['95207407', 2592307]
-translations_df_new.to_excel(f'translations_after_manual_{now}.xlsx', index=False)
+# translations_df_new.to_excel(f'translations_after_manual_{now}.xlsx', index=False)
    
 edited_clusters = list(set(edited_clusters))  
 with open('translation_edited_clusters.txt', 'wt', encoding='utf-8') as f:
@@ -1784,8 +1796,10 @@ with open('translation_edited_clusters.txt', 'wt', encoding='utf-8') as f:
 
 #%% dodawanie kolejnych tabel do pracy manualnej
 # modified_sheets = [e for e in modified_sheets if not e['title'].startswith(('030', '034'))]
-#tutaj mogę wyśledzić wyjątki
+#tutaj mogę wyśledzić wyjątki -- nieregularnych autorów
 exceptions = {k:v for k,v in authors_with_works.items() if any(e.get('edited') == False for e in v.get('clusters'))}
+
+
 
 
 used_authors_dict = {}
@@ -1808,7 +1822,7 @@ for work_id in tqdm(latest_work_id_for_author):
     while True:
         # work_id = latest_work_id_for_author[4]
         # work_id = '10072333'
-        # work_id = '514957'
+        # work_id = '22884787'
         author_id = work_id_author_id_dict[int(work_id)]
         sheet_id = [e for e in files_list if all(el in e['title'] for el in [work_id, author_id])][0]['id']
         sheet_for_author_no = int([e['title'].split('_')[-1] for e in files_list if e['id'] == sheet_id][0])
@@ -1851,14 +1865,14 @@ for work_id in tqdm(latest_work_id_for_author):
 # with ThreadPoolExecutor() as excecutor:
 #     list(tqdm(excecutor.map(upload_next_clusters, latest_work_id_for_author),total=len(latest_work_id_for_author)))   
     
-   
+#%%   
 #!!!bazować na pliku po manualnych edycjach!!!    
    
+test = translations_df.loc[translations_df['work_id'] == 13205408]
+test = translations_df_new.loc[translations_df_new['work_id'] == 13205408]    
     
-   
-    
-   
-
+translations_df.loc[translations_df['001'] == 367432746]['work_id']
+translations_df_new.loc[translations_df_new['001'] == 367432746]['work_id']
 
 
 
