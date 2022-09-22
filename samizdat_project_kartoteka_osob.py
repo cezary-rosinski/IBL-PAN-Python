@@ -414,8 +414,8 @@ for groupby in people_groupbys:
     people_dict = {}
     for name, group in tqdm(groupby, total=len(groupby)):
         # 198, 346, 936, 1947, 1883, 1045, 520
-        # 200068, 200069
-        # name = '1645'
+        # 414, 1654, 214, 1845, 501883
+        # name = '2271'
         # group = groupby.get_group(name)
         project_id = name
         try:

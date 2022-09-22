@@ -9,11 +9,12 @@ import numpy as np
 from unidecode import unidecode
 import sys
 sys.path.insert(1, 'C:/Users/Cezary/Documents/miasto-wies')
-from geonames_accounts import geoname_users
+from geonames_accounts import geonames_users
 import random
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from collections import defaultdict
+from ast import literal_eval
 
 #%% def
 
@@ -281,7 +282,7 @@ grouped_records = len([e for e in translations_df['group_ids'].to_list() if '❦
 grouped_ids = [el for sub in [e.split('❦') for e in translations_df['group_ids'].to_list() if '❦' in e] for el in sub]
 # 11643 rekordów powstało z 36749 rekordów
 
-#%% przypisanie gonames
+#%% przypisanie gonames do rekordów
 country_codes = pd.read_excel('translation_country_codes.xlsx')
 
 country_codes = [list(e[-1]) for e in country_codes.iterrows()]
@@ -337,7 +338,7 @@ geonames_resp = {}
 # for geoname in geonames_ids:
 def get_geonames_country(geoname_id):
     # geoname_id = list(geonames_ids)[0]
-    user = random.choice(geoname_users)
+    user = random.choice(geonames_users)
     #w funkcję wpisać losowanie randomowego username
     try:
         geonames_resp[geoname_id] = requests.get(f'http://api.geonames.org/getJSON?geonameId={geoname_id}&username={user}').json()['countryName']
@@ -355,7 +356,7 @@ places['geonames_country'] = places['geonames'].apply(lambda x: [geonames_resp[e
     
 def get_geonames_name(geoname_id):
     # geoname_id = list(geonames_ids)[0]
-    user = random.choice(geoname_users)
+    user = random.choice(geonames_users)
     #w funkcję wpisać losowanie randomowego username
     try:
         geonames_resp[geoname_id] = requests.get(f'http://api.geonames.org/getJSON?geonameId={geoname_id}&username={user}').json()['name']
@@ -364,7 +365,7 @@ def get_geonames_name(geoname_id):
         
 def get_geonames_coordinates(geoname_id):
     # geoname_id = list(geonames_ids)[0]
-    user = random.choice(geoname_users)
+    user = random.choice(geonames_users)
     #w funkcję wpisać losowanie randomowego username
     try:
         response = requests.get(f'http://api.geonames.org/getJSON?geonameId={geoname_id}&username={user}').json()
@@ -413,13 +414,13 @@ test2 = places_new.loc[places_new['001'].isin([e[0] for e in Counter(places_new[
 test2_grouped = test2.groupby('001')
 test2 = {}
 for name, group in tqdm(test2_grouped, total=len(test2_grouped)):
-    # name = 24693934
+    # name = 2973189
     # group = test2_grouped.get_group(name).to_dict(orient='index')
     group = group.to_dict(orient='index')
     c = Counter()
     for d in group.values():
         c.update(d)
-        
+    c['001'] = name
     geo_ids = [e for e in Counter(c.get('geonames_id'))]
     geo_indices = [c.get('geonames_id').index(e) for e in geo_ids]
         
@@ -430,24 +431,47 @@ for name, group in tqdm(test2_grouped, total=len(test2_grouped)):
     group = {c.get('001'): {k:v for k,v in c.items() if k != '001'}}
     test2.update(group)
     
-    
 test2 = pd.DataFrame.from_dict(test2, orient='index').reset_index().rename(columns={'index':'001'})
 
-#z places usunąć ids z test 2 i dodać test 2 do places
-#mogę przejść do records_groups_with_places
+places = places_new.loc[~places_new['001'].isin(test2['001'])]
+places = pd.concat([places, test2]).sort_values('001').reset_index(drop=True)
 
- 
-                             
-#ma gonames
 #ile rekordów
-places.shape[0] #57451
-#ile rekordów unique
-len(set(places['001'].to_list())) #54926
+places.shape[0] #54926
+#ma gonames
+places.loc[places['geonames_id'].notnull()].shape[0] #51498; 93.7%
 #problematyczne rekordy:
     #	1015947429
+
+#%% porównanie geonames coverage
     
 records_groups_dict = dict(zip(translations_df['001'].to_list(), [e.split('❦') for e in translations_df['group_ids'].to_list()]))
 records_groups_multiple_dict = {k:v for k,v in records_groups_dict.items() if len(v) > 1}
+
+places_dict = places.copy()
+places_dict.index = places['001']
+places_dict.drop(columns='001',inplace=True)
+places_dict = places_dict.to_dict(orient='index')
+
+#current records with places
+dict(zip(records_groups_multiple_dict.keys(), ))
+
+translations_df_places = translations_df.loc[translations_df['001'].isin(records_groups_multiple_dict.keys())][['001', 'geonames_id', 'geonames_name', 'geonames_country', 'geonames_lat', 'geonames_lng']]
+for column in translations_df_places.columns[1:]:
+    translations_df_places[column] = translations_df_places[column].apply(lambda x: literal_eval(x) if not isinstance(x,float) else x)
+translations_df_places.index = translations_df_places['001']
+translations_df_places.drop(columns='001',inplace=True)
+translations_df_places = translations_df_places.to_dict(orient='index')
+#tu mam obecne miejsca
+translations_df_places = {k:tuple({ka:tuple(va) if isinstance(va,list) else va for ka,va in v.items()}.items()) for k,v in translations_df_places.items()}
+
+#tu mam zbudoawać uzupełnione miejsca, a potem porównać
+
+
+
+
+
+translations_df.columns.values
 
 records_groups_with_places
 
