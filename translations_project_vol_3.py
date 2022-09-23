@@ -1742,10 +1742,11 @@ modified_sheets = files_list.copy()
 translations_df_new = translations_df.copy()  
 # for modified_sheet in tqdm(modified_sheets):
 # def collect_modification(modified_sheet):
+edited_records = []
 edited_clusters = []
 for modified_sheet in tqdm(modified_sheets):
     while True:
-    # modified_sheet = modified_sheets[22]
+    # modified_sheet = modified_sheets[0]
     # modified_sheet = [e for e in modified_sheets if e['title'].split('_')[0] == '230'][0]
         cluster_no, author_id, work_id, author_fequency = modified_sheet['title'].split('_')
         edited_clusters.append(work_id)
@@ -1758,6 +1759,7 @@ for modified_sheet in tqdm(modified_sheets):
         try:
             temp_df = gsheet_to_df(modified_sheet['id'], work_id)[[1, 'to_retain']].rename(columns={1:'001'})
             temp_dict = dict(zip(temp_df['001'].to_list(), temp_df['to_retain'].to_list()))
+            edited_records.extend([int(e) for e in {k for k,v in temp_dict.items() if v == 'x'}])            
             temp_dict = {int(k):int(work_id) if v == 'x' else v for k,v in temp_dict.items()}
             temp_dict = {k:v for k,v in temp_dict.items() if not isinstance(v, float)}
             temp_ids = translations_df_new.loc[translations_df_new['work_id'] == int(work_id)]['001'].to_list()
@@ -1794,6 +1796,8 @@ with open('translation_edited_clusters.txt', 'wt', encoding='utf-8') as f:
 # work_id_author_id_dict = {k:v for k,v in work_id_author_id_dict.items() if k not in used_clusters}
 # work_ids_sizes = [e for e in work_ids_sizes if e[0] not in used_clusters]
 
+Counter(edited_records).most_common(10)
+
 #%% dodawanie kolejnych tabel do pracy manualnej
 # modified_sheets = [e for e in modified_sheets if not e['title'].startswith(('030', '034'))]
 #tutaj mogę wyśledzić wyjątki -- nieregularnych autorów
@@ -1822,7 +1826,7 @@ for work_id in tqdm(latest_work_id_for_author):
     while True:
         # work_id = latest_work_id_for_author[4]
         # work_id = '10072333'
-        # work_id = '22884787'
+        # work_id = '22355245'
         author_id = work_id_author_id_dict[int(work_id)]
         sheet_id = [e for e in files_list if all(el in e['title'] for el in [work_id, author_id])][0]['id']
         sheet_for_author_no = int([e['title'].split('_')[-1] for e in files_list if e['id'] == sheet_id][0])
@@ -1834,7 +1838,8 @@ for work_id in tqdm(latest_work_id_for_author):
             try:
                 new_cluster = [e for e in work_ids_sizes if e[0] in {k for k,v in work_id_author_id_dict.items() if v == author_id} and e[1] < work_id_size][0][0]
                 new_cluster_df = translations_df_new.loc[translations_df_new['work_id'] == new_cluster]
-                rest_df = translations_df_new.loc[translations_df_new['001'].isin(temp_ids)].sort_values('work_id')                
+                rest_df = translations_df_new.loc[translations_df_new['001'].isin(temp_ids)].sort_values('work_id')
+                rest_df = rest_df.loc[~rest_df['001'].isin(edited_records)]
                 temp_df = pd.concat([new_cluster_df, rest_df])
                 temp_df['to_retain'] = np.nan
                 temp_df['245a'] = temp_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'] if not(isinstance(x, float)) and '$a' in x else np.nan)
