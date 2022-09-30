@@ -443,6 +443,10 @@ places.loc[places['geonames_id'].notnull()].shape[0] #51498; 93.7%
 #problematyczne rekordy:
     #	1015947429
 
+
+#!!!             UWAGA!!!!!!!!
+# !!!dla tych 6% jeśli można wskazać kraj, to wybieramy stolicę!!!
+
 #%% porównanie geonames coverage
     
 records_groups_dict = dict(zip(translations_df['001'].to_list(), [e.split('❦') for e in translations_df['group_ids'].to_list()]))
