@@ -1,23 +1,12 @@
 import pandas as pd
-from datetime import datetime
 import regex as re
 import numpy as np
-from my_functions import gsheet_to_df, marc_parser_1_field, cSplit, cluster_records, simplify_string, mrc_to_mrk#, marc_parser_dict_for_field
-import unidecode
+from my_functions import gsheet_to_df#, marc_parser_dict_for_field
 from tqdm import tqdm
-import requests
 from collections import Counter
 import warnings
-import io
-import pickle 
-from copy import deepcopy
-from difflib import SequenceMatcher
-from ast import literal_eval
 import gspread as gs
 from my_functions import create_google_worksheet
-import matplotlib.pyplot as plt
-from kneed import KneeLocator
-from googleapiclient.errors import HttpError
 import time
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
