@@ -181,7 +181,7 @@ latest_work_id_for_author = [e.split('_')[2] for e in used_authors_dict.values()
     # work_id = latest_work_id_for_author[-2]
 # def upload_next_clusters(work_id):
 for work_id in tqdm(latest_work_id_for_author):
-    # work_id = latest_work_id_for_author[1]
+    # work_id = latest_work_id_for_author[0]
     while True:
 
         author_id = work_id_author_id_dict[int(work_id)]
@@ -197,7 +197,7 @@ for work_id in tqdm(latest_work_id_for_author):
                 new_cluster_df = translations_df_new.loc[translations_df_new['work_id'] == new_cluster]
                 rest_df = translations_df_new.loc[translations_df_new['001'].isin(temp_ids)].sort_values('work_id')
                 rest_df = rest_df.loc[~rest_df['001'].isin(edited_records)]
-                temp_df = pd.concat([new_cluster_df, rest_df])
+                temp_df = pd.concat([new_cluster_df, rest_df]).drop_duplicates()
                 temp_df['to_retain'] = np.nan
                 temp_df['245a'] = temp_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'] if not(isinstance(x, float)) and '$a' in x else np.nan)
                 temp_df = temp_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
