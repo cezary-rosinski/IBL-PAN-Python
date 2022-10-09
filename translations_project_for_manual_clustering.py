@@ -161,141 +161,122 @@ with open('translation_edited_clusters.txt', 'wt', encoding='utf-8') as f:
 Counter(edited_records).most_common(10)
 
 #%% dodawanie kolejnych tabel do pracy manualnej
-# modified_sheets = [e for e in modified_sheets if not e['title'].startswith(('030', '034'))]
-#tutaj mogę wyśledzić wyjątki -- nieregularnych autorów
-exceptions = {k:v for k,v in authors_with_works.items() if any(e.get('edited') == False for e in v.get('clusters'))}
+# # modified_sheets = [e for e in modified_sheets if not e['title'].startswith(('030', '034'))]
+# #tutaj mogę wyśledzić wyjątki -- nieregularnych autorów
+# exceptions = {k:v for k,v in authors_with_works.items() if any(e.get('edited') == False for e in v.get('clusters'))}
 
-used_authors_dict = {}
-for el in modified_sheets:
-    author_id = el['title'].split('_')[1]
-    if author_id not in used_authors_dict:
-        used_authors_dict[author_id] = 1
-    else:
-        used_authors_dict[author_id] += 1
+# used_authors_dict = {}
+# for el in modified_sheets:
+#     author_id = el['title'].split('_')[1]
+#     if author_id not in used_authors_dict:
+#         used_authors_dict[author_id] = 1
+#     else:
+#         used_authors_dict[author_id] += 1
 
-used_authors_dict = {k:[e['title'] for e in modified_sheets if k in e['title'] and str(v) == e['title'].split('_')[-1]][0] for k,v in used_authors_dict.items()}
-max_books_per_author = max([e[-1] for e in used_authors_dict.values()])
-latest_work_id_for_author = [e.split('_')[2] for e in used_authors_dict.values() if e[-1] == max_books_per_author]
+# used_authors_dict = {k:[e['title'] for e in modified_sheets if k in e['title'] and str(v) == e['title'].split('_')[-1]][0] for k,v in used_authors_dict.items()}
+# max_books_per_author = max([e[-1] for e in used_authors_dict.values()])
+# latest_work_id_for_author = [e.split('_')[2] for e in used_authors_dict.values() if e[-1] == max_books_per_author]
 
-# for work_id in latest_work_id_for_author:
-    # work_id = latest_work_id_for_author[-2]
-# def upload_next_clusters(work_id):
-for work_id in tqdm(latest_work_id_for_author):
-    # work_id = latest_work_id_for_author[0]
-    while True:
+# # for work_id in latest_work_id_for_author:
+#     # work_id = latest_work_id_for_author[-2]
+# # def upload_next_clusters(work_id):
+# for work_id in tqdm(latest_work_id_for_author):
+#     # work_id = latest_work_id_for_author[0]
+#     while True:
 
-        author_id = work_id_author_id_dict[int(work_id)]
-        sheet_id = [e for e in files_list if all(el in e['title'] for el in [work_id, author_id])][0]['id']
-        sheet_for_author_no = int([e['title'].split('_')[-1] for e in files_list if e['id'] == sheet_id][0])
-        try:
-            temp_df = gsheet_to_df(sheet_id, work_id)[[1, 'to_retain', 'work_id']].rename(columns={1:'001'})
-            temp_ids = [int(e) for e in temp_df.loc[temp_df['to_retain'] != 'x']['001'].to_list()]
-            work_id_size = [e[1] for e in work_ids_sizes if e[0] == int(work_id)][0]
+#         author_id = work_id_author_id_dict[int(work_id)]
+#         sheet_id = [e for e in files_list if all(el in e['title'] for el in [work_id, author_id])][0]['id']
+#         sheet_for_author_no = int([e['title'].split('_')[-1] for e in files_list if e['id'] == sheet_id][0])
+#         try:
+#             temp_df = gsheet_to_df(sheet_id, work_id)[[1, 'to_retain', 'work_id']].rename(columns={1:'001'})
+#             temp_ids = [int(e) for e in temp_df.loc[temp_df['to_retain'] != 'x']['001'].to_list()]
+#             work_id_size = [e[1] for e in work_ids_sizes if e[0] == int(work_id)][0]
             
-            try:
-                new_cluster = [e for e in work_ids_sizes if e[0] in {k for k,v in work_id_author_id_dict.items() if v == author_id} and e[1] < work_id_size][0][0]
-                new_cluster_df = translations_df_new.loc[translations_df_new['work_id'] == new_cluster]
-                rest_df = translations_df_new.loc[translations_df_new['001'].isin(temp_ids)].sort_values('work_id')
-                rest_df = rest_df.loc[~rest_df['001'].isin(edited_records)]
-                temp_df = pd.concat([new_cluster_df, rest_df]).drop_duplicates()
-                temp_df['to_retain'] = np.nan
-                temp_df['245a'] = temp_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'] if not(isinstance(x, float)) and '$a' in x else np.nan)
-                temp_df = temp_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
-                temp_df['work_id'] = temp_df['work_id'].apply(lambda x: str(x) if isinstance(x, np.int64) else x) 
+#             try:
+#                 new_cluster = [e for e in work_ids_sizes if e[0] in {k for k,v in work_id_author_id_dict.items() if v == author_id} and e[1] < work_id_size][0][0]
+#                 new_cluster_df = translations_df_new.loc[translations_df_new['work_id'] == new_cluster]
+#                 rest_df = translations_df_new.loc[translations_df_new['001'].isin(temp_ids)].sort_values('work_id')
+#                 rest_df = rest_df.loc[~rest_df['001'].isin(edited_records)]
+#                 temp_df = pd.concat([new_cluster_df, rest_df]).drop_duplicates()
+#                 temp_df['to_retain'] = np.nan
+#                 temp_df['245a'] = temp_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'] if not(isinstance(x, float)) and '$a' in x else np.nan)
+#                 temp_df = temp_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
+#                 temp_df['work_id'] = temp_df['work_id'].apply(lambda x: str(x) if isinstance(x, np.int64) else x) 
                 
-                ind = [i for i,e in enumerate(work_ids_sizes,1) if e[0] == new_cluster][0]
-                ind = '{:03d}'.format(ind)
+#                 ind = [i for i,e in enumerate(work_ids_sizes,1) if e[0] == new_cluster][0]
+#                 ind = '{:03d}'.format(ind)
                 
-                sheet = gc.create(f'{ind}_{author_id}_{int(new_cluster)}_{sheet_for_author_no+1}', '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
-                # create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
-                try:
-                    create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
-                except Exception:
-                    time.sleep(60)
-                    create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
-                except KeyboardInterrupt:
-                    raise
-            except IndexError:
-                pass
-            break
-        except KeyboardInterrupt as error:
-            raise error
-        except Exception:
-            time.sleep(10)
-            continue     
+#                 sheet = gc.create(f'{ind}_{author_id}_{int(new_cluster)}_{sheet_for_author_no+1}', '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
+#                 # create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
+#                 try:
+#                     create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
+#                 except Exception:
+#                     time.sleep(60)
+#                     create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
+#                 except KeyboardInterrupt:
+#                     raise
+#             except IndexError:
+#                 pass
+#             break
+#         except KeyboardInterrupt as error:
+#             raise error
+#         except Exception:
+#             time.sleep(10)
+#             continue     
         
 #%% uzupełnienia, tego, co się wymknęło
+
+#dodawać po każdej rundzie kolejne
+empty_clusters = [42155155, 26799077, 57775596, 1431393]
+
+authors_with_works = {k:{ka:[{kb:True if kb == 'edited' and e['cluster_id'] in empty_clusters else vb for kb,vb in e.items()} for e in va] if isinstance(va,list) else va for ka,va in v.items()} for k,v in authors_with_works.items()}
+with open('authors_with_works.json', 'w', encoding='utf-8') as f:
+    json.dump(authors_with_works, f, ensure_ascii=False, indent=4)
 
 exceptions = {k:v for k,v in authors_with_works.items() if any(e.get('edited') == False for e in v.get('clusters'))}
 
 supplements = {k:[e.get('cluster_id') for e in v.get('clusters') if e.get('edited') == False][0] for k,v in exceptions.items()}
 
-
+new_spreadsheets = []
 for author_id, work_id in tqdm(supplements.items()):
     # author_id, work_id = list(supplements.items())[0]
     while True:
-        
-        previous_author_ids = [int(e['title'].split('_')[2]) for e in files_list if author_id in e['title']]
-        new_cluster_df = translations_df_new.loc[translations_df_new['work_id'] == work_id]
-        rest_df = translations_df_new.loc[translations_df_new['author_id'] == author_id]
-        rest_df = rest_df.loc[~rest_df['work_id'].isin(previous_author_ids)].sort_values('work_id')
-        rest_df = rest_df.loc[~rest_df['001'].isin(edited_records)]
-        temp_df = pd.concat([new_cluster_df, rest_df]).drop_duplicates()
-        
-        
-        #teraz tutaj ograć nazywanie arkuszy google i wysyłać
-        
-        
-        
-        rest_df = translations_df_new.loc[~translations_df_new['work_id'].isin(previous_author_ids)]
-        
-        
-
-        sheet_id = max([e for e in files_list if author_id in e['title']], key=lambda x: int(x['title'].split('_')[0]))['id']
-        sheet_for_author_no = int([e['title'].split('_')[-1] for e in files_list if e['id'] == sheet_id][0])
         try:
-            temp_df = gsheet_to_df(sheet_id, work_id)[[1, 'to_retain', 'work_id']].rename(columns={1:'001'})
-            temp_ids = [int(e) for e in temp_df.loc[temp_df['to_retain'] != 'x']['001'].to_list()]
-            work_id_size = [e[1] for e in work_ids_sizes if e[0] == int(work_id)][0]
+            previous_author_ids = [int(e['title'].split('_')[2]) for e in files_list if author_id in e['title']]
+            new_cluster_df = translations_df_new.loc[translations_df_new['work_id'] == work_id]
+            rest_df = translations_df_new.loc[translations_df_new['author_id'] == author_id]
+            rest_df = rest_df.loc[~rest_df['work_id'].isin(previous_author_ids)].sort_values('work_id')
+            rest_df = rest_df.loc[~rest_df['001'].isin(edited_records)]
+            temp_df = pd.concat([new_cluster_df, rest_df]).drop_duplicates()
+            temp_df['to_retain'] = np.nan
+            temp_df['245a'] = temp_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'] if not(isinstance(x, float)) and '$a' in x else np.nan)
+            temp_df = temp_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
+            temp_df['work_id'] = temp_df['work_id'].apply(lambda x: str(x) if isinstance(x, np.int64) else x) 
             
+            ind = [i for i,e in enumerate(work_ids_sizes,1) if e[0] == work_id][0]
+            ind = '{:03d}'.format(ind)
+            
+            new_spreadsheet_name = f'{ind}_{author_id}_{int(work_id)}_{len(previous_author_ids)+1}'
+            
+            sheet = gc.create(new_spreadsheet_name, '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
+            new_spreadsheets.append(new_spreadsheet_name)
             try:
-                new_cluster = [e for e in work_ids_sizes if e[0] in {k for k,v in work_id_author_id_dict.items() if v == author_id} and e[1] < work_id_size][0][0]
-                new_cluster_df = translations_df_new.loc[translations_df_new['work_id'] == new_cluster]
-                rest_df = translations_df_new.loc[translations_df_new['001'].isin(temp_ids)].sort_values('work_id')
-                rest_df = rest_df.loc[~rest_df['001'].isin(edited_records)]
-                temp_df = pd.concat([new_cluster_df, rest_df]).drop_duplicates()
-                temp_df['to_retain'] = np.nan
-                temp_df['245a'] = temp_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'] if not(isinstance(x, float)) and '$a' in x else np.nan)
-                temp_df = temp_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
-                temp_df['work_id'] = temp_df['work_id'].apply(lambda x: str(x) if isinstance(x, np.int64) else x) 
-                
-                ind = [i for i,e in enumerate(work_ids_sizes,1) if e[0] == new_cluster][0]
-                ind = '{:03d}'.format(ind)
-                
-                sheet = gc.create(f'{ind}_{author_id}_{int(new_cluster)}_{sheet_for_author_no+1}', '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
-                # create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
-                try:
-                    create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
-                except Exception:
-                    time.sleep(60)
-                    create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
-                except KeyboardInterrupt:
-                    raise
-            except IndexError:
-                pass
-            break
-        except KeyboardInterrupt as error:
-            raise error
-        except Exception:
-            time.sleep(10)
-            continue     
+                create_google_worksheet(sheet.id, str(int(work_id)), temp_df)
+            except Exception:
+                time.sleep(60)
+                create_google_worksheet(sheet.id, str(int(work_id)), temp_df)
+            except KeyboardInterrupt:
+                raise
+        except IndexError:
+            pass
+        break
 
+print(new_spreadsheets)
 
-
-
-
-
-
+#sprawdzić ręcznie, które clustry są puste (bo zostały przypisane wcześniej) i zmienić je w supplements na edited
+#puste: 212_29531402_42155155_2, 265_34469656_26799077_4, 030_42003196_57775596_1, 034_46774385_1431393_1
+new_spreadsheets = [e for e in new_spreadsheets if e not in ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1']]
+print(new_spreadsheets)
 
 
 
