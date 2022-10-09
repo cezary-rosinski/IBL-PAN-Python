@@ -224,38 +224,101 @@ for work_id in tqdm(latest_work_id_for_author):
             time.sleep(10)
             continue     
         
+#%% uzupełnienia, tego, co się wymknęło
+
+exceptions = {k:v for k,v in authors_with_works.items() if any(e.get('edited') == False for e in v.get('clusters'))}
+
+supplements = {k:[e.get('cluster_id') for e in v.get('clusters') if e.get('edited') == False][0] for k,v in exceptions.items()}
+
+
+for author_id, work_id in tqdm(supplements.items()):
+    # author_id, work_id = list(supplements.items())[0]
+    while True:
+        
+        previous_author_ids = [int(e['title'].split('_')[2]) for e in files_list if author_id in e['title']]
+        new_cluster_df = translations_df_new.loc[translations_df_new['work_id'] == work_id]
+        rest_df = translations_df_new.loc[translations_df_new['author_id'] == author_id]
+        rest_df = rest_df.loc[~rest_df['work_id'].isin(previous_author_ids)].sort_values('work_id')
+        rest_df = rest_df.loc[~rest_df['001'].isin(edited_records)]
+        temp_df = pd.concat([new_cluster_df, rest_df]).drop_duplicates()
+        
+        
+        #teraz tutaj ograć nazywanie arkuszy google i wysyłać
         
         
         
+        rest_df = translations_df_new.loc[~translations_df_new['work_id'].isin(previous_author_ids)]
         
         
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+        sheet_id = max([e for e in files_list if author_id in e['title']], key=lambda x: int(x['title'].split('_')[0]))['id']
+        sheet_for_author_no = int([e['title'].split('_')[-1] for e in files_list if e['id'] == sheet_id][0])
+        try:
+            temp_df = gsheet_to_df(sheet_id, work_id)[[1, 'to_retain', 'work_id']].rename(columns={1:'001'})
+            temp_ids = [int(e) for e in temp_df.loc[temp_df['to_retain'] != 'x']['001'].to_list()]
+            work_id_size = [e[1] for e in work_ids_sizes if e[0] == int(work_id)][0]
+            
+            try:
+                new_cluster = [e for e in work_ids_sizes if e[0] in {k for k,v in work_id_author_id_dict.items() if v == author_id} and e[1] < work_id_size][0][0]
+                new_cluster_df = translations_df_new.loc[translations_df_new['work_id'] == new_cluster]
+                rest_df = translations_df_new.loc[translations_df_new['001'].isin(temp_ids)].sort_values('work_id')
+                rest_df = rest_df.loc[~rest_df['001'].isin(edited_records)]
+                temp_df = pd.concat([new_cluster_df, rest_df]).drop_duplicates()
+                temp_df['to_retain'] = np.nan
+                temp_df['245a'] = temp_df['245'].apply(lambda x: marc_parser_dict_for_field(x, '\$')['$a'] if not(isinstance(x, float)) and '$a' in x else np.nan)
+                temp_df = temp_df[['001', '240', 'to_retain', '245', '245a', 'language', '260', '490', '500', '776', 'author_id', 'work_title', 'simple_original_title', 'work_id']]
+                temp_df['work_id'] = temp_df['work_id'].apply(lambda x: str(x) if isinstance(x, np.int64) else x) 
+                
+                ind = [i for i,e in enumerate(work_ids_sizes,1) if e[0] == new_cluster][0]
+                ind = '{:03d}'.format(ind)
+                
+                sheet = gc.create(f'{ind}_{author_id}_{int(new_cluster)}_{sheet_for_author_no+1}', '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
+                # create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
+                try:
+                    create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
+                except Exception:
+                    time.sleep(60)
+                    create_google_worksheet(sheet.id, str(int(new_cluster)), temp_df)
+                except KeyboardInterrupt:
+                    raise
+            except IndexError:
+                pass
+            break
+        except KeyboardInterrupt as error:
+            raise error
+        except Exception:
+            time.sleep(10)
+            continue     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
