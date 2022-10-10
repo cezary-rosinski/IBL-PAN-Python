@@ -227,11 +227,7 @@ Counter(edited_records).most_common(10)
 #%% uzupełnienia, tego, co się wymknęło
 
 #dodawać po każdej rundzie kolejne
-empty_clusters = [42155155, 26799077, 57775596, 1431393]
-
-authors_with_works = {k:{ka:[{kb:True if kb == 'edited' and e['cluster_id'] in empty_clusters else vb for kb,vb in e.items()} for e in va] if isinstance(va,list) else va for ka,va in v.items()} for k,v in authors_with_works.items()}
-with open('authors_with_works.json', 'w', encoding='utf-8') as f:
-    json.dump(authors_with_works, f, ensure_ascii=False, indent=4)
+empty_clusters = [42155155, 26799077, 57775596, 1431393, 16772379, 13205408, 63403408, 708331248]
 
 exceptions = {k:v for k,v in authors_with_works.items() if any(e.get('edited') == False for e in v.get('clusters'))}
 
@@ -275,10 +271,14 @@ print(new_spreadsheets)
 
 #sprawdzić ręcznie, które clustry są puste (bo zostały przypisane wcześniej) i zmienić je w supplements na edited
 #puste: 212_29531402_42155155_2, 265_34469656_26799077_4, 030_42003196_57775596_1, 034_46774385_1431393_1
-new_spreadsheets = [e for e in new_spreadsheets if e not in ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1']]
+# 258_76500434_13205408_7, 140_19683055_63403408_3, 046_46774385_708331248_1
+new_spreadsheets = [e for e in new_spreadsheets if e not in ['258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1']]
 print(new_spreadsheets)
 
-
+# na sam koniec powtórzyć z dodanymi clustrami do empty_clusters
+authors_with_works = {k:{ka:[{kb:True if kb == 'edited' and e['cluster_id'] in empty_clusters else vb for kb,vb in e.items()} for e in va] if isinstance(va,list) else va for ka,va in v.items()} for k,v in authors_with_works.items()}
+with open('authors_with_works.json', 'w', encoding='utf-8') as f:
+    json.dump(authors_with_works, f, ensure_ascii=False, indent=4)
 
 
 
