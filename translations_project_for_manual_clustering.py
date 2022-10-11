@@ -98,8 +98,6 @@ for author_id in tqdm(authors_ids):
 with open('authors_with_works.json', 'w', encoding='utf-8') as f:
     json.dump(authors_with_works, f, ensure_ascii=False, indent=4)
     
-
-
 #%% zbieranie informacji z pracy manualnej
 
 #!!!usunięte clustry:
@@ -150,13 +148,18 @@ translations_df_new['work_id'] = translations_df_new['work_id'].apply(lambda x: 
 translations_df_new = translations_df_new.loc[translations_df_new['author_id'] != '46774385']
 to_be_changed = translations_df_new.loc[translations_df_new['work_id'] == 57775596]['001'].to_list()
 translations_df_new.loc[translations_df_new['001'].isin(to_be_changed), ['author_id', 'work_id']] = ['95207407', 2592307]
+
+test = translations_df_new.copy()
+
+ids_to_be_changed = [233979417, 499657879, 609190927, 865861032, 871518282, 948562166, 1017395251, 1037670745, 1120923101, 693046345, 612484641, 10000000648, 70357873, 638788889, 654310823, 756886304, 970939398, 1069895800, 1075256608, 223391512, 85568040, 22259771, 85701806, 693046207, 1031719525, 1185289556, 1126992949, 1185327579, 77710868, 470367451, 631744717, 887579640, 894762749, 1011668322, 1193400156, 651213307, 651373365, 692935236, 1011215706, 1196397163, 254963673, 911815625, 123755002, 977421011, 977917241, 21715009, 1080763089, 959631455, 994329657, 639960874, 644008507, 187126309, 634453477, 279460747, 187126320, 599773453, 34659978, 562925701, 562925708, 752809693, 976900995, 1024710747]
+
+translations_df_new.loc[translations_df_new['001'].isin(ids_to_be_changed), ['author_id']] = '34454129'
 # translations_df_new.to_excel(f'translations_after_manual_{now}.xlsx', index=False)
    
 edited_clusters = list(set(edited_clusters))  
 with open('translation_edited_clusters.txt', 'wt', encoding='utf-8') as f:
     for el in edited_clusters:
         f.write(f'{el}/n')
-
 
 Counter(edited_records).most_common(10)
 
@@ -227,7 +230,8 @@ Counter(edited_records).most_common(10)
 #%% uzupełnienia, tego, co się wymknęło
 
 #dodawać po każdej rundzie kolejne
-empty_clusters = [42155155, 26799077, 57775596, 1431393, 16772379, 13205408, 63403408, 708331248]
+empty_clusters = [42155155, 26799077, 57775596, 1431393, 16772379, 13205408, 63403408, 708331248, 155533, 13205408]
+empty_sheets = ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1', '258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1', '056_56651696_155533_1', '258_76500434_13205408_7']
 
 exceptions = {k:v for k,v in authors_with_works.items() if any(e.get('edited') == False for e in v.get('clusters'))}
 
@@ -253,16 +257,16 @@ for author_id, work_id in tqdm(supplements.items()):
             ind = '{:03d}'.format(ind)
             
             new_spreadsheet_name = f'{ind}_{author_id}_{int(work_id)}_{len(previous_author_ids)+1}'
-            
-            sheet = gc.create(new_spreadsheet_name, '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
-            new_spreadsheets.append(new_spreadsheet_name)
-            try:
-                create_google_worksheet(sheet.id, str(int(work_id)), temp_df)
-            except Exception:
-                time.sleep(60)
-                create_google_worksheet(sheet.id, str(int(work_id)), temp_df)
-            except KeyboardInterrupt:
-                raise
+            if new_spreadsheet_name not in empty_sheets: 
+                sheet = gc.create(new_spreadsheet_name, '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
+                new_spreadsheets.append(new_spreadsheet_name)
+                try:
+                    create_google_worksheet(sheet.id, str(int(work_id)), temp_df)
+                except Exception:
+                    time.sleep(60)
+                    create_google_worksheet(sheet.id, str(int(work_id)), temp_df)
+                except KeyboardInterrupt:
+                    raise
         except IndexError:
             pass
         break
@@ -272,7 +276,9 @@ print(new_spreadsheets)
 #sprawdzić ręcznie, które clustry są puste (bo zostały przypisane wcześniej) i zmienić je w supplements na edited
 #puste: 212_29531402_42155155_2, 265_34469656_26799077_4, 030_42003196_57775596_1, 034_46774385_1431393_1
 # 258_76500434_13205408_7, 140_19683055_63403408_3, 046_46774385_708331248_1
-new_spreadsheets = [e for e in new_spreadsheets if e not in ['258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1']]
+# 056_56651696_155533_1
+# 258_76500434_13205408_7
+new_spreadsheets = [e for e in new_spreadsheets if e not in ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1', '258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1', '056_56651696_155533_1', '258_76500434_13205408_7']]
 print(new_spreadsheets)
 
 # na sam koniec powtórzyć z dodanymi clustrami do empty_clusters
