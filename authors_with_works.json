@@ -94,71 +94,6 @@
             }
         ]
     },
-    "46774385": {
-        "author_name": "Kisch, Egon Erwin",
-        "clusters": [
-            {
-                "cluster_id": 1431393.0,
-                "original_cluster_size": 43,
-                "edited": true
-            },
-            {
-                "cluster_id": 708331248.0,
-                "original_cluster_size": 36,
-                "edited": true
-            },
-            {
-                "cluster_id": 2181806.0,
-                "original_cluster_size": 33,
-                "edited": false
-            },
-            {
-                "cluster_id": 1472236.0,
-                "original_cluster_size": 23,
-                "edited": false
-            },
-            {
-                "cluster_id": 1927384.0,
-                "original_cluster_size": 20,
-                "edited": false
-            },
-            {
-                "cluster_id": 73498344.0,
-                "original_cluster_size": 20,
-                "edited": false
-            },
-            {
-                "cluster_id": 1555481.0,
-                "original_cluster_size": 17,
-                "edited": false
-            },
-            {
-                "cluster_id": 1070764.0,
-                "original_cluster_size": 16,
-                "edited": false
-            },
-            {
-                "cluster_id": 10877074.0,
-                "original_cluster_size": 14,
-                "edited": false
-            },
-            {
-                "cluster_id": 69538262.0,
-                "original_cluster_size": 14,
-                "edited": false
-            },
-            {
-                "cluster_id": 9921464.0,
-                "original_cluster_size": 12,
-                "edited": false
-            },
-            {
-                "cluster_id": 451513127.0,
-                "original_cluster_size": 10,
-                "edited": false
-            }
-        ]
-    },
     "83176668": {
         "author_name": " Škvorecký, Josef, ",
         "clusters": [
@@ -610,12 +545,12 @@
             {
                 "cluster_id": 875576023.0,
                 "original_cluster_size": 41,
-                "edited": false
+                "edited": true
             },
             {
                 "cluster_id": 377733816.0,
                 "original_cluster_size": 20,
-                "edited": false
+                "edited": true
             },
             {
                 "cluster_id": 59010589.0,
@@ -830,12 +765,12 @@
             {
                 "cluster_id": 34697560.0,
                 "original_cluster_size": 11,
-                "edited": false
+                "edited": true
             },
             {
                 "cluster_id": 17654408.0,
                 "original_cluster_size": 10,
-                "edited": false
+                "edited": true
             }
         ]
     },
@@ -950,12 +885,12 @@
             {
                 "cluster_id": 35812798.0,
                 "original_cluster_size": 10,
-                "edited": false
+                "edited": true
             },
             {
                 "cluster_id": 424201586.0,
                 "original_cluster_size": 10,
-                "edited": false
+                "edited": true
             },
             {
                 "cluster_id": 441650008.0,
@@ -1150,7 +1085,7 @@
             {
                 "cluster_id": 26799077.0,
                 "original_cluster_size": 10,
-                "edited": true
+                "edited": false
             }
         ]
     },
@@ -1295,7 +1230,7 @@
             {
                 "cluster_id": 13205408.0,
                 "original_cluster_size": 10,
-                "edited": true
+                "edited": false
             }
         ]
     },
@@ -1505,7 +1440,7 @@
             {
                 "cluster_id": 155533.0,
                 "original_cluster_size": 29,
-                "edited": true
+                "edited": false
             },
             {
                 "cluster_id": 27590.0,
@@ -1530,7 +1465,7 @@
             {
                 "cluster_id": 16772379.0,
                 "original_cluster_size": 10,
-                "edited": true
+                "edited": false
             }
         ]
     },
@@ -1625,7 +1560,7 @@
             {
                 "cluster_id": 63403408.0,
                 "original_cluster_size": 17,
-                "edited": true
+                "edited": false
             }
         ]
     },
@@ -1650,7 +1585,7 @@
             {
                 "cluster_id": 42155155.0,
                 "original_cluster_size": 12,
-                "edited": true
+                "edited": false
             }
         ]
     },
@@ -1770,7 +1705,7 @@
             {
                 "cluster_id": 57775596.0,
                 "original_cluster_size": 48,
-                "edited": true
+                "edited": false
             }
         ]
     },
@@ -1845,12 +1780,12 @@
             {
                 "cluster_id": 1441622.0,
                 "original_cluster_size": 18,
-                "edited": false
+                "edited": true
             },
             {
                 "cluster_id": 3737935.0,
                 "original_cluster_size": 18,
-                "edited": false
+                "edited": true
             },
             {
                 "cluster_id": 191151063.0,

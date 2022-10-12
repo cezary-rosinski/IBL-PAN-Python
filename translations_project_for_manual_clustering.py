@@ -39,7 +39,7 @@ gc = gs.oauth()
 gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
-#%%
+#%% statystyki
 files_list = drive.ListFile({'q': "'1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m' in parents and trashed=false"}).GetList() 
 
 # wgranie danych
