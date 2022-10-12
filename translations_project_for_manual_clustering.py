@@ -94,7 +94,9 @@ for author_id in tqdm(authors_ids):
     temp_dict = {author_id: {'author_name': author_name,
                              'clusters': clusters_for_author_with_size}}
     authors_with_works.update(temp_dict)
-    
+ 
+authors_with_works.pop('46774385')
+ 
 with open('authors_with_works.json', 'w', encoding='utf-8') as f:
     json.dump(authors_with_works, f, ensure_ascii=False, indent=4)
     
@@ -230,8 +232,8 @@ Counter(edited_records).most_common(10)
 #%% uzupełnienia, tego, co się wymknęło
 
 #dodawać po każdej rundzie kolejne
-empty_clusters = [42155155, 26799077, 57775596, 1431393, 16772379, 13205408, 63403408, 708331248, 155533, 13205408]
-empty_sheets = ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1', '258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1', '056_56651696_155533_1', '258_76500434_13205408_7']
+empty_clusters = [42155155, 26799077, 57775596, 1431393, 16772379, 13205408, 63403408, 708331248, 155533, 13205408, 181698433]
+empty_sheets = ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1', '258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1', '056_56651696_155533_1', '258_76500434_13205408_7', '246_4931097_181698433_5', '056_56651696_155533_5']
 
 exceptions = {k:v for k,v in authors_with_works.items() if any(e.get('edited') == False for e in v.get('clusters'))}
 
@@ -257,7 +259,7 @@ for author_id, work_id in tqdm(supplements.items()):
             ind = '{:03d}'.format(ind)
             
             new_spreadsheet_name = f'{ind}_{author_id}_{int(work_id)}_{len(previous_author_ids)+1}'
-            if new_spreadsheet_name not in empty_sheets: 
+            if new_spreadsheet_name not in empty_sheets and not new_spreadsheet_name.startswith('056'): 
                 sheet = gc.create(new_spreadsheet_name, '1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m')
                 new_spreadsheets.append(new_spreadsheet_name)
                 try:
@@ -273,12 +275,14 @@ for author_id, work_id in tqdm(supplements.items()):
 
 print(new_spreadsheets)
 
+#%% dodatki po każdej iteracji
+
 #sprawdzić ręcznie, które clustry są puste (bo zostały przypisane wcześniej) i zmienić je w supplements na edited
 #puste: 212_29531402_42155155_2, 265_34469656_26799077_4, 030_42003196_57775596_1, 034_46774385_1431393_1
 # 258_76500434_13205408_7, 140_19683055_63403408_3, 046_46774385_708331248_1
 # 056_56651696_155533_1
 # 258_76500434_13205408_7
-new_spreadsheets = [e for e in new_spreadsheets if e not in ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1', '258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1', '056_56651696_155533_1', '258_76500434_13205408_7']]
+new_spreadsheets = [e for e in new_spreadsheets if e not in ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1', '258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1', '056_56651696_155533_1', '258_76500434_13205408_7', '246_4931097_181698433_5', '056_56651696_155533_5']]
 print(new_spreadsheets)
 
 # na sam koniec powtórzyć z dodanymi clustrami do empty_clusters
