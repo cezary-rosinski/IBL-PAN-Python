@@ -336,12 +336,14 @@ skc_df_translations.to_excel(f'skc_translations_cz_authority_{year}-{month}-{day
 #%% load data
 list_of_records = []
 original_number_of_records = 0
-with open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
+with open(r"C:\Users\Cezary\Downloads\oclc_lang.csv", 'r', encoding="utf8", errors="surrogateescape") as csv_file:
 #with open('C:/Users/User/Desktop/oclc_lang.csv', 'r', encoding="utf8", errors="surrogateescape") as csv_file:
     reader = csv.reader(csv_file, delimiter=',')
     headers = next(reader)
     position_008 = headers.index('008')
-    for row in reader:
+    for row in tqdm(reader):
+        if row[1] == '1135277855':
+            print(row)
         original_number_of_records += 1
         if row[position_008][35:38] != 'cze':
             list_of_records.append(row)
