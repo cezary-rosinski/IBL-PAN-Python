@@ -39,12 +39,12 @@ gc = gs.oauth()
 gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
 drive = GoogleDrive(gauth)
-#%% statystyki
+#%% wgranie danych
 files_list = drive.ListFile({'q': "'1CJwe0Bl-exd4aRyqCMqv_XHSyLuE2w4m' in parents and trashed=false"}).GetList() 
-
-# wgranie danych
-
 translations_df = pd.read_excel('translation_before_manual_2022-09-20.xlsx')
+# with open('authors_with_works.json', 'rt', encoding='utf-8') as f:
+#     authors_with_works = json.load(f)
+#%% statystyki
 # next_translations_df = pd.read_excel('translations_after_first_manual_with_germany_2022-08-12.xlsx')
 # translations_df_new = next_translations_df .copy()
 # translations_df = gsheet_to_df('1wy64th7IjF0ktAqjz3NQcflNYLAkStD3', 'Arkusz1')
@@ -69,7 +69,7 @@ proper_columns = ['001', '240', '245', '245a', 'language', '260', 'author_id', '
 work_id_author_id_dict = dict(zip(translations_df['work_id'], translations_df['author_id']))
 work_id_author_id_dict = {k:v for k,v in work_id_author_id_dict.items() if k in work_ids}
 
-#wprowadzanie zmian
+#%% na razie zbędne #wprowadzanie zmian
 
 # statystyki ile clustrów mają autorzy
 author_clusters_len = dict(Counter(work_id_author_id_dict.values()))
@@ -231,18 +231,21 @@ Counter(edited_records).most_common(10)
 #%% uzupełnienia, tego, co się wymknęło
 
 #dodawać po każdej rundzie kolejne
-empty_clusters = [42155155, 26799077, 57775596, 1431393, 16772379, 13205408, 63403408, 708331248, 155533, 13205408, 181698433, 23846781]
-empty_sheets = ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1', '258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1', '056_56651696_155533_1', '258_76500434_13205408_7', '246_4931097_181698433_5', '056_56651696_155533_5', '146_51691735_23846781_17']
+empty_clusters = [42155155, 26799077, 57775596, 1431393, 16772379, 13205408, 63403408, 708331248, 155533, 13205408, 181698433, 23846781, 260010551]
+empty_sheets = ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1', '258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1', '056_56651696_155533_1', '258_76500434_13205408_7', '246_4931097_181698433_5', '056_56651696_155533_5', '146_51691735_23846781_17', '153_51691735_260010551_17']
 
 exceptions = {k:v for k,v in authors_with_works.items() if any(e.get('edited') == False for e in v.get('clusters'))}
+
+exceptions = {k:{ka:[{kb:True if kb == 'edited' and e['cluster_id'] in empty_clusters else vb for kb,vb in e.items()} for e in va] if isinstance(va,list) else va for ka,va in v.items()} for k,v in exceptions.items()}
 
 # test = {k:v for k,v in authors_with_works.items() if any(e.get('edited') == False for e in v.get('clusters')) and any(e.get('edited') not in empty_clusters for e in v.get('clusters'))}
 
 supplements = {k:[e.get('cluster_id') for e in v.get('clusters') if e.get('edited') == False][0] for k,v in exceptions.items()}
 
+
 new_spreadsheets = []
 for author_id, work_id in tqdm(supplements.items()):
-    # author_id, work_id = list(supplements.items())[0]
+    # author_id, work_id = list(supplements.items())[3]
     while True:
         try:
             previous_author_ids = [int(e['title'].split('_')[2]) for e in files_list if author_id in e['title']]
@@ -283,11 +286,13 @@ print(new_spreadsheets)
 # 258_76500434_13205408_7, 140_19683055_63403408_3, 046_46774385_708331248_1
 # 056_56651696_155533_1
 # 258_76500434_13205408_7
-new_spreadsheets = [e for e in new_spreadsheets if e not in ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1', '258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1', '056_56651696_155533_1', '258_76500434_13205408_7', '246_4931097_181698433_5', '056_56651696_155533_5', '146_51691735_23846781_17']]
+new_spreadsheets = [e for e in new_spreadsheets if e not in empty_sheets]
 print(new_spreadsheets)
 
 # na sam koniec powtórzyć z dodanymi clustrami do empty_clusters
+
 authors_with_works = {k:{ka:[{kb:True if kb == 'edited' and e['cluster_id'] in empty_clusters else vb for kb,vb in e.items()} for e in va] if isinstance(va,list) else va for ka,va in v.items()} for k,v in authors_with_works.items()}
+
 with open('authors_with_works.json', 'w', encoding='utf-8') as f:
     json.dump(authors_with_works, f, ensure_ascii=False, indent=4)
 

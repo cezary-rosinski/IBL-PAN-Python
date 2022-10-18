@@ -357,21 +357,57 @@ df.to_excel('literatura_na_swiecie_df.xlsx', index=False)
             
             
             
+#%% Praca z df (tabelą)           
             
-            
-            
-            
-            
-            
-            
-            
-       
+df = pd.read_excel(r"C:\Users\RivenDell\Documents\$Nauka\HumCyf\PROJEKT\literatura_na_swiecie_df 2022-06-15.xlsx")            
+#"typ publikacji"
+#"współpracownik - rola"
+#"współpracownik - nazwisko"
+#"opis bibliograficzny"
+#"rok"
+#"numer bieżący"
+#"numer ciągły"
+#"strony"
+#"tytuł utworu"
+#"dodatkowe informacje" (np. Nobel)
+
+borges_df = df[df["pisarz"]=="BORGES, Jorge Luis 1899–1986"]
+def get_typ_publikacji(x):
+    try:
+        return re.search("(?<!\p{Lu} )(\p{Ll} ){2,}\p{Ll}(?!\p{L})", x).group(0)
+    except AttributeError:
+        return np.NaN
         
-       
+borges_df["typ publikacji"] = borges_df["zapisy bibliograficzne"].apply(lambda x: get_typ_publikacji(x))
+def get_wspolpracownik_rola(x):
+    if isinstance(x["typ publikacji"], str) and x["zapisy bibliograficzne"].startswith(x["typ publikacji"]) and x["zapisy bibliograficzne"].count("|") > 1:
+        return x["zapisy bibliograficzne"].split("|")[1]
+    elif isinstance(x["typ publikacji"], str) and x["zapisy bibliograficzne"].startswith(x["typ publikacji"]):
+        return x["zapisy bibliograficzne"].split(" ; ")[1].split(" ")[0]
+    elif "tł." in x["zapisy bibliograficzne"]:
+        return "tł."
         
-           
-           
-        
+borges_df["współpracownik - rola"] = borges_df[["zapisy bibliograficzne", "typ publikacji"]].apply(lambda x: get_wspolpracownik_rola(x),axis=1)
+def get_wspolpracownik_nazwisko(x):
+    if isinstance(x["współpracownik - rola"], str):
+        try:
+            return re.findall("(?<=tł. |tł.\|)\p{Lu}[\p{L}-]+, \p{Lu}.",x["zapisy bibliograficzne"])[0]
+        except IndexError:
+            return np.NaN
+
+borges_df[]
+
+borges_df["współpracownik - nazwisko"] = borges_df[["zapisy bibliograficzne", "współpracownik - rola"]].apply(lambda x: get_wspolpracownik_nazwisko(x),axis=1)
+
+
+y = "w i e r s z e|tł.|Baterowicz, M.|1973 nr 12 (32)  s. 246–7,  Aluzja do śmierci pułkownika Francisco Borgesa ; Ajedrez"
+re.findall("(?<=tł. |tł.\|)\p{Lu}[\p{L}-]+, \p{Lu}.",y)[0]
+
+re.match("(?<!\p{Lu} )(\p{Ll} ){2,}\p{Ll}(?!\p{L})","Dziewięć esejów dantejskich ;  tł. Partyka, J.,  Prószyński i S-ka  2007|= Nueve ensayos dantescos r e c.  Mrugalski, M., Ugolino z Argentyny, 2010 nr 1–2 (462–3)  s. 399–418	.").group(0)
+
+### połączenie LnŚ + PBL + BN + VIAF -> połączony dataset
+
+#%%        
         wiersze = new_test[1]
         wiersze_tylko_tekst = []
         for lista in wiersze:
