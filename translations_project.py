@@ -21,15 +21,15 @@ from google_drive_research_folders import cr_projects
 import gspread_pandas as gp
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
-from google_drive_credentials import gc, credentials
+# from google_drive_credentials import gc, credentials
 import datetime
 import itertools
 import difflib
-import num2words
+# import num2words
 from functools import reduce
 import sys
 import csv
-
+#%%
 gauth = GoogleAuth()
 gauth.LocalWebserverAuth()
 
@@ -680,58 +680,64 @@ fields_order.sort(key = lambda x: ([str,int].index(type(1 if re.findall(r'\w+', 
 new_df = new_df.reindex(columns=fields_order)
 new_df.to_excel('loc_data.xlsx', index = False)
 
-#OCLC
+#%%OCLC
+
+import xml.etree.ElementTree as ET
+>>> tree = ET.parse('test.xml')
+>>> for elem in tree.iter():
+...     print elem
 
 #preparation
 
-# =============================================================================
-# oclc_viaf = 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/dr117byviaf.xml'
-# oclc_lang = 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/dr117bylang.xml'
-# 
-# ov = open(oclc_viaf, "r", encoding="UTF-8")
-# ind = 0
-# for line in ov:
-#     ind += 1
-# ov_number = ind
-# print(f"Number of OCLC VIAF records: {ov_number}")
-# 
-# ol = open(oclc_lang, "r", encoding="UTF-8")
-# ind = 0
-# for line in ol:
-#     ind += 1
-# ol_number = ind
-# print(f"Number of OCLC Czech records: {ol_number}")
-# 
-# ov = open(oclc_viaf, "r", encoding="UTF-8")
-# writer = pymarc.TextWriter(io.open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', 'wt', encoding="utf-8"))
-# for i, line in enumerate(ov, 1):
-#     print(f"{i}/{ov_number}")
-#     with open('test.xml', 'wt', encoding="UTF-8") as file:
-#         file.write(line)
-#     records = pymarc.map_xml(writer.write, 'test.xml')
-# writer.close()
-# 
-# ol = open(oclc_lang, "r", encoding="UTF-8")
-# ol_errors = []
-# writer = pymarc.TextWriter(io.open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.mrk', 'wt', encoding="utf-8"))
-# for i, line in enumerate(ol, 1):
-#     print(f"{i}/{ol_number}")
-#     try:
-#         with open('test.xml', 'wt', encoding="UTF-8") as file:
-#             file.write(line)
-#         records = pymarc.map_xml(writer.write, 'test.xml')
-#     except PermissionError:
-#         ol_errors.append(line)
-# writer.close()
-# 
-# mrk_to_mrc('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrc', '001')
-# mrk_to_mrc('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.mrk', 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.mrc', '001')
-# 
-# oclc_viaf = mrk_to_df('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', '001')
-# oclc_viaf.to_excel('oclc_viaf.xlsx', index=False)
-# oclc_lang, ocl_viaf_errors = mrk_to_df('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_lang.mrk', '001')
-# oclc_lang.to_csv('oclc_lang.csv', index=False)
-# =============================================================================
+oclc_viaf = 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/dr117byviaf.xml'
+oclc_lang = 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/dr117bylang.xml'
+
+ov = open(oclc_viaf, "r", encoding="UTF-8")
+ind = 0
+for line in ov:
+    if '1135277855' in line:
+        print(line)
+        break
+    ind += 1
+ov_number = ind
+print(f"Number of OCLC VIAF records: {ov_number}")
+
+ol = open(oclc_lang, "r", encoding="UTF-8")
+ind = 0
+for line in ol:
+    ind += 1
+ol_number = ind
+print(f"Number of OCLC Czech records: {ol_number}")
+
+ov = open(oclc_viaf, "r", encoding="UTF-8")
+writer = pymarc.TextWriter(io.open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', 'wt', encoding="utf-8"))
+for i, line in enumerate(ov, 1):
+    print(f"{i}/{ov_number}")
+    with open('test.xml', 'wt', encoding="UTF-8") as file:
+        file.write(line)
+    records = pymarc.map_xml(writer.write, 'test.xml')
+writer.close()
+
+ol = open(oclc_lang, "r", encoding="UTF-8")
+ol_errors = []
+writer = pymarc.TextWriter(io.open('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.mrk', 'wt', encoding="utf-8"))
+for i, line in enumerate(ol, 1):
+    print(f"{i}/{ol_number}")
+    try:
+        with open('test.xml', 'wt', encoding="UTF-8") as file:
+            file.write(line)
+        records = pymarc.map_xml(writer.write, 'test.xml')
+    except PermissionError:
+        ol_errors.append(line)
+writer.close()
+
+mrk_to_mrc('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrc', '001')
+mrk_to_mrc('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.mrk', 'F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.mrc', '001')
+
+oclc_viaf = mrk_to_df('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_viaf.mrk', '001')
+oclc_viaf.to_excel('oclc_viaf.xlsx', index=False)
+oclc_lang, ocl_viaf_errors = mrk_to_df('F:/Cezary/Documents/IBL/Translations/OCLC/Czech viaf/oclc_lang.mrk', '001')
+oclc_lang.to_csv('oclc_lang.csv', index=False)
 
 oclc_lang = pd.read_csv('F:/Cezary/Documents/IBL/Translations/OCLC/Czech origin_trans/oclc_lang.csv')
 
