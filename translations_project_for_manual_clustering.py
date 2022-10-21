@@ -231,12 +231,13 @@ Counter(edited_records).most_common(10)
 #%% uzupełnienia, tego, co się wymknęło
 
 #dodawać po każdej rundzie kolejne
-empty_clusters = [42155155, 26799077, 57775596, 1431393, 16772379, 13205408, 63403408, 708331248, 155533, 13205408, 181698433, 23846781, 260010551]
-empty_sheets = ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1', '258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1', '056_56651696_155533_1', '258_76500434_13205408_7', '246_4931097_181698433_5', '056_56651696_155533_5', '146_51691735_23846781_17', '153_51691735_260010551_17']
+empty_clusters = [42155155, 26799077, 57775596, 1431393, 16772379, 13205408, 63403408, 708331248, 155533, 13205408, 181698433, 23846781, 260010551, 26443215]
+empty_sheets = ['212_29531402_42155155_2', '265_34469656_26799077_4', '030_42003196_57775596_1', '034_46774385_1431393_1', '258_76500434_13205408_7', '140_19683055_63403408_3', '046_46774385_708331248_1', '056_56651696_155533_1', '258_76500434_13205408_7', '246_4931097_181698433_5', '056_56651696_155533_5', '146_51691735_23846781_17', '153_51691735_260010551_17', '174_51691735_26443215_17']
 
 exceptions = {k:v for k,v in authors_with_works.items() if any(e.get('edited') == False for e in v.get('clusters'))}
 
 exceptions = {k:{ka:[{kb:True if kb == 'edited' and e['cluster_id'] in empty_clusters else vb for kb,vb in e.items()} for e in va] if isinstance(va,list) else va for ka,va in v.items()} for k,v in exceptions.items()}
+exceptions = {k:v for k,v in exceptions.items() if any(e.get('edited') == False for e in v.get('clusters'))}
 
 # test = {k:v for k,v in authors_with_works.items() if any(e.get('edited') == False for e in v.get('clusters')) and any(e.get('edited') not in empty_clusters for e in v.get('clusters'))}
 
