@@ -4,7 +4,7 @@ import regex as re
 import requests
 import pandas as pd
 from collections import Counter
-from my_functions import marc_parser_dict_for_field
+from my_functions import marc_parser_dict_for_field, create_google_worksheet
 import numpy as np
 from unidecode import unidecode
 import sys
@@ -15,11 +15,19 @@ from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from collections import defaultdict
 from ast import literal_eval
+from itertools import groupby
+import gspread as gs
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
 
 #%% def
 
 def simplify_place_name(x):
     return ''.join([unidecode(e).lower() for e in re.findall('[\p{L}- ]',  x)]).strip()
+
+def all_equal(iterable):
+    g = groupby(iterable)
+    return next(g, True) and not next(g, False)
 
 #%% przygotowanie danych gonames
 
@@ -272,10 +280,11 @@ ov_records = pd.read_excel(r"translation_database_clusters_year_author_language_
 all_records_df = all_records_df.loc[all_records_df['001'].isin(ov_records['001'])]
 
 #wgranie aktualnego pliku
-translations_df = pd.read_excel('translation_before_manual_2022-09-20.xlsx')     
+translations_df = pd.read_excel('translation_before_manual_2022-09-20.xlsx')   
 
 #27068 -- all records
 single_records = len([e for e in translations_df['group_ids'].to_list() if '❦' not in e])
+# 15425 single records
 grouped_records = len([e for e in translations_df['group_ids'].to_list() if '❦' in e])
 #grouped_records == 43%
 
@@ -345,7 +354,7 @@ def get_geonames_country(geoname_id):
     except KeyError:
         get_geonames_country(geoname_id)
 
-with ThreadPoolExecutor(max_workers=50) as executor:
+with ThreadPoolExecutor() as executor:
     list(tqdm(executor.map(get_geonames_country, geonames_ids), total=len(geonames_ids)))
     
 #dodać kolumnę    
@@ -457,6 +466,47 @@ places_dict.index = places['001']
 places_dict.drop(columns='001',inplace=True)
 places_dict = places_dict.to_dict(orient='index')
 
+#porównanie miejsc dla zgrupowanych rekordów
+
+# tylko nazwy
+
+places_compared = {k:[places_dict.get(int(e)).get('geonames_name') for e in v] for k,v in records_groups_multiple_dict.items()}
+
+different_places = {k:v for k,v in places_compared.items() if not all_equal(v)}
+
+different_places_ids = {k:records_groups_multiple_dict.get(k) for k,v in different_places.items()}
+# 3112 grup ma różne miejsca wydania
+
+records_to_check_df = pd.DataFrame()
+for k,v in tqdm(different_places_ids.items()):
+    test_df_geo = places.loc[places['001'].isin([int(e) for e in v])]
+    test_df = all_records_df.loc[all_records_df['001'].isin([int(e) for e in v])][['001', '008', '100', '245', '260']]
+    test_df = pd.merge(test_df, test_df_geo, on='001', how='inner')
+    test_df.insert(loc=0, column='group', value=k)
+    records_to_check_df = pd.concat([records_to_check_df, test_df])
+records_to_check_df['to separate'] = None
+
+# 3112 grup przekłada się na 13139
+
+#%%
+gc = gs.oauth()
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()
+drive = GoogleDrive(gauth)
+
+sheet = gc.create('deduplicated_records_to_be_checked_DRAFT', '1YLfF5NyFVXC6NYpp-WhjGxMDxqXn8FT3')
+create_google_worksheet(sheet.id, 'deduplicated_records_to_be_checked_DRAFT', records_to_check_df)
+#%%
+
+
+all_equal(places_compared.get(54194849))
+all_equal(places_compared.get(52388693))
+all_equal(places_compared.get(53455645))
+# wszystkie dane
+
+
+
+
 #current records with places
 dict(zip(records_groups_multiple_dict.keys(), ))
 
@@ -472,6 +522,9 @@ translations_df_places = {k:tuple({ka:tuple(va) if isinstance(va,list) else va f
 #tu mam zbudoawać uzupełnione miejsca, a potem porównać
 
 
+
+
+test = places.loc[places['001'] == 9925751]
 
 
 
