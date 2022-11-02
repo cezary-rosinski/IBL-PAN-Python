@@ -12,11 +12,18 @@ from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from concurrent.futures import ThreadPoolExecutor
 import json
+from datetime import datetime
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 pd.set_option('display.float_format', lambda x: '%.3f' % x)
 pd.options.mode.chained_assignment = None
+
+#%%
+now = datetime.now().date()
+year = now.year
+month = '{:02}'.format(now.month)
+day = '{:02}'.format(now.day)
 
 #%% defs
 
@@ -155,7 +162,7 @@ test = translations_df_new.copy()
 ids_to_be_changed = [233979417, 499657879, 609190927, 865861032, 871518282, 948562166, 1017395251, 1037670745, 1120923101, 693046345, 612484641, 10000000648, 70357873, 638788889, 654310823, 756886304, 970939398, 1069895800, 1075256608, 223391512, 85568040, 22259771, 85701806, 693046207, 1031719525, 1185289556, 1126992949, 1185327579, 77710868, 470367451, 631744717, 887579640, 894762749, 1011668322, 1193400156, 651213307, 651373365, 692935236, 1011215706, 1196397163, 254963673, 911815625, 123755002, 977421011, 977917241, 21715009, 1080763089, 959631455, 994329657, 639960874, 644008507, 187126309, 634453477, 279460747, 187126320, 599773453, 34659978, 562925701, 562925708, 752809693, 976900995, 1024710747]
 
 translations_df_new.loc[translations_df_new['001'].isin(ids_to_be_changed), ['author_id']] = '34454129'
-# translations_df_new.to_excel(f'translations_after_manual_{now}.xlsx', index=False)
+translations_df_new.to_excel(f'translations_after_manual_{now}.xlsx', index=False)
    
 edited_clusters = list(set(edited_clusters))  
 with open('translation_edited_clusters.txt', 'wt', encoding='utf-8') as f:

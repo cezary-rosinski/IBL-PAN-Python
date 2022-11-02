@@ -280,15 +280,19 @@ ov_records = pd.read_excel(r"translation_database_clusters_year_author_language_
 all_records_df = all_records_df.loc[all_records_df['001'].isin(ov_records['001'])]
 
 #wgranie aktualnego pliku
-translations_df = pd.read_excel('translation_before_manual_2022-09-20.xlsx')   
+translations_df = pd.read_excel('translation_before_manual_2022-09-20.xlsx')  
 
+# translations_df_new.shape[0] #26392
 #27068 -- all records
 single_records = len([e for e in translations_df['group_ids'].to_list() if '❦' not in e])
+# len([e for e in translations_df_new['group_ids'].to_list() if '❦' not in e]) #15130
 # 15425 single records
 grouped_records = len([e for e in translations_df['group_ids'].to_list() if '❦' in e])
+# len([e for e in translations_df_new['group_ids'].to_list() if '❦' in e]) #11262
 #grouped_records == 43%
 
 grouped_ids = [el for sub in [e.split('❦') for e in translations_df['group_ids'].to_list() if '❦' in e] for el in sub]
+# len([el for sub in [e.split('❦') for e in translations_df_new['group_ids'].to_list() if '❦' in e] for el in sub]) #35078
 # 11643 rekordów powstało z 36749 rekordów
 
 #%% przypisanie gonames do rekordów
