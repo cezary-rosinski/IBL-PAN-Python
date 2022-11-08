@@ -210,6 +210,7 @@ for key, value in tqdm(sh_dict.items()):
         
     for k,v in locsh_dict.items():
         query = f"https://id.loc.gov/authorities/subjects/{v['ID']}.json"
+        # query = f"https://id.loc.gov/authorities/subjects/sh85026379.json"
         pure_url = query.replace('https', 'http').replace('.json','')
         response = requests.get(query)
         response.encoding = 'UTF-8'

@@ -560,7 +560,9 @@ def create_google_worksheet(sheet_id, worksheet_name, df, delete_default_workshe
         try:
             sheet.del_worksheet(sheet.worksheet('Arkusz1'))
         except:
-            sheet.del_worksheet(sheet.worksheet('Sheet1'))
+            try:
+                sheet.del_worksheet(sheet.worksheet('Sheet1'))
+            except: None
 
 
 
