@@ -4,7 +4,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-filepath = "I:\documents\My Clippings.txt"
+filepath = "D:\documents\My Clippings.txt"
 
 browser = webdriver.Firefox(executable_path='geckodriver.exe')
 browser.get('https://my.clippings.io/#/login')
