@@ -17,7 +17,7 @@ import datetime
 import pickle
 import sys
 sys.path.insert(1, 'C:/Users/Cezary/Documents/SPUB-project')
-from geonames_accounts import geoname_users
+from geonames_accounts import geonames_users
 from collections import Counter
 from unidecode import unidecode
 from Levenshtein import ratio
