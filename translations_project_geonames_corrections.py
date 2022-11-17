@@ -4,7 +4,7 @@ import regex as re
 import requests
 import pandas as pd
 from collections import Counter
-from my_functions import marc_parser_dict_for_field, create_google_worksheet, gsheet_to_df
+from my_functions import marc_parser_dict_for_field, create_google_worksheet, gsheet_to_df, cluster_strings
 import numpy as np
 from unidecode import unidecode
 import sys
@@ -19,6 +19,8 @@ from itertools import groupby
 import gspread as gs
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
+from xml.etree import ElementTree
+from collections import ChainMap
 
 #%% def
 
@@ -504,53 +506,70 @@ create_google_worksheet(sheet.id, 'deduplicated_records_to_be_checked', records_
 #%% coma corrections
 
 translations_df = pd.read_excel('translations_after_manual_2022-11-02.xlsx')  
-deduplicated = gsheet_to_df('1jwbZZHqzETCkUW04M-ftFt1vx9yyBp_WIfPIJt0JOYs', 'deduplicated_records_to_be_checked')
+deduplicated = gsheet_to_df('1jwbZZHqzETCkUW04M-ftFt1vx9yyBp_WIfPIJt0JOYs', 'deduplicated_records_to_be_checked').rename(columns={1:'001',8:'008',100:'100',245:'245',260:'260'})
 
 country_codes = pd.read_excel('translation_country_codes.xlsx')
 country_codes = [list(e[-1]) for e in country_codes.iterrows()]
 country_codes = dict(zip([e[0] for e in country_codes], [{'MARC_name': e[1], 'iso_alpha_2': e[2], 'Geonames_name': e[-1]} for e in country_codes]))
 
+
 places = translations_df[['001', 'author_id', '008', '260']]
+places = deduplicated[['001', '008', '260']]
 # places = places[places.index.isin([1, 2, 72, 155, 262, 445, 667, 1437, 2298, 4402, 13258])]
+all_places = pd.DataFrame()
+for places in [translations_df[['001', 'author_id', '008', '260']], deduplicated[['001', '008', '260']]]:
 
-places['country'] = places['008'].apply(lambda x: x[15:18])
-places.drop(columns='008', inplace=True)
-places['country'] = places['country'].str.replace('\\', '', regex=False)
-places['country_name'] = places['country'].apply(lambda x: country_codes[x]['MARC_name'] if x in country_codes else 'unknown')
-places['geonames_name'] = places['country'].apply(lambda x: country_codes[x]['Geonames_name'] if x in country_codes else 'unknown')
-#155, 13258
-# places['places'] = places['260'].str.replace(' - ', '$a')
-places['places'] = places['260'].apply(lambda x: [list(e.values())[0] for e in marc_parser_dict_for_field(x, '\$') if '$a' in e] if not(isinstance( x, float)) else x)
-places['places'] = places['places'].apply(lambda x: ''.join([f'$a{e}' for e in x]) if not(isinstance(x, float)) else np.nan)
+    places['001'] = places['001'].astype(np.int64)
+    places['country'] = places['008'].apply(lambda x: x[15:18])
+    places.drop(columns='008', inplace=True)
+    places['country'] = places['country'].str.replace('\\', '', regex=False)
+    places['country_name'] = places['country'].apply(lambda x: country_codes[x]['MARC_name'] if x in country_codes else 'unknown')
+    places['geonames_name'] = places['country'].apply(lambda x: country_codes[x]['Geonames_name'] if x in country_codes else 'unknown')
+    #155, 13258
+    # places['places'] = places['260'].str.replace(' - ', '$a')
+    places['places'] = places['260'].apply(lambda x: [list(e.values())[0] for e in marc_parser_dict_for_field(x, '\$') if '$a' in e] if not(isinstance( x, float)) else x)
+    places['places'] = places['places'].apply(lambda x: ''.join([f'$a{e}' for e in x]) if not(isinstance(x, float)) else np.nan)
+    
+    places['places'] = places['places'].apply(lambda x: re.sub('( : )(?!\$)', r'$b', x) if pd.notnull(x) else x)
+    places['places'] = places['places'].apply(lambda x: re.sub('( ; )(?!\$)', r'$a', x) if pd.notnull(x) else x)
+    places['places'] = places['places'].apply(lambda x: re.sub('\d', r'$a', x) if pd.notnull(x) else x)
+    places['places'] = places['places'].apply(lambda x: re.sub(' - ', r'$a', x) if pd.notnull(x) else x)
+    places['places'] = places['places'].apply(lambda x: re.sub(' \& ', r'$a', x) if pd.notnull(x) else x)
+    # places['places'] = places['places'].apply(lambda x: re.sub(', ', r'$a', x) if pd.notnull(x) else x)
+    places['places'] = places['places'].apply(lambda x: re.sub('\(', r'$a', x) if pd.notnull(x) else x)
+    places['places'] = places['places'].apply(lambda x: re.sub('\[', r'$a', x) if pd.notnull(x) else x)
+    places['places'] = places['places'].apply(lambda x: re.sub('\/', r'$a', x) if pd.notnull(x) else x)
+    
+    places['places'] = places['places'].apply(lambda x: [list(e.values())[0] for e in marc_parser_dict_for_field(x, '\$') if '$a' in e] if pd.notnull(x) else x)
+    places['places'] = places['places'].apply(lambda x: x if x else np.nan)
+    
+    places['simple'] = places['places'].apply(lambda x: [simplify_place_name(e).strip() for e in x] if not(isinstance(x, float)) else x if pd.notnull(x) else x)
+    places['simple'] = places['simple'].apply(lambda x: [e for e in x if e] if not(isinstance(x, float)) else np.nan)
+    
+    places['comma'] = places['places'].apply(lambda x: any(e for e in x if ',' in e and (e.endswith(',') == False if e.count(',') == 1 else True)) if not(isinstance(x, float)) else False)
+    places = places.loc[places['comma'] == True]
+    
+    try:
+        places = places.loc[~places['001'].isin(all_places['001'])]
+    except KeyError:
+        pass
+    
+    ger_do_dopytania = [10000015968, 31413396, 72674954, 678825773, 263635407, 220880807, 760615705, 603848884, 719948759, 221924160, 678695024, 19318756, 57397812, 760555923]
+    ger_out = [e for e in places.loc[places['country'] == 'gw']['001'].to_list() if e not in ger_do_dopytania]
+    places = places.loc[~places['001'].isin(ger_out)]
+    
+    all_places = pd.concat([all_places, places])
 
-places['places'] = places['places'].apply(lambda x: re.sub('( : )(?!\$)', r'$b', x) if pd.notnull(x) else x)
-places['places'] = places['places'].apply(lambda x: re.sub('( ; )(?!\$)', r'$a', x) if pd.notnull(x) else x)
-places['places'] = places['places'].apply(lambda x: re.sub('\d', r'$a', x) if pd.notnull(x) else x)
-places['places'] = places['places'].apply(lambda x: re.sub(' - ', r'$a', x) if pd.notnull(x) else x)
-places['places'] = places['places'].apply(lambda x: re.sub(' \& ', r'$a', x) if pd.notnull(x) else x)
-# places['places'] = places['places'].apply(lambda x: re.sub(', ', r'$a', x) if pd.notnull(x) else x)
-places['places'] = places['places'].apply(lambda x: re.sub('\(', r'$a', x) if pd.notnull(x) else x)
-places['places'] = places['places'].apply(lambda x: re.sub('\[', r'$a', x) if pd.notnull(x) else x)
-places['places'] = places['places'].apply(lambda x: re.sub('\/', r'$a', x) if pd.notnull(x) else x)
-
-places['places'] = places['places'].apply(lambda x: [list(e.values())[0] for e in marc_parser_dict_for_field(x, '\$') if '$a' in e] if pd.notnull(x) else x)
-places['places'] = places['places'].apply(lambda x: x if x else np.nan)
-
-places['simple'] = places['places'].apply(lambda x: [simplify_place_name(e).strip() for e in x] if not(isinstance(x, float)) else x if pd.notnull(x) else x)
-places['simple'] = places['simple'].apply(lambda x: [e for e in x if e] if not(isinstance(x, float)) else np.nan)
-
-places['comma'] = places['places'].apply(lambda x: any(e for e in x if ',' in e and (e.endswith(',') == False if e.count(',') == 1 else True)) if not(isinstance(x, float)) else False)
-places = places.loc[places['comma'] == True]
-
-ger_out = places.loc[places['country'] == 'gw']
-ger_do_dopytania = [10000015968, 31413396, 72674954, 678825773, 263635407, 220880807, 760615705, 603848884, 719948759, 221924160]
-places = places.loc[(~places['001'].isin(ger_out)) &
-                    (places['001'].isin(ger_do_dopytania))]
-
+# deduplicated.loc[deduplicated['001'] == '760555923'][['geonames_id', 'geonames_name', 'geonames_country']].values.tolist()
+#manualnie
+#72397243 to Berlin
+#Duseldorf
+#Iowa City
 #TUTAJ
+#72239206 to Praga
 
 places_dict = {}
-for i, row in tqdm(places.iterrows(), total=places.shape[0]):
+for i, row in tqdm(all_places.iterrows(), total=all_places.shape[0]):
     try:
         for el in row['simple']:
             if el and el not in places_dict:
@@ -584,22 +603,72 @@ places_clusters = cluster_strings(places_ordered, 0.75)
 places_clusters_with_country = {k:[(e, places_dict[e]['country'], places_dict[e]['geonames_country']) for e in v] for k,v in places_clusters.items()}
 
 
+#uwaga na wroclaw poland
+atest = all_places.loc[all_places['simple'].apply(lambda x: any(e for e in x if e == 'luzern frankfurt am main'))]
+deduplicated['001'] = deduplicated['001'].astype(np.int64)
+deduplicated_limited = deduplicated.loc[~deduplicated['001'].isin(translations_df['001'])]
+everything = pd.concat([translations_df, deduplicated_limited])[['001', 'geonames_id', 'geonames_name', 'geonames_country']]
+all_places_wide = pd.merge(all_places, everything, on='001', how='left')
+
+all_places_wide.to_excel('all_places.xlsx', index=False)
+ttt = translations_df.loc[translations_df['001'] == 713003756]
+[['geonames_id', 'geonames_name', 'geonames_country']].values.tolist()
+deduplicated.loc[deduplicated['001'] == '10239118'][['geonames_id', 'geonames_name', 'geonames_country']].values.tolist()
+
+#%% do odpytki po manualnej edycji
+
+fixed_places_df = pd.read_excel('fixed_places.xlsx', sheet_name='fixed_places')
+fixed_places = fixed_places_df[['001', 'geonames_id']].values.tolist()
+
+# Counter([e[0] for e in fixed_places]).most_common(10)
+
+fixed_places = dict(zip([e[0] for e in fixed_places], [literal_eval(e[-1]) for e in fixed_places]))
+
+places_for_query = set([e for sub in fixed_places.values() for e in sub])
+
+places_geonames = {}
+users_index = 0
+
+for place in tqdm(places_for_query):
+    # place = list(places_for_query)[0]
+    url = 'http://api.geonames.org/get?'
+    params = {'username': geonames_users[users_index], 'geonameId': place}
+    response = requests.get(url, params=params)
+    
+    tree = ElementTree.fromstring(response.content)
+    data = dict(ChainMap(*[{e.tag: e.text} for e in tree if e.tag in ['name', 'lat', 'lng', 'geonameId', 'countryName']]))
+    places_geonames.update({place:data})
+    
+fixed_places_geonames = {k:[places_geonames.get(e) for e in v] for k,v in fixed_places.items()}
+{k:v for k,v in fixed_places_geonames.items() if any(e.get('geonameId') == '2661881' for e in v)}
+
+df = pd.DataFrame()
+for k,v in tqdm(fixed_places_geonames.items()):
+    # k = 2968007
+    # v = fixed_places_geonames.get(k)
+    temp_df = pd.DataFrame(v)
+    temp_df['001'] = k
+    df = pd.concat([df, temp_df])
+
+df.reset_index(drop=True, inplace=True)  
+df = df.groupby('001').agg(lambda x: x.to_list()).reset_index()
+# test = df.loc[df['001'] == 2968007]
+
+df.to_excel('fixed_places_with_geonames.xlsx', index=False)
+
+#następne kroki:
+    #1. podmieniam deduplicated wartościami z fixed
+    #2. grupuję wartości z deduplicated i podmieniam nimi translations_df
+    #3. podmieniam translations_df tymi wartościami z fixed, które nie były użyte w deduplicated
+    #4. sortuję translations_df i patrzę, czy nie można, czegoś semi-automatycznie naprawić (np. Dusseldorf)
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
+    
+   
 
 
 

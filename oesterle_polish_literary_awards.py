@@ -52,9 +52,9 @@ dzialy = sorted(pbl_literary_awards['DZ_NAZWA'].unique())
 
 pbl_literary_awards = pbl_literary_awards.loc[pbl_literary_awards['DZ_NAZWA'].isin(['Nagrody (życie literackie polskie za granicą)', 'Nagrody (życie literackie)'])]
 
-awards_unique = sorted(pbl_literary_awards['ZA_TYTUL'].unique())
+awards_unique = sorted(set(pbl_literary_awards['ZA_TYTUL'].unique()))
 
-awards_dict = cluster_strings(awards_unique, 0.85)
+awards_dict = cluster_strings(awards_unique, 0.80)
 awards_dict_ids = dict(zip(awards_dict.keys(), range(1,len(awards_dict)+1)))
 
 pbl_literary_awards['ID'] = pbl_literary_awards['ZA_TYTUL'].apply(lambda x: awards_dict_ids.get({k for k,v in awards_dict.items() if x in v}.pop()))
