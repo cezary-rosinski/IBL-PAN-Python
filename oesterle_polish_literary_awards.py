@@ -4,11 +4,12 @@ import numpy as np
 from my_functions import gsheet_to_df, cluster_strings
 import regex as re
 from collections import Counter
+from pbl_credentials import pbl_user, pbl_password
 
 #%% SQL connection
 
 dsn_tns = cx_Oracle.makedsn('pbl.ibl.poznan.pl', '1521', service_name='xe')
-connection = cx_Oracle.connect(user='IBL_SELECT', password='CR333444', dsn=dsn_tns, encoding='windows-1250')
+connection = cx_Oracle.connect(user=pbl_user, password=pbl_password, dsn=dsn_tns, encoding='windows-1250')
 
 #%% PBL query
 
