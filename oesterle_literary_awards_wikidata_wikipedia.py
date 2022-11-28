@@ -9,6 +9,7 @@ import pywikibot
 from bs4 import BeautifulSoup
 from pywikibot import textlib
 from pywikibot.exceptions import NoPageError
+from collections import Counter
 
 #%% def
 
@@ -34,7 +35,10 @@ def get_wikidata_label(wikidata_url):
     try:
         label = result.get('entities').get(wikidata_id).get('labels').get('en').get('value')
     except AttributeError:
-        label = result.get('entities').get(wikidata_id).get('labels').get('de').get('value')
+        try:
+            label = result.get('entities').get(wikidata_id).get('labels').get('de').get('value')
+        except AttributeError:
+            label = None
     wikidata_urls_dict.update({wikidata_url: label})
 #%% reading literary awards spreadsheet
 
@@ -136,6 +140,62 @@ df_de['county origin'] = 'DE'
 
 df_total = pd.concat([df_pl, df_cz, df_de_david, df_de])
 
+#%%
+
+literary_awards = gsheet_to_df('1satFAR9-5DFGwk-PFrgcWVOBMahNs7RcQ3dY1BvLVvM', 'Awards_pl_cs_de')
+literary_awards_wikidata_list_ids = set([e for e in literary_awards['wikidata'].to_list() if not isinstance(e,float)])
+
+wikidata_mapping = gsheet_to_df('1satFAR9-5DFGwk-PFrgcWVOBMahNs7RcQ3dY1BvLVvM', 'wikidata mapping')
+wikidata_properties = set([e for e in wikidata_mapping['Wikidata property'].to_list() if not isinstance(e, float)])
+
+davids_model = wikidata_mapping["David's model"].to_list()
+davids_model_with_properties = {k:v for k,v in dict(zip(wikidata_mapping['Wikidata property'], wikidata_mapping["David's model"])).items() if not isinstance(k, float)}
+
+wikidata_response_dict = {}
+wikipedia_urls = {}
+for wikidata_id in tqdm(literary_awards_wikidata_list_ids):
+    # wikidata_id = list(literary_awards_wikidata_list_ids)[0]
+    # wikidata_id = 'Q37922'
+    # wikidata_id = 'Q11789161'
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    result = requests.get(url).json()
+    wikipedia_links = result.get('entities').get(wikidata_id).get('sitelinks')
+    wikipedia_urls.update({wikidata_id: wikipedia_links})
+    try:
+        english_title = result.get('entities').get(wikidata_id).get('labels').get('en').get('value')
+    except AttributeError:
+        english_title = None
+    claims = {k:v for k,v in result.get('entities').get(wikidata_id).get('claims').items() if k in wikidata_properties}
+    doe_model = {davids_model_with_properties.get(k):[get_wikidata_data(e) for e in v] for k,v in claims.items()}
+    doe_model.update({'Official title in English': english_title})
+    wikidata_response_dict.update({wikidata_id: doe_model})
+    
+df = pd.DataFrame.from_dict(wikidata_response_dict, orient='index')
+df['Endowment'] = df['Endowment'].apply(lambda x: [e for sub in x for e in sub] if isinstance(x, list) else x)
+df['Frequency'] = df['Frequency'].apply(lambda x: [e for sub in x for e in sub] if isinstance(x, list) else x)
+
+wikidata_urls = [[[ele for ele in el if not isinstance(ele, float) and 'wiki' in ele] if not isinstance(el, float) and el is not None else None for el in df[e].to_list()] for e in df.columns.values]
+wikidata_urls = [e for sub in wikidata_urls for e in sub if e]
+wikidata_urls = [e for sub in wikidata_urls for e in sub]
+       
+wikidata_urls_dict = {}
+with ThreadPoolExecutor() as executor:
+    list(tqdm(executor.map(get_wikidata_label,wikidata_urls), total=len(wikidata_urls)))
+
+wikidata_urls_dict['www.wikidata.org/wiki/Q21296312'] = 'Central Council of Trade Unions'
+    
+df_labels = df.copy()
+for column in df_labels:
+    df_labels[column] = df_labels[column].apply(lambda x: [wikidata_urls_dict.get(e, e) for e in x] if isinstance(x, list) else x)
+    
+df_id_labels = df.copy()
+for column in df_id_labels:
+    df_id_labels[column] = df_id_labels[column].apply(lambda x: [{e: wikidata_urls_dict.get(e, e)} for e in x] if isinstance(x, list) else x)
+
+all_columns = ["Official title in English", "Prize's homepage", "Alternative titles", "Year of foundation ", "Frequency", "Endowment", "Donor-Organisation", "Former Donor-Organisations", "Country of the donor-organisation", "Organization and coordination", "Jurors", "Reach", "Awardee profile", "Award subject", "Work awarded", "Nominees", "Laureates", "Genre", "Additional information on awarding practice", "European program", "Self-description of the Literary Prize", "Text of self-description", "Laureat speech (link)", "Laudation (link)", "Communication mode of the European program", "Coding: Value reference", "Coding: Spatial reference", "Coding: Personality reference", "Coding: Literary-aesthetic reference", "Coding: Structural-political reference", "Conditions of participation", "Formal requirements / restrictions", "Award Framework", "Remarks"]
+columns_wikidata = ["Country of the donor-organisation", "Year of foundation", "Official title in English", "Coding: Personality reference", "Organization and coordination", "Endowment", "Prize's homepage", "Laureates", "Alternative titles", "Frequency"]
+
+[e for e in all_columns if e.strip() not in columns_wikidata]
 
 #%% 
 site = pywikibot.Site('de', 'wikipedia')
