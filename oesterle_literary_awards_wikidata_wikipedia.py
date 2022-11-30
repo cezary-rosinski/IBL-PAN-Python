@@ -192,6 +192,10 @@ df_id_labels = df.copy()
 for column in df_id_labels:
     df_id_labels[column] = df_id_labels[column].apply(lambda x: [{e: wikidata_urls_dict.get(e, e)} for e in x] if isinstance(x, list) else x)
 
+df_id_labels = df_id_labels[["Country of the donor-organisation", 'Year of foundation', 'Official title in English', 'Coding: Personality reference', 'Organization and coordination', 'Endowment', "Prize's homepage", 'Laureates', 'Alternative titles', 'Frequency']]
+
+df_id_labels.to_excel('awards.xlsx')
+
 all_columns = ["Official title in English", "Prize's homepage", "Alternative titles", "Year of foundation ", "Frequency", "Endowment", "Donor-Organisation", "Former Donor-Organisations", "Country of the donor-organisation", "Organization and coordination", "Jurors", "Reach", "Awardee profile", "Award subject", "Work awarded", "Nominees", "Laureates", "Genre", "Additional information on awarding practice", "European program", "Self-description of the Literary Prize", "Text of self-description", "Laureat speech (link)", "Laudation (link)", "Communication mode of the European program", "Coding: Value reference", "Coding: Spatial reference", "Coding: Personality reference", "Coding: Literary-aesthetic reference", "Coding: Structural-political reference", "Conditions of participation", "Formal requirements / restrictions", "Award Framework", "Remarks"]
 columns_wikidata = ["Country of the donor-organisation", "Year of foundation", "Official title in English", "Coding: Personality reference", "Organization and coordination", "Endowment", "Prize's homepage", "Laureates", "Alternative titles", "Frequency"]
 
