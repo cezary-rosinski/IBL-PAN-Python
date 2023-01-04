@@ -9,6 +9,7 @@ result = result.json()
 next_page = result.get('nextPage')
 
 start_url = 'https://data.bn.org.pl/api/networks/bibs.marc?limit=100&amp;marc=773t+Literatura+na+%C5%9Awiecie'
+#link powyżej też trzeba edytować; najlepiej zaznaczając w API BN format marc i skopiować URL
 
 
 ls_response = requests.get(start_url).text
