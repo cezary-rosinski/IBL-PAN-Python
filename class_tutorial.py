@@ -466,6 +466,158 @@ print(len(emp_1))
 
 #%% https://www.youtube.com/watch?v=jCzT9XFZ5bw Python OOP Tutorial 6: Property Decorators - Getters, Setters, and Deleters
 
+class Employee:
+    
+    def __init__(self, first, last):
+        self.first = first
+        self.last = last
+        self.email = first + '.' + last + '@company.com'
+        
+    def fullname(self):
+        return '{} {}'.format(self.first, self.last)
+
+emp_1 = Employee('Corey', 'Schafer')
+
+print(emp_1.first)
+print(emp_1.last)
+print(emp_1.fullname())
+
+emp_1.first = 'Jim'
+
+print(emp_1.first)
+print(emp_1.email) #to się nie zmieniło po zmianie imienia
+print(emp_1.fullname())
+
+#%% zmiana atrybutu na metodę pomaga
+
+class Employee:
+    
+    def __init__(self, first, last):
+        self.first = first
+        self.last = last
+        
+    def email(self):
+        return '{}.{}@company.com'.format(self.first, self.last)
+    
+    def fullname(self):
+        return '{} {}'.format(self.first, self.last)
+
+emp_1 = Employee('Corey', 'Schafer')
+
+print(emp_1.first)
+print(emp_1.last)
+print(emp_1.fullname())
+
+emp_1.first = 'Jim'
+
+print(emp_1.first)
+print(emp_1.email())
+print(emp_1.fullname())
+#ale... cały wcześniejszy kod jest do przepisania, żeby email z atrybutu emp_1.email stał się metodą emp_1.email
+
+#%% dekorator @property pozwala sięgać do metody jak do atrybutu -- getter
+
+class Employee:
+    
+    def __init__(self, first, last):
+        self.first = first
+        self.last = last
+    
+    @property    
+    def email(self):
+        return '{}.{}@company.com'.format(self.first, self.last)
+    
+    def fullname(self):
+        return '{} {}'.format(self.first, self.last)
+
+emp_1 = Employee('Corey', 'Schafer')
+
+print(emp_1.first)
+print(emp_1.last)
+print(emp_1.fullname())
+
+emp_1.first = 'Jim'
+
+print(emp_1.first)
+print(emp_1.email) #nawias jest zbędny
+print(emp_1.fullname())
+
+#UWAGA! @property pozwala sięgać do metody jak do atrybutu, ale sprawia, że nie można już sięgać do niej jak do metody
+
+#%% setter -- przypisywanie zmiennych do metod, tutaj do fullname
+class Employee:
+    
+    def __init__(self, first, last):
+        self.first = first
+        self.last = last
+    
+    @property    
+    def email(self):
+        return '{}.{}@company.com'.format(self.first, self.last)
+    @property
+    def fullname(self):
+        return '{} {}'.format(self.first, self.last)
+    @fullname.setter
+    def fullname(self, name):
+        first, last = name.split(' ')
+        self.first = first
+        self.last = last
+
+emp_1 = Employee('Corey', 'Schafer')
+
+emp_1.fullname = 'John Smith'
+
+print(emp_1.first)
+print(emp_1.email)
+print(emp_1.fullname)
+
+#%% deleter
+class Employee:
+    
+    def __init__(self, first, last):
+        self.first = first
+        self.last = last
+    
+    @property    
+    def email(self):
+        return '{}.{}@company.com'.format(self.first, self.last)
+    @property
+    def fullname(self):
+        return '{} {}'.format(self.first, self.last)
+    
+    @fullname.setter
+    def fullname(self, name):
+        first, last = name.split(' ')
+        self.first = first
+        self.last = last
+        
+    @fullname.deleter
+    def fullname(self):
+        print('Delete Name!')
+        self.first = None
+        self.last = None
+
+emp_1 = Employee('Corey', 'Schafer')
+
+emp_1.fullname = 'John Smith'
+
+print(emp_1.first)
+print(emp_1.email)
+print(emp_1.fullname)
+
+del emp_1.fullname
+
+emp_1.__dict__
+
+
+
+
+
+
+
+
+
+
 
 
 
