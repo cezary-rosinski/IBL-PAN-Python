@@ -9,11 +9,11 @@ import pandas as pd
 
 #%% main
 #mrc to mrk 
-# path = r"F:\Cezary\Documents\IBL\BN\bn_all\2023-01-19/"
-# files = [f for f in glob.glob(path + '*.mrc', recursive=True)]
-# for file_path in tqdm(files):
-#     path_mrk = file_path.replace('.mrc', '.mrk')
-#     mrc_to_mrk(file_path, path_mrk)
+path = r"F:\Cezary\Documents\IBL\BN\bn_all\2023-01-23/"
+files = [f for f in glob.glob(path + '*.mrc', recursive=True)]
+for file_path in tqdm(files):
+    path_mrk = file_path.replace('.mrc', '.mrk')
+    mrc_to_mrk(file_path, path_mrk)
     
 #zrobić wykres z podziałem na stulecia z liczbą rekordów z dedykacją + relacja dedykacja vs. niededykacja
 
