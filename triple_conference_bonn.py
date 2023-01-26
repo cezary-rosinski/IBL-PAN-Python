@@ -4,6 +4,7 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 import requests
 from SPUB_wikidata_connector import get_wikidata_label
 from tqdm import tqdm
+import pandas as pd
 
 
 user_agent = "WDQS-example Python/%s.%s" % (sys.version_info[0], sys.version_info[1])
@@ -49,7 +50,8 @@ for k,v in tqdm(final_dict.items()):
                  'longitude': longitude}
     final_dict[k] = temp_dict
     
-    
+df = pd.DataFrame().from_dict(final_dict, orient='index')
+df.to_excel('triple_bonn.xlsx', index=False)
 
 
 
@@ -61,32 +63,13 @@ for k,v in tqdm(final_dict.items()):
 
 
 
-def query_wikidata_person_with_viaf(viaf_id):
-    # viaf_id = 49338782
-    user_agent = "WDQS-example Python/%s.%s" % (sys.version_info[0], sys.version_info[1])
-    sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent=user_agent)
-    sparql.setQuery(f"""PREFIX wdt: <http://www.wikidata.org/prop/direct/>
-                SELECT distinct ?author ?authorLabel ?birthplaceLabel ?deathplaceLabel ?birthdate ?deathdate ?sexLabel ?pseudonym ?occupationLabel ?genreLabel ?birthNameLabel ?aliasLabel ?birthplace ?deathplace WHERE {{ 
-                  ?author wdt:P214 "{viaf_id}" ;
-                  optional {{ ?author wdt:P19 ?birthplace . }}
-                  optional {{ ?author wdt:P569 ?birthdate . }}
-                  optional {{ ?author wdt:P570 ?deathdate . }}
-                  optional {{ ?author wdt:P20 ?deathplace . }}
-                  optional {{ ?author wdt:P21 ?sex . }}
-                  optional {{ ?author wdt:P106 ?occupation . }}
-                  optional {{ ?author wdt:P742 ?pseudonym . }}
-                  optional {{ ?author wdt:P136 ?genre . }}
-                  optional {{ ?author rdfs:label ?alias . }}
-                  optional {{ ?author wdt:P1477 ?birthName . }}
-                SERVICE wikibase:label {{ bd:serviceParam wikibase:language "pl". }}}}""")
-    sparql.setReturnFormat(JSON)
-    while True:
-        try:
-            results = sparql.query().convert()
-            break
-        except HTTPError:
-            time.sleep(2)
-        except URLError:
-            time.sleep(5)
-    results = wikidata_simple_dict_resp(results)  
-    return results
+
+
+
+
+
+
+
+
+
+
