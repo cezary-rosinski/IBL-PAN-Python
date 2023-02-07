@@ -8,6 +8,33 @@ import json
 import pandas as pd
 from datetime import datetime
 from collections import Counter
+import regex as re
+
+#%% def
+
+def read_mrk_nukat(path):
+    records = []
+    with open(path, 'r', encoding='utf-8') as mrk:
+        record_dict = {}
+        for line in mrk.readlines():
+            line = line.replace('\n', '')
+            if line.startswith('LDR'):
+                if record_dict:
+                    records.append(record_dict)
+                    record_dict = {}
+                record_dict[line[:3]] = [line[4:]]
+            elif re.findall('^\d{3}', line):
+                key = line[:3]
+                if key in record_dict:
+                    record_dict[key] += [line[4:]]
+                else:
+                    record_dict[key] = [line[4:]]
+            elif line and line.startswith(' '):
+                keys = [e for e in record_dict if e != 'LDR']
+                max_key = max(keys, key = lambda x: int(x))
+                record_dict[max_key][-1] += line.strip()
+        records.append(record_dict)
+    return records
 
 #%% main
 #mrc to mrk 
@@ -68,6 +95,75 @@ df_1500_1700.to_excel(f'dedykacje_1500-1700_{datetime.now().date()}.xlsx', index
 
 #na końcu policzyć unikatowe identyfikatory, żeby zobaczyć, ile rekordów – 14331
 #uwaga na 500 z "brak dedykacji"
+
+
+#%% NUKAT
+
+nukat_paths = [r"F:\Cezary\Documents\IBL\NUKAT\wyb_wydzpol.print01", r"F:\Cezary\Documents\IBL\NUKAT\wyb_wydzpol.print02"]
+
+dedyk_nukat = {'500': [], #7805
+               '655': [], #0
+               '700': []} #6284
+for file in tqdm(nukat_paths):
+    file = read_mrk_nukat(file)
+    for dictionary in file:
+        for k,v in dictionary.items():
+            if k in ['500', '655', '700']:
+                for el in v:
+                    if 'dedyk' in el.lower():
+                        dedyk_nukat[k].append(dictionary)
+
+ids_set = []
+for k,v in dedyk_nukat.items():
+    for dictionary in v:
+        ids_set.append(dictionary.get('001')[0])
+ids_set = set(ids_set)
+
+all_dedyk_records = dedyk_nukat.get('500') + dedyk_nukat.get('655') + dedyk_nukat.get('700')
+all_dedyk_records = [{ka:list(va) for ka,va in dict(el).items()} for el in set([tuple({k:tuple(v) for k,v in e.items()}.items()) for e in all_dedyk_records])] #nukat: całość unique: 7396
+
+#1500-1700:
+records_1500_1700_nukat = []
+errors = []
+for record in tqdm(all_dedyk_records):
+    try:
+        if record.get('008')[0][7:11] in ['16uu', '160\\'] or 1500 <= int(record.get('008')[0][7:11]) <= 1700:
+            records_1500_1700_nukat.append(record)
+    except ValueError:
+        errors.append(record)
+
+# set([e.get('008')[0][7:11] for e in errors])
+
+df_1500_1700_nukat = mrk_to_df(records_1500_1700_nukat) #5355
+df_1500_1700_nukat['country'] = df_1500_1700_nukat['008'].apply(lambda x: x[0][15:17])
+countries_frequency = dict(Counter(df_1500_1700_nukat['country'].to_list()))
+
+#save
+df_1500_1700_nukat.to_excel(f'dedykacje_1500-1700_nukat_{datetime.now().date()}.xlsx', index=False)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
