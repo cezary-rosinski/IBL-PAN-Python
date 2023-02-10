@@ -190,11 +190,26 @@ class Category:
         self.name = name
 
     def deposit(self, amount, description=''):
-        ledger.append({"amount": amount, "description": description})
+        self.ledger.append({"amount": amount, "description": description})
         
-    def withdraw(self, amount):
-        
+    def withdraw(self, amount, description=''):
+        if amount < 0 and sum([e.get('amount') for e in self.ledger]) >= abs(amount):
+            self.ledger.append({"amount": amount, "description": description})
+            return True
+        else: return False
+    
+    def get_balance(self):
+        return sum([e.get('amount') for e in self.ledger])
+    
+    def transfer(self, amount, another_budget_category):
+            
 
+x = Category('food')        
+x.deposit(15, 'test')
+x.withdraw(-7)
+x.ledger
+x.get_balance()
+x.withdraw(-9)
 # Complete the Category class in budget.py. It should be able to instantiate objects based on different budget categories like food, clothing, and entertainment. When objects are created, they are passed in the name of the category. The class should have an instance variable called ledger that is a list. The class should also contain the following methods:
 
 # A deposit method that accepts an amount and description. If no description is given, it should default to an empty string. The method should append an object to the ledger list in the form of {"amount": amount, "description": description}.
