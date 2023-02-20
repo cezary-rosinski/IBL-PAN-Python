@@ -7,6 +7,8 @@ from tqdm import tqdm
 import fitz
 import regex as re
 from requests_html import AsyncHTMLSession
+from my_functions import gsheet_to_df
+import pandas as pd
 
 #%% def
 asession = AsyncHTMLSession()
@@ -40,11 +42,32 @@ for file in tqdm(files):
                         'subject': record.metadata.get('subject'),
                         'journal': record.metadata.get('journal-title'),
                         'keywords': record.metadata.get('kwd')}
-    except AttributeError:
         bibliotekanauki_articles.append(article_dict)
+    except AttributeError:
         errors.append(file.split('\\')[-1])
 
+errors_df = gsheet_to_df('16j70iW1_K0AClTlJZFmnk6UQGSYtOp3hFKF7FyJ12K8', 'Arkusz1')
+errors_ids = {k:v for k,v in dict(zip(errors_df['id z pliku'], errors_df['poprawny identyfikator'])).items() if isinstance(v,str)}
 
+for file in tqdm(errors_ids.values()):
+    bn_id = re.findall('\d+', file.split('\\')[-1])[0]
+    
+    try:
+        record = sickle.GetRecord(identifier=f'oai:bibliotekanauki.pl:{bn_id}', metadataPrefix='jats', error='idDoesNotExist')
+        try:
+            article_dict = {'file': file.split('\\')[-1],
+                            'title': record.metadata.get('article-title'),
+                            'subject': record.metadata.get('subject'),
+                            'journal': record.metadata.get('journal-title'),
+                            'keywords': record.metadata.get('kwd')}
+            bibliotekanauki_articles.append(article_dict)
+        except AttributeError:
+            errors.append(file.split('\\')[-1])
+    except Exception as e:
+        print(f'{e} __ {file}')
+
+df = pd.DataFrame(bibliotekanauki_articles)
+df.to_excel('analiza_ipi_pan.xlsx', index=False)
     
 #%% notes
 doc = fitz.open(file)
