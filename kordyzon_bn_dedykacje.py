@@ -52,16 +52,31 @@ def read_mrk_nukat(path):
 path = r"F:\Cezary\Documents\IBL\BN\bn_all\2023-01-23/"
 files = [f for f in glob.glob(path + '*.mrk', recursive=True)]
 
-dedyk_records = {'500': [], #8568 #całość 14665
-                 '655': [], #10470 #całość 10939
-                 '700': []} #1460 #całość 4889
+# dedyk_records = {'500': [], #8568 #całość 14665
+#                  '655': [], #10470 #całość 10939
+#                  '700': []} #1460 #całość 4889
+# for file in tqdm(files):
+#     file = read_mrk(file)
+#     for dictionary in file:
+#         for k,v in dictionary.items():
+#             if k in ['500', '655', '700']:
+#                 for el in v:
+#                     if 'dedyk' in el.lower():
+#                         dedyk_records[k].append(dictionary)
+
+dedyk_records = {'655': [], #10928
+                 '700': []} #11662     
 for file in tqdm(files):
     file = read_mrk(file)
     for dictionary in file:
         for k,v in dictionary.items():
-            if k in ['500', '655', '700']:
+            if k == '700':
                 for el in v:
-                    if 'dedyk' in el.lower():
+                    if 'adresat dedykacji' in el.lower() or 'adr. ded.' in el.lower():
+                        dedyk_records[k].append(dictionary)
+            elif k == '655':
+                for el in v:
+                    if 'Dedykacje' in el:
                         dedyk_records[k].append(dictionary)
                     
 ids_set = []
@@ -70,7 +85,8 @@ for k,v in dedyk_records.items():
         ids_set.append(dictionary.get('001')[0])
 ids_set = set(ids_set)
 
-all_dedyk_records = dedyk_records.get('500') + dedyk_records.get('655') + dedyk_records.get('700')
+# all_dedyk_records = dedyk_records.get('500') + dedyk_records.get('655') + dedyk_records.get('700')
+all_dedyk_records = dedyk_records.get('655') + dedyk_records.get('700')
 all_dedyk_records = [{ka:list(va) for ka,va in dict(el).items()} for el in set([tuple({k:tuple(v) for k,v in e.items()}.items()) for e in all_dedyk_records])] #całość unique: 20662
 
 #1500-1700:
@@ -101,16 +117,17 @@ df_1500_1700.to_excel(f'dedykacje_1500-1700_{datetime.now().date()}.xlsx', index
 
 nukat_paths = [r"F:\Cezary\Documents\IBL\NUKAT\wyb_wydzpol.print01", r"F:\Cezary\Documents\IBL\NUKAT\wyb_wydzpol.print02"]
 
-dedyk_nukat = {'500': [], #7805
-               '655': [], #0
-               '700': []} #6284
+dedyk_nukat = {'100': [], #dedyk + adr. ded.: 1678
+               '500': [], #dedyk: 7805 | dedyk + ded.: 17115 | dedyk + adr. ded.: 8080
+               '655': [], #dedyk: 0 | dedyk + ded.: 0 | dedyk + adr. ded.: 0
+               '700': []} #dedyk: 6284 | dedyk + ded.: 17359  | dedyk + adr. ded.: 16805
 for file in tqdm(nukat_paths):
     file = read_mrk_nukat(file)
     for dictionary in file:
         for k,v in dictionary.items():
-            if k in ['500', '655', '700']:
+            if k in ['100', '500', '655', '700']:
                 for el in v:
-                    if 'dedyk' in el.lower():
+                    if 'adresat dedykacji' in el.lower() or 'adr. ded.' in el.lower():
                         dedyk_nukat[k].append(dictionary)
 
 ids_set = []
@@ -119,7 +136,9 @@ for k,v in dedyk_nukat.items():
         ids_set.append(dictionary.get('001')[0])
 ids_set = set(ids_set)
 
-all_dedyk_records = dedyk_nukat.get('500') + dedyk_nukat.get('655') + dedyk_nukat.get('700')
+# all_dedyk_records = dedyk_nukat.get('500') + dedyk_nukat.get('655') + dedyk_nukat.get('700')
+all_dedyk_records = dedyk_nukat.get('700')
+
 all_dedyk_records = [{ka:list(va) for ka,va in dict(el).items()} for el in set([tuple({k:tuple(v) for k,v in e.items()}.items()) for e in all_dedyk_records])] #nukat: całość unique: 7396
 
 #1500-1700:
@@ -140,6 +159,8 @@ countries_frequency = dict(Counter(df_1500_1700_nukat['country'].to_list()))
 
 #save
 df_1500_1700_nukat.to_excel(f'dedykacje_1500-1700_nukat_{datetime.now().date()}.xlsx', index=False)
+
+
 
 
 
