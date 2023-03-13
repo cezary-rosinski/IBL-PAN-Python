@@ -1,7 +1,7 @@
 import glob
 from tqdm import tqdm
 import sys
-from my_functions import mrc_to_mrk
+from my_functions import mrc_to_mrk, gsheet_to_df, marc_parser_dict_for_field
 sys.path.insert(1, 'C:/Users/Cezary/Documents/Global-trajectories-of-Czech-Literature')
 from marc_functions import read_mrk, mrk_to_df
 import json
@@ -9,6 +9,8 @@ import pandas as pd
 from datetime import datetime
 from collections import Counter
 import regex as re
+from ast import literal_eval
+import requests
 
 #%% def
 
@@ -161,22 +163,44 @@ countries_frequency = dict(Counter(df_1500_1700_nukat['country'].to_list()))
 df_1500_1700_nukat.to_excel(f'dedykacje_1500-1700_nukat_{datetime.now().date()}.xlsx', index=False)
 
 
+#%% geotagging
 
+dedicated_nukat = gsheet_to_df('1ZKv2sLoTnzGqWuD4jwgcuRSD8oDM3qdnli8Wd3c1quI', 'Sheet1')
+dedicated_bn = gsheet_to_df('1K6J4E8z5fdeobT1f25yoC8B2pJPGfr6K8ZREA8rnvPE', 'Sheet1')
 
+places_nukat_df = gsheet_to_df('1ZKv2sLoTnzGqWuD4jwgcuRSD8oDM3qdnli8Wd3c1quI', 'miejsca')
+places_bn_df = gsheet_to_df('1K6J4E8z5fdeobT1f25yoC8B2pJPGfr6K8ZREA8rnvPE', 'miejsca')
+places_nukat_df.iloc[:,2] = places_nukat_df.iloc[:,2].apply(lambda x: literal_eval(x) if isinstance(x, str) else x)
+places_bn_df.iloc[:,1] = places_bn_df.iloc[:,1].apply(lambda x: literal_eval(x) if isinstance(x, str) else x)
 
+places_nukat = [e for sub in places_nukat_df.iloc[:,2].dropna().to_list() for e in sub]
+places_bn = [e for sub in places_bn_df.iloc[:,1].dropna().to_list() for e in sub]
 
+places = []
+y = [places_nukat, places_bn]
+for el in y:
+    for e in el:
+        x = marc_parser_dict_for_field(e, '\\$')
+        x = [{k:v.replace('\\\\', '').strip() for k,v in e.items()} for e in x]
+        x = [list(e.values())[0] for e in x]
+        if x not in places:
+            places.append(x)
+        # else: print(x)
 
-
-
-
-
-
-
-
-
-
-
-
+for ind, (country, place) in tqdm(enumerate(places), total=len(places)):
+    # country, place = miejsca[0]
+    url = f'https://www.wikidata.org/w/api.php?action=query&format=json&list=search&srsearch=inlabel:{place}&srlimit=5&formatversion=2'
+    r = requests.get(url).json()
+    
+    hits = [e.get('title') for e in r.get('query').get('search')]
+    ids = [requests.get(f'https://www.wikidata.org/wiki/Special:EntityData/{e}.json').json() for e in hits]
+    ids = [e for e in ids if 'P625' in e.get('entities').get(list(e.get('entities').keys())[0]).get('claims')]
+    ids = [list(e.get('entities').keys())[0] for e in ids]
+    places[ind].append(ids)
+    
+places = [[c, p, [f'https://www.wikidata.org/wiki/{e}' for e in wiki_list]] for c, p, wiki_list in places]
+places_df = pd.DataFrame(places, columns = ['country', 'place', 'wikidata IDs'])
+places_df.to_excel('dedykacje_miejsca.xlsx', index=False)
 
 
 
