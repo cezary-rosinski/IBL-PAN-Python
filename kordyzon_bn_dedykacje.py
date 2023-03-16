@@ -11,6 +11,7 @@ from collections import Counter
 import regex as re
 from ast import literal_eval
 import requests
+import numpy as np
 
 #%% def
 
@@ -201,6 +202,85 @@ for ind, (country, place) in tqdm(enumerate(places), total=len(places)):
 places = [[c, p, [f'https://www.wikidata.org/wiki/{e}' for e in wiki_list]] for c, p, wiki_list in places]
 places_df = pd.DataFrame(places, columns = ['country', 'place', 'wikidata IDs'])
 places_df.to_excel('dedykacje_miejsca.xlsx', index=False)
+
+
+#%% de-duplication
+
+dedicated_nukat = gsheet_to_df('1ZKv2sLoTnzGqWuD4jwgcuRSD8oDM3qdnli8Wd3c1quI', 'Sheet1')
+dedicated_bn = gsheet_to_df('1K6J4E8z5fdeobT1f25yoC8B2pJPGfr6K8ZREA8rnvPE', 'Sheet1')
+
+places_df = gsheet_to_df('1ukvhbr8xD428C-2S6xXsOdDeqmHABbfpe5Qh8O08I5k', 'Sheet1')
+places = places_df['ID'].dropna().to_list()
+
+places_dict = {}
+for place in places:
+    # place = places[0]
+    # place = 'https://www.wikidata.org/wiki/Q216'
+    match = places_df[places_df['ID'] == place][['country', 'place']].values.tolist()
+    for c, p in match:
+        places_dict[p] = place
+    
+    # if not place in places_dict:
+    #     places_dict[place] = places_df[places_df['ID'] == place][['country', 'place']].values.tolist()
+    # else:
+    #     places_dict[place].extend(places_df[places_df['ID'] == place][['country', 'place']].values.tolist())
+
+#przy matchowaniu miejsc iterować po wszystkich polach w 752, bo teraz biorę tylko pierwsze
+        
+dedicated_bn_light = dedicated_bn[['001', '008', '245', '752']]
+dedicated_bn_light = dedicated_bn_light.loc[dedicated_bn_light['752'].notnull()]
+
+dedicated_bn_light['001'] = dedicated_bn_light['001'].apply(lambda x: literal_eval(x)[0]) 
+dedicated_bn_light['year'] = dedicated_bn_light['008'].apply(lambda x: literal_eval(x)[0][7:11])
+dedicated_bn_light['title'] = dedicated_bn_light['245'].apply(lambda x: [e.get('$a') for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\$') if '$a' in e][0])
+dedicated_bn_light['place'] = dedicated_bn_light['752'].apply(lambda x: match_place(x))
+    
+
+def match_place(x):
+    try:
+        return places_dict.get([e.get('$d') for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\$') if '$d' in e][0])
+    except:
+        return None
+
+dedicated_bn_light = dedicated_bn_light.loc[dedicated_bn_light['place'].notnull()][['001', 'title', 'place', 'year']]
+
+
+
+dedicated_nukat_light = dedicated_nukat[['001', '008', '245', '752']]
+dedicated_nukat_light = dedicated_nukat_light.loc[dedicated_nukat_light['752'].notnull()]
+
+dedicated_nukat_light['001'] = dedicated_nukat_light['001'].apply(lambda x: literal_eval(x)[0])
+dedicated_nukat_light['year'] = dedicated_nukat_light['008'].apply(lambda x: literal_eval(x)[0][7:11])
+dedicated_nukat_light['title'] = dedicated_nukat_light['245'].apply(lambda x: [e.get('\\a').strip() for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\\\') if '\\a' in e][0])
+dedicated_nukat_light['place'] = dedicated_nukat_light['752'].apply(lambda x: places_dict.get([e.get('\\d').strip() for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\\\') if '\\d' in e][0]))
+dedicated_nukat_light = dedicated_nukat_light.loc[dedicated_nukat_light['place'].notnull()][['001', 'title', 'place', 'year']]
+
+a, b = 	'https://www.wikidata.org/wiki/Q31487', 1675
+
+
+for row in dedicated_bn_light.iterrows():
+    a = row['place']
+    b = row['year']
+    
+
+nukat = dedicated_nukat_light.loc[(dedicated_nukat_light['place'] == a) &
+                                  (dedicated_nukat_light['year'] == b)]
+
+
+
+
+
+# ujednoznacznione miejsce wydania, rok + tytuł (string similarity
+['080206s1644 pl a  |000 0 lat c'][0][7:11]
+[e.get('$a') for e in marc_parser_dict_for_field(['10$aRadosny grob jasnie wielmożnego jego mośći pana Alexandra Mosalskiego, woiewody minskiego starosty kowienskiego, ciwona retowskiego, dzierżavvce iasvvońskiego etc. na kazaniu pogrzebowym w Kownie w kośćiele Troyce świętey panien zakonnych Franciszka świętego reguły pokutuiących wystawiony /$cprzez x. Avgvstyna Witvnskiego, zakonu Franćiszka świętego bernardynow nazwanego, generalnego lektora y kaznodźieię [...].'][0], '\\$') if '$a' in e]
+
+[e.get('$d') for e in marc_parser_dict_for_field(['\\\\$aPolska$dKraków.'][0], '\\$') if '$d' in e]
+
+[e.get('\\a').strip() for e in marc_parser_dict_for_field(['10 \\a Serenissimi Iohannis Casimiri Poloniarvm Sveciæqve Principis CarcerGallicvs / \\c ab Euerhardo Wassenbergio conscriptus.'][0], '\\\\') if '\\a' in e]
+
+
+[e.get('\\d').strip() for e in marc_parser_dict_for_field([' \\a Polska \\d Gdańsk.'][0], '\\\\') if '\\d' in e]
+
 
 
 

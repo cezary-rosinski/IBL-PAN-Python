@@ -44,7 +44,7 @@ def marc_parser_1_field(df, field_id, field_data, subfield_code, delimiter='❦'
             marc_field[column_name] = marc_field[column_name].str.replace(re.escape(column_name), '❦')
     return marc_field
 
-##% main
+#%% main
 
 df = pd.read_excel(r"C:\Users\Cezary\Downloads\ls_bn.xlsx")
 
@@ -52,12 +52,33 @@ for column in df:
     df[column] = df[column].apply(lambda x: '❦'.join(literal_eval(x)) if pd.notnull(x) else x)
 
 df_700 = marc_parser_1_field(df, '001', '700', '\\$')
+df_245 = marc_parser_1_field(df, '001', '245', '\\$')
+
+wanted = {'041': ['$a', '$h'],
+          '100': ['$a', '$d', '$e'],
+          '245': ['$a', '$b', '$c'],
+          '700': ['$a', '$d', '$e', '$t']
+          }
+
+full_df = pd.DataFrame()
+for k,v in wanted.items():
+    y = v.copy()
+    y.insert(0, '001')
+    test_df = marc_parser_1_field(df, '001', k, '\\$')[y]
+    test_df = (test_df.groupby(['001'])
+               .agg({e: list for e in v})
+               .reset_index())
+    test_df.columns = [f'{k}{e}' if e != '001' else e for e in test_df.columns]
+    if full_df.size == 0:
+        full_df = test_df.copy()
+    else:
+        full_df = pd.merge(full_df, test_df, on='001', how='outer')
+    
+for column in full_df.columns[1:]:
+    full_df[column] = full_df[column].apply(lambda x: '❦'.join(x) if not isinstance(x, float) else x)
 
 
-
-
-
-
+full_df.to_excel('final_excel.xlsx', index=False)
 
 
 
