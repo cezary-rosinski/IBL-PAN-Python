@@ -12,6 +12,7 @@ import regex as re
 from ast import literal_eval
 import requests
 import numpy as np
+import Levenshtein as lev
 
 #%% def
 
@@ -233,8 +234,6 @@ dedicated_bn_light = dedicated_bn_light.loc[dedicated_bn_light['752'].notnull()]
 dedicated_bn_light['001'] = dedicated_bn_light['001'].apply(lambda x: literal_eval(x)[0]) 
 dedicated_bn_light['year'] = dedicated_bn_light['008'].apply(lambda x: literal_eval(x)[0][7:11])
 dedicated_bn_light['title'] = dedicated_bn_light['245'].apply(lambda x: [e.get('$a') for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\$') if '$a' in e][0])
-dedicated_bn_light['place'] = dedicated_bn_light['752'].apply(lambda x: match_place(x))
-    
 
 def match_place(x):
     try:
@@ -242,9 +241,9 @@ def match_place(x):
     except:
         return None
 
-dedicated_bn_light = dedicated_bn_light.loc[dedicated_bn_light['place'].notnull()][['001', 'title', 'place', 'year']]
+dedicated_bn_light['place'] = dedicated_bn_light['752'].apply(lambda x: match_place(x))
 
-
+dedicated_bn_light = dedicated_bn_light.loc[dedicated_bn_light['place'].notnull()][['001', 'title', 'place', 'year']] #6357
 
 dedicated_nukat_light = dedicated_nukat[['001', '008', '245', '752']]
 dedicated_nukat_light = dedicated_nukat_light.loc[dedicated_nukat_light['752'].notnull()]
@@ -253,7 +252,47 @@ dedicated_nukat_light['001'] = dedicated_nukat_light['001'].apply(lambda x: lite
 dedicated_nukat_light['year'] = dedicated_nukat_light['008'].apply(lambda x: literal_eval(x)[0][7:11])
 dedicated_nukat_light['title'] = dedicated_nukat_light['245'].apply(lambda x: [e.get('\\a').strip() for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\\\') if '\\a' in e][0])
 dedicated_nukat_light['place'] = dedicated_nukat_light['752'].apply(lambda x: places_dict.get([e.get('\\d').strip() for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\\\') if '\\d' in e][0]))
-dedicated_nukat_light = dedicated_nukat_light.loc[dedicated_nukat_light['place'].notnull()][['001', 'title', 'place', 'year']]
+dedicated_nukat_light = dedicated_nukat_light.loc[dedicated_nukat_light['place'].notnull()][['001', 'title', 'place', 'year']] #5504
+
+unique_nukat = dedicated_nukat_light.copy()[['title', 'place', 'year']].drop_duplicates().values.tolist()
+
+df_nukat = dedicated_nukat.copy()
+df_nukat['001'] = df_nukat['001'].apply(lambda x: literal_eval(x)[0])
+df_bn = dedicated_bn.copy()
+df_bn['001'] = df_bn['001'].apply(lambda x: literal_eval(x)[0])
+
+final_df = pd.DataFrame()
+empty_row = pd.DataFrame([[]])
+
+for n_t, n_p, n_y in tqdm(unique_nukat): #czas trwania: 18 minut
+    # n_t, n_p, n_y = unique_nukat[3]
+    test_nukat = dedicated_nukat_light.loc[(dedicated_nukat_light['title'] == n_t) &
+                                        (dedicated_nukat_light['place'] == n_p) &
+                                        (dedicated_nukat_light['year'] == n_y)]['001'].to_list()
+    
+    test_bn = dedicated_bn_light.loc[(dedicated_bn_light['place'] == n_p) &
+                                     (dedicated_bn_light['year'] == n_y)]
+    test_bn = test_bn[['001', 'title']].values.tolist()
+    test_bn = [i for i,v in test_bn if lev.ratio(n_t, v) > 0.8]    
+    
+    df_nukat_sample = df_nukat.loc[df_nukat['001'].isin(test_nukat)]
+    
+    df_bn_sample = df_bn.loc[df_bn['001'].isin(test_bn)]
+    
+    df = pd.concat([df_nukat_sample, df_bn_sample])
+    if df.shape[0] > 1:
+        final_df = pd.concat([final_df, df])
+        final_df = pd.concat([final_df, empty_row])
+
+
+final_df.to_excel('nukat_bn_duplikaty.xlsx', index=False)
+# pokazać przykład, że Levenshtein może nie wystarczyć: ('Processus Juris breuior Joa[n]nis Andr[eae] /',  'https://www.wikidata.org/wiki/Q31487', '1531')
+
+
+
+
+
+
 
 a, b = 	'https://www.wikidata.org/wiki/Q31487', 1675
 
