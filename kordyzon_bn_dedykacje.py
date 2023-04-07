@@ -266,6 +266,7 @@ empty_row = pd.DataFrame([[]])
 
 for n_t, n_p, n_y in tqdm(unique_nukat): #czas trwania: 18 minut
     # n_t, n_p, n_y = unique_nukat[3]
+    n_t, n_p, n_y = ('Processus Juris breuior Joa[n]nis Andr[eae] /',  'https://www.wikidata.org/wiki/Q31487', '1531')
     test_nukat = dedicated_nukat_light.loc[(dedicated_nukat_light['title'] == n_t) &
                                         (dedicated_nukat_light['place'] == n_p) &
                                         (dedicated_nukat_light['year'] == n_y)]['001'].to_list()
