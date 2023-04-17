@@ -228,31 +228,64 @@ for place in places:
 
 #przy matchowaniu miejsc iterować po wszystkich polach w 752, bo teraz biorę tylko pierwsze
         
-dedicated_bn_light = dedicated_bn[['001', '008', '245', '752']]
+dedicated_bn_light = dedicated_bn[['001', '008', '245', '752', '600', '655', '700']]
 dedicated_bn_light = dedicated_bn_light.loc[dedicated_bn_light['752'].notnull()]
 
 dedicated_bn_light['001'] = dedicated_bn_light['001'].apply(lambda x: literal_eval(x)[0]) 
 dedicated_bn_light['year'] = dedicated_bn_light['008'].apply(lambda x: literal_eval(x)[0][7:11])
 dedicated_bn_light['title'] = dedicated_bn_light['245'].apply(lambda x: [e.get('$a') for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\$') if '$a' in e][0])
 
-def match_place(x):
+# test = dedicated_bn_light.loc[(dedicated_bn_light['655'].str.contains('Dedykacje')) & (dedicated_bn_light['600'].isnull()) & (dedicated_bn_light['700'].str.contains('Adresat dedykacji') == False) & (dedicated_bn_light['700'].str.contains('Adr. ded') == False)]
+# test_ids = test['001'].to_list()
+# test_df = dedicated_bn.copy()
+# test_df['001'] = test_df['001'].apply(lambda x: literal_eval(x)[0])
+# test_df = test_df.loc[test_df['001'].isin(test_ids)]
+# test_df.to_excel('błędy_bn.xlsx', index=False)
+
+#czy wyrzucić błędne rekordy BN?
+
+def get_dedicated_bn(x):
+    if pd.notnull(x['655']) and pd.notnull(x['600']) and 'Dedykacje' in x['655']:
+        return [marc_parser_dict_for_field(e, '\\$') for e in literal_eval(x['600'])]
+    elif pd.notnull(x['700']) and any(el in x['700'] for el in ['Adr. ded.', 'Adresat dedykacji']):
+        return [el for el in [marc_parser_dict_for_field(e, '\\$') for e in literal_eval(x['700'])] if any(list(ele.values())[0] in ['Adr. ded.', 'Adresat dedykacji'] for ele in el)]
+    else: return None
+        
+dedicated_bn_light['dedicated'] = dedicated_bn_light.apply(lambda x: get_dedicated_bn(x), axis=1)
+
+def match_place_bn(x):
     try:
-        return places_dict.get([e.get('$d') for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\$') if '$d' in e][0])
+        result = [elem for elem in [places_dict.get(ele) for ele in [[el.get('$d') for el in marc_parser_dict_for_field(e, '\\$') if '$d' in el][0] for e in literal_eval(x)]] if elem]
+        if result:
+            return result
+        else: return None
     except:
         return None
 
-dedicated_bn_light['place'] = dedicated_bn_light['752'].apply(lambda x: match_place(x))
+dedicated_bn_light['place'] = dedicated_bn_light['752'].apply(lambda x: match_place_bn(x))
 
-dedicated_bn_light = dedicated_bn_light.loc[dedicated_bn_light['place'].notnull()][['001', 'title', 'place', 'year']] #6357
+dedicated_bn_light = dedicated_bn_light.loc[dedicated_bn_light['place'].notnull()][['001', 'title', 'place', 'year', 'dedicated']] #2492 wcześniej: 6374
 
-dedicated_nukat_light = dedicated_nukat[['001', '008', '245', '752']]
+dedicated_nukat_light = dedicated_nukat[['001', '008', '245', '752', '700']]
 dedicated_nukat_light = dedicated_nukat_light.loc[dedicated_nukat_light['752'].notnull()]
 
 dedicated_nukat_light['001'] = dedicated_nukat_light['001'].apply(lambda x: literal_eval(x)[0])
 dedicated_nukat_light['year'] = dedicated_nukat_light['008'].apply(lambda x: literal_eval(x)[0][7:11])
 dedicated_nukat_light['title'] = dedicated_nukat_light['245'].apply(lambda x: [e.get('\\a').strip() for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\\\') if '\\a' in e][0])
-dedicated_nukat_light['place'] = dedicated_nukat_light['752'].apply(lambda x: places_dict.get([e.get('\\d').strip() for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\\\') if '\\d' in e][0]))
-dedicated_nukat_light = dedicated_nukat_light.loc[dedicated_nukat_light['place'].notnull()][['001', 'title', 'place', 'year']] #5504
+dedicated_nukat_light['dedicated'] = dedicated_nukat_light['700'].apply(lambda x: [ele for ele in [[{k:v.strip() for k,v in el.items()} for el in marc_parser_dict_for_field(e, '\\\\')] for e in literal_eval(x)] if any(list(elem.values())[0] in ['Adr. ded.', 'Adresat dedykacji'] for elem in ele)])
+
+def match_place_nukat(x):
+    try:
+        result = [elem for elem in [places_dict.get(ele) for ele in [[el.get('\\d').strip() for el in marc_parser_dict_for_field(e, '\\\\') if '\\d' in el][0] for e in literal_eval(x)]] if elem]
+        if result:
+            return result
+        else: return None
+    except:
+        return None
+
+dedicated_nukat_light['place'] = dedicated_nukat_light['752'].apply(lambda x: match_place_nukat(x))
+
+dedicated_nukat_light = dedicated_nukat_light.loc[dedicated_nukat_light['place'].notnull()][['001', 'title', 'place', 'year', 'dedicated']] #5546
 
 unique_nukat = dedicated_nukat_light.copy()[['title', 'place', 'year']].drop_duplicates().values.tolist()
 
