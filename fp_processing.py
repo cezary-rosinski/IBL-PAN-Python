@@ -639,7 +639,7 @@ numer_strzalka = browser.find_element('xpath', "//a[@class='show_extras']").clic
 opublikuj_numer = browser.find_element('xpath', "//a[contains(text(),'Opublikuj numer')]")
 opublikuj_numer.click()
 odznacz_mail = browser.find_element('id', 'sendIssueNotification').click()
-opublikuj_numer_ok = browser.find_element('xpath', "//button[@class='pkp_button submitFormButton']").click()
+# opublikuj_numer_ok = browser.find_element('xpath', "//button[@class='pkp_button submitFormButton']").click()
 opublikuj_numer_ok = browser.find_element('xpath', "//button[@name='submitFormButton']")
 opublikuj_numer_ok.click()
 
@@ -649,7 +649,7 @@ print('Strona numeru na pressto opublikowana')
 
 #pressto dodawanie artykułów
 
-for i, row in aktualny_numer[2:].iterrows():
+for i, row in aktualny_numer[23:].iterrows():
     # i = 0
     # row = aktualny_numer.iloc[i,:]
     if row['język'] == 'pl':
