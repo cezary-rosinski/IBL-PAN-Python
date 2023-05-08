@@ -13,6 +13,7 @@ from ast import literal_eval
 import requests
 import numpy as np
 import Levenshtein as lev
+from collections import ChainMap
 
 #%% def
 
@@ -40,7 +41,7 @@ def read_mrk_nukat(path):
         records.append(record_dict)
     return records
 
-#%% main
+#%% selection
 #mrc to mrk 
 # path = r"F:\Cezary\Documents\IBL\BN\bn_all\2023-01-23/"
 # files = [f for f in glob.glob(path + '*.mrc', recursive=True)]
@@ -208,7 +209,15 @@ places_df.to_excel('dedykacje_miejsca.xlsx', index=False)
 #%% de-duplication
 
 dedicated_nukat = gsheet_to_df('1ZKv2sLoTnzGqWuD4jwgcuRSD8oDM3qdnli8Wd3c1quI', 'Sheet1')
+dedicated_nukat['001'] = dedicated_nukat['001'].apply(lambda x: literal_eval(x)[0])
+
 dedicated_bn = gsheet_to_df('1K6J4E8z5fdeobT1f25yoC8B2pJPGfr6K8ZREA8rnvPE', 'Sheet1')
+bn_to_delete = gsheet_to_df('1Qyw35EZBYhWaSXc2basBGRB5RcW01zTQXFOHZXv6bms', 'do usunięcia')
+bn_to_delete = bn_to_delete['001'].to_list()
+
+dedicated_bn['001'] = dedicated_bn['001'].apply(lambda x: literal_eval(x)[0])
+dedicated_bn = dedicated_bn.loc[~dedicated_bn['001'].isin(bn_to_delete)]
+
 
 places_df = gsheet_to_df('1ukvhbr8xD428C-2S6xXsOdDeqmHABbfpe5Qh8O08I5k', 'Sheet1')
 places = places_df['ID'].dropna().to_list()
@@ -231,7 +240,6 @@ for place in places:
 dedicated_bn_light = dedicated_bn[['001', '008', '245', '752', '600', '655', '700']]
 dedicated_bn_light = dedicated_bn_light.loc[dedicated_bn_light['752'].notnull()]
 
-dedicated_bn_light['001'] = dedicated_bn_light['001'].apply(lambda x: literal_eval(x)[0]) 
 dedicated_bn_light['year'] = dedicated_bn_light['008'].apply(lambda x: literal_eval(x)[0][7:11])
 dedicated_bn_light['title'] = dedicated_bn_light['245'].apply(lambda x: [e.get('$a') for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\$') if '$a' in e][0])
 
@@ -264,12 +272,12 @@ def match_place_bn(x):
 
 dedicated_bn_light['place'] = dedicated_bn_light['752'].apply(lambda x: match_place_bn(x))
 
-dedicated_bn_light = dedicated_bn_light.loc[dedicated_bn_light['place'].notnull()][['001', 'title', 'place', 'year', 'dedicated']] #2492 wcześniej: 6374
+dedicated_bn_light = dedicated_bn_light.loc[dedicated_bn_light['place'].notnull()][['001', 'title', 'place', 'year', 'dedicated']]#6325
+#2492 wcześniej: 6374
 
 dedicated_nukat_light = dedicated_nukat[['001', '008', '245', '752', '700']]
 dedicated_nukat_light = dedicated_nukat_light.loc[dedicated_nukat_light['752'].notnull()]
 
-dedicated_nukat_light['001'] = dedicated_nukat_light['001'].apply(lambda x: literal_eval(x)[0])
 dedicated_nukat_light['year'] = dedicated_nukat_light['008'].apply(lambda x: literal_eval(x)[0][7:11])
 dedicated_nukat_light['title'] = dedicated_nukat_light['245'].apply(lambda x: [e.get('\\a').strip() for e in marc_parser_dict_for_field(literal_eval(x)[0], '\\\\') if '\\a' in e][0])
 dedicated_nukat_light['dedicated'] = dedicated_nukat_light['700'].apply(lambda x: [ele for ele in [[{k:v.strip() for k,v in el.items()} for el in marc_parser_dict_for_field(e, '\\\\')] for e in literal_eval(x)] if any(list(elem.values())[0] in ['Adr. ded.', 'Adresat dedykacji'] for elem in ele)])
@@ -287,22 +295,70 @@ dedicated_nukat_light['place'] = dedicated_nukat_light['752'].apply(lambda x: ma
 
 dedicated_nukat_light = dedicated_nukat_light.loc[dedicated_nukat_light['place'].notnull()][['001', 'title', 'place', 'year', 'dedicated']] #5546
 
-unique_nukat = dedicated_nukat_light.copy()[['title', 'place', 'year']].drop_duplicates().values.tolist()
+dedicated_people_nukat = [e for sub in dedicated_nukat_light['dedicated'].to_list() for e in sub]
+dedicated_people_nukat = set([tuple([tuple(el.items()) for el in e]) for e in dedicated_people_nukat])#3808
+
+dedicated_people_bn = [e for sub in dedicated_bn_light['dedicated'].to_list() for e in sub]
+dedicated_people_bn = set([tuple([tuple(el.items()) for el in e]) for e in dedicated_people_bn])#4787
+
+dedicated_people_nukat = [[dict(el) for el in e] for e in dedicated_people_nukat]
+dedicated_people_bn = [[dict(el) for el in e] for e in dedicated_people_bn]
+
+dedicated_people_nukat = [{'$a' if k == '\\a' else '$b' if k == '\\b' else '$c' if k == '\\c' else '$d' if k == '\\d' else k:v for k,v in dict(ChainMap(*e)).items() if k in ['\\a', '\\b', '\\c', '\\d']} for e in dedicated_people_nukat]
+dedicated_people_bn = [{k:v for k,v in dict(ChainMap(*e)).items() if k in ['$a', '$b', '$c', '$d']} for e in dedicated_people_bn]
+
+dedicated_people = dedicated_people_nukat.copy()
+dedicated_people.extend(dedicated_people_bn)
+
+dedicated_people = [dict(sorted(e.items())) for e in dedicated_people]
+
+df = pd.DataFrame(dedicated_people).drop_duplicates()
+
+df.to_excel('dedicated_people.xlsx', index=False)
+
+dedicated_nukat_light.to_excel('dedicated_nukat.xlsx', index=False)
+dedicated_bn_light.to_excel('dedicated_bn.xlsx', index=False)
+
+len(set(df['$a'].to_list()))
+
+
+
+
+data = dict(ChainMap(*x))
+
+test = dedicated_bn_light['dedicated'].to_list()
+
+ttt = []
+for i, e in enumerate(test):
+    for el in e:
+        pass
+
+
+
+
+
+
+
+nukat_test = dedicated_nukat_light.copy()
+nukat_test['place'] = nukat_test['place'].apply(lambda x: tuple(x))
+nukat_test['dedicated'] = nukat_test['dedicated'].apply(lambda x: tuple([tuple([tuple(el.items()) for el in e]) for e in x])[0])
+unique_nukat = nukat_test.copy()[['title', 'place', 'year', 'dedicated']].drop_duplicates().values.tolist() #5357
+
+# unique_nukat = dedicated_nukat_light.copy()[['title', 'place', 'year']].drop_duplicates().values.tolist()
 
 df_nukat = dedicated_nukat.copy()
-df_nukat['001'] = df_nukat['001'].apply(lambda x: literal_eval(x)[0])
 df_bn = dedicated_bn.copy()
-df_bn['001'] = df_bn['001'].apply(lambda x: literal_eval(x)[0])
 
 final_df = pd.DataFrame()
 empty_row = pd.DataFrame([[]])
 
-for n_t, n_p, n_y in tqdm(unique_nukat): #czas trwania: 18 minut
-    # n_t, n_p, n_y = unique_nukat[3]
+for n_t, n_p, n_y, n_d in tqdm(unique_nukat): #czas trwania: 18 minut
+    # n_t, n_p, n_y, n_d = unique_nukat[3]
     n_t, n_p, n_y = ('Processus Juris breuior Joa[n]nis Andr[eae] /',  'https://www.wikidata.org/wiki/Q31487', '1531')
     test_nukat = dedicated_nukat_light.loc[(dedicated_nukat_light['title'] == n_t) &
                                         (dedicated_nukat_light['place'] == n_p) &
-                                        (dedicated_nukat_light['year'] == n_y)]['001'].to_list()
+                                        (dedicated_nukat_light['year'] == n_y) &
+                                        (dedicated_nukat_light['dedicated'])]['001'].to_list()
     
     test_bn = dedicated_bn_light.loc[(dedicated_bn_light['place'] == n_p) &
                                      (dedicated_bn_light['year'] == n_y)]
