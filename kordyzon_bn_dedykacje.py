@@ -14,6 +14,8 @@ import requests
 import numpy as np
 import Levenshtein as lev
 from collections import ChainMap
+import requests
+import Levenshtein as lev
 
 #%% def
 
@@ -299,6 +301,7 @@ dedicated_people_nukat = [e for sub in dedicated_nukat_light['dedicated'].to_lis
 dedicated_people_nukat = set([tuple([tuple(el.items()) for el in e]) for e in dedicated_people_nukat])#3808
 
 dedicated_people_bn = [e for sub in dedicated_bn_light['dedicated'].to_list() for e in sub]
+
 dedicated_people_bn = set([tuple([tuple(el.items()) for el in e]) for e in dedicated_people_bn])#4787
 
 dedicated_people_nukat = [[dict(el) for el in e] for e in dedicated_people_nukat]
@@ -316,13 +319,40 @@ df = pd.DataFrame(dedicated_people).drop_duplicates()
 
 df.to_excel('dedicated_people.xlsx', index=False)
 
+
 dedicated_nukat_light.to_excel('dedicated_nukat.xlsx', index=False)
 dedicated_bn_light.to_excel('dedicated_bn.xlsx', index=False)
 
 len(set(df['$a'].to_list()))
 
 
+x = 'Abrek, Andrzej ( -1656)'
+x = 'Abrek, Andrzej (16..-1700).'
+x = 'Abrek, Andrzej (?-1656)'
+x = 'Abrek, Andrzej (?-1700)'
 
+
+x = 'Teresa Kunegunda (księżna bawarska ; 1676-1730).'
+x = 'Teresa Kunegunda Sobieska (księżna Bawarii ; 1676-1730)'	
+
+url = f'https://viaf.org/viaf/search?query=local.names%20all%20%22{x}%22&sortKeys=holdingscount&recordSchema=BriefVIAF&httpAccept=application/json'
+
+r = requests.get(url).json()
+
+[e.get('record').get('recordData').get('viafID').get('#text') for e in r.get('searchRetrieveResponse').get('records') if (isinstance(e.get('record').get('recordData').get('mainHeadings').get('data'), list) and x in [el.get('text') for el in e.get('record').get('recordData').get('mainHeadings').get('data')]) or (isinstance(e.get('record').get('recordData').get('mainHeadings').get('data'), dict) and x == e.get('record').get('recordData').get('mainHeadings').get('data').get('text'))]
+
+
+
+
+[[el.get('text') for el in e.get('record').get('recordData').get('mainHeadings').get('data')] for e in r.get('searchRetrieveResponse').get('records')]
+[[lev.ratio(x, el.get('text')) for el in e.get('record').get('recordData').get('mainHeadings').get('data')] for e in r.get('searchRetrieveResponse').get('records')]
+
+# jeśli jakikolwiek z rezultatów oddaje ratio == 1.0, to automatycznie bierzemy
+# jeśli nie ma 1.0, to bierzemy wszystkie >= 0.85
+
+# w pierwszej kolejności przygotować dla Wojtka tabelę z BN, gdzie: w 655 są dedykacje, w 700 nie ma adresata dedykacji i w 600 jest jakaś osoba !!!
+
+# w deduplikacji przyjmujemy zgodność przynajmniej jednego adresata dedykacji
 
 data = dict(ChainMap(*x))
 
