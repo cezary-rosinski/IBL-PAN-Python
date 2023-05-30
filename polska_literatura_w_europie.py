@@ -1,3 +1,7 @@
+#to do:
+#zmienic wagę dla sąsiadów, którzy są z innej rodziny na 1.5    
+#zmienić dobór stron na wikidacie i uwzglednić languages spoken, written or signed, odznaczyć related values
+    
 from tqdm import tqdm
 import requests
 import pandas as pd
@@ -51,9 +55,21 @@ spanish_query = """SELECT DISTINCT ?item ?itemLabel WHERE {
   }
 }"""
 
+bulgarian_query = """SELECT DISTINCT ?item ?itemLabel WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE]". }
+  {
+    SELECT DISTINCT ?item WHERE {
+      ?item p:P6886 ?statement0.
+      ?statement0 (ps:P6886/(wdt:P279*)) wd:Q7918.
+      ?item p:P106 ?statement1.
+      ?statement1 (ps:P106/(wdt:P279*)) wd:Q36180.
+    }
+  }
+}"""
+
 user_agent = "WDQS-example Python/%s.%s" % (sys.version_info[0], sys.version_info[1])
 sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent=user_agent)
-sparql.setQuery(polish_query)
+sparql.setQuery(bulgarian_query)
 sparql.setReturnFormat(JSON)
 while True:
     try:
@@ -67,6 +83,7 @@ while True:
 spanish_writers_wikidata = [e.get('item').get('value') for e in results.get('results').get('bindings')]
 czech_writers_wikidata = [e.get('item').get('value') for e in results.get('results').get('bindings')]
 polish_writers_wikidata = [e.get('item').get('value') for e in results.get('results').get('bindings')]
+bulgarian_writers_wikidata = [e.get('item').get('value') for e in results.get('results').get('bindings')]
 
 
 def get_wikidata_label(wikidata_url):   
@@ -89,25 +106,28 @@ def get_wikidata_label(wikidata_url):
  
 wikidata_dict = {}
 with ThreadPoolExecutor() as executor:
-    list(tqdm(executor.map(get_wikidata_label,spanish_writers_wikidata), total=len(spanish_writers_wikidata)))
+    list(tqdm(executor.map(get_wikidata_label,bulgarian_writers_wikidata), total=len(bulgarian_writers_wikidata)))
 
 lang_for_writers = {v.get('label'):v.get('languages') for k,v in wikidata_dict.items() if v.get('label')}
 
-writers_no_languages = {k:len(v) for k,v in lang_for_writers.items()}
+# writers_no_languages = {k:len(v) for k,v in lang_for_writers.items()}
 
 languages_for_poland = [e for sub in lang_for_writers.values() for e in sub]
 languages_for_spain = [e for sub in lang_for_writers.values() for e in sub]
+languages_for_bulgaria = [e for sub in lang_for_writers.values() for e in sub]
 
 
 rodziny_jezykow = {'słowiańskie': ['Polska', 'Czechy', 'Słowacja', 'Rosja', 'Białoruś', 'Ukraina', 'Serbia', 'Chorwacja', 'Słowenia', 'Bułgaria', 'Macedonia'],
-                   'germańskie': ['Szwecja', 'Norwegia', 'Dania', 'Islandia', 'Wyspy Owcze', 'Niemcy', 'Holandia', 'Luksemburg', 'Wielka Brytania'],
-                   'romańskie': ['Hiszpania', 'Portugalia', 'Francja', 'Włochy', 'Rumunia'],
+                   'germańskie': ['Szwecja', 'Norwegia', 'Dania', 'Islandia', 'Wyspy Owcze', 'Niemcy', 'Holandia', 'Luksemburg', 'Wielka Brytania', 'Szwajcaria'],
+                   'romańskie': ['Hiszpania', 'Portugalia', 'Francja', 'Włochy', 'Rumunia', 'Szwajcaria'],
                    'bałtyckie': ['Litwa', 'Łotwa'],
                    'ugrofińskie': ['Estonia', 'Finlandia', 'Węgry'],
-                   'pozostałe': ['Grecja', 'Albania']}
+                   'pozostałe': ['Grecja', 'Albania', 'Turcja']}
 sasiedzi = {'Polska': ['Niemcy', 'Czechy', 'Słowacja', 'Ukraina', 'Białoruś', 'Litwa', 'Rosja'],
             'Hiszpania': ['Portugalia', 'Francja'],
-            'Czechy': ['Polska', 'Słowacja', 'Niemcy', 'Austria', 'Węgry']}
+            'Czechy': ['Polska', 'Słowacja', 'Niemcy', 'Austria', 'Węgry'],
+            'Macedonia': ['Grecja', 'Albania', 'Bułgaria', 'Kosowo', 'Serbia'],
+            'Bułgaria': ['Rumunia', 'Grecja', 'Serbia', 'Macedonia', 'Turcja']}
 
 jezyki_wikipedii = {'pl': 'Polska',
                     'cs': 'Czechy',
@@ -125,7 +145,11 @@ jezyki_wikipedii = {'pl': 'Polska',
                     'sl': 'Słowenia',
                     'mk': 'Macedonia',
                     'it': 'Włochy',
-                    'ro': 'Rumunia'}
+                    'ro': 'Rumunia',
+                    'es': 'Hiszpania',
+                    'el': 'Grecja',
+                    'aln': 'Albania',
+                    'tk': 'Turcja'}
 
 
 points = 0
@@ -150,9 +174,10 @@ for lang in languages_for_poland:
         points += 3
         points_dict[3] +=1
 
-13558/778 #PL liczba punktów na osobę = 17.43
-13558/6469 #PL wartość relacji osoby i języka strony = 2.10
-{0: 720, 1: 1748, 2: 193, 3: 3808}
+13512/778 #PL liczba punktów na osobę = 17.37
+13512/6469 #PL wartość relacji osoby i języka strony = 2.09
+{0: 720, 1: 1748, 2: 239, 3: 3762}
+{k:v/6469 for k,v in {0: 720, 1: 1748, 2: 239, 3: 3762}.items()}
 
 points = 0
 points_dict = {0:0, 1:0, 2:0, 3:0}
@@ -177,9 +202,37 @@ for lang in languages_for_spain:
         points += 3
         points_dict[3] +=1
         
-13100/605 #ES liczba punktów na osobę = 21.65
-13100/4616 #ES wartość relacji osoby i języka strony = 2.84
-{0: 0, 1: 273, 2: 205, 3: 4139}
+11671/606 #ES liczba punktów na osobę = 19.26
+11671/4629 #ES wartość relacji osoby i języka strony = 2.52
+{0: 487, 1: 275, 2: 205, 3: 3662}
+{k:v/4629 for k,v in {0: 487, 1: 275, 2: 205, 3: 3662}.items()}
+
+points = 0
+points_dict = {0:0, 1:0, 2:0, 3:0}
+for lang in languages_for_bulgaria:
+    # lang = languages_for_poland[0]
+    # lang = 'plwiki'
+    lang = lang.replace('wiki','')
+    country = jezyki_wikipedii.get(lang)
+    if not country:
+        points += 3
+        points_dict[3] +=1
+    elif country == 'Bułgaria':
+        points_dict[0] +=1
+    elif country in sasiedzi.get('Bułgaria'):
+        points += 1
+        points_dict[1] +=1
+    elif country in rodziny_jezykow.get('słowiańskie'):
+        points += 2
+        points_dict[2] +=1
+    else:
+        points += 3
+        points_dict[3] +=1
+
+1408/74 #BG liczba punktów na osobę = 19.02
+1408/629 #BG wartość relacji osoby i języka strony = 2.24
+{0: 73, 1: 41, 2: 178, 3: 337}
+{k:v/629 for k,v in {0: 73, 1: 41, 2: 178, 3: 337}.items()}
 
 count = dict(Counter(writers_no_languages.values()))
 
