@@ -16,6 +16,7 @@ import Levenshtein as lev
 from collections import ChainMap
 import requests
 import Levenshtein as lev
+from concurrent.futures import ThreadPoolExecutor
 
 #%% def
 
@@ -364,11 +365,32 @@ for i, e in enumerate(test):
         pass
 
 
+#%%viaf
+df = gsheet_to_df('13ZwtmVrHdRBAu50KNXBBFjJQDJtm50fTy7esVdUZyyI', 'Sheet1')
+
+list_of_people = set(df['$a'].to_list())
 
 
+# for query in tqdm(list_of_people):
+def query_viaf(query):
+    url = "https://www.viaf.org/viaf/AutoSuggest"
+    params = {"query": query}
+    # return [(e.get('term'), f"https://viaf.org/viaf/{e.get('viafid')}") for e in requests.get(url, params=params).json().get('result')]
+    r = requests.get(url, params=params).json()
+    if r.get('result'):
+        viaf_results.update({query: [(e.get('term'), f"https://viaf.org/viaf/{e.get('viafid')}") for e in r.get('result')]})
+    else: viaf_results.update({query: None})
 
+viaf_results = {}
+with ThreadPoolExecutor() as executor:
+    list(tqdm(executor.map(query_viaf,list_of_people), total=len(list_of_people)))
 
+viaf_ok = {k:v for k,v in viaf_results.items() if v}
 
+df_people = pd.DataFrame().from_dict(viaf_results, orient='index')
+df_people.to_excel('lista_osob.xlsx', index=True)
+
+#%% notatki
 nukat_test = dedicated_nukat_light.copy()
 nukat_test['place'] = nukat_test['place'].apply(lambda x: tuple(x))
 nukat_test['dedicated'] = nukat_test['dedicated'].apply(lambda x: tuple([tuple([tuple(el.items()) for el in e]) for e in x])[0])
