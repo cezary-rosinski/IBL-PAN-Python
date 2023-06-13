@@ -31,7 +31,7 @@ for file in tqdm(files):
         descriptors = any([e for e in dictionary.get('650') if any(el in e for el in descriptors_bn)]) if '650' in dictionary else False
         is_translation = all(e in dictionary.get('041')[0] for e in ['$apol', '$h']) if '041' in dictionary else False
         original_language = [e.get('$h') for e in marc_parser_dict_for_field(dictionary.get('041')[0], '\\$') if '$h' in e and e.get('$h') != 'pol'] if '041' in dictionary and '$h' in dictionary.get('041')[0] else None
-        if year in range(1990,2021) and descriptors == True and is_translation == True and original_language:
+        if year in range(1990,2023) and descriptors == True and is_translation == True and original_language:
             result_years.setdefault(year, set()).add(dictionary.get('001')[0])
             if len(original_language) == 1:
                 result_languages.setdefault(original_language[0], set()).add(dictionary.get('001')[0])
