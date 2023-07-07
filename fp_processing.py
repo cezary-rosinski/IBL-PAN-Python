@@ -582,7 +582,7 @@ print('Strona numeru na wordpressie opublikowana')
 
 #pressto - dodawanie numeru
 
-browser.get("https://pressto.amu.edu.pl/index.php/index/login") 
+browser.get("https://pressto.amu.edu.pl/index.php/index/login")
 browser.implicitly_wait(5)
 username_input = browser.find_element('id', 'login-username')
 password_input = browser.find_element('id', 'login-password')
@@ -633,23 +633,15 @@ time.sleep(2)
 # zapisz_numer = browser.find_element('xpath', "//button[@class='pkp_button submitFormButton']")
 zapisz_numer = browser.find_element('xpath', "//button[@name='submitFormButton']")
 zapisz_numer.click()
-time.sleep(1)
-numer_strzalka = browser.find_element('xpath', "//a[@class='show_extras']").click()
-# opublikuj_numer = browser.find_element('xpath', "//a[@title='Opublikuj numer']").click()
-opublikuj_numer = browser.find_element('xpath', "//a[contains(text(),'Opublikuj numer')]")
-opublikuj_numer.click()
-odznacz_mail = browser.find_element('id', 'sendIssueNotification').click()
-# opublikuj_numer_ok = browser.find_element('xpath', "//button[@class='pkp_button submitFormButton']").click()
-opublikuj_numer_ok = browser.find_element('xpath', "//button[@name='submitFormButton']")
-opublikuj_numer_ok.click()
 
-print('Strona numeru na pressto opublikowana')
+print('Strona numeru na pressto zapisana, ale nie opublikowana')
+
 
 #%% pressto – upload new articles
 
 #pressto dodawanie artykułów
 
-for i, row in aktualny_numer[23:].iterrows():
+for i, row in aktualny_numer.iterrows():
     # i = 0
     # row = aktualny_numer.iloc[i,:]
     if row['język'] == 'pl':
@@ -829,16 +821,89 @@ for i, row in aktualny_numer[23:].iterrows():
             potwierdz_button = browser.find_element('id', 'continueButton').click()
             time.sleep(2)
         
-        while True:
-            try:
-                breakzaplanuj_do_publikacji = browser.find_element('id', 'articlePublished').click()
-                time.sleep(2)
-            except ElementClickInterceptedException:
-                potwierdz_button = browser.find_element('id', 'continueButton').click()
-                time.sleep(2)
-                continue
-            break
+        zapisz = browser.find_elements('xpath', "//button[@class='pkp_button submitFormButton']")
+        zapisz[-1].click()
+
+print('Artykuły na pressto zapisane, ale nie przypięte do numeru i nie opublikowane')        
+#print('Artykuły na pressto opublikowane i dodane DOI na wordpressie')
+
+#browser.close()
+
+#%%uzupełnienie tabeli artykułów na dysku google
+
+try:
+    set_with_dataframe(aktualny_numer_sheet.worksheet('artykuły po pętli'), aktualny_numer)
+except gs.WorksheetNotFound:
+    aktualny_numer_sheet.add_worksheet(title="artykuły po pętli", rows="100", cols="20")
+    set_with_dataframe(aktualny_numer_sheet.worksheet('artykuły po pętli'), aktualny_numer)
+
+
+#uzupełnienie tabeli numeru na dysku google
+try:
+    set_with_dataframe(aktualny_numer_sheet.worksheet('strona po pętli'), strona_numeru)
+except gs.WorksheetNotFound:
+    aktualny_numer_sheet.add_worksheet(title="strona po pętli", rows="100", cols="20")
+    set_with_dataframe(aktualny_numer_sheet.worksheet('strona po pętli'), strona_numeru)
+
+worksheets = ['artykuły po pętli', 'strona po pętli']
+for worksheet in worksheets:
+    worksheet = aktualny_numer_sheet.worksheet(worksheet)
+    
+    aktualny_numer_sheet.batch_update({
+        "requests": [
+            {
+                "updateDimensionProperties": {
+                    "range": {
+                        "sheetId": worksheet._properties['sheetId'],
+                        "dimension": "ROWS",
+                        "startIndex": 0,
+                        #"endIndex": 100
+                    },
+                    "properties": {
+                        "pixelSize": 20
+                    },
+                    "fields": "pixelSize"
+                }
+            }
+        ]
+    })
+    
+    worksheet.freeze(rows=1)
+    worksheet.set_basic_filter()
+
+print('Metadane na dysku Google zaktualizowane!')
+    
+
+
+#%% Publikowanie na pressto + DOI
+
+#Publikacja strony numeru na pressto
+time.sleep(1)
+numer_strzalka = browser.find_element('xpath', "//a[@class='show_extras']").click()
+# opublikuj_numer = browser.find_element('xpath', "//a[@title='Opublikuj numer']").click()
+opublikuj_numer = browser.find_element('xpath', "//a[contains(text(),'Opublikuj numer')]")
+opublikuj_numer.click()
+odznacz_mail = browser.find_element('id', 'sendIssueNotification').click()
+# opublikuj_numer_ok = browser.find_element('xpath', "//button[@class='pkp_button submitFormButton']").click()
+opublikuj_numer_ok = browser.find_element('xpath', "//button[@name='submitFormButton']")
+opublikuj_numer_ok.click()
+
+print('Strona numeru na pressto opublikowana')
+
+###
+
+#Przypisanie tekstu do numeru i publikacja
         
+    	while True:
+                try:
+                    breakzaplanuj_do_publikacji = browser.find_element('id', 'articlePublished').click()
+                    time.sleep(2)
+                except ElementClickInterceptedException:
+                    potwierdz_button = browser.find_element('id', 'continueButton').click()
+                    time.sleep(2)
+                    continue
+                break
+
         publikuj_w = browser.find_element('xpath', f"//select[@id = 'issueId']/option[text()='{nazwa_numeru}']").click()
         publikuj_strony = browser.find_element('name', 'pages').send_keys(row['strony'])
         
@@ -918,63 +983,9 @@ for i, row in aktualny_numer[23:].iterrows():
         content = browser.find_element('id', 'content').send_keys(body)
         
         opublikuj = browser.find_element('id', 'publish').click()
-        
-print('Artykuły na pressto opublikowane i dodane DOI na wordpressie')
 
-browser.close()
-
-#%%uzupełnienie tabeli artykułów na dysku google
-
-try:
-    set_with_dataframe(aktualny_numer_sheet.worksheet('artykuły po pętli'), aktualny_numer)
-except gs.WorksheetNotFound:
-    aktualny_numer_sheet.add_worksheet(title="artykuły po pętli", rows="100", cols="20")
-    set_with_dataframe(aktualny_numer_sheet.worksheet('artykuły po pętli'), aktualny_numer)
-
-
-#uzupełnienie tabeli numeru na dysku google
-try:
-    set_with_dataframe(aktualny_numer_sheet.worksheet('strona po pętli'), strona_numeru)
-except gs.WorksheetNotFound:
-    aktualny_numer_sheet.add_worksheet(title="strona po pętli", rows="100", cols="20")
-    set_with_dataframe(aktualny_numer_sheet.worksheet('strona po pętli'), strona_numeru)
-
-worksheets = ['artykuły po pętli', 'strona po pętli']
-for worksheet in worksheets:
-    worksheet = aktualny_numer_sheet.worksheet(worksheet)
-    
-    aktualny_numer_sheet.batch_update({
-        "requests": [
-            {
-                "updateDimensionProperties": {
-                    "range": {
-                        "sheetId": worksheet._properties['sheetId'],
-                        "dimension": "ROWS",
-                        "startIndex": 0,
-                        #"endIndex": 100
-                    },
-                    "properties": {
-                        "pixelSize": 20
-                    },
-                    "fields": "pixelSize"
-                }
-            }
-        ]
-    })
-    
-    worksheet.freeze(rows=1)
-    worksheet.set_basic_filter()
 
 print('Nowy numer opublikowany!')
-    
-
-
-
-
-
-
-
-
 
 
 
