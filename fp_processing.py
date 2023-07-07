@@ -825,7 +825,9 @@ for i, row in aktualny_numer.iterrows():
         zapisz[-1].click()
 
 print('Artykuły na pressto zapisane, ale nie przypięte do numeru i nie opublikowane')        
-#print('Artykuły na pressto opublikowane i dodane DOI na wordpressie')
+
+
+###UWAGA --> dodać sekcję o przypisaniu artykułu do nieopublikowanego numeru (artykuł nie zostanie opublikowany)
 
 #browser.close()
 
