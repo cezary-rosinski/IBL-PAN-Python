@@ -829,7 +829,7 @@ print('Artykuły na pressto zapisane, ale nie przypięte do numeru i nie opublik
 
 ###UWAGA --> dodać sekcję o przypisaniu artykułu do nieopublikowanego numeru (artykuł nie zostanie opublikowany)
 
-#browser.close()
+
 
 #%%uzupełnienie tabeli artykułów na dysku google
 
@@ -878,7 +878,91 @@ print('Metadane na dysku Google zaktualizowane!')
 
 
 #%% Publikowanie na pressto + DOI
+from sickle import Sickle
+from tqdm import tqdm
 
+#pobranie danych z pressto
+
+data_publikacji_na_pressto = input('data publikacji numeru na pressto w formacie YYYY-MM-DD: ')
+
+sickle = Sickle('http://pressto.amu.edu.pl/index.php/fp/oai')
+records = sickle.ListRecords(metadataPrefix='oai_dc')
+
+results = []
+for record in tqdm(records):
+    if record.deleted == False:
+        record = record.get_metadata()
+        record = {k:v for k,v in record.items() if k in ['title', 'creator', 'date', 'identifier', 'source']}
+        if record.get('date')[0] == data_publikacji_na_pressto:
+            results.append(record)
+
+#wczytanie tabeli z aktualnym numerem
+
+file_list = drive.ListFile({'q': f"'{cr_projects}' in parents and trashed=false"}).GetList() 
+fp_folder = [file['id'] for file in file_list if file['title'] == 'Forum Poetyki – redakcja'][0]
+file_list = drive.ListFile({'q': f"'{fp_folder}' in parents and trashed=false"}).GetList() 
+fp_folder = [file['id'] for file in file_list if file['title'] == 'redakcja FP'][0]
+file_list = drive.ListFile({'q': f"'{fp_folder}' in parents and trashed=false"}).GetList() 
+last_number = max(file_list, key=lambda x: x['createdDate'])
+print(f"{last_number['title']}  |  {last_number['id']}")
+
+table_id = input('Podaj id arkusza bieżącego numeru: ')
+aktualny_numer_sheet = gc.open_by_key(table_id)
+
+aktualny_numer = get_as_dataframe(aktualny_numer_sheet.worksheet('artykuły po pętli'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+
+#połączenie zasobów
+
+doi_dict = {}
+for e in results:
+    # e = results[0]
+    for el in e.get('title'):
+        # el = e.get('title')[0]
+        try:
+            df = aktualny_numer[aktualny_numer['tytuł artykułu'].str.replace('<i>','').str.replace('</i>','') == el]['url_edycji'].to_list()[0]
+            doi_dict.update({df:e.get('identifier')[-1]})
+        except IndexError: print(el)
+
+#uruchomienie przeglądarki i zalogowanie na fp.amu.edu.pl
+
+browser = webdriver.Firefox()  
+
+browser.get("http://fp.amu.edu.pl/admin")    
+browser.implicitly_wait(5)
+username_input = browser.find_element('id', 'user_login')
+password_input = browser.find_element('id', 'user_pass')
+
+username = fp_credentials.wordpress_username
+password = fp_credentials.wordpress_password
+time.sleep(1)
+username_input.send_keys(username)
+password_input.send_keys(password)
+
+login_button = browser.find_element('id', 'wp-submit').click()
+
+#dodanie doi do wordpressa
+
+for k,v in tqdm(doi_dict.items()):
+
+    browser.get(k)
+    
+    content = browser.find_element('id', 'content').get_attribute('value')
+    
+    doi_row = f"""<div><strong><strong>DOI:</strong></strong> <a href=" https://doi.org/{v}"> https://doi.org/{v} </a></div>\n"""
+    
+    body = re.sub('(?=\n {0,}<hr \/>)', doi_row, content)
+    content = browser.find_element('id', 'content').clear()
+    content = browser.find_element('id', 'content').send_keys(body)
+    
+    opublikuj = browser.find_element('id', 'publish').click()
+
+
+print('Numery DOI dodane na wordpress!')
+
+browser.close()
+
+
+#%% stary kod
 #Publikacja strony numeru na pressto
 time.sleep(1)
 numer_strzalka = browser.find_element('xpath', "//a[@class='show_extras']").click()
