@@ -18,7 +18,7 @@ def year(row, field):
 #%% new approach
     
 #mrc to mrk 
-path = 'F:/Cezary/Documents/IBL/BN/bn_all/2022-02-18/'
+path = 'D:/IBL/BN/bn_all/2023-07-20/'
 files = [f for f in glob.glob(path + '*.mrc', recursive=True)]
 for file_path in tqdm(files):
     path_mrk = file_path.replace('.mrc', '.mrk')

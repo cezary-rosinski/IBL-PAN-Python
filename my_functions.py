@@ -317,7 +317,7 @@ def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
                         record_in_list = re.split('\$(.)', ''.join(v))
                         indicators = list(record_in_list[0])
                         subfields = record_in_list[1:]
-                        marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
+                        marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=[pymarc.Subfield(code=subfields[0], value=subfields[-1])])
                         pymarc_record.add_ordered_field(marc_field)
                     else:
                         for element in v:
@@ -325,7 +325,7 @@ def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
                             record_in_list = re.split('\$(.)', ''.join(element))
                             indicators = list(record_in_list[0])
                             subfields = record_in_list[1:]
-                            marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=subfields)
+                            marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=[pymarc.Subfield(code=subfields[0], value=subfields[-1])])
                             pymarc_record.add_ordered_field(marc_field)
             outputfile.write(pymarc_record.as_marc())
         except ValueError as err:
