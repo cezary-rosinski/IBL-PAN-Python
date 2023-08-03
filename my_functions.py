@@ -292,6 +292,8 @@ def mrk_to_mrc(path_in, path_out, field_with_id):
     outputfile.close()
     
 def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
+    # df, field_delimiter, path_out, txt_error_file = df, '❦', f'libri_marc_bn_chapters_{year}-{month}-{day}.mrc', f'libri_bn_chapters_errors_{year}-{month}-{day}.txt'
+    # df, field_delimiter, path_out, txt_error_file = bn_articles_marc, '❦', f'data/libri_marc_bn_articles_{year}-{month}-{day}.mrc', f'data/libri_bn_articles_errors_{year}-{month}-{day}.txt'
     mrc_errors = []
     df = df.replace(r'^\s*$', np.nan, regex=True)
     outputfile = open(path_out, 'wb')
@@ -304,6 +306,7 @@ def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
             # record = {k:v for k,v in record.items() if any(a == k for a in ['LDR', 'AVA']) or re.findall('\d{3}', str(k))}
             for k, v in record.items():
                 v = str(v).split(field_delimiter)
+                k = str(k) if isinstance(k,int) else k
                 if k == 'LDR':
                     pass
                 elif k.isnumeric() and int(k) < 10:
@@ -318,15 +321,17 @@ def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
                         indicators = list(record_in_list[0])
                         subfields = record_in_list[1:]
                         marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=[pymarc.Subfield(code=subfields[0], value=subfields[-1])])
-                        pymarc_record.add_ordered_field(marc_field)
+                        if indicators:
+                            pymarc_record.add_ordered_field(marc_field)
                     else:
                         for element in v:
                             tag = k
                             record_in_list = re.split('\$(.)', ''.join(element))
                             indicators = list(record_in_list[0])
                             subfields = record_in_list[1:]
-                            marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=[pymarc.Subfield(code=subfields[0], value=subfields[-1])])
-                            pymarc_record.add_ordered_field(marc_field)
+                            marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=[pymarc.Subfield(code=e,value=f) for e,f in zip(subfields[::2], subfields[1::2])])
+                            if indicators:
+                                pymarc_record.add_ordered_field(marc_field)
             outputfile.write(pymarc_record.as_marc())
         except ValueError as err:
             mrc_errors.append((err, record))
@@ -474,24 +479,25 @@ def simplify_string(x, with_spaces=True, nodiacritics=True):
             final_string += letter
     return final_string
 
-# def marc_parser_dict_for_field(string, subfield_code):
-#     subfield_list = re.findall(f'{subfield_code}.', string)
-#     dictionary_field = {}
-#     for subfield in subfield_list:
-#         subfield_escape = re.escape(subfield)
-#         string = re.sub(f'({subfield_escape})', r'❦\1', string)
-#     for subfield in subfield_list:
-#         subfield_escape = re.escape(subfield)
-#         regex = f'(^)(.*?\❦{subfield_escape}|)(.*?)(\,{{0,1}})((\❦{subfield_code})(.*)|$)'
-#         value = re.sub(regex, r'\3', string)
-#         dictionary_field[subfield] = value
-#     return dictionary_field
+import time
+
+
+def marc_parser_to_dict(string: str, subfield_code: str) -> dict:
+    subfield_list = re.findall(f'{subfield_code}.', string)
+    dictionary_field = {}
+    for subfield in subfield_list:
+        subfield_escape = re.escape(subfield)
+        string = re.sub(f'({subfield_escape})', r'❦\1', string)
+    string = [e.split('\n')[0].strip() for e in string.split('❦') if e]
+    dictionary_fields = [e for e in string if re.escape(e)[:len(subfield_code)] == subfield_code]
+    dictionary_fields = {subfield_list[i]:e[len(subfield_list[i]):] for i, e in enumerate(dictionary_fields)}
+    return dictionary_fields
 
 def substring_range(s, substring):
     for i in re.finditer(re.escape(substring), s):
         yield (i.start(), i.end())
 
-def marc_parser_dict_for_field(string, subfield_code):
+def marc_parser_to_list(string: str, subfield_code: str) -> list:
     subfield_list = re.findall(f'{subfield_code}.', string)
     for subfield in subfield_list:
         subfield_escape = re.escape(subfield)
