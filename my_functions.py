@@ -292,7 +292,7 @@ def mrk_to_mrc(path_in, path_out, field_with_id):
     outputfile.close()
     
 def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
-    # df, field_delimiter, path_out, txt_error_file = df, '❦', f'libri_marc_bn_chapters_{year}-{month}-{day}.mrc', f'libri_bn_chapters_errors_{year}-{month}-{day}.txt'
+    # df, field_delimiter, path_out, txt_error_file = bn_harvested_df, '❦', 'test.mrc', 'test.txt'
     # df, field_delimiter, path_out, txt_error_file = bn_articles_marc, '❦', f'data/libri_marc_bn_articles_{year}-{month}-{day}.mrc', f'data/libri_bn_articles_errors_{year}-{month}-{day}.txt'
     mrc_errors = []
     df = df.replace(r'^\s*$', np.nan, regex=True)
@@ -320,7 +320,7 @@ def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
                         record_in_list = re.split('\$(.)', ''.join(v))
                         indicators = list(record_in_list[0])
                         subfields = record_in_list[1:]
-                        marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=[pymarc.Subfield(code=subfields[0], value=subfields[-1])])
+                        marc_field = pymarc.Field(tag=tag, indicators=indicators, subfields=[pymarc.Subfield(code=e,value=f) for e,f in zip(subfields[::2], subfields[1::2])])
                         if indicators:
                             pymarc_record.add_ordered_field(marc_field)
                     else:
@@ -340,6 +340,7 @@ def df_to_mrc(df, field_delimiter, path_out, txt_error_file):
             errorfile.write(str(element) + '\n\n')
     errorfile.close()
     outputfile.close()
+    # mrc_to_mrk('test.mrc', 'test.mrk')
     
 def mrk_to_df(path_in, encoding='UTF-8'):
     reader = io.open(path_in, 'rt', encoding = encoding).read().splitlines()
