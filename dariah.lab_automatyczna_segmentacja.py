@@ -4,34 +4,94 @@ spakowane abstrakty w formacie .zip przesłać do usługi https://services.clari
 
 from glob import glob
 import requests
+import xml.etree.ElementTree as et
+import lxml.etree
 
 
-path = r"D:\IBL\Biblioteka Nauki\Dariah.lab hOCR/"
-files = [f for f in glob(f"{path}*", recursive=True)]
+path = r"D:\IBL\Biblioteka Nauki\Dariah.lab hOCR\hOCR/"
+files_hocr = [f for f in glob(f"{path}*", recursive=True)]
 
 
 url = 'https://converter-hocr.services.clarin-pl.eu/docs'
 
 url = 'https://converter-hocr.services.clarin-pl.eu/convert/'
 
-def get_radon_info_for_person(person_id):
-    url = 'https://radon.nauka.gov.pl/opendata/scientist/search'
+curl -X 'POST' \
+  'https://converter-hocr.services.clarin-pl.eu/convert/' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@bibliotekanauki_87574.alto.hOCR'
+  
+
+
+headers = {
+    'accept': 'application/json',
+    # requests won't add a boundary if this header is set when you pass files=
+    # 'Content-Type': 'multipart/form-data',
+}
+
+files = {
+    # 'file': open('bibliotekanauki_87574.alto.hOCR', 'rb'),
+    'file': open(files_hocr[0], 'rb'),
+}
+
+response = requests.post('https://converter-hocr.services.clarin-pl.eu/convert/', headers=headers, files=files)
+
+dir(response)
+
+xml = et.fromstring(response.text)
+test = xml.findall(".//[@class='abstract_en']")
+
+for el in xml[-1]:
+    print(el.tag)
+    print(el.attrib)
+    print(el.text)
+
+len(xml[-1][1])
+
+for el in xml[-1][1]:
+    print(el.tag)
+    print(el.attrib)
+    print(el.text)
+  
+for e in xml[-1]: #poziom strony
+    for el in e: #poziom elementu na stronie
+        for ele in el:
+            if el.attrib.get('class') in ['abstract_en', 'abstract_pl']:
+                print(el.attrib.get('class'))
+                print(ele.text)
+            print(el.attrib.get('class'))
+            print(ele.text)
+            
+            print(ele.tag)
+            print(ele.attrib)
+            print(ele.text)
+        
+
     
-    body={
-      "resultNumbers": 1,
-      "token": None,
-      "body": {
-        "uid": person_id,
-        "firstName": None,
-        "lastName": None,
-        "employmentMarker": None,
-        "employmentStatusMarker": None,
-        "activePenaltyMarker": "No",
-        "calculatedEduLevel": None,
-        "academicDegreeMarker": None,
-        "academicTitleMarker": None,
-        "dataSources": None,
-        "lastRefresh": None
-      }}
-    response=requests.post(url,  json=body).json()
-    radon_response.update({person_id: response.get('results')})
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
