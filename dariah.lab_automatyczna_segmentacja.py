@@ -14,6 +14,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor
 import json
 import pandas as pd
+import pickle
 
 #%%
 path = r"D:\IBL\Biblioteka Nauki\Dariah.lab hOCR\hOCR/"
@@ -61,7 +62,10 @@ def segment_hocr(file):
 results = {}
 with ThreadPoolExecutor() as executor:
     list(tqdm(executor.map(segment_hocr,files_hocr), total=len(files_hocr)))        
-        
+
+with open('bb_service.pickle', 'wb') as handle:
+    pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+     
 for k,v in tqdm(results.items()):
     if 'abstract_pl' in v and v.get('abstract_pl'):
         with open(f"data/bibliotekanauki/pl/{k}.txt", 'wt', encoding='utf-8') as f:
