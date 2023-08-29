@@ -63,7 +63,7 @@ results = {}
 with ThreadPoolExecutor() as executor:
     list(tqdm(executor.map(segment_hocr,files_hocr), total=len(files_hocr)))        
 
-with open('bb_service.pickle', 'wb') as handle:
+with open('data/bb_service.pickle', 'wb') as handle:
     pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
      
 for k,v in tqdm(results.items()):
@@ -106,8 +106,25 @@ df = pd.DataFrame().from_dict(keywords_dict, orient='index')
 df.to_excel('data/bibliotekanauki/clarin_keywords_bibliotekanauki_probka.xlsx')
   
   
-  
-  
+#%% porównanie danych CR i BB
+
+path_CR_pl = r"C:\Users\Cezary\Documents\IBL-PAN-Python\data\bibliotekanauki\pl/"
+path_BB_pl = r"C:\Users\Cezary\Documents\IBL-PAN-Python\data\bibliotekanauki\dane BB\abstrakt_pl/"
+
+CR_pl = [f.split('\\')[-1].split('.')[0] for f in glob(f"{path_CR_pl}*", recursive=True)]
+BB_pl = [f.split('\\')[-1].split('.')[0] for f in glob(f"{path_BB_pl}*", recursive=True)]
+
+CR_negative_pl = [e for e in BB_pl if e not in CR_pl]
+BB_negative_pl = [e for e in CR_pl if e not in BB_pl]
+
+path_CR_en = r"C:\Users\Cezary\Documents\IBL-PAN-Python\data\bibliotekanauki\en/"
+path_BB_en = r"C:\Users\Cezary\Documents\IBL-PAN-Python\data\bibliotekanauki\dane BB\abstrakt_en/"
+
+CR_en = [f.split('\\')[-1].split('.')[0] for f in glob(f"{path_CR_en}*", recursive=True)]
+BB_en = [f.split('\\')[-1].split('.')[0] for f in glob(f"{path_BB_en}*", recursive=True)]
+
+CR_negative_en = [e for e in BB_en if e not in CR_en]
+BB_negative_en = [e for e in CR_en if e not in BB_en]
   
   
   

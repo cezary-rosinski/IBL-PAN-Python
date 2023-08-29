@@ -3,21 +3,26 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import seaborn as sns
+from collections import OrderedDict
 
 
 #%%
 with open('data/oesterle_bn_stats.json', 'rt', encoding='utf-8') as f:
     data = json.load(f)
-data.pop('polish literature')   
+data.pop('polish literature')
     
 {tuple(v.keys()) for k,v in data.items()}
 
 
 test = {k:v for k,v in data.items() if k in ['belarusian literature', 'ukrainian literature', 'austrian literature', 'american literature', 'german literature', 'french literature', 'spanish literature', 'japanese literature']}
 
+test = OrderedDict(test)
+
+test = dict(sorted(test.items(), key = lambda tup: [int(e) for e in tup[1].keys()]))
+
 belarusian = pd.DataFrame().from_dict(test.get('belarusian literature'), orient='index').sort_index()
 ukrainian = pd.DataFrame().from_dict(test.get('ukrainian literature'), orient='index').reset_index().rename(columns={'index': 'year'})
-austrian = pd.DataFrame().from_dict(test.get('austrian literature'), orient='index').reset_index().rename(columns={'index': 'year'})
+austrian = pd.DataFrame().from_dict(test.get('austrian literature'), orient='index').reset_index()
 american = pd.DataFrame().from_dict(test.get('american literature'), orient='index').sort_index()
 german = pd.DataFrame().from_dict(test.get('german literature'), orient='index').reset_index().rename(columns={'index': 'year'})
 french = pd.DataFrame().from_dict(test.get('french literature'), orient='index').reset_index().rename(columns={'index': 'year'})
@@ -31,39 +36,18 @@ american.plot()
 
 
 
+# Tworzenie wykresu zbiorczego dla wszystkich literatur
+fig, axes = plt.subplots(nrows=len(test), ncols=1, figsize=(10, 6 * len(test)), dpi=150)
 
-
-# Dane przykładowe (możesz zastąpić je swoimi danymi)
-literatury_narodowe = ['Polska', 'USA', 'Francja', 'Japonia']
-podmiotowa = [120, 180, 150, 90]
-przedmiotowa = [90, 150, 100, 80]
-
-# Tworzenie wykresu
-plt.figure(figsize=(10, 6))
-plt.bar(literatury_narodowe, podmiotowa, label='Literatura podmiotowa')
-plt.bar(literatury_narodowe, przedmiotowa, label='Literatura przedmiotowa', alpha=0.5)
-
-# Dodanie etykiet, tytułu, legendy
-plt.xlabel('Literatury narodowe')
-plt.ylabel('Liczba wydanych książek')
-plt.title('Porównanie literatury podmiotowej i przedmiotowej dla różnych literatur narodowych')
-plt.legend()
-
-# Pokazanie wykresu
-plt.tight_layout()
-plt.show()
-
-
-#
-
-
-# Tworzenie wykresów
-fig, axes = plt.subplots(nrows=len(data), ncols=1, figsize=(10, 6 * len(data)))
-
-for i, (literature, values) in tqdm(enumerate(test.items()), total = len(data)):
+for i, (literature, values) in tqdm(enumerate(test.items()), total = len(test)):
     years = list(values.keys())
     literature_values = [entry["literature"] for entry in values.values()]
     secondary_values = [entry["secondary"] for entry in values.values()]
+
+    sorted_indices = sorted(range(len(years)), key=lambda k: years[k])
+    years = [years[i] for i in sorted_indices]
+    literature_values = [literature_values[i] for i in sorted_indices]
+    secondary_values = [secondary_values[i] for i in sorted_indices]    
 
     ax = axes[i]
     ax.bar(years, literature_values, label='Literatura podmiotowa')
@@ -72,58 +56,15 @@ for i, (literature, values) in tqdm(enumerate(test.items()), total = len(data)):
     ax.set_xlabel('Rok')
     ax.set_ylabel('Liczba wydanych książek')
     ax.legend()
+    
+    ax.set_xticklabels(years, rotation=90)
 
 plt.tight_layout()
 plt.show()
 
 
-#
 
-# Tworzenie list dla box plot
-box_data = []
-
-for literature, values in test.items():
-    literature_values = [entry["literature"] for entry in values.values()]
-    secondary_values = [entry["secondary"] for entry in values.values()]
-    
-    box_data.extend(literature_values)
-    box_data.extend(secondary_values)
-
-# Tworzenie list dla scatter plot
-scatter_data = []
-
-for literature, values in test.items():
-    literature_values = [entry["literature"] for entry in values.values()]
-    secondary_values = [entry["secondary"] for entry in values.values()]
-    
-    for year, literature_val, secondary_val in zip(values.keys(), literature_values, secondary_values):
-        scatter_data.append((literature, year, literature_val, secondary_val))
-
-# Tworzenie DataFrame dla scatter plot
-scatter_df = pd.DataFrame(scatter_data, columns=['Literatura', 'Rok', 'Literatura podmiotowa', 'Literatura przedmiotowa'])
-
-# Tworzenie wykresu pudełkowego (box plot)
-plt.figure(figsize=(10, 6))
-sns.boxplot(data=box_data)
-plt.title('Wykres pudełkowy dla literatury podmiotowej i przedmiotowej')
-plt.xlabel('Rodzaj literatury')
-plt.ylabel('Liczba wydanych książek')
-plt.show()
-
-# Tworzenie wykresu punktowo-liniowego (scatter plot)
-plt.figure(figsize=(10, 6))
-sns.scatterplot(data=scatter_df, x='Literatura podmiotowa', y='Literatura przedmiotowa', hue='Literatura', palette='Set1')
-plt.title('Wykres punktowo-liniowy dla literatury podmiotowej i przedmiotowej')
-plt.xlabel('Literatura podmiotowa')
-plt.ylabel('Literatura przedmiotowa')
-plt.legend(title='Literatura')
-plt.show()
-
-
-#
-
-
-# Przygotowanie danych do wykresu
+# Przygotowanie danych do wykresu scatter plot
 scatter_data = []
 
 for literature, values in test.items():
@@ -144,7 +85,7 @@ scatter_df = scatter_df.sort_values(by='Rok')
 palette = "Set1"  # Change this to the desired palette name
 
 # Tworzenie wykresu punktowo-liniowego (scatter plot) z wybraną paletą kolorów i posortowanymi danymi
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6), dpi=150)
 sns.set_palette(palette)  # Set the desired palette
 for literature in scatter_df['Literatura'].unique():
     subset = scatter_df[scatter_df['Literatura'] == literature]
@@ -154,6 +95,9 @@ plt.title('Scatter plot - Suma książek podmiotowych i przedmiotowych w różny
 plt.xlabel('Rok wydania książki')
 plt.ylabel('Suma książek')
 plt.legend()
+
+plt.xticks(rotation=90)
+
 plt.show()
 
 
