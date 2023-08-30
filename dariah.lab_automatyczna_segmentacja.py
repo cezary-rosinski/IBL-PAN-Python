@@ -104,6 +104,8 @@ for file in tqdm(files):
   
 df = pd.DataFrame().from_dict(keywords_dict, orient='index')
 df.to_excel('data/bibliotekanauki/clarin_keywords_bibliotekanauki_probka.xlsx')
+
+# zliczyć wystąpienia list słów kluczowy --> jeśli lista pojawia się więcej niż 1 raz, to oznacza przypuszczenie, że abstrakt jest zbyt krótki i usługa halucynuje
   
   
 #%% porównanie danych CR i BB

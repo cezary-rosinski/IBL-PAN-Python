@@ -7,18 +7,22 @@ from collections import OrderedDict
 
 
 #%%
-with open('data/oesterle_bn_stats.json', 'rt', encoding='utf-8') as f:
+
+path = 'data/oesterle_bn_stats.json'
+path = 'data/three_categories_new data_from_Czarek_files.json'
+
+with open(path, 'rt', encoding='utf-8') as f:
     data = json.load(f)
 data.pop('polish literature')
     
-{tuple(v.keys()) for k,v in data.items()}
-
 
 test = {k:v for k,v in data.items() if k in ['belarusian literature', 'ukrainian literature', 'austrian literature', 'american literature', 'german literature', 'french literature', 'spanish literature', 'japanese literature']}
 
 test = OrderedDict(test)
 
-test = dict(sorted(test.items(), key = lambda tup: [int(e) for e in tup[1].keys()]))
+
+
+
 
 belarusian = pd.DataFrame().from_dict(test.get('belarusian literature'), orient='index').sort_index()
 ukrainian = pd.DataFrame().from_dict(test.get('ukrainian literature'), orient='index').reset_index().rename(columns={'index': 'year'})
