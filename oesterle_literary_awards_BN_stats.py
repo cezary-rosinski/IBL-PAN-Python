@@ -9,7 +9,7 @@ from collections import OrderedDict
 #%%
 
 path = 'data/oesterle_bn_stats.json'
-path = 'data/three_categories_new data_from_Czarek_files.json'
+path = 'data/four_categories_new data_from_Czarek_files.json'
 
 with open(path, 'rt', encoding='utf-8') as f:
     data = json.load(f)
@@ -21,12 +21,12 @@ test = {k:v for k,v in data.items() if k in ['belarusian literature', 'ukrainian
 test = OrderedDict(test)
 
 
-
+#other należy do secondary doliczyć
 
 
 belarusian = pd.DataFrame().from_dict(test.get('belarusian literature'), orient='index').sort_index()
 ukrainian = pd.DataFrame().from_dict(test.get('ukrainian literature'), orient='index').reset_index().rename(columns={'index': 'year'})
-austrian = pd.DataFrame().from_dict(test.get('austrian literature'), orient='index').reset_index()
+austrian = pd.DataFrame().from_dict(test.get('austrian literature'), orient='index').sort_index()
 american = pd.DataFrame().from_dict(test.get('american literature'), orient='index').sort_index()
 german = pd.DataFrame().from_dict(test.get('german literature'), orient='index').reset_index().rename(columns={'index': 'year'})
 french = pd.DataFrame().from_dict(test.get('french literature'), orient='index').reset_index().rename(columns={'index': 'year'})
