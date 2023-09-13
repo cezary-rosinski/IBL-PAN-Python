@@ -41,7 +41,7 @@ american.plot()
 
 
 # Tworzenie wykresu zbiorczego dla wszystkich literatur
-fig, axes = plt.subplots(nrows=len(test), ncols=1, figsize=(10, 6 * len(test)), dpi=150)
+fig, axes = plt.subplots(nrows=len(test), ncols=1, figsize=(10, 6 * len(test)), dpi=200)
 
 for i, (literature, values) in tqdm(enumerate(test.items()), total = len(test)):
     years = list(values.keys())
@@ -54,11 +54,11 @@ for i, (literature, values) in tqdm(enumerate(test.items()), total = len(test)):
     secondary_values = [secondary_values[i] for i in sorted_indices]    
 
     ax = axes[i]
-    ax.bar(years, literature_values, label='Literatura podmiotowa')
-    ax.bar(years, secondary_values, label='Literatura przedmiotowa', alpha=0.5)
-    ax.set_title(f'Porównanie literatury podmiotowej i przedmiotowej w {literature}')
-    ax.set_xlabel('Rok')
-    ax.set_ylabel('Liczba wydanych książek')
+    ax.bar(years, literature_values, label='Literature')
+    ax.bar(years, secondary_values, label='Secondary', alpha=0.5)
+    ax.set_title(f'Comparison of literature and secondary in {literature}')
+    ax.set_xlabel('Year')
+    ax.set_ylabel('Number of books published')
     ax.legend()
     
     ax.set_xticklabels(years, rotation=90)
