@@ -151,9 +151,9 @@ quotient = {language: summed_secondary[language] / summed_literature[language] f
 languages = list(quotient.keys())
 quotients = list(quotient.values())
 
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(10, 6), dpi=200)
 plt.bar(languages, quotients, color='skyblue')
-plt.xlabel('Language')
+plt.xlabel('National Literature')
 plt.ylabel('Quotient (Secondary Literature / Literature)')
 plt.title('Quotient of Secondary Literature divided by Literature')
 plt.xticks(rotation=45)
@@ -184,7 +184,7 @@ scatter_df = scatter_df.sort_values(by='Rok')
 palette = "Set1"  # Change this to the desired palette name
 
 # Tworzenie wykresu punktowo-liniowego (scatter plot) z wybraną paletą kolorów i posortowanymi danymi
-plt.figure(figsize=(10, 6), dpi=150)
+plt.figure(figsize=(10, 6), dpi=200)
 sns.set_palette(palette)  # Set the desired palette
 for literature in scatter_df['Literatura'].unique():
     subset = scatter_df[scatter_df['Literatura'] == literature]
