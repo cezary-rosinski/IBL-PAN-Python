@@ -8,7 +8,7 @@ from collections import OrderedDict
 
 #%%
 
-path = 'data/oesterle_bn_stats.json'
+# path = 'data/oesterle_bn_stats.json'
 path = 'data/four_categories_new data_from_Czarek_files.json'
 
 with open(path, 'rt', encoding='utf-8') as f:
@@ -104,9 +104,10 @@ scatter_data = []
 
 for literature, values in test.items():
     years = list(values.keys())
-    total_podmiotowa = [entry["literature"] for entry in values.values()]
-    total_przedmiotowa = [entry["secondary"] for entry in values.values()]
-    total_combined = [p + s for p, s in zip(total_podmiotowa, total_przedmiotowa)]
+    total_combined = [entry["literature"] for entry in values.values()]
+    # total_podmiotowa = [entry["literature"] for entry in values.values()]
+    # total_przedmiotowa = [entry["secondary"] for entry in values.values()]
+    # total_combined = [p + s for p, s in zip(total_podmiotowa, total_przedmiotowa)]
     
     scatter_data.extend(zip(years, total_combined, [literature] * len(years)))
 
@@ -126,9 +127,10 @@ for literature in scatter_df['Literatura'].unique():
     subset = scatter_df[scatter_df['Literatura'] == literature]
     plt.scatter(subset['Rok'], subset['Suma książek'], label=literature, alpha=0.7)
 
-plt.title('Scatter plot - Suma książek podmiotowych i przedmiotowych w różnych latach')
-plt.xlabel('Rok wydania książki')
-plt.ylabel('Suma książek')
+plt.title('Scatter plot – Sum of literature books in different years')
+# plt.title('Scatter plot - Suma książek podmiotowych i przedmiotowych w różnych latach')
+plt.xlabel('Year')
+plt.ylabel('Sum')
 plt.legend()
 
 plt.xticks(rotation=90)
@@ -155,7 +157,7 @@ plt.figure(figsize=(10, 6), dpi=200)
 plt.bar(languages, quotients, color='skyblue')
 plt.xlabel('National Literature')
 plt.ylabel('Quotient (Secondary Literature / Literature)')
-plt.title('Quotient of Secondary Literature divided by Literature')
+plt.title('Quotient of Secondary Literature divided by Literature in 1989-2023')
 plt.xticks(rotation=45)
 plt.tight_layout()
 
