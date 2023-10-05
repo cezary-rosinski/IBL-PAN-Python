@@ -92,7 +92,7 @@ save_zip('data/bibliotekanauki/en/', 'bibliotekanauki_en.zip', ['txt'])
   
 #%% keywords
 
-path = r"C:\Users\Cezary\Documents\IBL-PAN-Python\data\bibliotekanauki\pl\keywords/"
+path = r"C:\Users\Cezary\Documents\IBL-PAN-Python\data\automatyczna segmentacja\bibliotekanauki\pl\keywords\2023-10-05/"
 files = [f for f in glob(f"{path}*", recursive=True)]
 
 keywords_dict = {}
@@ -103,7 +103,7 @@ for file in tqdm(files):
     keywords_dict.update({file_name: file_contents.get('clarin').get('labels')})
   
 df = pd.DataFrame().from_dict(keywords_dict, orient='index')
-df.to_excel('data/bibliotekanauki/clarin_keywords_bibliotekanauki_probka.xlsx')
+df.to_excel('data/automatyczna segmentacja/bibliotekanauki/clarin_keywords_bibliotekanauki.xlsx')
 
 # zliczyć wystąpienia list słów kluczowy --> jeśli lista pojawia się więcej niż 1 raz, to oznacza przypuszczenie, że abstrakt jest zbyt krótki i usługa halucynuje
   
