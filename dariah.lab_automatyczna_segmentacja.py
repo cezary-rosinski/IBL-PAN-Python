@@ -129,7 +129,75 @@ CR_negative_en = [e for e in BB_en if e not in CR_en]
 BB_negative_en = [e for e in CR_en if e not in BB_en]
   
   
-  
+#%% inforex -- dorzutka
+
+path = r"C:\Users\Cezary\Documents\IBL-PAN-Python\data\automatyczna segmentacja\inforex/"
+files_hocr = [f for f in glob(f"{path}*", recursive=True)]
+
+url = 'https://converter-hocr.services.clarin-pl.eu/convert/'
+
+headers = {
+    'accept': 'application/json',
+}
+
+# results = {}
+def segment_hocr(file):
+# for file in tqdm(files_hocr):
+    # file = files_hocr[0]
+    files = {
+        # 'file': open('bibliotekanauki_87574.alto.hOCR', 'rb'),
+        'file': open(file, 'rb')}
+    file_name = file.split('\\')[-1].replace('.alto.hOCR', '')
+
+    response = requests.post(url, headers=headers, files=files)
+
+    soup = BeautifulSoup(response.content, 'xml')
+    try:
+        results.update({file_name: {'text': soup.find("div", {"class": "normal"}).text.strip()}})
+    except AttributeError:
+        results.update({file_name: {'text': None}})
+        
+results = {}
+with ThreadPoolExecutor() as executor:
+    list(tqdm(executor.map(segment_hocr,files_hocr), total=len(files_hocr)))        
+
+with open('data/bb_service.pickle', 'wb') as handle:
+    pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+     
+for k,v in tqdm(results.items()):
+    if 'abstract_pl' in v and v.get('abstract_pl'):
+        with open(f"data/bibliotekanauki/pl/{k}.txt", 'wt', encoding='utf-8') as f:
+            f.write(v.get('abstract_pl'))
+    if 'abstract_en' in v and v.get('abstract_en'):
+        with open(f"data/bibliotekanauki/en/{k}.txt", 'wt', encoding='utf-8') as f:
+            f.write(v.get('abstract_en'))
+
+
+def save_zip(path, zip_name, extension: list):
+    name = path
+    zip_name = name + zip_name
+    with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zip_ref:
+        for folder_name, subfolders, filenames in os.walk(name):
+            for filename in filenames:
+                if filename.split('.')[-1] in extension:
+                    file_path = os.path.join(folder_name, filename)
+                    zip_ref.write(file_path, arcname=os.path.relpath(file_path, name))
+    zip_ref.close()
+
+save_zip('data/bibliotekanauki/pl/', 'bibliotekanauki_pl.zip', ['txt'])
+save_zip('data/bibliotekanauki/en/', 'bibliotekanauki_en.zip', ['txt'])
+
+
+
+
+
+
+
+
+
+
+
+
   
   
   
