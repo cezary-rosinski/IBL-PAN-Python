@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 import pandas as pd
 import pickle
+from my_functions import gsheet_to_df
 
 #%%
 path = r"D:\IBL\Biblioteka Nauki\Dariah.lab hOCR\hOCR/"
@@ -188,9 +189,47 @@ save_zip('data/bibliotekanauki/pl/', 'bibliotekanauki_pl.zip', ['txt'])
 save_zip('data/bibliotekanauki/en/', 'bibliotekanauki_en.zip', ['txt'])
 
 
+#%% topiki
+
+dobre_id = gsheet_to_df('1-MYkyJfW5u1T4Cv-ofiLDx140FvAFbjVHq3Qo-7UwV4', 'Sheet1')
+dobre_id = dobre_id.loc[(dobre_id['oai_lang'] == 'pol') & 
+                        (dobre_id['abstract_lang'] == 'pol')]['id'].to_list()
+
+path = r"C:\Users\Cezary\Downloads\clarin_bibliotekanauki_hOCR/"
+files_hocr = [f for f in glob(f"{path}*", recursive=True)]
+
+files_hocr = [e for e in files_hocr if e.split('\\')[-1].split('.')[0] in dobre_id]
 
 
+url = 'https://converter-hocr.services.clarin-pl.eu/convert/'
 
+headers = {
+    'accept': 'application/json',
+}
+def segment_hocr(file):
+# for file in tqdm(files_hocr):
+    # file = files_hocr[0]
+    files = {
+        # 'file': open('bibliotekanauki_87574.alto.hOCR', 'rb'),
+        'file': open(file, 'rb')}
+    file_name = re.findall('(bibliotekanauki_\d+)(?=\.)', file)[0]
+
+    response = requests.post(url, headers=headers, files=files)
+
+    soup = BeautifulSoup(response.content, 'xml')
+    try:
+        results.update({file_name: {'abstract_pl': soup.find("div", {"class": "abstract"}).text.strip()}})
+    except AttributeError:
+        results.update({file_name: {'abstract_pl': None}})
+        
+    try:
+        results[file_name].update({'abstract_en': soup.find("div", {"class": "abstract_en"}).text.strip()})
+    except AttributeError:
+        results[file_name].update({'abstract_en': None})
+        
+results = {}
+with ThreadPoolExecutor() as executor:
+    list(tqdm(executor.map(segment_hocr,files_hocr), total=len(files_hocr)))
 
 
 
