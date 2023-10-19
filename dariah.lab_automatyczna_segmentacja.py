@@ -195,7 +195,8 @@ dobre_id = gsheet_to_df('1-MYkyJfW5u1T4Cv-ofiLDx140FvAFbjVHq3Qo-7UwV4', 'Sheet1'
 dobre_id = dobre_id.loc[(dobre_id['oai_lang'] == 'pol') & 
                         (dobre_id['abstract_lang'] == 'pol')]['id'].to_list()
 
-path = r"C:\Users\Cezary\Downloads\clarin_bibliotekanauki_hOCR/"
+# path = r"C:\Users\Cezary\Downloads\clarin_bibliotekanauki_hOCR/"
+path = r"D:\IBL\Biblioteka Nauki\Dariah.lab hOCR\hOCR/"
 files_hocr = [f for f in glob(f"{path}*", recursive=True)]
 
 files_hocr = [e for e in files_hocr if e.split('\\')[-1].split('.')[0] in dobre_id]
@@ -205,7 +206,16 @@ url = 'https://converter-hocr.services.clarin-pl.eu/convert/'
 
 headers = {
     'accept': 'application/json',
+    # requests won't add a boundary if this header is set when you pass files=
+    # 'Content-Type': 'multipart/form-data',
 }
+
+params = {
+    # 'class_name': 'normal',
+    'html': 'false',
+    'word_transfer': 'true',
+}
+
 def segment_hocr(file):
 # for file in tqdm(files_hocr):
     # file = files_hocr[0]
@@ -214,7 +224,7 @@ def segment_hocr(file):
         'file': open(file, 'rb')}
     file_name = re.findall('(bibliotekanauki_\d+)(?=\.)', file)[0]
 
-    response = requests.post(url, headers=headers, files=files)
+    response = requests.post(url, params=params, headers=headers, files=files)
 
     soup = BeautifulSoup(response.content, 'xml')
     try:
@@ -227,6 +237,11 @@ def segment_hocr(file):
     except AttributeError:
         results[file_name].update({'abstract_en': None})
         
+    try:
+        results[file_name].update({'text': soup.find_all("div", {"class": "normal"})})
+    except AttributeError:
+        results[file_name].update({'text': None})
+        
 results = {}
 with ThreadPoolExecutor() as executor:
     list(tqdm(executor.map(segment_hocr,files_hocr), total=len(files_hocr)))
@@ -234,7 +249,7 @@ with ThreadPoolExecutor() as executor:
 
 
 
-
+test = [e.text.strip() for e in results.get(list(results.keys())[0]).get('text')]
 
 
   
