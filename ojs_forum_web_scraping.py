@@ -85,7 +85,9 @@ errors = []
 for e in tqdm(higher):
     # e = higher[31]
 
-    title = e.select_one('a.title').text
+    title = e.select_one('a.title')
+    post_url = title['href']
+    title = title.text
     try:
         views = e.select_one('td.num.views')
         views = re.findall('\d+', views.select_one('span.number')['title'])[0]
@@ -96,12 +98,73 @@ for e in tqdm(higher):
         posts = e.select_one('span.posts').text
         views = e.select_one('span.views').text
     
-    response.append((title, views, posts))
+    response.append([title, post_url, views, posts])
 
-response = set(response)
-df = pd.DataFrame(response, columns=['title', 'views', 'posts'])
+# response = set(response)
+# df = pd.DataFrame(response, columns=['title', 'views', 'posts'])
 
-df.to_excel('data/ojs_forum.xlsx', index=False)    
+# df.to_excel('data/ojs_forum.xlsx', index=False)    
+
+# for i, (title, url, view, post) in tqdm(enumerate(response), total=len(response)):
+
+    #!!!!!!!!!!!!!!!!!!!
+#przygotować urle, np.   MissingSchema: Invalid URL '/t/the-incident-id-is-n-a/4063'  
+
+def update_post_info(resp):
+    try:
+        title, url, view, post = resp
+        result = requests.get(url)
+        soup = BeautifulSoup(result.content, 'lxml')
+            
+        text = soup.find('div', class_="post").text.strip()
+        
+        posts_time = soup.find_all('span', class_='crawler-post-infos')
+        first_post_time = posts_time[0].find('time')['datetime']
+        last_post_time = posts_time[-1].find('time')['datetime']
+        resp.extend([text, first_post_time, last_post_time])
+    except AttributeError:
+        errors.append(url)
+    
+    
+errors = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(update_post_info, response),total=len(response)))    
+
+
+
+# post content
+url = "https://forum.pkp.sfu.ca/t/the-incident-id-is-n-a/4063"
+result = requests.get(url)
+soup = BeautifulSoup(result.content, 'lxml')
+
+text = soup.select('#post_1 .cooked')
+
+text = soup.find('div', class_="post").text.strip()
+
+test = text.text
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
