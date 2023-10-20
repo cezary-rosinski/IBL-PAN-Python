@@ -201,6 +201,9 @@ files_hocr = [f for f in glob(f"{path}*", recursive=True)]
 
 files_hocr = [e for e in files_hocr if e.split('\\')[-1].split('.')[0] in dobre_id]
 
+# path2 = r"C:\Users\Cezary\Downloads\clarin_bibliotekanauki_hOCR\833/"
+# files_hocr_all = [f for f in glob(f"{path2}*", recursive=True)]
+# [os.remove(e) for e in files_hocr_all if e.replace('\\833', '') not in files_hocr]
 
 url = 'https://converter-hocr.services.clarin-pl.eu/convert/'
 
@@ -251,9 +254,30 @@ with ThreadPoolExecutor() as executor:
 
 test = [e.text.strip() for e in results.get(list(results.keys())[0]).get('text')]
 
+results.get(list(results.keys())[0]).get('abstract_pl')
 
-  
-  
+abstrakty = {k:v.get('abstract_pl') for k,v in results.items()}
+# test = set([v.split(' ')[0] for k,v in abstrakty.items() if v])
+
+# ['Abstrakt:', 'ABSTRAKT', 'Abstrakt', 'Abstrakt.', 'STRESZCZENIE', 'Streszczenie', 'Streszczenie.', 'Streszczenie:']
+
+abstrakty = {k:re.sub('^Abstrakt\:|^ABSTRAKT|^Abstrakt\.|^Abstrakt|^STRESZCZENIE|^Streszczenie\:|^Streszczenie\.|^Streszczenie', '', v).strip().lstrip('.').lstrip(':').lstrip('|').strip() if v else v for k,v in abstrakty.items()}
+
+path = r'C:\Users\Cezary\Downloads\clarin_bibliotekanauki_hOCR\abstrakty/'
+
+for k,v in abstrakty.items():
+    if v:
+        with open(f"{path}{k}.txt", 'wt', encoding='utf-8') as f:
+            f.write(v)
+
+
+
+
+
+
+
+
+
   
   
   
