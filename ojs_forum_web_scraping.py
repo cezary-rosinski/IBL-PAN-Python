@@ -4,7 +4,7 @@ import pandas as pd
 import regex as re
 import time
 from tqdm import tqdm  #licznik
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from datetime import datetime
 import json
 from pydrive.auth import GoogleAuth
@@ -13,6 +13,7 @@ import pandas as pd
 import sys
 sys.path.insert(1, 'C:/Users/Cezary/Documents/IBL-PAN-Python')
 from my_functions import gsheet_to_df
+import pickle
 
 #%%
 
@@ -106,14 +107,42 @@ for e in tqdm(higher):
 # df.to_excel('data/ojs_forum.xlsx', index=False)    
 
 # for i, (title, url, view, post) in tqdm(enumerate(response), total=len(response)):
+    
+response = [(a, f"https://forum.pkp.sfu.ca{b}" if not b.startswith('h') else b, c, d) for a, b, c, d in response]  
+response = [list(e) for e in list(set(response))]
 
-    #!!!!!!!!!!!!!!!!!!!
-#przygotować urle, np.   MissingSchema: Invalid URL '/t/the-incident-id-is-n-a/4063'  
+with open('data/pkp_response.pickle', 'wb') as handle:
+    pickle.dump(response, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    
+with open('data/pkp_response.pickle', 'rb') as handle:
+    response = pickle.load(handle)
+    
+origin_response = [e[:4] for e in response]
+
+for resp in tqdm(origin_response[14561:]):
+    title, url, view, post = resp
+    result = requests.get(url)
+    soup = BeautifulSoup(result.content, 'lxml')
+    if result.status_code != 504:
+        text = soup.find('div', class_="post").text.strip()
+        
+        posts_time = soup.find_all('span', class_='crawler-post-infos')
+        first_post_time = posts_time[0].find('time')['datetime']
+        last_post_time = posts_time[-1].find('time')['datetime']
+        resp.extend([text, first_post_time, last_post_time])
+    else: print(resp)
+        
+    
+with open('data/pkp_response.pickle', 'wb') as handle:
+    pickle.dump(origin_response, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 
 def update_post_info(resp):
+    # resp = ['Upgrade related - OJS', 'https://forum.pkp.sfu.ca/t/upgrade-related-ojs/20435', '311', '1']
     try:
         title, url, view, post = resp
         result = requests.get(url)
+        errors.append([url, result.status_code, result.content])
         soup = BeautifulSoup(result.content, 'lxml')
             
         text = soup.find('div', class_="post").text.strip()
@@ -123,12 +152,92 @@ def update_post_info(resp):
         last_post_time = posts_time[-1].find('time')['datetime']
         resp.extend([text, first_post_time, last_post_time])
     except AttributeError:
-        errors.append(url)
+        time.sleep(0.3)
+        update_post_info(resp)
+        # errors.append(url)
+    except requests.Timeout:
+        time.sleep(0.3)
+        update_post_info(resp)
+        # result = requests.get(url)
+        # print(url, result.status_code)
     
+
+
     
 errors = []
 with ThreadPoolExecutor() as excecutor:
-    list(tqdm(excecutor.map(update_post_info, response),total=len(response)))    
+    list(tqdm(excecutor.map(update_post_info, response),total=len(response)))
+
+
+
+#NLP
+import spacy 
+from sklearn.feature_extraction.text import TfidfVectorizer 
+nlp = spacy.load("en_core_web_sm") 
+
+
+test = [e for e in response if len(e) == 7]
+
+interested = [e for e in test if any('3' in el for el in [e[0], e[4]])]
+
+for m in tqdm(interested):
+    # m = interested[2]
+    q = m[4]
+    q = m[0]
+    doc = nlp(q)
+    noun_phrases = [chunk.text for chunk in doc.noun_chunks] 
+    
+    vectorizer = TfidfVectorizer() 
+    tfidf = vectorizer.fit_transform([doc.text])
+    top_phrases = sorted(vectorizer.vocabulary_, key=lambda x: tfidf[0, vectorizer.vocabulary_[x]], reverse=True)[:3]
+    m.append(top_phrases)
+
+
+from keybert import KeyBERT
+kw_model = KeyBERT()
+keywords = kw_model.extract_keywords(q)
+keywords
+
+
+
+import yake
+kw_extractor = yake.KeywordExtractor()
+keywords = kw_extractor.extract_keywords(q)
+keywords[:5]
+
+
+from rake_nltk import Rake
+import nltk
+nltk.download('stopwords')
+nltk.download('punkt')
+rake = Rake()
+rake.extract_keywords_from_text(q)
+keywords = rake.get_ranked_phrases()
+keywords[:5]
+
+
+import torch
+import transformers
+
+# Load the BERT model and create a new tokenizer 
+model = transformers.BertModel.from_pretrained("bert-base-uncased") 
+tokenizer = transformers.BertTokenizer.from_pretrained("bert-base-uncased")
+
+# Tokenize and encode the text 
+input_ids = tokenizer.encode(q, add_special_tokens=True) 
+
+# Use BERT to encode the meaning and context of the words and phrases in the text 
+outputs = model(torch.tensor([input_ids]))
+
+# Use the attention weights of the tokens to identify the most important words and phrases 
+attention_weights = outputs[-1]
+top_tokens = sorted(attention_weights[0], key=lambda x: x[1], reverse=True)[:3]
+
+# Decode the top tokens and print the top 3 keywords 
+top_keywords = [tokenizer.decode([token[0]]) for token in top_tokens]
+print(top_keywords)
+
+
 
 
 
@@ -144,8 +253,15 @@ text = soup.find('div', class_="post").text.strip()
 test = text.text
 
 
-
-
+for url, status, content in test:
+    soup = BeautifulSoup(content, 'lxml')
+        
+    text = soup.find('div', class_="post").text.strip()
+    
+    posts_time = soup.find_all('span', class_='crawler-post-infos')
+    first_post_time = posts_time[0].find('time')['datetime']
+    last_post_time = posts_time[-1].find('time')['datetime']
+    
 
 
 
