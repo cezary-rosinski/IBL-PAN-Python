@@ -14,17 +14,6 @@ import sys
 sys.path.insert(1, 'C:/Users/Cezary/Documents/IBL-PAN-Python')
 from my_functions import gsheet_to_df
 import pickle
-
-#%%
-
-url = "https://forum.pkp.sfu.ca/c/questions/5?order=views"
-result = requests.get(url)
-soup = BeautifulSoup(result.content, 'lxml')
-
-
-
-
-#%%
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, NoAlertPresentException, SessionNotCreatedException, ElementClickInterceptedException, InvalidArgumentException
@@ -32,11 +21,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
-from bs4 import BeautifulSoup
-from tqdm import tqdm
-import regex as re
-import pandas as pd
+from collections import Counter
 #%%
 
 url = 'https://forum.pkp.sfu.ca/c/questions/5?order=views' # replace with the URL of the webpage you want to scrape
@@ -161,44 +146,72 @@ def update_post_info(resp):
         # result = requests.get(url)
         # print(url, result.status_code)
     
-
-
-    
 errors = []
 with ThreadPoolExecutor() as excecutor:
     list(tqdm(excecutor.map(update_post_info, response),total=len(response)))
 
+#%%NLP
+from keybert import KeyBERT
+import spacy
+kw_model = KeyBERT()
+
+with open('data/pkp_response.pickle', 'rb') as handle:
+    response = pickle.load(handle)
+    
+interesting = [e for e in response if any('3' in el for el in [e[0], e[4]])]
+
+keywords_dict = {}
+for m in tqdm(interesting):
+    # m = interesting[2]
+    keywords_dict.update({m[0]: {'title': kw_model.extract_keywords(m[0]),
+                                 'post': kw_model.extract_keywords(m[4])}})
+
+with open('data/pkp_forum_keywords_extracted.pickle', 'wb') as handle:
+    pickle.dump(keywords_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    
+title_kw = [el for sub in [[a for a,b in v.get('title')] for k,v in keywords_dict.items()] for el in sub]
+nlp = spacy.load("en_core_web_sm")
+
+title_kw_lemmas = []
+for e in tqdm(title_kw):
+    title_kw_lemmas.append(nlp(e))
+title_kw_lemmas = [e[0].lemma_ for e in title_kw_lemmas]
+title_result = Counter(title_kw_lemmas).most_common(200)
+title_df = pd.DataFrame(title_result)
+
+post_kw = [el for sub in [[a for a,b in v.get('post')] for k,v in keywords_dict.items()] for el in sub]
+
+post_kw_lemmas = []
+for e in tqdm(post_kw):
+    post_kw_lemmas.append(nlp(e))
+post_kw_lemmas = [e[0].lemma_ for e in post_kw_lemmas]
+post_result = Counter(post_kw_lemmas).most_common(200)
+post_df = pd.DataFrame(post_result)
 
 
-#NLP
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#rest
 import spacy 
 from sklearn.feature_extraction.text import TfidfVectorizer 
-nlp = spacy.load("en_core_web_sm") 
-
-
-test = [e for e in response if len(e) == 7]
-
-interested = [e for e in test if any('3' in el for el in [e[0], e[4]])]
-
-for m in tqdm(interested):
-    # m = interested[2]
-    q = m[4]
-    q = m[0]
-    doc = nlp(q)
-    noun_phrases = [chunk.text for chunk in doc.noun_chunks] 
-    
-    vectorizer = TfidfVectorizer() 
-    tfidf = vectorizer.fit_transform([doc.text])
-    top_phrases = sorted(vectorizer.vocabulary_, key=lambda x: tfidf[0, vectorizer.vocabulary_[x]], reverse=True)[:3]
-    m.append(top_phrases)
-
-
-from keybert import KeyBERT
-kw_model = KeyBERT()
-keywords = kw_model.extract_keywords(q)
-keywords
-
-
+nlp = spacy.load("en_core_web_sm")
+doc = nlp(q)
+noun_phrases = [chunk.text for chunk in doc.noun_chunks] 
+vectorizer = TfidfVectorizer() 
+tfidf = vectorizer.fit_transform([doc.text])
+top_phrases = sorted(vectorizer.vocabulary_, key=lambda x: tfidf[0, vectorizer.vocabulary_[x]], reverse=True)[:3]
 
 import yake
 kw_extractor = yake.KeywordExtractor()
