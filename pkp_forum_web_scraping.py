@@ -69,11 +69,21 @@ higher = soup.select('tr.topic-list-item')
 response = []
 errors = []
 for e in tqdm(higher):
+    # e = higher[1]
     # e = higher[31]
+
+    category = e.select_one('.category-name').text
 
     title = e.select_one('a.title')
     post_url = title['href']
     title = title.text
+    
+    category = e.select_one('.category-name').text
+    tags = e.select('.simple')
+    if tags:
+        tags = [e.text for e in tags]
+    else: tags = None
+    
     try:
         views = e.select_one('td.num.views')
         views = re.findall('\d+', views.select_one('span.number')['title'])[0]
@@ -84,7 +94,7 @@ for e in tqdm(higher):
         posts = e.select_one('span.posts').text
         views = e.select_one('span.views').text
     
-    response.append([title, post_url, views, posts])
+    response.append([title, post_url, views, posts, category, tags])
 
 # response = set(response)
 # df = pd.DataFrame(response, columns=['title', 'views', 'posts'])
@@ -93,14 +103,19 @@ for e in tqdm(higher):
 
 # for i, (title, url, view, post) in tqdm(enumerate(response), total=len(response)):
     
-response = [(a, f"https://forum.pkp.sfu.ca{b}" if not b.startswith('h') else b, c, d) for a, b, c, d in response]  
-response = [list(e) for e in list(set(response))]
+response = response[30:]
+response = [(a, f"https://forum.pkp.sfu.ca{b}" if not b.startswith('h') else b, c, d, e, f) for a, b, c, d, e, f in response]  
 
-with open('data/pkp_response.pickle', 'wb') as handle:
+with open('data/pkp_original_response.pickle', 'wb') as handle:
     pickle.dump(response, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+# response = [list(e) for e in list(set(response))]
+
+# with open('data/pkp_response.pickle', 'wb') as handle:
+#     pickle.dump(response, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
-with open('data/pkp_response.pickle', 'rb') as handle:
-    response = pickle.load(handle)
+# with open('data/pkp_response.pickle', 'rb') as handle:
+#     response = pickle.load(handle)
     
 origin_response = [e[:4] for e in response]
 
@@ -189,6 +204,31 @@ post_result = Counter(post_kw_lemmas).most_common(200)
 post_df = pd.DataFrame(post_result)
 
 
+#%% Hanna request
+
+with open('data/pkp_forum_keywords_extracted.pickle', 'rb') as a, open('data/pkp_response.pickle', 'rb') as b, open('data/pkp_original_response.pickle', 'rb') as c:
+    keywords_dict = pickle.load(a)
+    pkp_response = pickle.load(b)
+    pkp_original_response = pickle.load(c)
+
+pkp_response = [e for e in pkp_response if any('3' in el for el in [e[0], e[4]])]
+
+orig_cat_dict = {e[0]:e[4] for e in pkp_original_response}
+orig_tag_dict = {e[0]:e[5] for e in pkp_original_response}
+
+
+for e in tqdm(pkp_response):
+    e.append(orig_cat_dict.get(e[0]))
+    e.append(orig_tag_dict.get(e[0]))
+    
+with open('data/pkp_final_response.pickle', 'wb') as handle:
+    pickle.dump(pkp_response, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    
+upgrade = [e for e in pkp_response if e[-2] == 'Software Support' and e[-1] and all(el in e[-1] for el in ['ojs', 'upgrade'])]
+
+upgrade_df = pd.DataFrame(upgrade, columns=['title', 'url', 'views', 'replies', 'text', 'first_post_time', 'last_post_time', 'category', 'tags'])
+    
+upgrade_df.to_excel('data/pkp_forum_upgrade.xlsx', index=False)
 
 
 
@@ -196,14 +236,7 @@ post_df = pd.DataFrame(post_result)
 
 
 
-
-
-
-
-
-
-
-#rest
+#%%rest
 import spacy 
 from sklearn.feature_extraction.text import TfidfVectorizer 
 nlp = spacy.load("en_core_web_sm")
