@@ -224,11 +224,15 @@ for e in tqdm(pkp_response):
 with open('data/pkp_final_response.pickle', 'wb') as handle:
     pickle.dump(pkp_response, handle, protocol=pickle.HIGHEST_PROTOCOL)
     
-upgrade = [e for e in pkp_response if e[-2] == 'Software Support' and e[-1] and all(el in e[-1] for el in ['ojs', 'upgrade'])]
-
-upgrade_df = pd.DataFrame(upgrade, columns=['title', 'url', 'views', 'replies', 'text', 'first_post_time', 'last_post_time', 'category', 'tags'])
+with open('data/pkp_final_response.pickle', 'rb') as file:
+    pkp_response = pickle.load(file)
     
-upgrade_df.to_excel('data/pkp_forum_upgrade.xlsx', index=False)
+# upgrade = [e for e in pkp_response if e[-2] == 'Software Support' and e[-1] and all(el in e[-1] for el in ['ojs', 'upgrade'])]
+tags = [e for e in pkp_response if e[-2] == 'Software Support' and e[-1] and any(el in e[-1] for el in ['install', 'installation', 'multi-installation', 'upgrade', 'upgrade-error', 'post-upgrade'])]
+
+tags_df = pd.DataFrame(tags, columns=['title', 'url', 'views', 'replies', 'text', 'first_post_time', 'last_post_time', 'category', 'tags'])
+    
+tags_df.to_excel('data/pkp_forum_tags.xlsx', index=False)
 
 
 
