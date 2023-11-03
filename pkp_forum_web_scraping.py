@@ -234,11 +234,26 @@ tags_df = pd.DataFrame(tags, columns=['title', 'url', 'views', 'replies', 'text'
     
 tags_df.to_excel('data/pkp_forum_tags.xlsx', index=False)
 
+#%% tables for keywords
 
+with open('data/pkp_forum_keywords_extracted.pickle', 'rb') as a, open('data/pkp_response.pickle', 'rb') as b, open('data/pkp_original_response.pickle', 'rb') as c:
+    keywords_dict = pickle.load(a)
+    pkp_response = pickle.load(b)
+    pkp_original_response = pickle.load(c)
 
+pkp_response = [e for e in pkp_response if any('3' in el for el in [e[0], e[4]])]
 
+ok_keywords_dict = {k:[el[0] for el in [e for sub in v.values() for e in sub]] for k,v in keywords_dict.items()}
 
+selected_keywors = ["reviewer", "review", "notification", "permission", "register", "access", "archive", "submission", "file", "email", "upload", "export", "pdf", "crossref", "display", "template"]
 
+ok_keywords_dict = {k:[el.lower() for el in v] for k,v in ok_keywords_dict.items() if any(e in selected_keywors for e in v)}
+
+result = [e for e in pkp_response if e[0] in ok_keywords_dict]
+[e.append(ok_keywords_dict.get(e[0])) for e in result]
+
+keywords_df = pd.DataFrame(result, columns=['title', 'url', 'views', 'replies', 'text', 'first_post_time', 'last_post_time', 'keywords'])
+keywords_df.to_excel('data/pkp_forum_keywords_posts.xlsx', index=False)
 
 #%%rest
 import spacy 
