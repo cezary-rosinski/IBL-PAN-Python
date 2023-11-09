@@ -1,6 +1,7 @@
 from my_functions import gsheet_to_df
 from tqdm import tqdm
 from gspread.exceptions import WorksheetNotFound
+from datetime import datetime
 
 #%%
 
@@ -33,5 +34,6 @@ for k,v in tqdm(prace_manualne_statystyki.items()):
         # except WorksheetNotFound:
         #     pass
         
-        
+print(f"Sporządzono {sum(osoby_statystyki.values())} z 40000 zapisów")
+print(f"Do dnia {datetime.now().date()} zrealizowano {round((sum(osoby_statystyki.values())/40000)*100,2)}% wymaganych zapisów.")
 
