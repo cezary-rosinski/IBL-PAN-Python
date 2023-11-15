@@ -270,6 +270,49 @@ for k,v in abstrakty.items():
         with open(f"{path}{k}.txt", 'wt', encoding='utf-8') as f:
             f.write(v)
 
+#KDL
+
+path = r"D:\IBL\CLARIN\KDL\hOCR/"
+files_hocr = [f for f in glob(f"{path}*.hOCR", recursive=True)]
+
+url = 'https://converter-hocr.services.clarin-pl.eu/convert/'
+
+headers = {
+    'accept': 'application/json'
+}
+
+params = {
+    'html': 'false',
+    'word_transfer': 'true',
+}
+
+def segment_hocr(file):
+# for file in tqdm(files_hocr):
+    # file = files_hocr[0]
+    files = {
+        # 'file': open('bibliotekanauki_87574.alto.hOCR', 'rb'),
+        'file': open(file, 'rb')}
+    file_name = file.replace('D:\\IBL\\CLARIN\\KDL\\hOCR\\', '').replace('.alto.hOCR', '')
+
+    response = requests.post(url, params=params, headers=headers, files=files)
+
+    soup = BeautifulSoup(response.content, 'xml')
+    
+    text = ''.join([e.text.strip() for e in soup.find_all("div", {"class": "normal"})])
+    
+    results.update({file_name: text})
+        
+results = {}
+with ThreadPoolExecutor() as executor:
+    list(tqdm(executor.map(segment_hocr,files_hocr), total=len(files_hocr)))
+
+path = r'D:\IBL\CLARIN\KDL\txt/'
+
+for k,v in results.items():
+    with open(f"{path}{k}.txt", 'wt', encoding='utf-8') as f:
+        f.write(v)
+
+test = {k:v for k,v in results.items() if not v}
 
 
 

@@ -37,3 +37,5 @@ for k,v in tqdm(prace_manualne_statystyki.items()):
 print(f"Sporządzono {sum(osoby_statystyki.values())} z 40000 zapisów")
 print(f"Do dnia {datetime.now().date()} zrealizowano {round((sum(osoby_statystyki.values())/40000)*100,2)}% wymaganych zapisów.")
 
+#dodać statystyki dla poszczególnych osób, mówiące o tempie prac (czy za wolno lub za szybko z perspektywy przyjętych obciążeń [uwzględnić RM])
+
