@@ -3,6 +3,23 @@ from tqdm import tqdm
 from gspread.exceptions import WorksheetNotFound
 from datetime import datetime
 import pandas as pd
+import gspread as gs
+from pydrive.auth import GoogleAuth
+from pydrive.drive import GoogleDrive
+from gspread_dataframe import set_with_dataframe
+
+#%% connect google drive
+
+#autoryzacja do tworzenia i edycji plików
+gc = gs.oauth()
+#autoryzacja do penetrowania dysku
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()
+drive = GoogleDrive(gauth)
+
+
+file_list = drive.ListFile({'q': "'1ZrLyjsA6Q-k78M8gpuK5EB2NXCk56zA0' in parents and trashed=false"}).GetList()
+# [print(e['title'], e['id']) for e in file_list]
 
 #%%
 
@@ -13,10 +30,13 @@ opracowywane_df = dokumentacja_df.loc[dokumentacja_df['OSOBA OPRACOWUJĄCA'].not
 szacunki_prac_manualnych = gsheet_to_df('1fZxyEYxGPsGfaMGXUFYaCrTAgxV40Yi4-vzgIsyU9LA', 'Arkusz1')
 
 project_start = datetime.fromisoformat('2023-05-01')
+radek_start = datetime.fromisoformat('2023-09-01')
 project_current = datetime.now()
 
 delta = project_current - project_start
 days_of_the_project = delta.days * 0.67
+radek_delta = project_current - radek_start
+days_of_the_project_radek = radek_delta.days * 0.67
 
 prace_manualne_statystyki = {}
 for i, row in opracowywane_df.iterrows():
@@ -42,16 +62,24 @@ for k,v in tqdm(prace_manualne_statystyki.items()):
         # except WorksheetNotFound:
         #     pass
 
-ile_powinno_byc_zrobione = {k:int(float(v)/20*days_of_the_project) for k,v in dict(zip(szacunki_prac_manualnych['osoby'], szacunki_prac_manualnych['rekordów na miesiąc'])).items() if pd.notnull(k)}
+ile_powinno_byc_zrobione = {k:int(float(v)/20*days_of_the_project) if k != 'RM' else int(float(v)/20*days_of_the_project_radek) for k,v in dict(zip(szacunki_prac_manualnych['osoby'], szacunki_prac_manualnych['rekordów na miesiąc'])).items() if pd.notnull(k)}
 
 final_stats = {}
 for k,v in osoby_statystyki.items():
-    final_stats.update({k:{'jest rekordów': v,
-                           f'powinno być rekordów do dnia {project_current.date()}': ile_powinno_byc_zrobione.get(k),
+    final_stats.update({k:{'data': project_current.date(),
+                           'jest rekordów': v,
+                           'powinno być rekordów': ile_powinno_byc_zrobione.get(k),
                            'różnica': v-ile_powinno_byc_zrobione.get(k)}})
     
-
-
+for k,v in tqdm(final_stats.items()):
+    # v = final_stats.get(k)
+    temp_df = pd.DataFrame().from_dict([v])
+    sheet_id = [e['id'] for e in file_list if e['title'] == k][0]
+    last_df = gsheet_to_df(sheet_id, 'statystyki')
+    last_df = pd.concat([last_df, temp_df]).reset_index(drop=True)
+    person_sheet = gc.open_by_key(sheet_id)
+    set_with_dataframe(person_sheet.worksheet('statystyki'), last_df)
+    
         
 print(f"Sporządzono {sum(osoby_statystyki.values())} z 40000 zapisów")
 print(f"Do dnia {datetime.now().date()} zrealizowano {round((sum(osoby_statystyki.values())/40000)*100,2)}% wymaganych zapisów.")
