@@ -108,6 +108,7 @@ table_id = input('Podaj id arkusza bieżącego numeru: ')
 aktualny_numer_sheet = gc.open_by_key(table_id)
 
 aktualny_numer = get_as_dataframe(aktualny_numer_sheet.worksheet('artykuły'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
+# aktualny_numer = get_as_dataframe(aktualny_numer_sheet.worksheet('artykuły po pętli'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
 kategorie_wpisow = get_as_dataframe(gc.open_by_key('1hPVa854YZ4DIajzVoWshXFotd3A7lHHz_d-GqEgn4BI').worksheet('Arkusz1')).dropna(how='all').dropna(how='all', axis=1)
 
 foldery_lokalne = aktualny_numer['folder lokalny'].drop_duplicates().to_list()
