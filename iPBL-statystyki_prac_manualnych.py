@@ -28,15 +28,25 @@ dokumentacja_df = gsheet_to_df('1jCjEaopxsezprUiauuYkwQcG1cp40NqdhvxIzG5qUu8', '
 opracowywane_df = dokumentacja_df.loc[dokumentacja_df['OSOBA OPRACOWUJĄCA'].notnull()]
 
 szacunki_prac_manualnych = gsheet_to_df('1fZxyEYxGPsGfaMGXUFYaCrTAgxV40Yi4-vzgIsyU9LA', 'Arkusz1')
+for i, row in szacunki_prac_manualnych.iterrows():
+    # i = 4
+    # row = szacunki_prac_manualnych.loc[i,:]
+    if row['osoby'] == 'IH':
+        for it, e in row.items():
+            if it in ['godziny w miesiącu', 'ile miesięcy', 'ile godzin', 'udział', 'liczba zapisów do zrobienia', 'rekordów na miesiąc']:
+                szacunki_prac_manualnych.loc[i,it] = 0
 
 project_start = datetime.fromisoformat('2023-05-01')
 radek_start = datetime.fromisoformat('2023-09-01')
+kp_start = datetime.fromisoformat('2024-01-01')
 project_current = datetime.now()
 
 delta = project_current - project_start
 days_of_the_project = delta.days * 0.67
 radek_delta = project_current - radek_start
 days_of_the_project_radek = radek_delta.days * 0.67
+kp_delta = project_current - kp_start
+days_of_the_project_kp = kp_delta.days * 0.67
 
 prace_manualne_statystyki = {}
 for i, row in opracowywane_df.iterrows():
@@ -62,7 +72,7 @@ for k,v in tqdm(prace_manualne_statystyki.items()):
         # except WorksheetNotFound:
         #     pass
 
-ile_powinno_byc_zrobione = {k:int(float(v)/20*days_of_the_project) if k != 'RM' else int(float(v)/20*days_of_the_project_radek) for k,v in dict(zip(szacunki_prac_manualnych['osoby'], szacunki_prac_manualnych['rekordów na miesiąc'])).items() if pd.notnull(k)}
+ile_powinno_byc_zrobione = {k:850 if k == 'IH' else int(float(v)/20*days_of_the_project_radek) if k == 'RM' else int(float(v)/20*days_of_the_project_kp) if k == 'KP' else int(float(v)/20*days_of_the_project) for k,v in dict(zip(szacunki_prac_manualnych['osoby'], szacunki_prac_manualnych['rekordów na miesiąc'])).items() if pd.notnull(k)}
 
 final_stats = {}
 for k,v in osoby_statystyki.items():
