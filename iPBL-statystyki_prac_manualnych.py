@@ -27,7 +27,9 @@ dokumentacja_df = gsheet_to_df('1jCjEaopxsezprUiauuYkwQcG1cp40NqdhvxIzG5qUu8', '
 
 opracowywane_df = dokumentacja_df.loc[dokumentacja_df['OSOBA OPRACOWUJĄCA'].notnull()]
 
-szacunki_prac_manualnych = gsheet_to_df('1fZxyEYxGPsGfaMGXUFYaCrTAgxV40Yi4-vzgIsyU9LA', 'Arkusz1')
+szacunki_prac_manualnych_2023 = gsheet_to_df('1fZxyEYxGPsGfaMGXUFYaCrTAgxV40Yi4-vzgIsyU9LA', '2023')
+szacunki_prac_manualnych_2024 = gsheet_to_df('1fZxyEYxGPsGfaMGXUFYaCrTAgxV40Yi4-vzgIsyU9LA', '2024')
+
 for i, row in szacunki_prac_manualnych.iterrows():
     # i = 4
     # row = szacunki_prac_manualnych.loc[i,:]
