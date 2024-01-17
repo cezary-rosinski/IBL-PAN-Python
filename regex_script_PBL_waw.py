@@ -27,5 +27,20 @@ for root in main_dirs:
             files = os.listdir(root + '/' + subdir)
             for file in tqdm(files):
                 regex_on_file(root + '/' + subdir + '/' + file, patterns)
+                
+#phisical description in books
+files = [r"data\SPUB\import_books_0.xml", r"data\SPUB\import_books_1.xml", r"data\SPUB\import_books_3.xml", r"data\SPUB\import_books_4.xml"]
+pattern = """(physical-description.*description=\".*)(')(.*\")"""
+solution = r'\1ʼ\3'
+for path in files:
+    # path = files[0]
+    with open(path, 'r', encoding='utf-8') as xml:
+        content = xml.read()
+    while re.search(pattern, content):
+        content = re.sub(pattern, solution, content)
+    with open(path, 'w', encoding='utf-8') as xml:
+        xml.write(content)
+    
+
 
 
