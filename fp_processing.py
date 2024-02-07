@@ -1001,7 +1001,7 @@ for k,v in tqdm(doi_dict.items()):
     body = re.sub('(?=\n {0,}<hr \/>)', doi_row, content)
     content = browser.find_element('id', 'content').clear()
     content = browser.find_element('id', 'content').send_keys(body)
-    
+    time.sleep(5)
     opublikuj = browser.find_element('id', 'publish').click()
 
 
