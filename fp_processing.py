@@ -735,12 +735,13 @@ for i, row in aktualny_numer.iterrows():
             # bibliografia_df = re.sub('\n+', '\n', browser.find_element('name', 'citations').get_attribute('value'))
             # browser.find_element('name', 'citations').clear()
             # bibliografia = browser.find_element('name', 'citations').send_keys(bibliografia_df, Keys.BACK_SPACE)
+            time.sleep(2)
         
         for a_pl, a_en, o, af_pl, af_en, b_pl, b_en in zip(row['autor'].split('❦'), aktualny_numer.at[i+1, 'autor'].split('❦'), row['ORCID'].split('❦'), row['afiliacja'].split('❦'), aktualny_numer.at[i+1, 'afiliacja'].split('❦'), row['biogram'].split('❦'), aktualny_numer.at[i+1, 'biogram'].split('❦')):
             
             # wspolautor_dodaj = browser.find_element('xpath', "//a[@title = 'Dodaj autora']")
-            # wspolautor_dodaj = browser.find_element('xpath', "//a[contains(text(),'Dodaj autora')]")
-            wspolautor_dodaj = browser.find_element('xpath', "//a[contains(text(),'Dodaj współautora')]")
+            wspolautor_dodaj = browser.find_element('xpath', "//a[contains(text(),'Dodaj autora')]")
+            # wspolautor_dodaj = browser.find_element('xpath', "//a[contains(text(),'Dodaj współautora')]")
             wspolautor_dodaj.click()
             autor_imie_pl = re.findall('.+(?= (?!.* ))', a_pl)[0]
             time.sleep(2)
