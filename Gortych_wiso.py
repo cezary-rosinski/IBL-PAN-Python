@@ -21,10 +21,45 @@ from pydrive.drive import GoogleDrive
 import gspread as gs
 from google_drive_research_folders import cr_projects
 from gspread_dataframe import set_with_dataframe, get_as_dataframe
+from Gortych_wiso_credentials import login, password
 
 pd.options.display.max_colwidth = 10000
 #%%
+def scrape_results():
+    results = browser.find_elements('xpath', "//span[@class = 'boxDescription ifTitleOnly']")
+    while not results:
+        time.sleep(2)
+        results = browser.find_elements('xpath', "//span[@class = 'boxDescription ifTitleOnly']")
 
+    for i, a in enumerate(results):
+        # i = 9
+        # a = results[0]
+        
+        time.sleep(2)
+        browser.execute_script(f"window.scrollTo(0, {i+1}*150)")
+        time.sleep(2)
+        try:
+            a.click()
+        except ElementClickInterceptedException:
+            browser.execute_script(f"window.scrollTo(0, {i+1}*150)")
+        time.sleep(10)
+        try:
+            save = browser.find_element('xpath', "//a[@class = 'boxSave spritesIcons']")
+        except (NoSuchElementException, ElementClickInterceptedException):
+            save = browser.find_element('xpath', "//a[@class = 'boxSave spritesIcons']")
+        save.click()
+        time.sleep(2)
+        save_confirm = browser.find_elements('xpath', "//span[contains(text(),'Speichern')]")[-1]
+        save_confirm.click()
+        time.sleep(3)
+        browser.switch_to.window(browser.window_handles[1])
+        browser.close()
+        browser.switch_to.window(browser.window_handles[0])
+        browser.back()
+        time.sleep(2)
+    
+#%%
+start = time.time()
 query_text = 'postmigrantisch*'
 url = 'http://erf.sbb.spk-berlin.de/han/1700563777/www.wiso-net.de/dosearch?&dbShortcut=BMP'
 
@@ -34,13 +69,13 @@ accept = browser.find_element('xpath', "//input[@type = 'submit']")
 accept.click()
 
 username_input = browser.find_element('xpath', "//input[@name = 'User']")
-username_input.send_keys('xx')
+username_input.send_keys(login)
 
-password = browser.find_element('xpath', "//input[@name = 'Password']")
-password.send_keys('xx*')
+password_input= browser.find_element('xpath', "//input[@name = 'Password']")
+password_input.send_keys(password)
 
-login = browser.find_element('xpath', "//input[@type = 'submit']")
-login.click()
+log_in = browser.find_element('xpath', "//input[@type = 'submit']")
+log_in.click()
 
 time.sleep(10)
 
@@ -50,8 +85,12 @@ terms_of_use.click()
 terms_of_use_ok =  browser.find_elements('xpath', "//span[contains(text(),'OK')]")[-1]
 terms_of_use_ok.click()
 
+time.sleep(2)
+
 query = browser.find_element('xpath', "//input[@id = 'field_q']")
 query.send_keys(query_text)
+
+time.sleep(2)
 
 search_button = browser.find_element('xpath', "//input[@id = 'searchButton']")
 search_button.click()
@@ -59,43 +98,20 @@ search_button.click()
 germany_press = browser.find_element('xpath', "//div[contains(text(),'Presse Deutschland')]")
 germany_press.click()
 
-results = browser.find_elements('css selector', '.boxDescription')
-
-for a in results:
-    # a = results[0]
-    a.click()
+scrape_results()
+#ustawić na 175
+for iteration in range(10):
+    time.sleep(2)
+    next_page = browser.find_element('xpath', "//a[@class = 'nextLink']")
+    next_page.click()
     time.sleep(10)
-    save = browser.find_element('xpath', "//a[@class = 'boxSave spritesIcons']")
-    save.click()
-    time.sleep(2)
-    save_confirm = browser.find_elements('xpath', "//span[contains(text(),'Speichern')]")[-1]
-    save_confirm.click()
-    time.sleep(2)
-    browser.switch_to.window(browser.window_handles[1])
-    browser.close()
-    browser.switch_to.window(browser.window_handles[0])
-    browser.back()
+    scrape_results()
+
+
+end = time.time()
+print(end - start)
     
-    dir(results[0])
-    print(dir(a))
-
-wstep_pl_ok = browser.find_element('xpath', "//span[contains(text(),'Ok')]").click()
-
-
-
-
-
-sendKeys(Keys.RETURN)
-
-
-username_input.send_keys(username)
-password_input.send_keys(password)
-
-
-browser.find_element('xpath', "//button[@class = 'button media-button button-primary button-large media-button-select']")
-
-browser.find_element('input', {'type': 'submit'})
-wybierz_pdf = browser.find_element('xpath', "//select[@id = 'metakeyselect']/option[text()='pdf-url']").click()
+#%%
 
 
 
