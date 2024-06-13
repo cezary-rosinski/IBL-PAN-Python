@@ -7,6 +7,7 @@ import json
 import ijson
 import xml.etree.ElementTree as ET
 import xml.dom.minidom
+import regex as re
 
 #%%
 # stary PBL 912178
@@ -14,10 +15,13 @@ import xml.dom.minidom
 dsn_tns = cx_Oracle.makedsn('pbl.ibl.poznan.pl', '1521', service_name='xe')
 connection = cx_Oracle.connect(user=pbl_user, password=pbl_password, dsn=dsn_tns, encoding='windows-1250')
 
-pbl_query = """select z.za_zapis_id, z.za_ro_rok, z.za_status_imp
+pbl_query = """select z.za_zapis_id, z.za_ro_rok, z.za_status_imp, rz.rz_nazwa
 from pbl_zapisy z
+full join pbl_rodzaje_zapisow rz on rz.rz_rodzaj_id = z.za_rz_rodzaj1_id
 where z.za_status_imp like 'IOK' or z.za_status_imp is null"""
 pbl_records = pd.read_sql(pbl_query, con=connection).fillna(value = np.nan)
+
+pbl_records.to_excel('data/zapisy_stary_pbl.xlsx', index=False)
 
 #nowy PBL 1214588
 
@@ -29,8 +33,11 @@ new_pbl_test = []
 for prefix, event, value in data:
     if prefix == 'item.id':
         new_pbl_test.append([value])
-    elif prefix == 'item.publishDate.item':
+    elif prefix in ['item.publishDate.item', 'item.format_major.item']:
         new_pbl_test[-1].append(value)
+        
+new_pbl_records = pd.DataFrame(new_pbl_test, columns=['id', 'format', 'year'])
+new_pbl_records.to_csv('data/zapisy_nowy_pbl.csv', index=False)
         
 #nowy PBL retro 435178
 xml_files_retro = [
@@ -67,16 +74,25 @@ xml_files_retro = [
               r"C:\Users\Cezary\Documents\PBL-converter\xml_output\retro\1988_t2\import_retro_books_1988_t2_0.xml",
               r"C:\Users\Cezary\Documents\PBL-converter\xml_output\retro\1988_t2\import_retro_journal_items_1988_t2_0.xml"
               ]
-new_pbl_retro_records = 0
+# new_pbl_retro_records = 0
+new_pbl_retro = []
 for xml_file in tqdm(xml_files_retro):
+    # xml_file = xml_files_retro[0]
+    year = re.search('\d+', xml_file).group(0)
     tree = ET.parse(xml_file)
     root = tree.getroot()
     if '_books_' in xml_file:
-        new_pbl_retro_records += len(root.findall('.//book'))
-    else: new_pbl_retro_records += len(root.findall('.//journal-item'))
+        new_pbl_retro.append((year, 'book', len(root.findall('.//book'))))
+        # new_pbl_retro_records += len(root.findall('.//book'))
+    else:
+        new_pbl_retro.append((year, 'journal-item', len(root.findall('.//journal-item'))))
+        #new_pbl_retro_records += len(root.findall('.//journal-item'))
 
     # dom = xml.dom.minidom.parse(xml_file)
-    # pretty_xml_as_string = dom.toprettyxml()  
+    # pretty_xml_as_string = dom.toprettyxml() 
+    
+new_pbl_retro_records = pd.DataFrame(new_pbl_retro, columns=['year', 'format', 'number of records'])
+new_pbl_retro_records.to_excel('data/zapisy_retro_nowy_pbl.xlsx', index=False)
 
 #ile BN w ELB i nowym PBL-u 437251
 old_pbl_in_elb = set([e[0] for e in new_pbl_test if e[0].startswith('pl')])
@@ -92,22 +108,6 @@ only_old_pbl = old_pbl_full - old_pbl_in_elb
 
 
 
-
-mrk_list = []
-for row in marc_list:
-    if row.startswith('=LDR'):
-        mrk_list.append([row])
-    else:
-        if row:
-            mrk_list[-1].append(row)
-
-
-with open(json_path, encoding='utf8') as json_data:
-    d = json.load(json_data)
-    new_pbl_records = [{k:v if isinstance(v, str) else v[0] for k,v in e.items() if k in ['id', 'publishDate']} for e in d]
-    
-    [e for e in d]
-    
 
 
     
