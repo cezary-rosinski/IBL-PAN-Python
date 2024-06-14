@@ -105,23 +105,50 @@ old_pbl_full = set([int(e) for e in pbl_records['ZA_ZAPIS_ID'].to_list()])
 only_old_pbl = old_pbl_full - old_pbl_in_elb
 
 
+#%%
 
+old_pbl = pd.read_excel(r"C:\Users\Cezary\Downloads\zapisy_stary_pbl.xlsx")
+new_pbl = pd.read_csv(r"C:\Users\Cezary\Downloads\zapisy_nowy_pbl.csv")
+retro_pbl = pd.read_excel(r"C:\Users\Cezary\Downloads\zapisy_retro_nowy_pbl.xlsx")
+    
+old_pbl.columns.values
+old_pbl['ZA_RO_ROK'].dtypes 
+new_pbl.columns.values
+new_pbl['year'].dtypes    
+retro_pbl.columns.values    
+retro_pbl['year'].dtypes    
 
+old_pbl_plot = old_pbl[['ZA_RO_ROK', 'RZ_NAZWA']]
+old_pbl_plot = old_pbl_plot.groupby(['ZA_RO_ROK']).count()
+old_pbl_plot.plot()
 
+old_pbl_plot = old_pbl[['ZA_RO_ROK', 'RZ_NAZWA', 'ZA_ZAPIS_ID']]
+old_pbl_plot = old_pbl_plot.groupby(['ZA_RO_ROK', 'RZ_NAZWA']).count()
+old_pbl_plot.plot(colormap='jet', rot=90)
+old_pbl_plot.to_excel('data/stary_pbl_rodzaje_statystyki.xlsx')
 
+new_pbl_plot = new_pbl[['year', 'format']]
+new_pbl_plot = new_pbl_plot[(new_pbl_plot['year'].notnull()) & 
+                            (new_pbl_plot['year'] >= 1978) & 
+                            (new_pbl_plot['year'] <= 2023)]
+new_pbl_plot = new_pbl_plot.groupby(['year']).count()
+new_pbl_plot.plot()
+    
+new_pbl_plot = new_pbl[['year', 'format', 'id']]
+new_pbl_plot = new_pbl_plot[(new_pbl_plot['year'].notnull()) & 
+                            (new_pbl_plot['year'] >= 1978) & 
+                            (new_pbl_plot['year'] <= 2023)]
+new_pbl_plot = new_pbl_plot.groupby(['year', 'format']).count()
+new_pbl_plot.plot(kind='bar', rot=90)   
+new_pbl_plot.to_excel('data/nowy_pbl_rodzaje_statystyki.xlsx')
+    
+retro_pbl_plot = retro_pbl[['year', 'number of records']]
+retro_pbl_plot = retro_pbl_plot.groupby(['year']).sum()
+retro_pbl_plot.plot(colormap='jet', rot=90)
 
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+retro_pbl_plot = retro_pbl.copy()
+retro_pbl_plot = retro_pbl_plot.groupby(['year', 'format']).sum()
+retro_pbl_plot.plot(kind='bar', rot=90)
     
     
     
