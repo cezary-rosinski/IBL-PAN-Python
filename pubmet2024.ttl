@@ -1,0 +1,1756 @@
+@prefix dc: <http://purl.org/dc/elements/1.1/> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/> .
+@prefix pubmet2024: <https://example.org/pubmet2024/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix schema: <https://schema.org/> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<https://example.org/record/DOI> a schema:Article ;
+    dcterms:references <https://example.org/reference/Algee-Hewitt,_Mark,_and_M._McGurl._Between_Canon_and_Corpus:_Six_Perspectives_on_20th-_Century_Novels._no._8,_2015,_https:/​/​litlab.stanford.edu/​LiteraryLabPamphlet8.pdf.>,
+        <https://example.org/reference/Algee-Hewitt,_Mark,_et_al._Canon/Archive._Large-Scale_Dynamics_in_the_Literary_Field._no._11,_2016,_https:/​/​litlab.stanford.edu/​LiteraryLabPamphlet11.pdf.>,
+        <https://example.org/reference/Altieri,_Charles._“An_Idea_and_Ideal_of_a_Literary_Canon.”_Critical_Inquiry,_vol._10,_no._1,_Sept._1983,_pp._37–60,_https://doi.org/10.1086/448236.>,
+        <https://example.org/reference/Barré,_Jean._Replication_Data_for:_“Operationalizing_Canonicity.”_Harvard_Dataverse,_2023,_https://doi.org/10.7910/DVN/GQQKWK.>,
+        <https://example.org/reference/Bernard,_Michel._“Goncourt_2020_:_Mais_Qu’a-t-Il_de_plus_Que_Les_Autres_?”_Humanités_Numériques,_no._4,_Dec._2021,_https://doi.org/10.4000/revuehn.2297.>,
+        <https://example.org/reference/Bourdieu,_Pierre._Les_règles_de_l’art:_Genèse_et_structure_du_champ_littéraire._Éditions_du_Seuil,_1992.>,
+        <https://example.org/reference/Brottrager,_Judith,_Annina_Stahl,_Arda_Arslan,_et_al._“Modeling_and_Predicting_Literary_Reception.”_Journal_of_Computational_Literary_Studies,_vol._1,_no._1,_2022,_https://doi.org/10.48694/JCLS.95.>,
+        <https://example.org/reference/Brottrager,_Judith,_Annina_Stahl,_Arda_Arslan,_et_al._“Predicting_Canonization:_Comparing_Canonization_Scores_Based_on_Text-Extrinsic_and_-Intrinsic_Features.”_Proceedings_of_the_Conference_on_Computational_Humanities_Research_CHR2021,_edited_by_Maud_Ehrmann_et_al.,_vol._2989,_CEUR,_2021,_pp._195–205,_http:/​/​ceur-ws.org/​Vol-2989/​#short_paper21.>,
+        <https://example.org/reference/Cafiero,_Florian,_and_Jean-Baptiste_Camps._“Why_Molière_Most_Likely_Did_Write_His_Plays.”_Science_Advances,_vol._5,_no._11,_Nov._2019,_p._eaax5489,_https://doi.org/10.1126/sciadv.aax5489.>,
+        <https://example.org/reference/Casanova,_Pascale._La_république_mondiale_des_lettres._Éditions_du_Seuil,_2008.>,
+        <https://example.org/reference/Chervel,_André._Histoire_de_l’agrégation:_Contribution_à_l’histoire_de_la_culture_scolaire._Institut_national_de_recherche_pédagogique :_Editions_Kimé,_1993.>,
+        <https://example.org/reference/Chevrel,_Yves._“Les_Lettres_modernes_et_la_formation_des_professeurs_de_français.”_L’information_littéraire,_vol._Vol._55,_no._3,_Sept._2003,_pp._3–10,_https://doi.org/10.3917/inli.553.0003.>,
+        <https://example.org/reference/Cohen,_Margaret._The_Sentimental_Education_of_the_Novel._Princeton_University_Press,_2002.>,
+        <https://example.org/reference/Compagnon,_Antoine._La_troisième_république_des_lettres,_de_flaubert_à_proust._Editions_du_Seuil,_1983.>,
+        <https://example.org/reference/English,_James_F._Economy_of_Prestige:_Prizes,_Awards,_and_the_Circulation_of_Cultural_Value._Harvard_University_Press,_2009.>,
+        <https://example.org/reference/Felperin,_Howard._Beyond_Deconstruction:_The_Uses_and_Abuses_of_Literary_Theory._Clarendon_press,_1985.>,
+        <https://example.org/reference/Gabay,_Simon._“Beyond_Idiolectometry?_On_Racine’s_Stylometric_Signature.”_Proceedings_of_the_Conference_on_Computational_Humanities_Research_CHR2021,_edited_by_Maud_Ehrmann_et_al.,_vol._2989,_CEUR,_2021,_pp._359–76,_http:/​/​ceur-ws.org/​Vol-2989/​#long_paper39.>,
+        <https://example.org/reference/González,_José_Eduardo,_et_al._“Measuring_Canonicity:_Graduate_Read­ing_Lists_in_Departments_of_Hispanic_Studies.”_Journal_of_Cultural_Analytics,_vol._6,_no._1,_Mar._2021,_https://doi.org/10.22148/001c.21599.>,
+        <https://example.org/reference/Guillory,_John._Cultural_Capital:_The_Problem_of_Literary_Canon_Formation._Paperback,_Univ._of_Chicago_Press,_1998.>,
+        <https://example.org/reference/Guillory,_John._“Canon.”_Critical_Terms_for_Literary_Study,_edited_by_Frank_Lentricchia_and_Thomas_McLauahlin,_2nd_ed.,_The_University_of_Chicago_Press,_1995,_pp._233–49,_https:/​/​press.uchicago.edu/​ucp/​books/​book/​chicago/​C/​bo3627086.html.>,
+        <https://example.org/reference/Halford,_Max._Prince._https:/​/​github.com/​MaxHalford/​prince.>,
+        <https://example.org/reference/Jey,_Martine,_and_Laetitia_Perret,_editors._L’idée_de_littérature_dans_l’enseignement._Classiques_Garnier,_2019.>,
+        <https://example.org/reference/Jey,_Martine._La_littérature_au_lycée:_Invention_d’une_discipline_(1880-1925)._Klincksieck,_1998.>,
+        <https://example.org/reference/Jey,_Martine.“Le_canon_aux_agrégations_du_XIXe_siècle.”_Revue_d’histoire_littéraire_de_la_France,_vol._114,_no._1,_2014,_p._143,_https://doi.org/10.3917/rhlf.141.0143.>,
+        <https://example.org/reference/Jipa,_Dragoș,_editor._La_canonisation_littéraire_et_l’avènement_de_la_culture_de_masse:_La_collection_les_grands_écrivains_français_(1887-1913)._Peter_Lang_Verlag,_2016,_https://doi.org/10.3726/978-3-653-06804-7.>,
+        <https://example.org/reference/Kestemont,_Mike._“Function_Words_in_Authorship_Attribution._From_Black_Magic_to_Theory?”_Proceedings_of_the_3rd_Workshop_on_Computational_Linguistics_for_Literature_(CLFL),_2014,_pp._59–66,_https://doi.org/10.3115/v1/w14-0908.>,
+        <https://example.org/reference/Koolen,_Corina,_et_al._“Literary_Quality_in_the_Eye_of_the_Dutch_Reader:_The_National_Reader_Survey.”_Poetics,_vol._79,_Apr._2020,_p._101439,_https://doi.org/10.1016/j.poetic.2020.101439.>,
+        <https://example.org/reference/Ladimer,_Bethany._Colette,_Beauvoir,_and_Duras:_Age_and_Women_Writers._University_Press_of_Florida,_1999.>,
+        <https://example.org/reference/Lagarde,_André,_and_Laurent_Michard._XIXe_siécle:_Les_grands_auteurs_français ;_anthologie_et_histoire_littéraire._Bordas,_1999.>,
+        <https://example.org/reference/Lagarde,_André,_et_al._XXe_siècle:_Les_grands_auteurs_français:_Anthologie_et_histoire_littéraire._Nouv._éd.,_Bordas,_1988.>,
+        <https://example.org/reference/Lanson,_Gustave._Hommes_et_Livres:_Études_Morales_et_Littéraires._Hachette_livre-bnf,_1895.>,
+        <https://example.org/reference/Leblond,_Aude._Corpus_Chapitres._Zenodo,_2022,_https://doi.org/10.5281/ZENODO.7446728.>,
+        <https://example.org/reference/Moretti,_Franco._“Conjectures_on_World_Literature.”_New_Left_Review,_2000.>,
+        <https://example.org/reference/Moretti,_Franco._“The_Slaughterhouse_of_Literature.”_Modern_Language_Quarterly,_vol._61,_no._1,_Mar._2000,_pp._207–28,_https://doi.org/10.1215/00267929-61-1-207.>,
+        <https://example.org/reference/Mosteller,_Frederick,_and_David_L._Wallace._“Inference_in_an_Authorship_Problem.”_Journal_of_the_American_Statistical_Association,_vol._58,_no._302,_June_1963,_p._275,_https://doi.org/10.2307/2283270.>,
+        <https://example.org/reference/Pedregosa,_F.,_et_al._“Scikit-Learn:_Machine_Learning_in_Python.”_Journal_of_Machine_Learning_Research,_vol._12,_2011,_pp._2825–30.>,
+        <https://example.org/reference/Pennebaker,_James_W._The_Secret_Life_of_Pronouns:_What_Our_Words_Say_about_Us._1st_U.S._ed,_Bloomsbury_Press,_2011.>,
+        <https://example.org/reference/Plecháč,_Petr._“Relative_Contributions_of_Shakespeare_and_Fletcher_in_Henry_VIII:_An_Analysis_Based_on_Most_Frequent_Words_and_Most_Frequent_Rhythmic_Patterns.”_Digital_Scholarship_in_the_Humanities,_vol._36,_no._2,_June_2020,_pp._430–38,_https://doi.org/10.1093/llc/fqaa032.>,
+        <https://example.org/reference/Pollock,_Griselda._Differencing_the_Canon:_Feminist_Desire_and_the_Writing_of_Art’s_Histories._Routledge,_1999.>,
+        <https://example.org/reference/Porter,_Jack_D._“Popularity/Prestige.”_Pamphlets_of_the_Stanford_Literary_Lab,_no._17,_2018,_https:/​/​litlab.stanford.edu/​LiteraryLabPamphlet17.pdf.>,
+        <https://example.org/reference/Schmitt,_Michel_P.,_and_Alain_Viala._“Les_cotes_aux_concours.”_Littératures_classiques,_vol._19,_no._1,_1993,_pp._281–91,_https://doi.org/10.3406/licla.1993.1753.>,
+        <https://example.org/reference/Seminck,_Olga,_et_al._“The_Evolution_of_the_Idiolect_over_the_Lifetime:_A_Quantitative_and_Qualitative_Study_of_French_19th_Century_Literature.”_Journal_of_Cultural_Analytics,_vol._7,_no._3,_Sept._2022,_https://doi.org/10.22148/001c.37588.>,
+        <https://example.org/reference/Thiesse,_Anne-Marie._La_fabrique_de_l’écrivain_national:_Entre_littérature_et_politique._Gallimard,_2019.>,
+        <https://example.org/reference/Tolonen,_Mikko,_et_al._“Examining_the_Early_Modern_Canon:_The_English_Short_Title_Catalogue_and_Large-Scale_Patterns_of_Cultural_Production.”_Data_Visualization_in_Enlightenment_Literature_and_Culture,_2021,_pp._63–119,_https://doi.org/10.1007/978-3-030-54913-8_3.>,
+        <https://example.org/reference/Underwood,_Ted,_and_Jordan_Sellers._“The_Longue_Durée_of_Literary_Prestige.”_Modern_Language_Quarterly,_vol._77,_no._3,_Aug._2016,_pp._321–44,_https://doi.org/10.1215/00267929-3570634.>,
+        <https://example.org/reference/Underwood,_Ted._Distant_Horizons:_Digital_Evidence_and_Literary_Change._The_University_of_Chicago_Press,_2019.>,
+        <https://example.org/reference/Verboord,_Marc._“Classification_of_Authors_by_Literary_Prestige.”_Poetics,_vol._31,_no._3–4,_June_2003,_pp._259–81,_https://doi.org/10.1016/s0304-422x(03)00037-8.>,
+        <https://example.org/reference/Viala,_Alain._“Qu’est-ce_qu’un_classique ?”_Littératures_classiques,_vol._19,_no._1,_1993,_pp._11–31,_https://doi.org/10.3406/licla.1993.1737.>,
+        <https://example.org/reference/Yu,_B._“An_Evaluation_of_Text_Classification_Methods_for_Literary_Study.”_Literary_and_Linguistic_Computing,_vol._23,_no._3,_Sept._2008,_pp._327–43,_https://doi.org/10.1093/llc/fqn015.>,
+        <https://example.org/reference/van_Cranenburgh,_Andreas,_and_Corina_Koolen._“Identifying_Literary_Texts_with_Bigrams.”_Proceedings_of_the_Fourth_Workshop_on_Computational_Linguistics_for_Literature,_2015,_pp._58–67,_https://doi.org/10.3115/v1/w15-0707.>,
+        <https://example.org/reference/van_Cranenburgh,_Andreas,_and_Rens_Bod._“A_Data-Oriented_Model_of_Literary_Language.”_Proceedings_of_the_15th_Conference_of_the_European_Chapter_of_the__Association_for_Computational_Linguistics:_Volume_1,_Long_Papers,_2017,_pp._1228–38,_https://doi.org/10.18653/v1/e17-1115.>,
+        <https://example.org/reference/van_Cranenburgh,_Andreas,_et_al._“Vector_Space_Explorations_of_Literary_Language.”_Language_Resources_and_Evaluation,_vol._53,_no._4,_Feb._2019,_pp._625–50,_https://doi.org/10.1007/s10579-018-09442-4.> ;
+    dcterms:subject <https://example.org/subject/Alexandre_Dumas>,
+        <https://example.org/subject/Alfred_Russel_Wallace>,
+        <https://example.org/subject/Andrew_John_Henry_Way>,
+        <https://example.org/subject/Bernard_of_Clairvaux>,
+        <https://example.org/subject/Charles_Altieri>,
+        <https://example.org/subject/Colette>,
+        <https://example.org/subject/Detail>,
+        <https://example.org/subject/Eugène_Sue>,
+        <https://example.org/subject/Ferdinand_Bac>,
+        <https://example.org/subject/Figure>,
+        <https://example.org/subject/George_Sand>,
+        <https://example.org/subject/Giacomo_Casanova>,
+        <https://example.org/subject/Gustave_Flaubert>,
+        <https://example.org/subject/Guy_de_Maupassant>,
+        <https://example.org/subject/Hildegarde>,
+        <https://example.org/subject/Honoré_de_Balzac>,
+        <https://example.org/subject/Jacques_Charles>,
+        <https://example.org/subject/Léonard_Defrance>,
+        <https://example.org/subject/Molière>,
+        <https://example.org/subject/Moretto_da_Brescia>,
+        <https://example.org/subject/Phrase>,
+        <https://example.org/subject/Pierre_Bourdieu>,
+        <https://example.org/subject/Pierre_Viala>,
+        <https://example.org/subject/Prince>,
+        <https://example.org/subject/Sido>,
+        <https://example.org/subject/Stendhal>,
+        <https://example.org/subject/Victor_Hugo>,
+        <https://example.org/subject/Willem_Gillisz_Kool>,
+        <https://example.org/subject/William_Shakespeare>,
+        <https://example.org/subject/woman> ;
+    pubmet2024:tables_in_text "TRUE" ;
+    schema:abstract """This article delves into the literary canon, a concept shaped by social
+biases and influenced by successive receptions. The canonization
+process is a multifaceted phenomenon, emerging from the intricate
+interplay of sociological, economic, and political factors. Our objective
+is to detect the underlying textual dynamics that grant certain
+works exceptional longevity while jeopardizing the transmission of
+the majority. Drawing on various criteria, we present an operational
+framework for defining the French literary canon, centered on its contemporary
+reception and emphasizing the role of institutions, particularly
+schools, in its formation. Leveraging natural language processing
+and machine learning techniques, we unveil an intrinsic norm inherent
+to the literary canon. Through statistical modeling, we achieve
+predictive outcomes with accuracy ranging from 70% to 74%, contingent
+on the chosen scale of canonicity. We believe that these findings
+detect what Charles Altieri calls a “cultural grammar”, referring to
+the idea that canonical works in literature serve as foundational texts
+that shape the norms, values, and conventions of a particular cultural
+tradition. We posit that this linguistic norm arises from biased latent
+selection mechanisms linked to the role of the educational system in
+the canon-formation process.""" ;
+    schema:author <https://example.org/author/Jean-Baptiste_Camps>,
+        <https://example.org/author/Jean_Barré>,
+        <https://example.org/author/Thierry_Poibeau> ;
+    schema:identifier "https://doi.org/10.22148/001c.88113" ;
+    schema:keywords <https://example.org/keyword/canon_studies>,
+        <https://example.org/keyword/computational_literary_studies>,
+        <https://example.org/keyword/distant_reading>,
+        <https://example.org/keyword/french_literature>,
+        <https://example.org/keyword/literary_history>,
+        <https://example.org/keyword/machine_learning>,
+        <https://example.org/keyword/natural_language_processing>,
+        <https://example.org/keyword/stylometry>,
+        <https://example.org/keyword/text_mining> ;
+    schema:license <https://creativecommons.org/licenses/by/4.0/> ;
+    schema:text """1. Introduction
+In 1895, the French literary critic Lanson posed a pivotal question: “How are the choices made regarding which works and names endure in immortality?” A case in point is Stendhal, who now holds a distinguished position within the French literary canon. Stendhal, however, only rose to literary prominence long after his demise, which raises questions about the mechanisms that contributed to his canonization as an author. What factors led to the preservation of his novels within the annals of literary history, and how do they differ from the abyss of what Cohen calls the “Great Unread”, comprising works consigned to literary oblivion?
+
+This matter has long captivated sociocultural research. Investigations into the mechanisms governing the attribution of literary significance have notably centered on the background in which the works were conceived, as well as the sociological path taken by the authors during the canonization process. As exemplified by Bourdieu, the value assigned to an author or a novel emerges as a collective endeavor involving an array of agents and institutions within the literary realm. These encompass critics, historians, salons, political entities, the educational system, and even editorial marketing strategies, all contributing to the formulation of the work as a literary entity.
+
+The canonization processes that underlie the compilation of texts and authors making up the canon, shape, as outlined by Pollock, a “selective tradition”. This intricate trajectory is marked by a succession of biases, encompassing dimensions of gender, race, and social class. The attribution of canonicity to these texts and authors ensures their enduring presence within the literary landscape, imbuing them with a preeminent position within the standards of cultural legitimacy.
+
+The concept of literary canon was initially introduced within the realm of literary studies to denote the collection of texts included in university syllabi and analyzed therein. As showed by scholars such as Felperin, the canon plays a vital role in the pedagogical realm of literature: “The institutional study of literature is inconceivable without a canon. Without a canon, without a corpus or syllabus of exemplary texts, there can be no interpretive community”. Consequently, the canon constitutes the foundational body of texts upon which the teaching and research in literature rest. This notion is underscored by Casanova, who asserts that the canon inherently “embodies literary legitimacy itself”. Essentially, the canon represents the reference set for what is officially recognized as literature, then used in the evaluation of other works.
+
+Thus, the literary canon is a complex notion to address and the mechanisms behind this temporal filtration are numerous, whether they are linked to cultural and academic policies or to aesthetic and critical criteria. In this article, we want to see what is actually happening at the textual scale, and to map the textual differences between canonized texts and non-canonized texts.
+
+Our study falls within the field of computational literary studies and distant reading (Moretti, “Conjectures on World Literature”). By the large scale quantitative study of literary works, it strives to go beyond the study of the few hundred works making the literary canon. Doing so, it hopes, as theorised by Underwood, to identify important structuring lines of literary history, that traditional approaches can fail to notice. In other terms, we wish to gain insight into what is happening inside the “slaughterhouse” of literature (Moretti, “The Slaughterhouse of Literature”).
+
+Our focus is directed towards a reexamination of the texts themselves and their intrinsic content. Our objective is to assess the extent of the filtration process applied to literary works. We hypothesize that there is a particular norm in the textual content of the canonized novels, and that it can be detected quantitatively. The question remains whether the textual attributes we seek to identify signify a causal phenomenon — where texts are selected due to their specific characteristics — or if they instead emerge as products of the canonization process itself, reflecting not inherent selection value but rather the biases intrinsic to the canonization trajectory.
+
+Our research will revolve around the presentation of diverse criteria employed in detecting canonicity from the textual content. To comprehend the concept of the literary canon within the context of French literature, we built a contemporary reception-based literary canon, rooted in multiple factors. We then used text mining, natural language processing (NLP), and machine learning techniques to delve into the intricate layers of the literary canon.
+
+2. Literature Review
+The literary canon has been the object of many studies in computational literary studies. A first approach was to quantitatively describe the lists that constituted the various canons. Pamphlet 8, “Between Canon and Corpus: Six Perspectives on 20th-century Novels” (Algee-Hewitt and McGurl) from Stanford Literary Lab characterized the literary canon and demonstrated the inherent lack of inclusivity of these lists towards non-Western literatures. A similar approach was adopted by González et al. in their work on Hispanic Studies syllabi in US universities. They studied the diversity of the canon with entropy measures of canonical populations over time. Attempts have been made to characterize the notion of literary canon through the composition of these lists, particularly during the period of their emergence (Tolonen et al.).
+
+Other studies have gone beyond the literary canon and have taken up Bourdieu’s binary construction of the literary field, between popularity and prestige. Porter showed that these axes seemed relevant for mapping literary and cultural space, while Verboord classified authors according to their position in the literary field, using this dichotomy. He showed that Institutional Literary Prestige (drawn from academic studies, among other things) was fruitful for classification.
+
+The second approach to understand the literary canon is to measure differences between canonical and non-canonical works in the texts themselves, using natural language processing methods. In this regard, the paper by Algee-Hewitt et al. is very instructive. Their hypothesis was that novels were selected in the canon because they were less redundant. The team measured lexical variety with entropy and found that their hypothesis was confirmed.
+
+Underwood and Sellers devoted an article to the automatic classification of literary prestige based on textual data from poetry. They defined literary prestige as the likelihood of a text being reviewed in specialized literary journals. The main question they asked was: “Is the social boundary between elite taste and the rest of literary production associated with recognizable stylistic differences ?” With simple NLP tools (bags of words) and a predictive algorithm (logistic regression), good results were obtained, on the order of 75% accuracy for the statistical model. They showed that the literary discourse contained in the text is related to the reception of the said text, and that this relationship is statistically robust.
+
+In the wake of these discoveries, numerous studies have addressed the question of literary prestige, focusing on the style of works consecrated by the canon, and its potential difference from other styles. This subject has been particularly addressed in the Netherlands, notably by Koolen et al., who showed that the degree of literariness perceived by humans is quantifiable and can be modeled. van Cranenburgh et al. and van Cranenburgh and Bod explored this perceived literariness using word vectors and obtained interesting results showing that the concept of literariness can be predicted to some extent based on textual features.
+
+The paper by Brottrager, Stahl, and Arslan, proposed a formalization of literary historical reception. They analyzed and compared the relationship between the concept of canonicity based on extrinsic data (i.e. the contexts of the works) and intrinsic features (i.e. their textual content). The results showed a clear lack of correlation between the two methods. As an extension of this research, Brottrager, Stahl, Arslan, et al. evaluated how literary reception as a social process can be linked to textual qualities. They obtained a 78% accuracy in predicting if a text was reviewed in literary periodicals in the English context.
+
+Empirical research on literary prestige is scarce in France, and few experiments have been carried out on French corpora. An exception is a study on the successive selection of works for the Prix Goncourt 2020 (Bernard). However, the results of this study did not show a clear tendency, suggesting that no textual dynamics was at stake in the selection.
+
+The present paper is therefore part of a dynamic research context but one in which investigations on French data are lacking. Our work consists in operationalizing a wider definition of canonicity, in order to better understand this complex phenomenon. Little work has been done to evaluate quantitatively the role of the school system in the canonization process. As we will see in section 3, it is arguably a much stronger route to immortality than reviews in specialized magazines. The first step was to collect relevant metadata to build a French literary canon. In a second step, we modeled canonicity based on textual features using machine learning and natural language processing methods.
+
+3. Determining canonical factors
+One of the main tasks of this study was the construction of a literary canon. For this purpose, we enriched our corpus[1] with information about the contemporary reception of the texts and authors. Admittedly, the literary canon is neither monolithic nor temporally stable, and defining it by finite criteria is in itself reductive and neglects the complexity of the phenomenon. Nevertheless, formalizing a complex notion requires making choices to be able to grasp it. One of the main restrictions we imposed was to focus on the contemporary reception of the works, in order to grasp the literary canon that has reached us today.
+
+We sought to focus on elements that have already been discussed and analyzed by literary criticism and studies on this subject. One of the aspects we focused on is the role of institutions in the formation of literary prestige, for as Bourdieu said “It is only post mortem, and after a long process, that the school institution, […] grants the infallible sign of consecration, namely the canonization of works as classics by including them in school curricula”. The school institution constructs its own representation of literature and determines the good use of it, with chronological divisions (periodizations, literary schools, generations), categories (romanticism, naturalism, surrealism), and the development of a canon by a selection of authors. According to Guillory, the process of canon formation within the educational system can be interpreted as a matter of distributing cultural capital in schools, with these established classics being presented as exemplars that communicate a specific aesthetic standard. We focused precisely on this norm, which we aimed to quantitatively identify.
+
+The work by Jey and Perret on the role of the school institution in the constitution of such canonical sets has shown that secondary and higher education have an enormous impact on the formation of the canon (in the making and especially the preservation of this canon) of authors and texts. It thus appeared relevant to approach the literary canon mainly from the perspective of the reception of works by educational institutions. While this approach is acknowledged in the humanities, it is not an exhaustive one, as other factors such as political, economic or sociological criteria also come into play in the constitution of the canon.
+
+We therefore established the following non-exhaustive set of criteria to characterize a literary canon that we then investigated quantitatively.
+
+3.1. The school canon
+As we consider the public school system as the place where the literary canon is disseminated and conserved, it seemed important to take into account what is expected of pupils when they leave compulsory schooling, that is to say what constitutes, for the authors of these lists, the minimal literary culture for the construction of citizenship. The work by Jey, gives a detailed description of the construction of a discipline, literature, around texts guaranteeing a certain language and a certain morality, which must be disseminated to educate the masses. She analyzes the process by which works are integrated into school syllabi which is in fact a process of canonization. We therefore took the programs of the secondary school examinations, i.e. the Brevet (equivalent to GCSE) and the Baccalauréat (high school diploma), from 2000 to 2018 as part of our criteria.
+
+3.2. The academic canon
+Lists established for Higher education examinations are also of interest. We retrieved lists and programs of literary and scientific preparatory classes from the École Normale Supérieure competitive examination. These lists are established to evaluate and select, on the basis of literary knowledge, candidates who will become future college professors. Schmitt and Viala adopted a similar approach by listing the number of times certain authors were cited in student essays. Since their data were not available, we stuck to the examination lists, from 2008 to 2019. We also retrieved the programs of the competitive examinations for the agrégation de lettres modernes, the highest competitive examination for the recruitment of teachers of French as it seemed significant to note which authors and texts were selected to train the national elite of teachers of French. For an overview of the agrégation exams, the research by Jey, and by Chervel and by Chevrel was of great help. As these programs did not include many novels, we decided to enlarge the period of reception considered, extending the metadata back to 1950.
+
+3.3. The canon of publishers
+Next, we looked at the world of publishing, which is also one of the major actors in the canonization process. The thesis by Jipa on the collection of the “Grands écrivains de France” clearly showed the importance of editorial logics in the construction of a national consensus around a pantheon of authors.
+
+We focused on the Pléiade collection, which is a prestigious collection of classic works of French literature. The Pléiade editions are highly regarded for their scholarly annotations, introductions, and critical notes that provide valuable insights into the literary and historical context of the works. The publication in the Pléiade of an author’s complete works is often seen as a mark of recognition and prestige for an author’s contributions to literature. It is a major sign that the said author belongs to the literary canon.
+
+For added nuance, we incorporated novels from the “Classical literature” collection by Garnier-Flammarion. This collection stands out for its comprehensive critical apparatus accompanying each novel, signifying the work’s depth that warrants exploration—both the literary work and the contexts in which they originated. This is relevant in this context as it mirrors a prevalent pedagogical perspective on the literary canon, often cited to uphold the existing literary framework in France and beyond.
+
+3.4. The canon of criticism
+To incorporate literary criticism, we looked at literary awards. This aspect of our canon is the least resistant to time, because these awards are strongly influenced by the economic and sociological context of their era, as highlighted by English in his study on cultural value circulation. Despite this limitation, we aimed to evaluate the impact of these awards on literary trends. Consequently, we compiled lists of French literary awards, ranging from the prestigious Goncourt prize to the Femina award.
+
+Additionally, we incorporated contemporary research by leveraging the online literary platform “Fabula”.[2] If a query concerning an author yielded at least ten results, the author was deemed canonical. This dimension was already present in the corpus metadata, and we opted to retain it.
+
+3.5. The political canon
+There are also political implications in the canon formation process. As Viala puts it: the canon “fulfills a function of cultural identification”, in other words, canonized texts represent a common base for the cultural construction of a nation. In the context of early 20th-century France, the canon formation embodied, in the words of Thiesse, “the political establishment of the national narrative”. With the structuring and centralization of the education system during the Third Republic in France, the canon crystallized and became a political object (Compagnon), particularly concerning novelistic production. Literature in education, coupled with a literary canon, was assigned the role of educating the masses and disseminating national values. Various political reforms of the education system have thus shaped the canon and the methods of teaching literature over time.
+
+To capture this political dimension in our canon, we also took a list of the 150 literary texts selected in 2018 by the Ministère de l’Éducation Nationale (French Ministry of Education).[3] Those texts represent what is assumed to be the French literary canon from a political standpoint.
+
+4. Our French literary canon
+Constructed with several factors, our literary canon seeks to include a wide variety of actors in the literary field who define, nourish and preserve the literary canon. Our approach to the issue of whether a work belongs to the literary canon or not adopted a twofold granularity: that of the individual novel and that of the author. This allows us, on the one hand, to construct a highly restrictive canon by considering that literary immortality is attributed to a specific text rather than to an individual writer. On the other hand, the figure of the author still holds sway in literary textbooks and various cultural depictions of literature, making it impossible for us to disregard this dimension. This second scale encompasses the entire body of work by an author as canonical, resulting in a much broader canon.
+
+Table 1.Number of novels in the corpus for each canonical factor
+bac	brevet	sup	prix	gf	gouv
+104	51	42	91	117	45
+bac =: Baccalauréat
+brevet =: Brevet
+sup =: Agrégation and ENS examinations
+prix =: Literary Awards
+gf =: Garnier Flammarion Collection
+gouv =: Ministry of Education
+
+To ensure consistency, all the lists were meticulously curated to only include novels that were present within our corpus of texts. This process aimed to align our corpus with the canon that we had constructed. To achieve this alignment, a simple membership test was employed: if the title of a novel appeared in at least one of the established lists, that particular novel was considered as part of the canonical body of work. Similarly, for authors, if an author’s name was featured on any of the established lists, all of that author’s works within our corpus were deemed to be part of the canon. We generated two binary variables—one for the novel level and the other for the author level—with the options being either canon or non_canon.
+
+Thus, the number of works in the corpus that are in our canon amounts to 306 items (10% of the corpus), while the number of works whose authors are in our canon is 1173 novels (40%). Table 2 shows the number of novels from our corpus present in each canonical list.[4]
+
+We calculated the cosine similarity between our canonical lists to assess their level of coherence. The heatmap of the results can be seen in Figure 1. It shows that the lists are far from being identical, even if there are certain similarities in the three school-based factors (brevet, bac, sup). It is interesting to note that the Garnier-Flammarion list (gf) is also close to the school-based factors, presumably because this collection, which includes a critical apparatus, is designed to be used by the school system. The literary awards list (prix) is very different from the other canonical factors. While the relevance of this list in the canon is debatable, we decided to keep it because it enables us to capture a more contemporary canon than the one captured by our school canon.
+
+Figure 1
+Figure 1.Heatmap of the cosine similarity between our canonical lists
+See appendix A.1 and A.5 for further details on data availability and construction.
+
+5. Corpus
+The corpus used in this study is that collected by the project “ANR Chapitres”,[5] a corpus of nearly 3000 French literary texts (Leblond). The goal of the research was to evaluate the pace of change in the length of chapters over two centuries of literature. The corpus is structured in XML (eXtensive Markup Language) with TEI[6] (Text Encoding Initiative) encoding, to add metadata to the texts. The corpus consists of 2,960 novels, totaling 14,982,817 sentences and 234,175,471 tokens. A significant bias inherent in this corpus lies in its compilation of digitized novels available online. This selection process inherently reflects texts that have been chosen, published, and preserved over time, which, in turn, represents only a fraction of the entire body of written production.
+
+The period concerned extends over two centuries of novelistic production, from the beginning of 19th to the early 21th century, as can be seen in Figure 2. The temporal distribution of novels within the corpus displays a relatively balanced spread, although the latter half of the 19th century stands out, encompassing nearly 40% of the novels. Notably, the 1880s alone contribute almost 10% of the novels. This distribution poses a challenge in terms of potential biases, as there is a risk of magnifying this period’s impact in statistical measures.
+
+Figure 2
+Figure 2.Distribution of the number of novels over time, broken out by canonicity tags, canon at the author scale
+The distribution of canonical novels at the author scale appears to be consistently spread across the entire corpus, minimizing the risk of any temporal bias impacting our experiment. There are approximately 50 canonical novels per decade, with the exception of the 1840s where there is a notable increase to over 150 canonical novels. This anomaly can be attributed, in part, to Balzac, as the editions of his 85 novels present in the corpus are predominantly from this particular decade.
+
+We believe that the non-canonical works in the corpus are a good sample of what the archive may have been, not only by their number – they account for nearly 90% of the novels at the novel scale, and 65% at the author scale – but also by the diversity of the sub-genres represented.
+
+The Chapitres corpus provides additional information about each text, with approximately two-thirds of them accompanied by details about their sub-genre. Figure 3 illustrates the distribution of the literary canon across various sub-genres within the corpus, encompassing genres from detective novels to travelogues. Notably, there is no overrepresentation of the canon within any specific sub-genre. However, an intriguing observation is the partial or complete absence of canonical works within the sub-genres of sentimental novel and children’s literature. This observation appears to align with the notion that these two sub-genres lack the literary recognition associated with, for instance, adventure novels. While the validity of the sub-genre labels can be debated, our focus here lies in the balanced distribution of canonical works among these diverse categories.
+
+Figure 3
+Figure 3.Literary sub-genres in the corpus, broken out by canonicity tags, canon at the author scale
+See appendix 10 for details about the distribution of the canon at the novel scale.
+
+6. Methods
+With our text collection and our operable definition of the canon in hand, we started the quantitative analysis. This was based on text features and a classifier, trained to predict canonicity.
+
+6.1. Textual features
+In view of the complexity of the phenomenon studied, we wanted to simplify the textual features retained to train the classifier. The classification was therefore based on a bag-of-words model with relative frequencies. Lemmas were used to build n-grams and sequences of both lemmas and POS-tags. We chose two configurations of these patterns, one with the lemmas of content words and POS-tags of the function words, and the other one vice versa as we wished to test how relevant function words were to characterize canonical information. Each type of feature was limited to a bag-of-words of the 1000 most frequent n-grams retrieved from a sample of 200 texts randomly drawn from the corpus.
+
+Our hypothesis was that function words should be very helpful, because they are more related to an unconscious and automatic structural writing (Pennebaker) than less frequent words related to the contents and the themes of the text. van Cranenburgh et al. showed that thematic information does not play a huge role in the literariness of texts, and we extrapolated these results to our case study (the specificity of a text to be canonical or not). This also allowed us to ignore most of the common nouns or proper nouns, which are not relevant to this study. Function words are at the heart of stylometry, notably in authorship attribution (Mosteller and Wallace), and in the study of idiolectal evolution (Seminck et al.), i.e. the textual signature of a writer. These methods have produced very good results on several authors, from Hildegarde de Bingen (Kestemont), to Shakespeare (Plecháč) or Molière (Cafiero and Camps) and Racine (Gabay). Although the nature of the challenge we encountered may differ, we considered that these techniques were applicable to our inquiry. This is because if there exists a distinct manner in which novels are crafted based on the institutions that shape the literary canon, then using stop words as features may reveal the subconscious indicators of this selection process.
+
+6.2. Prediction
+We based our work on the canonical labels defined for each text in the corpus. These were then used as ground truth for our binary classification. Two distinct experiments were conducted for the two canonical scales retained.
+
+The automatic classification of texts is a well studied problem in statistics. One family of models, Support Vector Machines (SVM), is of particular interest here because it obtains good results (Yu) when classifying literary texts, and has the advantage of reducing the risk of over-fitting. In this paper, we used the family of SVMs developed by the Scikit-learn team since 2011 (Pedregosa et al.), and more specifically the SVC estimator.
+
+We ran our model in a basic 5-fold cross-validation set up. The dataset is split into 5 consecutive folds and each fold was used once as a validation while the 4 remaining folds formed the training set. Given the nature of the features used in authorship attribution, we wanted to avoid over-fitting on an author’s writing style. To do so, we implemented Scikit-learn’s Group strategy. All works by the same author (group) were placed in the same fold; thus, each group will appeared exactly once in the test set across all folds. In this manner the model cannot cheat and recognize the same idiolectal information in both the training and the test sets. See appendix A.3 for the detailed prediction setup, in particular for how we handled the baselines.
+
+Data imbalance was especially challenging at the novel scale, given that our canonical sample represents only 10% of the dataset. Since SVM models are quite sensitive to such imbalanced classes, we re-balanced the classes before implementing the classification by taking the 306 canonical novels and randomly adding 306 non-canonical novels (50% canon, 50% non_canon). We implemented this random selection a hundred times and for each resulting sample the model was run in a 5-fold cross-validation setting. The following results are aggregated from this process.
+
+7. Results
+7.1. Results at the novel scale
+Table 2.Results of the evaluation of the model, novel scale
+precision	recall	f1-score	support	accuracy
+canon	0.728	0.668	0.697	306	
+non_canon	0.691	0.748	0.719	306	
+full dataset				612	0.708
+The model achieved 70.8% accuracy at the novel scale which is better than the baseline, which scored at 51% accuracy. This shows that the SVM is able to separate the two classes based on latent textual reasons. For each class, the metrics are coherent (5% gap between precision and recall). The F1-score for non-canonical works is a little better than for canonical ones.
+
+Surprisingly, the model achieved its best performance using only uni-grams and bi-grams of lemmas as features. This observation resonates with the findings of van Cranenburgh and Koolen, whose research demonstrated the effectiveness of bi-grams in classifying literary texts. Given these outcomes, our strategy based mostly on stopwords distribution and structural information from texts appears to be notably effective. What these findings seem to indicate is that the detected canonical norm operates beneath consciousness.
+
+In Figure 4, we projected the predicted probability of each novel to belong to the literary canon. All of these probabilities are drawn from the 5 test samples of the 5-fold cross-validation, from which we evaluated the generalization performance of the model. The blue circles represent the novels actually classified in our metadata as canonical and the orange crosses represent the non-canonical ones. As can be seen, the SVM has trouble discriminating the two classes, and there are noisy errors throughout the whole period.
+
+Figure 4
+Figure 4.Predicted probability to be canonical, novel scale
+The timeframe during which the model demonstrates effective performance is the span from 1850 to 1900, during which the two categories are clearly differentiated. It is worth noting that this might stem from a corpus bias, as the period from 1850 to 1900 is relatively over-represented in the corpus, as depicted in Figure 2. The model has access to a larger volume of training data from this particular timeframe, leading to a specialization in this era. Nonetheless, this over-fitting does not appear to hinder the model’s performance, as it continues to perform well.
+
+The red non-linear regression is fitted on the predicted probability for each text to be canonical. This prediction is retrieved from the test set, meaning that the model has seen neither the novel in question nor the writer’s other works. There is a huge increase in this probability over time, from 0.2 to 0.6 while it should be around 0.5 since our dataset is balanced. This result is discussed in the next section.
+
+To gain deeper insights into the implications of these findings, we focused on two authors and works that are clearly distinguished by the model’s assessments. Our model gave Gustave Flaubert’s novel L’Éducation sentimentale (Sentimental Education) an extremely high canonical score (0.914). Published in 1869, the novel offers a profound exploration of the lives of the depicted characters against the backdrop of the political and social upheavals of mid-19th-century France. The exceptional canonicity score of the novel aligns well with its revered status within French literature. Flaubert’s skillful interweaving of personal desires, historical context, and enduring themes has firmly secured the novel’s place in the literary canon, and the model’s recognition of this exemplifies its aptitude in discerning and evaluating the intricate facets that define canonical literature.
+
+In contrast, the novel Borgia published in 1906 by Michel Zévaco gets a very low canonical score (0.04). The novel is a historical adventure fiction novel that clearly falls outside the bounds of canonical literature. The novel’s focus on political intrigue, scandal, and sensational storytelling aligns with the model’s identification of works that deviate from canonical norms.
+
+7.2. Results at the author scale
+Table 3.Results of the evaluation of the model, author scale
+precision	recall	f1-score	support	balanced accuracy
+canon	0.721	0.645	0.681	1173	
+non_canon	0.782	0.836	0.808	1787	
+full dataset				2960	0.741
+The model reaches 74.1% balanced accuracy at the author level. The results are better than the performances at the novel scale, but only marginally so. This result is interesting because it might indicate that canonicity can be defined in a very restrictive manner at the novel scale. Although the prominence of individual authors is significant in literary history, it is also quite intuitive that the process of canonization operates within an author’s body of work, celebrating a limited selection of novels. We will elaborate on this argument in section 8.
+
+In Figure 5 we projected the predicted probability of each novel to belong to the literary canon, with the canonical metadata at the author scale. The SVM performs better at this scale, i.e. it is a little more confident in its predictions than at the novel scale.
+
+Figure 5
+Figure 5.Predicted probability to be canonical, author scale
+The red non-linear regression projected onto the graph shows an overall trend detected by our model. The probability of belonging to the literary canon increases over time, from 0.2 to 0.5 while it should revolve around 0.4. Technically, this increase is an error. Novels are not more likely to belong to the literary canon because they were published later. It is hard to say whether it is a data related issue or an actual trend in literary history. There is an increase in the canonical percentage in the last decades of our corpus (from the 1980s), as we can see in figure 2. But it does not explain everything, since the same trend is found at the novel scale, without the increase in our corpus (see appendix A.2 and figure 10). Similar findings are discussed by Underwood, and the assumptions drawn were i) that the model failed to produce valid criteria for two centuries of literary production and, ii) that books published later have more linguistic signs associated with the standards that govern reception. Our results endorse this prior research and support these hypotheses. This trend is not solely linked to the distribution of the canon over time, but rather seems to be connected to a form of convergence of the overall novelistic production towards the canonical norm. We will attempt to provide further analysis in the discussion in section 9.
+
+In the period just before 1850, we observed a significant increase in misclassifications, particularly regarding canonical novels receiving unexpectedly low canonical scores. Upon closer examination, we noticed a noteworthy pattern where certain prolific writers, including Eugene Sue, Alexandre Dumas (the elder), and George Sand —well-known figures in French literature— were inadequately predicted by our model. While they are acknowledged figures, they may not be as firmly canonized as some others, considering the popular and serialized nature of Sue and Dumas’s works, which deviate from the traditional elitist canon. Additionally, gender bias might be influencing the model’s assessment, given the relatively fewer women represented in the canon. It is important to note that the model’s scores are based on patterns identified within the corpus, and its performance might be influenced by the availability and distribution of data. The model’s inability to establish a valid norm for 200 years of history may also reveal a shift within this norm, which could potentially be explained by several factors. One possible explanation is the evolution of language and writing styles over time. As societal norms and linguistic conventions change across centuries, the model may struggle to capture a consistent norm that spans such a wide timeframe.
+
+It is also noticeable that a large amount of the model’s errors for non-canonical works are found between the 1980s to the present. The model loses confidence and many novels fall in between. This could be due to an attrition of the canonical standard, which has become challenging to discern since the 1980s.
+
+See appendix A.4 for information about our additional results, in particular on the idiolectal bias.
+
+7.3. Discriminant features analysis
+One of the fundamental benefits of machine learning for the field of literary studies lies in the ability to delve into the inferences made by models, shedding light on the intricate mechanisms that drive their predictions. We retrieved in figure 6 the 40 most discriminating features for the model. The coefficients derived from the predictive model offer intriguing insights into the factors that contribute to the classification of works as either canonical or non-canonical. Examining the elements associated with non-canonical labeling, a distinct pattern emerges. Certain ngrams such as “personne ne” (nobody), “en être” (to be in it), and “et moi” (and me) appear frequently. These phrases, while seemingly innocuous, often characterize colloquial language or informal dialogue. Their prevalence may reflect a tendency towards more mundane or everyday narratives. Similarly, words such as “murmurer” (to murmur), “arrêter” (to stop), and “devenir” (to become) hint at simpler action-driven narratives, often prevalent in genres like adventure or detective fiction. Notably, specific subgenre affiliations can also be deduced from the coefficients. The presence of words such as “commissaire” (detective) in non-canonical labeling might be indicative of works associated with crime or detective intrigue, genres that may be deemed less canonical due to their distinct narrative priorities. In contrast, canonical labeling features words such as “jacques” (a proper name) or “fils” (son) which may allude to more character-driven narratives.
+
+Figure 6
+Figure 6.Top 40 discriminant coefficients for the model, canon at the author scale
+On the other hand, examining the elements contributing to canonical labeling, a different linguistic and thematic spectrum comes into focus. Phrases such as “donner un” (to give a), “et si” (and if), “tel” (such) or “avoir pour” (have for) project a level of linguistic sophistication. These constructions often involve greater syntactical complexity (with more auxiliaries), potentially indicating a propensity for intricate, nuanced narrative structures. Similarly, terms such as “dont le” (of which the), and “faire ce” (to do this) suggest attention to detail and precision in language use.
+
+However, it is important to proceed with caution in generalizing these patterns. The literary landscape of the 19th and 20th centuries was incredibly diverse, encompassing a myriad of styles, themes, and subgenres. While these coefficients offer intriguing insights, the complexity of literature often defies simplistic categorizations.
+
+8. Canonicity at the novel scale
+We showed in 7.1 the model’s ability to detect the canonical norm with nearly the same performance at both the author and novel scales. This suggests that certain works within an author’s oeuvre might align more closely with the established norms and criteria of the literary canon, while others might deviate or be less congruent with those norms. It demonstrates that the process of canon formation is not solely constrained at the level of individual authors, but it also operates within the body of work produced by a single author. This phenomenon could be attributed to various factors, such as shifts in an author’s creative intent, experimentation with different narrative techniques, or a response to evolving literary trends.
+
+Focusing on specific authors, we conducted a more targeted experiment, to gain a deeper understanding of what was at play at the author scale. We computed Principal Component Analysis (PCA) thanks to the Python library Prince (Halford). See appendix A.4 for further details on the method. We present in this section the visualization of experiments conducted on the novels of Colette, Victor Hugo and Guy de Maupassant.
+
+8.1. Colette
+Figure 7 shows the PCA of the writings of Colette, a famous early 20th century writer. Two elements are highlighted in this graph, on the one hand in orange the non-canonical novels of Colette, and on the other hand in blue the works considered as canonical. The latter form a rather distinct group within Colette’s literary production. The PCA positions the canonical novels within a shared region of the graph, indicating a noticeable level of similarity among these works. It is worth noting that all five canonical novels were composed between 1926 and 1934. This temporal alignment might offer an explanation for their clustering, as it corresponds to a distinct literary phase in the author’s career. Far from this group is the series of Claudine, that were very popular novels which she published under her husband’s name. These novels made the popularity of the author at the beginning of her career, but did not correspond to the selection criteria of the canon. It was only later that Colette’s identity as a writer was firmly established (Ladimer), and that her works gained prestige. The novel Sido is a fictionalized memoir that delves into Colette’s relationship with her mother. Its placement within the canonical norm, and its departure from the Claudine series, reflects Colette’s transformation as a writer. The novel presents a more reflective and introspective side of Colette’s writing, as she contemplates her personal history, Note, however, that a late novel such as Julie de Carneilhan, published in 1941, is far from our canonical specificity, so the PCA does not only detect some chronolectal aspects of Colette’s work.
+
+Figure 7
+Figure 7.Canonical selectivity in Colette, canonical works in blue and noncanonical ones in orange
+8.2. Victor Hugo
+Victor Hugo is one of the most famous and canonical French authors. Not all his writings are equally canonized, however, and some of his novels tend to be forgotten. This is the case for Han d’Islande, an early novel by the young Victor Hugo, and for Le Rhin, a travel guide with stories about the Rhine river, published in 1842. The three volumes of Le Rhin present in our corpus are unsurprisingly very close. Once again, the PCA detects the signature of the author’s chronolect, roughly describing two writing periods of Hugo, the first around the 1830s and the second during the author’s later period (see figure 8). The two non canonized novels are at the margin of the idiolectal signature of Victor Hugo, and stand out from the canonical selection.
+
+Figure 8
+Figure 8.Canonical selectivity in Victor Hugo, canonical works in blue and non-canonical ones in orange
+8.3. Guy de Maupassant
+It is important to note that this experiment does not work for all our authors, as evidenced by the example of Guy de Maupassant’s works, shown in Figure 9: He was a very productive author, and the PCA visualization fails to separate canonical from non-canonical texts.
+
+Figure 9
+Figure 9.Canonical selectivity in Guy de Maupassant, canonical works in blue and non-canonical ones in orange
+The two categories of works, canonical and non-canonical, overlap. Critics and particularly the academic institution have elevated this author’s novels to such a degree that the distinction between his canonized works and the others has blurred, as if the selective filter had embraced the entirety of his writing style, regardless of specific works.
+
+Hence, the linguistic norm identified across numerous novels by our statistical model appears to gain strength from our additional experiments. This canonical norm is not solely contingent on an author’s unique linguistic or temporal characteristics. The PCA experiments demonstrate the sifting of a specific type of content within an author’s literary production, discerning between content enshrined in collective memory and content relegated to literary oblivion.
+
+9. Discussion
+The canon is a complex and multifaceted entity, simultaneously normative in the sense that it only includes a limited number of authors or novels, and dynamic, in that it reflects the constant evolution of the literary field and thus the evolution of literary reception criteria. The canon-makers (the educational institution and, to a lesser extent, the critics) nurture and expand the canon with the passage of time and include works that appear most aligned with a certain conception of literature.
+
+The results we obtained are not particularly surprising, in the sense that the canon is inherently normative, implicitly establishing the rules of “good” literature. Altieri assigns the role of a “cultural grammar” to the canon. This concept refers to a set of linguistic and cultural norms that define the acceptable forms of expression, themes, and ideas within a given society. Just as grammar in language dictates the rules for constructing sentences, this “cultural grammar” dictates the norms for constructing literature that is deemed canonical. The identification of common linguistic features and structures within canonical works suggests that these works adhere to a specific set of rules, much like a grammatical framework, which goes beyond mere stylistic choices.
+
+This may seem a non-intuitive way to view the canon, but it appears to be a fruitful approach to interpret our findings. We think that this norm is not prescriptive, and that it can indeed serve as a touchstone that artists and writers engage with, challenge, and respond to. This perspective emphasizes the significance of viewing the canonical tradition as a dynamic and evolving phenomenon, which continues to influence the creation and interpretation of contemporary works.
+
+As we saw in section 3 with Bourdieu, the intricate mechanisms of canon-formation are inherently tied to the school’s function in society, constructing its own representation of literature and generating, as Guillory puts it, “distinct forms of linguistic knowledge”. Our approach based on an extensive analysis of the textual content of novels sought to unveil the subtle dynamics that underlie the canon, recognizing its significance as a “cultural grammar” that shapes both the creation and interpretation of literature, while acknowledging that these intricate mechanisms are inherently tied to the school’s function in society.
+
+10. Conclusion
+In conclusion, this study has introduced a practical definition of the literary canon, validated through quantitative experiments. By establishing criteria rooted in historical evidence, we have delineated the contours of the literary canon within contemporary reception. Drawing on prior research, we acknowledged the educational institution as one of the most influential canon-makers. Leveraging a substantial corpus of novels and harnessing quantitative machine learning techniques and natural language processing, we conceptualized the notion of the literary canon through distant reading. A key contribution of this research has been the identification of a shared linguistic norm among canonical novels, coupled with the development of a statistical model capable of predicting the canonicity of a text with 70% to 74% accuracy.
+
+The objective of this analysis was to augment the conventional viewpoint that often regards the canon as arbitrary, influenced by politics, ideology, or randomness. Our focus on the textual content of works aimed to imbue this definition with a formal and internal dimension, shedding light on latent selection mechanisms within the canon-formation. Indeed, these mechanisms gradually shape what is considered as prestigious literature, influenced by economic, sociological, and political dynamics. The amalgamation of these influences may steer these processes to sift through texts that adhere to specific norms established within the literary realm, thus perpetuating a replication of the literary canon over time. In essence, the canonization processes establish a framework that molds distinct literary forms. We believe that these findings might reflect what Charles Altieri calls a “cultural grammar”, referring to the idea that canonical works in literature and culture serve as foundational texts that shape the norms, values, and conventions of a particular cultural and artistic tradition.
+
+This work opens up numerous avenues for further research. Our methodology revolved around quantitatively capturing the linguistic variables that underpin the societal phenomenon of canonization. This task was particularly intricate as it entailed predicting events that transpired during the reception phase—post-writing, that is. Given these complexities, we chose to employ a straightforward bag-of-words approach, adopting a consistent canon and streamlined metadata. The primary objective was to test this hypothesis within the realm of French literature. Subsequent investigations are necessary to comprehensively grasp the nuances embedded in the literary canon.
+
+A future approach would involve obtaining metadata chronologically, as reception evolves. Further possibilities encompass dissecting the canon through various literary field agents such as editions, textbooks, school, academic prestige, and literary journals. Additionally, incorporating advanced algorithmic techniques in natural language processing, such as word or paragraph vectors, topic embeddings, and transformers, could enhance the analysis of more intricate textual attributes.""" ;
+    schema:title "Operationalizing Canonicity: A Quantitative Study of French 19th and 20th Century Literature" .
+
+<https://example.org/author/André_Chervel> a foaf:Person ;
+    schema:name "André Chervel" .
+
+<https://example.org/author/Anne-Marie_Thiesse> a foaf:Person ;
+    schema:name "Anne-Marie Thiesse" .
+
+<https://example.org/author/Antoine_Compagnon> a foaf:Person ;
+    schema:name "Antoine Compagnon" .
+
+<https://example.org/author/Aude_Leblond> a foaf:Person ;
+    schema:name "Aude Leblond" .
+
+<https://example.org/author/B._Yu> a foaf:Person ;
+    schema:name "B. Yu" .
+
+<https://example.org/author/Bethany_Ladimer> a foaf:Person ;
+    schema:name "Bethany Ladimer" .
+
+<https://example.org/author/Charles_Altieri> a foaf:Person ;
+    schema:name "Charles Altieri" .
+
+<https://example.org/author/David_L._Wallace> a foaf:Person ;
+    schema:name "David L. Wallace" .
+
+<https://example.org/author/F._Pedregosa> a foaf:Person ;
+    schema:name "F. Pedregosa" .
+
+<https://example.org/author/Florian_Cafiero> a foaf:Person ;
+    schema:name "Florian Cafiero" .
+
+<https://example.org/author/Frederick_Mosteller> a foaf:Person ;
+    schema:name "Frederick Mosteller" .
+
+<https://example.org/author/Griselda_Pollock> a foaf:Person ;
+    schema:name "Griselda Pollock" .
+
+<https://example.org/author/Gustave_Lanson> a foaf:Person ;
+    schema:name "Gustave Lanson" .
+
+<https://example.org/author/Howard_Felperin> a foaf:Person ;
+    schema:name "Howard Felperin" .
+
+<https://example.org/author/Jack_D._Porter> a foaf:Person ;
+    schema:name "Jack D. Porter" .
+
+<https://example.org/author/James_F._English> a foaf:Person ;
+    schema:name "James F. English" .
+
+<https://example.org/author/James_W._Pennebaker> a foaf:Person ;
+    schema:name "James W. Pennebaker" .
+
+<https://example.org/author/Jordan_Sellers> a foaf:Person ;
+    schema:name "Jordan Sellers" .
+
+<https://example.org/author/José_Eduardo_González> a foaf:Person ;
+    schema:name "José Eduardo González" .
+
+<https://example.org/author/Laurent_Michard> a foaf:Person ;
+    schema:name "Laurent Michard" .
+
+<https://example.org/author/M._McGurl> a foaf:Person ;
+    schema:name "M. McGurl" .
+
+<https://example.org/author/Marc_Verboord> a foaf:Person ;
+    schema:name "Marc Verboord" .
+
+<https://example.org/author/Margaret_Cohen> a foaf:Person ;
+    schema:name "Margaret Cohen" .
+
+<https://example.org/author/Michel_Bernard> a foaf:Person ;
+    schema:name "Michel Bernard" .
+
+<https://example.org/author/Michel_P._Schmitt> a foaf:Person ;
+    schema:name "Michel P. Schmitt" .
+
+<https://example.org/author/Mike_Kestemont> a foaf:Person ;
+    schema:name "Mike Kestemont" .
+
+<https://example.org/author/Mikko_Tolonen> a foaf:Person ;
+    schema:name "Mikko Tolonen" .
+
+<https://example.org/author/Olga_Seminck> a foaf:Person ;
+    schema:name "Olga Seminck" .
+
+<https://example.org/author/Pascale_Casanova> a foaf:Person ;
+    schema:name "Pascale Casanova" .
+
+<https://example.org/author/Petr_Plecháč> a foaf:Person ;
+    schema:name "Petr Plecháč" .
+
+<https://example.org/author/Pierre_Bourdieu> a foaf:Person ;
+    schema:name "Pierre Bourdieu" .
+
+<https://example.org/author/Rens_Bod> a foaf:Person ;
+    schema:name "Rens Bod" .
+
+<https://example.org/author/Simon_Gabay> a foaf:Person ;
+    schema:name "Simon Gabay" .
+
+<https://example.org/author/Thierry_Poibeau> a foaf:Person ;
+    schema:affiliation <https://ror.org/00hx6zz33>,
+        "École Normale Supérieure" ;
+    schema:name "Thierry Poibeau" ;
+    schema:sameAs <https://orcid.org/0000-0003-3669-4051> .
+
+<https://example.org/author/Yves_Chevrel> a foaf:Person ;
+    schema:name "Yves Chevrel" .
+
+<https://example.org/editor/Dragoș_Jipa> a foaf:Person ;
+    schema:name "Dragoș Jipa" .
+
+<https://example.org/editor/Frank_Lentricchia> a foaf:Person ;
+    schema:name "Frank Lentricchia" .
+
+<https://example.org/editor/Laetitia_Perret> a foaf:Person ;
+    schema:name "Laetitia Perret" .
+
+<https://example.org/editor/Martine_Jey> a foaf:Person ;
+    schema:name "Martine Jey" .
+
+<https://example.org/editor/Thomas_McLauahlin> a foaf:Person ;
+    schema:name "Thomas McLauahlin" .
+
+<https://example.org/keyword/18th_century> a skos:Concept ;
+    skos:prefLabel "18th century" .
+
+<https://example.org/keyword/19th_century> a skos:Concept ;
+    skos:prefLabel "19th century" .
+
+<https://example.org/keyword/american_literature> a skos:Concept ;
+    skos:prefLabel "american literature" .
+
+<https://example.org/keyword/authorship> a skos:Concept ;
+    skos:prefLabel "authorship" .
+
+<https://example.org/keyword/authorship_attribution> a skos:Concept ;
+    skos:prefLabel "authorship attribution" .
+
+<https://example.org/keyword/bestsellers> a skos:Concept ;
+    skos:prefLabel "bestsellers" .
+
+<https://example.org/keyword/canon> a skos:Concept ;
+    skos:prefLabel "canon" .
+
+<https://example.org/keyword/canon_studies> a skos:Concept ;
+    skos:closeMatch <http://id.loc.gov/authorities/subjects/sh99004862>,
+        "Canon" ;
+    skos:prefLabel "Canon studies" .
+
+<https://example.org/keyword/canonicity> a skos:Concept ;
+    skos:prefLabel "canonicity" .
+
+<https://example.org/keyword/canonization> a skos:Concept ;
+    skos:prefLabel "canonization" .
+
+<https://example.org/keyword/comparative_literature> a skos:Concept ;
+    skos:prefLabel "comparative literature" .
+
+<https://example.org/keyword/computational_literary_studies> a skos:Concept ;
+    skos:closeMatch <http://id.loc.gov/authorities/subjects/sh85077224>,
+        "Computational linguistics" ;
+    skos:prefLabel "Computational Literary Studies" .
+
+<https://example.org/keyword/computational_literay_studies,_digital_humanities,_canon,_archive> a skos:Concept ;
+    skos:prefLabel "computational literay studies, digital humanities, canon, archive" .
+
+<https://example.org/keyword/cultural_inequality> a skos:Concept ;
+    skos:prefLabel "cultural inequality" .
+
+<https://example.org/keyword/deconstruction> a skos:Concept ;
+    skos:prefLabel "deconstruction" .
+
+<https://example.org/keyword/diversity> a skos:Concept ;
+    skos:prefLabel "diversity" .
+
+<https://example.org/keyword/document_embeddings> a skos:Concept ;
+    skos:prefLabel "document embeddings" .
+
+<https://example.org/keyword/eighteenth_century> a skos:Concept ;
+    skos:prefLabel "eighteenth century" .
+
+<https://example.org/keyword/estc> a skos:Concept ;
+    skos:prefLabel "estc" .
+
+<https://example.org/keyword/f._r._leavis> a skos:Concept ;
+    skos:prefLabel "f. r. leavis" .
+
+<https://example.org/keyword/french_classical_theatre> a skos:Concept ;
+    skos:prefLabel "french classical theatre" .
+
+<https://example.org/keyword/graduate_training> a skos:Concept ;
+    skos:prefLabel "graduate training" .
+
+<https://example.org/keyword/hispanic_studies> a skos:Concept ;
+    skos:prefLabel "hispanic studies" .
+
+<https://example.org/keyword/historical_reception> a skos:Concept ;
+    skos:prefLabel "historical reception" .
+
+<https://example.org/keyword/idiolect> a skos:Concept ;
+    skos:prefLabel "idiolect" .
+
+<https://example.org/keyword/jean_racine> a skos:Concept ;
+    skos:prefLabel "jean racine" .
+
+<https://example.org/keyword/literariness> a skos:Concept ;
+    skos:prefLabel "literariness" .
+
+<https://example.org/keyword/literary_criticism> a skos:Concept ;
+    skos:prefLabel "literary criticism" .
+
+<https://example.org/keyword/literary_prestige> a skos:Concept ;
+    skos:prefLabel "literary prestige" .
+
+<https://example.org/keyword/literary_quality> a skos:Concept ;
+    skos:prefLabel "literary quality" .
+
+<https://example.org/keyword/literary_reviewing> a skos:Concept ;
+    skos:prefLabel "literary reviewing" .
+
+<https://example.org/keyword/literary_texts> a skos:Concept ;
+    skos:prefLabel "literary texts" .
+
+<https://example.org/keyword/literary_theory> a skos:Concept ;
+    skos:prefLabel "literary theory" .
+
+<https://example.org/keyword/literature,_textual_analysis,_novel,_stylistics> a skos:Concept ;
+    skos:prefLabel "literature, textual analysis, novel, stylistics" .
+
+<https://example.org/keyword/longue_durée> a skos:Concept ;
+    skos:prefLabel "longue durée" .
+
+<https://example.org/keyword/machine_learning> a skos:Concept ;
+    skos:exactMatch <http://id.loc.gov/authorities/subjects/sh85079324>,
+        "Machine learning" ;
+    skos:prefLabel "machine learning" .
+
+<https://example.org/keyword/marxism> a skos:Concept ;
+    skos:prefLabel "marxism" .
+
+<https://example.org/keyword/metaknowledge> a skos:Concept ;
+    skos:prefLabel "metaknowledge" .
+
+<https://example.org/keyword/mla_international_bibliography_of_books_and_articles_on_the_modern_languages_and_literatures> a skos:Concept ;
+    skos:prefLabel "mla international bibliography of books and articles on the modern languages and literatures" .
+
+<https://example.org/keyword/model_selection> a skos:Concept ;
+    skos:prefLabel "model selection" .
+
+<https://example.org/keyword/natural_language_processing> a skos:Concept ;
+    skos:exactMatch <http://id.loc.gov/authorities/subjects/sh88002425>,
+        "Natural language processing (Computer science)" ;
+    skos:prefLabel "natural language processing" .
+
+<https://example.org/keyword/novel> a skos:Concept ;
+    skos:prefLabel "novel" .
+
+<https://example.org/keyword/operationalization> a skos:Concept ;
+    skos:prefLabel "operationalization" .
+
+<https://example.org/keyword/poetic_diction> a skos:Concept ;
+    skos:prefLabel "poetic diction" .
+
+<https://example.org/keyword/popular_fiction> a skos:Concept ;
+    skos:prefLabel "popular fiction" .
+
+<https://example.org/keyword/python> a skos:Concept ;
+    skos:prefLabel "python" .
+
+<https://example.org/keyword/quantitative_literary_studies> a skos:Concept ;
+    skos:prefLabel "quantitative literary studies" .
+
+<https://example.org/keyword/ranking> a skos:Concept ;
+    skos:prefLabel "ranking" .
+
+<https://example.org/keyword/readers> a skos:Concept ;
+    skos:prefLabel "readers" .
+
+<https://example.org/keyword/romance_theory> a skos:Concept ;
+    skos:prefLabel "romance theory" .
+
+<https://example.org/keyword/sentiment_analysis> a skos:Concept ;
+    skos:prefLabel "sentiment analysis" .
+
+<https://example.org/keyword/serial_stylistics> a skos:Concept ;
+    skos:prefLabel "serial stylistics" .
+
+<https://example.org/keyword/structuralism> a skos:Concept ;
+    skos:prefLabel "structuralism" .
+
+<https://example.org/keyword/supervised_learning> a skos:Concept ;
+    skos:prefLabel "supervised learning" .
+
+<https://example.org/keyword/survey> a skos:Concept ;
+    skos:prefLabel "survey" .
+
+<https://example.org/keyword/sylometry> a skos:Concept ;
+    skos:prefLabel "sylometry" .
+
+<https://example.org/keyword/text_mining> a skos:Concept ;
+    skos:closeMatch <http://id.loc.gov/authorities/subjects/sh2019000833>,
+        "Text data mining" ;
+    skos:prefLabel "text mining" .
+
+<https://example.org/keyword/topic_models> a skos:Concept ;
+    skos:prefLabel "topic models" .
+
+<https://example.org/keyword/university_studies> a skos:Concept ;
+    skos:prefLabel "university studies" .
+
+<https://example.org/keyword/unsupervised_learning> a skos:Concept ;
+    skos:prefLabel "unsupervised learning" .
+
+<https://example.org/reference/Algee-Hewitt,_Mark,_and_M._McGurl._Between_Canon_and_Corpus:_Six_Perspectives_on_20th-_Century_Novels._no._8,_2015,_https:/​/​litlab.stanford.edu/​LiteraryLabPamphlet8.pdf.> a schema:Article,
+        schema:item ;
+    rdfs:label "Algee-Hewitt, Mark, and M. McGurl. Between Canon and Corpus: Six Perspectives on 20th- Century Novels. no. 8, 2015, https:/​/​litlab.stanford.edu/​LiteraryLabPamphlet8.pdf." ;
+    schema:abstract "Of the many, many thousands of novels and stories published in English in the 20th century, which group of several hundred would represent the most reasonable, interesting, and useful subset of the whole?" ;
+    schema:author <https://example.org/author/M._McGurl>,
+        <https://example.org/author/Mark_Algee-Hewitt> ;
+    schema:datePublished "[2015]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Century Novels" ;
+    schema:issueNumber "8" ;
+    schema:keywords <https://example.org/keyword/digital_humanities>,
+        <https://example.org/keyword/english_literature>,
+        <https://example.org/keyword/literary_canon>,
+        <https://example.org/keyword/literary_history>,
+        <https://example.org/keyword/novel>,
+        <https://example.org/keyword/ranking> ;
+    schema:title "Between Canon and Corpus: Six Perspectives on 20th" .
+
+<https://example.org/reference/Algee-Hewitt,_Mark,_et_al._Canon/Archive._Large-Scale_Dynamics_in_the_Literary_Field._no._11,_2016,_https:/​/​litlab.stanford.edu/​LiteraryLabPamphlet11.pdf.> a schema:Article,
+        schema:item ;
+    rdfs:label "Algee-Hewitt, Mark, et al. Canon/Archive. Large-Scale Dynamics in the Literary Field. no. 11, 2016, https:/​/​litlab.stanford.edu/​LiteraryLabPamphlet11.pdf." ;
+    dc:subject <https://example.org/subject/Fernand_Braudel> ;
+    schema:abstract "Of the novelties introduced by digitization in the study of literature, the size of the archive is probably the most dramatic: we used to work on a couple of hundred nineteenth-century novels, and now we can analyze thousands of them, tens of thousands, tomorrow hundreds of thousands. It's a moment of euphoria, for quantitative literary history: like having a telescope that makes you see entirely new galaxies. And it's a moment of truth: so, have the digital skies revealed anything that changes our knowledge of literature? This is not a rhetorical question. In the famous 1958 essay in which he hailed ”the advent of a quantitative history” that would ”break with the traditional form of nineteenth-century history”, Fernand Braudel mentioned as its typical materials ”demographic progressions, the movement of wages, the variations in interest rates [...] productivity [...] money supply and demand.” These were all quantifiable entities, clearly enough, but they were also completely new objects compared to the study of legislation, military campaigns, political cabinets, diplomacy, and so on. It was this double shift that changed the practice of history, not quantification alone. In our case, though, there is no shift in materials: we may end up studying 200,000 novels instead of 200, but, they're all still novels. Where exactly is the novelty?" ;
+    schema:author <https://example.org/author/Mark_Algee-Hewitt> ;
+    schema:datePublished "[2016]" ;
+    schema:inLanguage "en" ;
+    schema:issueNumber "11" ;
+    schema:keywords <https://example.org/keyword/digital_humanities>,
+        <https://example.org/keyword/quantitative_literary_studies>,
+        <https://example.org/keyword/romance_theory> ;
+    schema:title "Canon/Archive. Large-Scale Dynamics in the Literary Field" .
+
+<https://example.org/reference/Altieri,_Charles._“An_Idea_and_Ideal_of_a_Literary_Canon.”_Critical_Inquiry,_vol._10,_no._1,_Sept._1983,_pp._37–60,_https://doi.org/10.1086/448236.> a schema:Article,
+        schema:item ;
+    rdfs:label "Altieri, Charles. “An Idea and Ideal of a Literary Canon.” Critical Inquiry, vol. 10, no. 1, Sept. 1983, pp. 37–60, https://doi.org/10.1086/448236." ;
+    schema:author <https://example.org/author/Charles_Altieri> ;
+    schema:datePublished "[1983, 9]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Critical Inquiry" ;
+    schema:issueNumber "1" ;
+    schema:pagination "37–60," ;
+    schema:sameAs <https://doi.org/10.1086/448236> ;
+    schema:title "An Idea and Ideal of a Literary Canon" ;
+    schema:url "https://doi.org/10.1086/448236." ;
+    schema:volumeNumber "10" .
+
+<https://example.org/reference/Barré,_Jean._Replication_Data_for:_“Operationalizing_Canonicity.”_Harvard_Dataverse,_2023,_https://doi.org/10.7910/DVN/GQQKWK.> a schema:Article,
+        schema:item ;
+    rdfs:label "Barré, Jean. Replication Data for: “Operationalizing Canonicity.” Harvard Dataverse, 2023, https://doi.org/10.7910/DVN/GQQKWK." ;
+    schema:abstract "This repository provides data and code to support the replication of the paper ”Operationalizing Canonicity.” (2023) (2023-08-18)" ;
+    schema:author <https://example.org/author/Jean_Barré> ;
+    schema:datePublished "[2023]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Harvard Dataverse" ;
+    schema:keywords <https://example.org/keyword/computational_literay_studies,_digital_humanities,_canon,_archive> ;
+    schema:sameAs <https://doi.org/10.7910/DVN/GQQKWK> ;
+    schema:title "Replication Data for: “Operationalizing Canonicity" ;
+    schema:url "https://doi.org/10.7910/DVN/GQQKWK." .
+
+<https://example.org/reference/Bernard,_Michel._“Goncourt_2020_:_Mais_Qu’a-t-Il_de_plus_Que_Les_Autres_?”_Humanités_Numériques,_no._4,_Dec._2021,_https://doi.org/10.4000/revuehn.2297.> a schema:Article,
+        schema:item ;
+    rdfs:label "Bernard, Michel. “Goncourt 2020 : Mais Qu’a-t-Il de plus Que Les Autres ?” Humanités Numériques, no. 4, Dec. 2021, https://doi.org/10.4000/revuehn.2297." ;
+    dc:subject <https://example.org/subject/Hervé_Le_Tellier>,
+        <https://example.org/subject/None> ;
+    schema:abstract "Can we explain the successive choices of the académie Goncourt – which in 2020 led L’Anomalie by Hervé Le Tellier to win the Goncourt prize – on the basis of purely textual criteria? Using textometric tools on a corpus made up of the 15 novels of the first Goncourt selection and 32 other novels from the 2020 literary season, we will try to determine which lexical or stylistic markers can explain the four phases of selection. The final finding is negative, in the sense that none of the criteria identified has conclusive continuity over the four stages. This refers to the consideration of extra-textual characteristics for awarding the prize but also to the undecidability of the successive choices made by professional readers in the context of a negotiation." ;
+    schema:author <https://example.org/author/Michel_Bernard> ;
+    schema:datePublished "[2021, 12]" ;
+    schema:inLanguage "fr" ;
+    schema:isPartOf "Humanités Numériques" ;
+    schema:issueNumber "4" ;
+    schema:keywords <https://example.org/keyword/literature,_textual_analysis,_novel,_stylistics> ;
+    schema:sameAs <https://doi.org/10.4000/revuehn.2297> ;
+    schema:title "Goncourt 2020 : Mais Qu’a-t-Il de plus Que Les Autres ?" ;
+    schema:url "https://doi.org/10.4000/revuehn.2297." .
+
+<https://example.org/reference/Bourdieu,_Pierre._Les_règles_de_l’art:_Genèse_et_structure_du_champ_littéraire._Éditions_du_Seuil,_1992.> a schema:Book,
+        schema:item ;
+    rdfs:label "Bourdieu, Pierre. Les règles de l’art: Genèse et structure du champ littéraire. Éditions du Seuil, 1992." ;
+    schema:author <https://example.org/author/Pierre_Bourdieu> ;
+    schema:datePublished "[1992]" ;
+    schema:inLanguage "fr" ;
+    schema:publisher "Éditions du Seuil" ;
+    schema:title "Les règles de l’art: Genèse et structure du champ littéraire" .
+
+<https://example.org/reference/Brottrager,_Judith,_Annina_Stahl,_Arda_Arslan,_et_al._“Modeling_and_Predicting_Literary_Reception.”_Journal_of_Computational_Literary_Studies,_vol._1,_no._1,_2022,_https://doi.org/10.48694/JCLS.95.> a schema:Article,
+        schema:item ;
+    rdfs:label "Brottrager, Judith, Annina Stahl, Arda Arslan, et al. “Modeling and Predicting Literary Reception.” Journal of Computational Literary Studies, vol. 1, no. 1, 2022, https://doi.org/10.48694/JCLS.95." ;
+    schema:abstract "This contribution exemplifies a workflow for the quantitative operationalization and analysis of historical literary reception. We will show how to encode literary historical information in a dataset that is suitable for quantitative analysis and present a nuanced and theory-based perspective on automated sentiment detection in historical literary reviews. Applying our method to corpora of English and German novels and narratives published from 1688 to 1914 and corresponding reviews and circulating library catalogs, we investigate if a text's popularity with lay audiences, the attention from contemporary experts or the sentiment in experts' reviews can be predicted from textual features, with the aim of contributing to the understanding of how literary reception as a social process can be linked to textual qualities." ;
+    schema:author <https://example.org/author/Annina_Stahl>,
+        <https://example.org/author/Arda_Arslan>,
+        <https://example.org/author/Judith_Brottrager> ;
+    schema:datePublished "[2022]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Journal of Computational Literary Studies" ;
+    schema:issueNumber "1" ;
+    schema:keywords <https://example.org/keyword/18th_century>,
+        <https://example.org/keyword/19th_century>,
+        <https://example.org/keyword/historical_reception>,
+        <https://example.org/keyword/operationalization>,
+        <https://example.org/keyword/sentiment_analysis>,
+        <https://example.org/keyword/text_classification> ;
+    schema:sameAs <https://doi.org/10.48694/JCLS.95> ;
+    schema:title "Modeling and Predicting Literary Reception" ;
+    schema:url "https://doi.org/10.48694/JCLS.95." ;
+    schema:volumeNumber "1" .
+
+<https://example.org/reference/Brottrager,_Judith,_Annina_Stahl,_Arda_Arslan,_et_al._“Predicting_Canonization:_Comparing_Canonization_Scores_Based_on_Text-Extrinsic_and_-Intrinsic_Features.”_Proceedings_of_the_Conference_on_Computational_Humanities_Research_CHR2021,_edited_by_Maud_Ehrmann_et_al.,_vol._2989,_CEUR,_2021,_pp._195–205,_http:/​/​ceur-ws.org/​Vol-2989/​#short_paper21.> a schema:Article,
+        schema:item ;
+    rdfs:label "Brottrager, Judith, Annina Stahl, Arda Arslan, et al. “Predicting Canonization: Comparing Canonization Scores Based on Text-Extrinsic and -Intrinsic Features.” Proceedings of the Conference on Computational Humanities Research CHR2021, edited by Maud Ehrmann et al., vol. 2989, CEUR, 2021, pp. 195–205, http:/​/​ceur-ws.org/​Vol-2989/​#short_paper21." ;
+    schema:abstract "The majority of literary texts ever written are hardly known, read, or studied today, and belong to the so-called “Great Unread”. Theories of canonization predominantly focus on sociocultural processes of selection which culminate in the formation of a canon, but say little about how the texts themselves contribute to canonization. In this paper, we propose an operationalization for canonization, which is then used to build a classifier that predicts a canonization score for a text by considering text-intrinsic features only. Working on a historical corpus of English and German texts, which includes both canonical and “unread” works, the results show that a canonization score based on text-inherent features has weak correlations with a canonization score based on text-extrinsic features." ;
+    schema:author <https://example.org/author/Annina_Stahl>,
+        <https://example.org/author/Arda_Arslan>,
+        <https://example.org/author/Judith_Brottrager> ;
+    schema:datePublished "[2021]" ;
+    schema:editor <https://example.org/editor/Maud_Ehrmann> ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Proceedings of the Conference on Computational Humanities Research CHR2021" ;
+    schema:keywords <https://example.org/keyword/canonization>,
+        <https://example.org/keyword/literary_texts>,
+        <https://example.org/keyword/text_classification> ;
+    schema:pagination "195–205," ;
+    schema:publisher "CEUR" ;
+    schema:title "Predicting Canonization: Comparing Canonization Scores Based on Text-Extrinsic and -Intrinsic Features" ;
+    schema:volumeNumber "2989" .
+
+<https://example.org/reference/Cafiero,_Florian,_and_Jean-Baptiste_Camps._“Why_Molière_Most_Likely_Did_Write_His_Plays.”_Science_Advances,_vol._5,_no._11,_Nov._2019,_p._eaax5489,_https://doi.org/10.1126/sciadv.aax5489.> a schema:Article,
+        schema:item ;
+    rdfs:label "Cafiero, Florian, and Jean-Baptiste Camps. “Why Molière Most Likely Did Write His Plays.” Science Advances, vol. 5, no. 11, Nov. 2019, p. eaax5489, https://doi.org/10.1126/sciadv.aax5489." ;
+    dc:subject <https://example.org/subject/Corneille>,
+        <https://example.org/subject/Molière>,
+        <https://example.org/subject/Pierre_Corneille>,
+        <https://example.org/subject/William_Shakespeare> ;
+    schema:abstract "As for Shakespeare, a hard-fought debate has emerged about Molière, a supposedly uneducated actor who, according to some, could not have written the masterpieces attributed to him. In the past decades, the century-old thesis according to which Pierre Corneille would be their actual author has become popular, mostly because of new works in computational linguistics. These results are reassessed here through state-of-the-art attribution methods. We study a corpus of comedies in verse by major authors of Molière and Corneille’s time. Analysis of lexicon, rhymes, word forms, affixes, morphosyntactic sequences, and function words do not give any clue that another author among the major playwrights of the time would have written the plays signed under the name Molière." ;
+    schema:author <https://example.org/author/Florian_Cafiero>,
+        <https://example.org/author/Jean-Baptiste_Camps> ;
+    schema:datePublished "[2019, 11]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Science Advances" ;
+    schema:issueNumber "11" ;
+    schema:pagination "5489," ;
+    schema:sameAs <https://doi.org/10.1126/sciadv.aax5489> ;
+    schema:title "Why Molière Most Likely Did Write His Plays" ;
+    schema:url "https://doi.org/10.1126/sciadv.aax5489." ;
+    schema:volumeNumber "5" .
+
+<https://example.org/reference/Casanova,_Pascale._La_république_mondiale_des_lettres._Éditions_du_Seuil,_2008.> a schema:Book,
+        schema:item ;
+    rdfs:label "Casanova, Pascale. La république mondiale des lettres. Éditions du Seuil, 2008." ;
+    schema:author <https://example.org/author/Pascale_Casanova> ;
+    schema:datePublished "[2008]" ;
+    schema:inLanguage "fr" ;
+    schema:publisher "Éditions du Seuil" ;
+    schema:title "La république mondiale des lettres" .
+
+<https://example.org/reference/Chervel,_André._Histoire_de_l’agrégation:_Contribution_à_l’histoire_de_la_culture_scolaire._Institut_national_de_recherche_pédagogique :_Editions_Kimé,_1993.> a schema:Book,
+        schema:item ;
+    rdfs:label "Chervel, André. Histoire de l’agrégation: Contribution à l’histoire de la culture scolaire. Institut national de recherche pédagogique : Editions Kimé, 1993." ;
+    schema:author <https://example.org/author/André_Chervel> ;
+    schema:datePublished "[1993]" ;
+    schema:inLanguage "fr" ;
+    schema:publisher "Editions Kimé" ;
+    schema:title "Histoire de l’agrégation: Contribution à l’histoire de la culture scolaire. Institut national de recherche pédagogique" .
+
+<https://example.org/reference/Chevrel,_Yves._“Les_Lettres_modernes_et_la_formation_des_professeurs_de_français.”_L’information_littéraire,_vol._Vol._55,_no._3,_Sept._2003,_pp._3–10,_https://doi.org/10.3917/inli.553.0003.> a schema:Article,
+        schema:item ;
+    rdfs:label "Chevrel, Yves. “Les Lettres modernes et la formation des professeurs de français.” L’information littéraire, vol. Vol. 55, no. 3, Sept. 2003, pp. 3–10, https://doi.org/10.3917/inli.553.0003." ;
+    schema:author <https://example.org/author/Yves_Chevrel> ;
+    schema:datePublished "[2003, 9]" ;
+    schema:inLanguage "fr" ;
+    schema:isPartOf "L’information littéraire" ;
+    schema:issueNumber "3" ;
+    schema:pagination "3–10," ;
+    schema:sameAs <https://doi.org/10.3917/inli.553.0003> ;
+    schema:title "Les Lettres modernes et la formation des professeurs de français" ;
+    schema:url "https://doi.org/10.3917/inli.553.0003." ;
+    schema:volumeNumber "55" .
+
+<https://example.org/reference/Cohen,_Margaret._The_Sentimental_Education_of_the_Novel._Princeton_University_Press,_2002.> a schema:Book,
+        schema:item ;
+    rdfs:label "Cohen, Margaret. The Sentimental Education of the Novel. Princeton University Press, 2002." ;
+    dc:subject <https://example.org/subject/Honoré_de_Balzac>,
+        <https://example.org/subject/Stendhal>,
+        <https://example.org/subject/woman> ;
+    schema:abstract "The nineteenth-century French novel has long been seen as the heroic production of great men, who confronted in their works the social consequences of the French Revolution. And it is true that French realism, especially as developed by Balzac and Stendhal, was one of the most influential novelistic forms ever invented. Margaret Cohen, however, challenges the traditional account of the genesis of realism by returning Balzac and Stendhal to the forgotten novelistic contexts of their time. Reconstructing a key formative period for the novel, she shows how realist codes emerged in a “hostile take-over” of a prestigious contemporary sentimental practice of the novel, which was almost completely dominated by women writers." ;
+    schema:author <https://example.org/author/Margaret_Cohen> ;
+    schema:datePublished "[2002]" ;
+    schema:inLanguage "sq" ;
+    schema:publisher "Princeton University Press" ;
+    schema:title "The Sentimental Education of the Novel" .
+
+<https://example.org/reference/Compagnon,_Antoine._La_troisième_république_des_lettres,_de_flaubert_à_proust._Editions_du_Seuil,_1983.> a schema:Book,
+        schema:item ;
+    rdfs:label "Compagnon, Antoine. La troisième république des lettres, de flaubert à proust. Editions du Seuil, 1983." ;
+    schema:author <https://example.org/author/Antoine_Compagnon> ;
+    schema:datePublished "[1983]" ;
+    schema:inLanguage "fr" ;
+    schema:publisher "Editions du Seuil" ;
+    schema:title "La troisième république des lettres, de flaubert à proust" .
+
+<https://example.org/reference/English,_James_F._Economy_of_Prestige:_Prizes,_Awards,_and_the_Circulation_of_Cultural_Value._Harvard_University_Press,_2009.> a schema:Book,
+        schema:item ;
+    rdfs:label "English, James F. Economy of Prestige: Prizes, Awards, and the Circulation of Cultural Value. Harvard University Press, 2009." ;
+    schema:abstract "This is a book about one of the great untold stories of modern cultural life: the remarkable ascendancy of prizes in literature and the arts. Such prizes and the competitions they crown are almost as old as the arts themselves, but their number and power--and their consequences for society and culture at large--have expanded to an unprecedented degree in our day. In a wide-ranging overview of this phenomenon, James F. English documents the dramatic rise of the awards industry and its complex role within what he describes as an economy of cultural prestige." ;
+    schema:author <https://example.org/author/James_F._English> ;
+    schema:datePublished "[2009]" ;
+    schema:inLanguage "en" ;
+    schema:publisher "Harvard University Press" ;
+    schema:title "Economy of Prestige: Prizes, Awards, and the Circulation of Cultural Value" .
+
+<https://example.org/reference/Felperin,_Howard._Beyond_Deconstruction:_The_Uses_and_Abuses_of_Literary_Theory._Clarendon_press,_1985.> a schema:Book,
+        schema:item ;
+    rdfs:label "Felperin, Howard. Beyond Deconstruction: The Uses and Abuses of Literary Theory. Clarendon press, 1985." ;
+    dc:subject <https://example.org/subject/Andrew_John_Henry_Way>,
+        <https://example.org/subject/F._R._Leavis> ;
+    schema:abstract "The past two decades have seen swift and radical change in the way literature is perceived and taught in this country and abroad, as numerous new schools of theory have blossomed, particularly at Yale, Johns Hopkins, and Cambridge. Intended as an introduction to these new theories, the book offers a balanced and lively overview that steers clear of technicalities as it explains, explores, and occasionally takes issue with the large movements that have followed the so-called ‘practical’ criticism of F. R. Leavis and others. It focuses on the major schools and figures of structuralism, Marxism, and deconstruction, giving a focus on the ideological and methodological issues involved." ;
+    schema:author <https://example.org/author/Howard_Felperin> ;
+    schema:datePublished "[1985]" ;
+    schema:inLanguage "en" ;
+    schema:keywords <https://example.org/keyword/deconstruction>,
+        <https://example.org/keyword/f._r._leavis>,
+        <https://example.org/keyword/literary_criticism>,
+        <https://example.org/keyword/literary_theory>,
+        <https://example.org/keyword/marxism>,
+        <https://example.org/keyword/structuralism> ;
+    schema:publisher "Clarendon press" ;
+    schema:title "Beyond Deconstruction: The Uses and Abuses of Literary Theory" .
+
+<https://example.org/reference/Gabay,_Simon._“Beyond_Idiolectometry?_On_Racine’s_Stylometric_Signature.”_Proceedings_of_the_Conference_on_Computational_Humanities_Research_CHR2021,_edited_by_Maud_Ehrmann_et_al.,_vol._2989,_CEUR,_2021,_pp._359–76,_http:/​/​ceur-ws.org/​Vol-2989/​#long_paper39.> a schema:Article,
+        schema:item ;
+    rdfs:label "Gabay, Simon. “Beyond Idiolectometry? On Racine’s Stylometric Signature.” Proceedings of the Conference on Computational Humanities Research CHR2021, edited by Maud Ehrmann et al., vol. 2989, CEUR, 2021, pp. 359–76, http:/​/​ceur-ws.org/​Vol-2989/​#long_paper39." ;
+    dc:subject <https://example.org/subject/Jean_Racine> ;
+    schema:abstract "If stylometry has proven to be useful for literary history, especially for distant reading approaches of texts, it still has to show its efficiency regarding close reading. Taking the example of famous French playwright Jean Racine, we propose a double analysis of his plays, both distant and close, following the double objective of controlling its newly alleged paternity on Campistron's plays (which proves to be wrong using standard methods in stylometry), and interpreting the stylometric markers used for this attribution procedure. 17 th c. French having a relatively unstable spelling system, we also propose a new method for denoising, based on full linguistic annotation rather than simple lemmatisation." ;
+    schema:author <https://example.org/author/Simon_Gabay> ;
+    schema:datePublished "[2021]" ;
+    schema:editor <https://example.org/editor/Maud_Ehrmann> ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Proceedings of the Conference on Computational Humanities Research CHR2021" ;
+    schema:keywords <https://example.org/keyword/authorship_attribution>,
+        <https://example.org/keyword/french_classical_theatre>,
+        <https://example.org/keyword/jean_racine>,
+        <https://example.org/keyword/serial_stylistics>,
+        <https://example.org/keyword/stylometry> ;
+    schema:pagination "359–76," ;
+    schema:publisher "CEUR" ;
+    schema:title "Beyond Idiolectometry? On Racine’s Stylometric Signature" ;
+    schema:volumeNumber "2989" .
+
+<https://example.org/reference/González,_José_Eduardo,_et_al._“Measuring_Canonicity:_Graduate_Read­ing_Lists_in_Departments_of_Hispanic_Studies.”_Journal_of_Cultural_Analytics,_vol._6,_no._1,_Mar._2021,_https://doi.org/10.22148/001c.21599.> a schema:Article,
+        schema:item ;
+    rdfs:label "González, José Eduardo, et al. “Measuring Canonicity: Graduate Read­ing Lists in Departments of Hispanic Studies.” Journal of Cultural Analytics, vol. 6, no. 1, Mar. 2021, https://doi.org/10.22148/001c.21599." ;
+    schema:abstract "This article discusses methods to determine canonical changes in graduate reading lists using a quantitative approach. Using diversity indexes common in ecology as well as simple data exploration and distance measure techniques to study levels of canonical dominance and gender equality, we compare over 90 samples from Hispanic Studies programs in the U.S. We use these indexes to study how some of these lists have changed over time and their success in representing the diversity of experiences and social groups in Spain and Latin America." ;
+    schema:author <https://example.org/author/José_Eduardo_González> ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Journal of Cultural Analytics" ;
+    schema:issueNumber "1" ;
+    schema:keywords <https://example.org/keyword/canonicity>,
+        <https://example.org/keyword/cultural_inequality>,
+        <https://example.org/keyword/diversity>,
+        <https://example.org/keyword/graduate_training>,
+        <https://example.org/keyword/hispanic_studies>,
+        <https://example.org/keyword/metaknowledge>,
+        <https://example.org/keyword/university_studies> ;
+    schema:sameAs <https://doi.org/10.22148/001c.21599> ;
+    schema:title "Measuring Canonicity: Graduate Read­ing Lists in Departments of Hispanic Studies" ;
+    schema:url "https://doi.org/10.22148/001c.21599." ;
+    schema:volumeNumber "6" .
+
+<https://example.org/reference/Guillory,_John._Cultural_Capital:_The_Problem_of_Literary_Canon_Formation._Paperback,_Univ._of_Chicago_Press,_1998.> a schema:Chapter,
+        schema:item ;
+    rdfs:label "Guillory, John. Cultural Capital: The Problem of Literary Canon Formation. Paperback, Univ. of Chicago Press, 1998." ;
+    dc:subject <https://example.org/subject/John>,
+        <https://example.org/subject/Pierre_Bourdieu> ;
+    schema:abstract "John Guillory challenges the most fundamental premises of the canon debate by resituating the problem of canon formation in an entirely new theoretical framework. The result is a book that promises to recast not only the debate about the literary curriculum but also the controversy over “multiculturalism” and the current “crisis of the humanities.” Employing concepts drawn from Pierre Bourdieu’s sociology, Guillory argues that canon formation must be understood less as a question of the representation of social groups than as a question of the distribution of “cultural capital” in the schools, which regulate access to literacy, to the practices of reading and writing." ;
+    schema:author <https://example.org/author/John_Guillory> ;
+    schema:datePublished "[1998]" ;
+    schema:inLanguage "en" ;
+    schema:publisher "Univ. of Chicago Press" ;
+    schema:title "Cultural Capital: The Problem of Literary Canon Formation" .
+
+<https://example.org/reference/Guillory,_John._“Canon.”_Critical_Terms_for_Literary_Study,_edited_by_Frank_Lentricchia_and_Thomas_McLauahlin,_2nd_ed.,_The_University_of_Chicago_Press,_1995,_pp._233–49,_https:/​/​press.uchicago.edu/​ucp/​books/​book/​chicago/​C/​bo3627086.html.> a schema:Chapter,
+        schema:item ;
+    rdfs:label "Guillory, John. “Canon.” Critical Terms for Literary Study, edited by Frank Lentricchia and Thomas McLauahlin, 2nd ed., The University of Chicago Press, 1995, pp. 233–49, https:/​/​press.uchicago.edu/​ucp/​books/​book/​chicago/​C/​bo3627086.html." ;
+    schema:author <https://example.org/author/John_Guillory> ;
+    schema:datePublished "[1995]" ;
+    schema:editor <https://example.org/editor/Frank_Lentricchia>,
+        <https://example.org/editor/Thomas_McLauahlin> ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Critical Terms for Literary Study" ;
+    schema:pagination "233–49," ;
+    schema:publisher "The University of Chicago Press" ;
+    schema:title "Canon" ;
+    schema:version "2nd" .
+
+<https://example.org/reference/Halford,_Max._Prince._https:/​/​github.com/​MaxHalford/​prince.> a schema:Chapter,
+        schema:item ;
+    rdfs:label "Halford, Max. Prince. https:/​/​github.com/​MaxHalford/​prince." ;
+    dc:subject <https://example.org/subject/Prince> ;
+    schema:abstract "Prince is a Python library for multivariate exploratory data analysis in Python. It includes a variety of methods for summarizing tabular data, including principal component analysis (PCA) and correspondence analysis (CA). Prince provides efficient implementations, using a scikit-learn API." ;
+    schema:inLanguage "fil" ;
+    schema:title "Halford, Max" .
+
+<https://example.org/reference/Jey,_Martine,_and_Laetitia_Perret,_editors._L’idée_de_littérature_dans_l’enseignement._Classiques_Garnier,_2019.> a schema:Article,
+        schema:item ;
+    rdfs:label "Jey, Martine, and Laetitia Perret, editors. L’idée de littérature dans l’enseignement. Classiques Garnier, 2019." ;
+    dc:subject <https://example.org/subject/Andrew_John_Henry_Way> ;
+    schema:abstract "This book examines the role that education has played in shaping the meaning of the word 'literature' and the field it covers. The contributions in this book focus on the way in which the educational establishment, through its practices, classifications and canon, has constructed an 'idea of literature'." ;
+    schema:datePublished "[2019]" ;
+    schema:editor <https://example.org/editor/Laetitia_Perret>,
+        <https://example.org/editor/Martine_Jey> ;
+    schema:inLanguage "fr" ;
+    schema:isPartOf "Classiques Garnier" ;
+    schema:title "L’idée de littérature dans l’enseignement" .
+
+<https://example.org/reference/Jey,_Martine._La_littérature_au_lycée:_Invention_d’une_discipline_(1880-1925)._Klincksieck,_1998.> a schema:Chapter,
+        schema:item ;
+    rdfs:label "Jey, Martine. La littérature au lycée: Invention d’une discipline (1880-1925). Klincksieck, 1998." ;
+    schema:author <https://example.org/author/Martine_Jey> ;
+    schema:datePublished "[1998]" ;
+    schema:inLanguage "fr" ;
+    schema:title "La littérature au lycée: Invention d’une discipline (1880-1925" .
+
+<https://example.org/reference/Jey,_Martine.“Le_canon_aux_agrégations_du_XIXe_siècle.”_Revue_d’histoire_littéraire_de_la_France,_vol._114,_no._1,_2014,_p._143,_https://doi.org/10.3917/rhlf.141.0143.> a schema:Article,
+        schema:item ;
+    rdfs:label "Jey, Martine.“Le canon aux agrégations du XIXe siècle.” Revue d’histoire littéraire de la France, vol. 114, no. 1, 2014, p. 143, https://doi.org/10.3917/rhlf.141.0143." ;
+    schema:author <https://example.org/author/Martine_Jey> ;
+    schema:datePublished "[2014]" ;
+    schema:inLanguage "fr" ;
+    schema:isPartOf "Revue d’histoire littéraire de la France" ;
+    schema:issueNumber "1" ;
+    schema:pagination "143," ;
+    schema:sameAs <https://doi.org/10.3917/rhlf.141.0143> ;
+    schema:title "Le canon aux agrégations du XIXe siècle" ;
+    schema:url "https://doi.org/10.3917/rhlf.141.0143." ;
+    schema:volumeNumber "114" .
+
+<https://example.org/reference/Jipa,_Dragoș,_editor._La_canonisation_littéraire_et_l’avènement_de_la_culture_de_masse:_La_collection_les_grands_écrivains_français_(1887-1913)._Peter_Lang_Verlag,_2016,_https://doi.org/10.3726/978-3-653-06804-7.> a schema:Book,
+        schema:item ;
+    rdfs:label "Jipa, Dragoș, editor. La canonisation littéraire et l’avènement de la culture de masse: La collection les grands écrivains français (1887-1913). Peter Lang Verlag, 2016, https://doi.org/10.3726/978-3-653-06804-7." ;
+    dc:subject <https://example.org/subject/Julian_Edelman> ;
+    schema:abstract "At the end of the 19th century in France, literary canonisation took place not only through republican schools, but also through collections for the general public. The diplomat Jean-Jules Jusserand directed Hachette's collection Les Grands Écrivains Français, which became a major publishing venture during the period of the ”Third Republic of Letters” (A. Compagnon). The aim of this study is to describe the collective process of canonisation at work, to identify the players and their respective roles (including that of the collection director), the editorial mechanisms (the constraints of serial publication) and the dominant discourse on the great writers of literary history as images of national greatness." ;
+    schema:datePublished "[2016]" ;
+    schema:editor <https://example.org/editor/Dragoș_Jipa> ;
+    schema:inLanguage "fr" ;
+    schema:publisher "Peter Lang Verlag" ;
+    schema:sameAs <https://doi.org/10.3726/978-3-653-06804-7> ;
+    schema:title "La canonisation littéraire et l’avènement de la culture de masse: La collection les grands écrivains français (1887-1913" ;
+    schema:url "https://doi.org/10.3726/978-3-653-06804-7." .
+
+<https://example.org/reference/Kestemont,_Mike._“Function_Words_in_Authorship_Attribution._From_Black_Magic_to_Theory?”_Proceedings_of_the_3rd_Workshop_on_Computational_Linguistics_for_Literature_(CLFL),_2014,_pp._59–66,_https://doi.org/10.3115/v1/w14-0908.> a schema:Article,
+        schema:item ;
+    rdfs:label "Kestemont, Mike. “Function Words in Authorship Attribution. From Black Magic to Theory?” Proceedings of the 3rd Workshop on Computational Linguistics for Literature (CLFL), 2014, pp. 59–66, https://doi.org/10.3115/v1/w14-0908." ;
+    schema:abstract "This position paper focuses on the use of function words in computational authorship attribution. Although recently there have been multiple successful applications of authorship attribution, the field is not particularly good at the explication of methods and theoretical issues, which might eventually compromise the acceptance of new research results in the traditional humanities community. I wish to partially help remedy this lack of explication and theory, by contributing a theoretical discussion on the use of function words in stylometry. I will concisely survey the attractiveness of function words in stylometry and relate them to the use of character n-grams. At the end of this paper, I will propose to replace the term ‘function word’ by the term ‘functor’ in stylometry, due to multiple theoretical considerations" ;
+    schema:author <https://example.org/author/Mike_Kestemont> ;
+    schema:datePublished "[2014]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Proceedings of the 3rd Workshop on Computational Linguistics for Literature (CLFL" ;
+    schema:pagination "59–66," ;
+    schema:sameAs <https://doi.org/10.3115/v1/w14-0908> ;
+    schema:title "Function Words in Authorship Attribution. From Black Magic to Theory?" ;
+    schema:url "https://doi.org/10.3115/v1/w14-0908." .
+
+<https://example.org/reference/Koolen,_Corina,_et_al._“Literary_Quality_in_the_Eye_of_the_Dutch_Reader:_The_National_Reader_Survey.”_Poetics,_vol._79,_Apr._2020,_p._101439,_https://doi.org/10.1016/j.poetic.2020.101439.> a schema:Article,
+        schema:item ;
+    rdfs:label "Koolen, Corina, et al. “Literary Quality in the Eye of the Dutch Reader: The National Reader Survey.” Poetics, vol. 79, Apr. 2020, p. 101439, https://doi.org/10.1016/j.poetic.2020.101439." ;
+    dc:subject <https://example.org/subject/Chance_the_Rapper>,
+        <https://example.org/subject/Riki_LeCotey> ;
+    schema:abstract "What makes some novels literary? There is little agreement within literary studies on this question. The two main approaches focus either on text-intrinsic factors (e.g., aesthetic, stylistic), or text-extrinsic social factors (e.g., author prestige, critics). Until now, there has not been a comprehensive study taking both text-intrinsic and social factors into account. The project The Riddle of Literary Quality examines both factors by connecting literary texts to the appreciation of those texts: can we identify textual characteristics that are connected to readers’ literary appraisal of texts? In this paper, we describe the development of The National Reader Survey and present some results. The National Reader Survey is a large online survey of Dutch readers with about 14,000 respondents, its purpose is to collect readers’ literary appraisal of texts. We asked readers to rate both read and unread novels on a scale of 1–7 for their literary and overall quality. The agreement amongst respondents on which recent Dutch language novels are of high literary quality and which are not was greater than expected. Motivations respondents gave for their ratings show that the notion of literary quality is a familiar one and respondents most commonly relate it to two elements: the first is the text itself—style, structure, plot and layers, and the second is genre—if a novel is considered a ‘genre’ novel (e.g., suspense, romantic, fantasy), its chances of obtaining a high rating on literary quality are small. These results indicate how entwined social and text-intrinsic factors are. We also touch upon project results which make use of the survey data." ;
+    schema:author <https://example.org/author/Corina_Koolen> ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Poetics" ;
+    schema:keywords <https://example.org/keyword/bestsellers>,
+        <https://example.org/keyword/literary_quality>,
+        <https://example.org/keyword/popular_fiction>,
+        <https://example.org/keyword/readers>,
+        <https://example.org/keyword/survey> ;
+    schema:pagination "101439," ;
+    schema:sameAs <https://doi.org/10.1016/j.poetic.2020.101439> ;
+    schema:title "Literary Quality in the Eye of the Dutch Reader: The National Reader Survey" ;
+    schema:url "https://doi.org/10.1016/j.poetic.2020.101439." ;
+    schema:volumeNumber "79, Apr. 2020" .
+
+<https://example.org/reference/Ladimer,_Bethany._Colette,_Beauvoir,_and_Duras:_Age_and_Women_Writers._University_Press_of_Florida,_1999.> a schema:Book,
+        schema:item ;
+    rdfs:label "Ladimer, Bethany. Colette, Beauvoir, and Duras: Age and Women Writers. University Press of Florida, 1999." ;
+    dc:subject <https://example.org/subject/Andrew_John_Henry_Way>,
+        <https://example.org/subject/Betty_Friedan>,
+        <https://example.org/subject/Colette>,
+        <https://example.org/subject/Lisa_Simone>,
+        <https://example.org/subject/Marguerite_Duras>,
+        <https://example.org/subject/woman> ;
+    schema:abstract "In a pioneering study of the three best-known French women writers of the 20th century, Bethany Ladimer examines the ways in which the aging process shaped their creativity and their lives. Simone de Beauvoir, Colette, and Marguerite Duras all lived long lives and were prolific writers until the end. Bethany Ladimer's developmental approach to their creativity takes into account literary analysis but also discusses their work and lives from the standpoint of history and the social sciences, a three-way conjunction that considers age, gender, and a culture that depends on the ideas of sexual difference for its national identity. She incorporates the work of Betty Friedan, Carolyn Heilbrun, and Margaret Gulette, among others, into her study. Asking how a French woman's heritage affects the way she writes when she has gone beyond the age when women are usually considered sexually desirable, Ladimer examines the problems and resolutions that face aging women in France. The light she sheds on the question illuminates the relationship between femininity and aging in all Western societies." ;
+    schema:author <https://example.org/author/Bethany_Ladimer> ;
+    schema:datePublished "[1999]" ;
+    schema:inLanguage "en" ;
+    schema:publisher "University Press of Florida" ;
+    schema:title "Colette, Beauvoir, and Duras: Age and Women Writers" .
+
+<https://example.org/reference/Lagarde,_André,_and_Laurent_Michard._XIXe_siécle:_Les_grands_auteurs_français ;_anthologie_et_histoire_littéraire._Bordas,_1999.> a schema:Article,
+        schema:item ;
+    rdfs:label "Lagarde, André, and Laurent Michard. XIXe siécle: Les grands auteurs français ; anthologie et histoire littéraire. Bordas, 1999." ;
+    schema:author <https://example.org/author/André_Lagarde>,
+        <https://example.org/author/Laurent_Michard> ;
+    schema:datePublished "[1999]" ;
+    schema:inLanguage "fr" ;
+    schema:title "XIXe siécle: Les grands auteurs français   ; anthologie et histoire littéraire" .
+
+<https://example.org/reference/Lagarde,_André,_et_al._XXe_siècle:_Les_grands_auteurs_français:_Anthologie_et_histoire_littéraire._Nouv._éd.,_Bordas,_1988.> a schema:Article,
+        schema:item ;
+    rdfs:label "Lagarde, André, et al. XXe siècle: Les grands auteurs français: Anthologie et histoire littéraire. Nouv. éd., Bordas, 1988." ;
+    schema:author <https://example.org/author/André_Lagarde> ;
+    schema:datePublished "[1988]" ;
+    schema:inLanguage "fr" ;
+    schema:isPartOf "Nouv. éd" ;
+    schema:title "XXe siècle: Les grands auteurs français: Anthologie et histoire littéraire" .
+
+<https://example.org/reference/Lanson,_Gustave._Hommes_et_Livres:_Études_Morales_et_Littéraires._Hachette_livre-bnf,_1895.> a schema:Book,
+        schema:item ;
+    rdfs:label "Lanson, Gustave. Hommes et Livres: Études Morales et Littéraires. Hachette livre-bnf, 1895." ;
+    schema:author <https://example.org/author/Gustave_Lanson> ;
+    schema:datePublished "[1895]" ;
+    schema:inLanguage "fr" ;
+    schema:publisher "Hachette livre-bnf" ;
+    schema:title "Hommes et Livres: Études Morales et Littéraires" .
+
+<https://example.org/reference/Leblond,_Aude._Corpus_Chapitres._Zenodo,_2022,_https://doi.org/10.5281/ZENODO.7446728.> a schema:Article,
+        schema:item ;
+    rdfs:label "Leblond, Aude. Corpus Chapitres. Zenodo, 2022, https://doi.org/10.5281/ZENODO.7446728." ;
+    schema:abstract "This is a non-exhaustively corrected version of the corpus of royalty-free novels in French and in .xml, compiled by the ANR Chapitres. There may still be errors in the metadata and structuring of the texts." ;
+    schema:author <https://example.org/author/Aude_Leblond> ;
+    schema:datePublished "[2022]" ;
+    schema:inLanguage "sr" ;
+    schema:isPartOf "Zenodo" ;
+    schema:sameAs <https://doi.org/10.5281/ZENODO.7446728> ;
+    schema:title "Corpus Chapitres" ;
+    schema:url "https://doi.org/10.5281/ZENODO.7446728." .
+
+<https://example.org/reference/Moretti,_Franco._“Conjectures_on_World_Literature.”_New_Left_Review,_2000.> a schema:Article,
+        schema:item ;
+    rdfs:label "Moretti, Franco. “Conjectures on World Literature.” New Left Review, 2000." ;
+    dc:subject <https://example.org/subject/Andrew_John_Henry_Way>,
+        <https://example.org/subject/Moretto_da_Brescia> ;
+    schema:abstract """This paper proposes a new method for the study of world literature. Moretti assumes that within modernity all cultural influences - not necessarily identical with political influences - are part of the struggle for symbolic hegemony. As carriers of modernity literary genres are subjected to various deformations within local cultures.To capture these deformations it is necessary to test selected formal or structural elements (tropes, themes, motife, narrative) across several national literatures.This is not possible through close reading, but only through distant reading, that is to say through interpretations that build on the work of other literary historians. A literary form analysed in this way represents the literary system embodied in the work (a system of literary inequality), and is an abstraction of social relationships. Hence the study of world literature is an analysis of power.
+""" ;
+    schema:author <https://example.org/author/Franco_Moretti> ;
+    schema:datePublished "[2000]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "New Left Review" ;
+    schema:title "Conjectures on World Literature" .
+
+<https://example.org/reference/Moretti,_Franco._“The_Slaughterhouse_of_Literature.”_Modern_Language_Quarterly,_vol._61,_no._1,_Mar._2000,_pp._207–28,_https://doi.org/10.1215/00267929-61-1-207.> a schema:Article,
+        schema:item ;
+    rdfs:label "Moretti, Franco. “The Slaughterhouse of Literature.” Modern Language Quarterly, vol. 61, no. 1, Mar. 2000, pp. 207–28, https://doi.org/10.1215/00267929-61-1-207." ;
+    schema:author <https://example.org/author/Franco_Moretti> ;
+    schema:datePublished "[2000, 3]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Modern Language Quarterly" ;
+    schema:issueNumber "1" ;
+    schema:pagination "207–28," ;
+    schema:sameAs <https://doi.org/10.1215/00267929-61-1-207> ;
+    schema:title "The Slaughterhouse of Literature" ;
+    schema:url "https://doi.org/10.1215/00267929-61-1-207." ;
+    schema:volumeNumber "61" .
+
+<https://example.org/reference/Mosteller,_Frederick,_and_David_L._Wallace._“Inference_in_an_Authorship_Problem.”_Journal_of_the_American_Statistical_Association,_vol._58,_no._302,_June_1963,_p._275,_https://doi.org/10.2307/2283270.> a schema:Article,
+        schema:item ;
+    rdfs:label "Mosteller, Frederick, and David L. Wallace. “Inference in an Authorship Problem.” Journal of the American Statistical Association, vol. 58, no. 302, June 1963, p. 275, https://doi.org/10.2307/2283270." ;
+    dc:subject <https://example.org/subject/James_Madison>,
+        <https://example.org/subject/Lewis_Hamilton>,
+        <https://example.org/subject/None> ;
+    schema:abstract "This study has four purposes: to provide a comparison of discrimination methods, to explore the problems presented by techniques based strongly on Bayes' theorem when they are used in a data analysis of large scale, to solve the authorship question of The Federalist papers, and to propose routine methods for solving other authorship problems. Word counts are the variables used for discrimination. Since the topic written about heavily influences the rate with which a word is used, care in selection of words is necessary. The filler words of the language such as an, of, and upon, and, more generally, articles, prepositions, and conjunctions provide fairly stable rates, whereas more meaningful words like war, executive, and legislature do not. After an investigation of the distribution of these counts, the authors execute an analysis employing the usual discriminant function and an analysis based on Bayesian methods. The conclusions about the authorship problem are that Madison rather than Hamilton wrote all 12 of the disputed papers. The findings about methods are presented in the closing section on conclusions. This report, summarizing and abbreviating a forthcoming monograph [8], gives some of the results but very little of their empirical and theoretical foundation. It treats two of the four main studies presented in the monograph, and none of the side studies." ;
+    schema:author <https://example.org/author/David_L._Wallace>,
+        <https://example.org/author/Frederick_Mosteller> ;
+    schema:datePublished "[1963, 6]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Journal of the American Statistical Association" ;
+    schema:issueNumber "302" ;
+    schema:pagination "275," ;
+    schema:sameAs <https://doi.org/10.2307/2283270> ;
+    schema:title "Inference in an Authorship Problem" ;
+    schema:url "https://doi.org/10.2307/2283270." ;
+    schema:volumeNumber "58" .
+
+<https://example.org/reference/Pedregosa,_F.,_et_al._“Scikit-Learn:_Machine_Learning_in_Python.”_Journal_of_Machine_Learning_Research,_vol._12,_2011,_pp._2825–30.> a schema:Article,
+        schema:item ;
+    rdfs:label "Pedregosa, F., et al. “Scikit-Learn: Machine Learning in Python.” Journal of Machine Learning Research, vol. 12, 2011, pp. 2825–30." ;
+    schema:abstract "Scikit-learn is a Python module integrating a wide range of state-of-the-art machine learning algorithms for medium-scale supervised and unsupervised problems. This package focuses on bringing machine learning to non-specialists using a general-purpose high-level language. Emphasis is put on ease of use, performance, documentation, and API consistency. It has minimal dependencies and is distributed under the simplified BSD license, encouraging its use in both academic and commercial settings. Source code, binaries, and documentation can be downloaded from http://scikit-learn.sourceforge.net." ;
+    schema:author <https://example.org/author/F._Pedregosa> ;
+    schema:datePublished "[2011]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Journal of Machine Learning Research" ;
+    schema:keywords <https://example.org/keyword/model_selection>,
+        <https://example.org/keyword/python>,
+        <https://example.org/keyword/supervised_learning>,
+        <https://example.org/keyword/unsupervised_learning> ;
+    schema:pagination "2825–30" ;
+    schema:title "Scikit-Learn: Machine Learning in Python" ;
+    schema:volumeNumber "12" .
+
+<https://example.org/reference/Pennebaker,_James_W._The_Secret_Life_of_Pronouns:_What_Our_Words_Say_about_Us._1st_U.S._ed,_Bloomsbury_Press,_2011.> a schema:Book,
+        schema:item ;
+    rdfs:label "Pennebaker, James W. The Secret Life of Pronouns: What Our Words Say about Us. 1st U.S. ed, Bloomsbury Press, 2011." ;
+    dc:subject <https://example.org/subject/Andrew_John_Henry_Way> ;
+    schema:abstract "Pronouns (such as I, you, they), articles (a, an, the), prepositions (to, of, for), auxiliary verbs (is, am, have), and a handful of other common word categories are called function words. On their own, function words have very little meaning. In English, there are fewer than 500 function words yet they account for more than half of the words we speak, hear, and read every day. By analyzing their use, we begin to learn how speakers are connecting with their audiences, their friends, their conversational topics, and themselves. The Secret Life of Pronouns is based on a large-scale research project that links natural language use to real world social and psychological processes. Using computerized text analyses on hundreds of thousands of letters, poems, books, blogs, Tweets, conversations, and other texts, it is possible to begin to read people’s hearts and minds in ways they can’t do themselves." ;
+    schema:author <https://example.org/author/James_W._Pennebaker> ;
+    schema:datePublished "[2011]" ;
+    schema:inLanguage "en" ;
+    schema:publisher "Bloomsbury Press" ;
+    schema:title "The Secret Life of Pronouns: What Our Words Say about Us" ;
+    schema:version "1st U.S." .
+
+<https://example.org/reference/Plecháč,_Petr._“Relative_Contributions_of_Shakespeare_and_Fletcher_in_Henry_VIII:_An_Analysis_Based_on_Most_Frequent_Words_and_Most_Frequent_Rhythmic_Patterns.”_Digital_Scholarship_in_the_Humanities,_vol._36,_no._2,_June_2020,_pp._430–38,_https://doi.org/10.1093/llc/fqaa032.> a schema:Article,
+        schema:item ;
+    rdfs:label "Plecháč, Petr. “Relative Contributions of Shakespeare and Fletcher in Henry VIII: An Analysis Based on Most Frequent Words and Most Frequent Rhythmic Patterns.” Digital Scholarship in the Humanities, vol. 36, no. 2, June 2020, pp. 430–38, https://doi.org/10.1093/llc/fqaa032." ;
+    dc:subject <https://example.org/subject/Henry_VIII_of_England>,
+        <https://example.org/subject/James_Spedding>,
+        <https://example.org/subject/John_Fletcher>,
+        <https://example.org/subject/Thomas_Aquinas>,
+        <https://example.org/subject/William_Shakespeare> ;
+    schema:abstract "The versified play Henry VIII is nowadays widely recognized to be a collaborative work not written solely by William Shakespeare. We employ combined analysis of vocabulary and versification together with machine learning techniques to determine which other authors took part in the writing of the play and what were their relative contributions. Unlike most previous studies, we go beyond the attribution of particular scenes and use the rolling attribution approach to determine the probabilities of authorship of pieces of texts, without respecting the scene boundaries. Our results highly support the canonical division of the play between William Shakespeare and John Fletcher proposed by James Spedding, but also bring new evidence supporting the modifications proposed later by Thomas Merriam." ;
+    schema:author <https://example.org/author/Petr_Plecháč> ;
+    schema:datePublished "[2020, 6]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Digital Scholarship in the Humanities" ;
+    schema:issueNumber "2" ;
+    schema:pagination "430–38," ;
+    schema:sameAs <https://doi.org/10.1093/llc/fqaa032> ;
+    schema:title "Relative Contributions of Shakespeare and Fletcher in Henry VIII: An Analysis Based on Most Frequent Words and Most Frequent Rhythmic Patterns" ;
+    schema:url "https://doi.org/10.1093/llc/fqaa032." ;
+    schema:volumeNumber "36" .
+
+<https://example.org/reference/Pollock,_Griselda._Differencing_the_Canon:_Feminist_Desire_and_the_Writing_of_Art’s_Histories._Routledge,_1999.> a schema:Book,
+        schema:item ;
+    rdfs:label "Pollock, Griselda. Differencing the Canon: Feminist Desire and the Writing of Art’s Histories. Routledge, 1999." ;
+    dc:subject <https://example.org/subject/Chance_the_Rapper>,
+        <https://example.org/subject/Griselda_Pollock>,
+        <https://example.org/subject/woman> ;
+    schema:abstract "In this major book, Griselda Pollock engages boldly in the culture wars over `what is the canon?` and `what difference can feminism make?` Do we simply reject the all-male line-up and satisfy our need for ideal egos with an all women litany of artistic heroines? Or is the question a chance to resist the phallocentric binary and allow the ambiguities and complexities of desire - subjectivity and sexuality - to shape the readings of art that constantly displace the present gender demarcations?" ;
+    schema:author <https://example.org/author/Griselda_Pollock> ;
+    schema:datePublished "[1999]" ;
+    schema:inLanguage "en" ;
+    schema:publisher "Routledge" ;
+    schema:title "Differencing the Canon: Feminist Desire and the Writing of Art’s Histories" .
+
+<https://example.org/reference/Porter,_Jack_D._“Popularity/Prestige.”_Pamphlets_of_the_Stanford_Literary_Lab,_no._17,_2018,_https:/​/​litlab.stanford.edu/​LiteraryLabPamphlet17.pdf.> a schema:Article,
+        schema:item ;
+    rdfs:label "Porter, Jack D. “Popularity/Prestige.” Pamphlets of the Stanford Literary Lab, no. 17, 2018, https:/​/​litlab.stanford.edu/​LiteraryLabPamphlet17.pdf." ;
+    dc:subject <https://example.org/subject/Andrew_John_Henry_Way>,
+        <https://example.org/subject/Mark_Lee>,
+        <https://example.org/subject/Mark_McGurl> ;
+    schema:abstract "What is the canon? Usually this question is just a proxy for something like,  ”Which works are in the canon?” But the first question is not just a concise version of the second, or at least  it doesn’t have to be. Instead, it can ask what the structure of the canon is - in  other words, when things are in the canon, what are they in? This question came to the fore during the project that resulted  in Pamphlet 11. The members of that group were looking for morphological differences between  the canon and the archive. The latter they define, straightforwardly and capaciously,  as ”that portion of published literature that has been preserved—in libraries and elsewhere”  The canon is a slipperier concept, the authors speak instead of multiple canons, like the  books preserved in the Chadwyck-Healey Nineteenth-Century Fiction Collection, the constituents of  the six different ”best-twentieth century novels” lists analyzed by  Mark Algee-Hewitt and Mark McGurl in Pamphlet 8,  authors included in the British Dictionary of National Biography, and so forth. [...] This last conundrum points the way out of these difficulties and into a workable model  of the structure of the canon. It suggests two different  ways of entering the canon: being read by many and being prized by an elite few—or, to use  the terms arrived at in Pamphlet 11, popularity and prestige. With these two dimensions, we arrive at a canonical space [...]" ;
+    schema:author <https://example.org/author/Jack_D._Porter> ;
+    schema:datePublished "[2018]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Pamphlets of the Stanford Literary Lab" ;
+    schema:issueNumber "17" ;
+    schema:keywords <https://example.org/keyword/american_literature>,
+        <https://example.org/keyword/comparative_literature>,
+        <https://example.org/keyword/digital_humanities>,
+        <https://example.org/keyword/english_literature>,
+        <https://example.org/keyword/literary_canon>,
+        <https://example.org/keyword/mla_international_bibliography_of_books_and_articles_on_the_modern_languages_and_literatures> ;
+    schema:title "Popularity/Prestige" .
+
+<https://example.org/reference/Schmitt,_Michel_P.,_and_Alain_Viala._“Les_cotes_aux_concours.”_Littératures_classiques,_vol._19,_no._1,_1993,_pp._281–91,_https://doi.org/10.3406/licla.1993.1753.> a schema:Article,
+        schema:item ;
+    rdfs:label "Schmitt, Michel P., and Alain Viala. “Les cotes aux concours.” Littératures classiques, vol. 19, no. 1, 1993, pp. 281–91, https://doi.org/10.3406/licla.1993.1753." ;
+    schema:author <https://example.org/author/Alain_Viala>,
+        <https://example.org/author/Michel_P._Schmitt> ;
+    schema:datePublished "[1993]" ;
+    schema:inLanguage "fr" ;
+    schema:isPartOf "Littératures classiques" ;
+    schema:issueNumber "1" ;
+    schema:pagination "281–91," ;
+    schema:sameAs <https://doi.org/10.3406/licla.1993.1753> ;
+    schema:title "Les cotes aux concours" ;
+    schema:url "https://doi.org/10.3406/licla.1993.1753." ;
+    schema:volumeNumber "19" .
+
+<https://example.org/reference/Seminck,_Olga,_et_al._“The_Evolution_of_the_Idiolect_over_the_Lifetime:_A_Quantitative_and_Qualitative_Study_of_French_19th_Century_Literature.”_Journal_of_Cultural_Analytics,_vol._7,_no._3,_Sept._2022,_https://doi.org/10.22148/001c.37588.> a schema:Article,
+        schema:item ;
+    rdfs:label "Seminck, Olga, et al. “The Evolution of the Idiolect over the Lifetime: A Quantitative and Qualitative Study of French 19th Century Literature.” Journal of Cultural Analytics, vol. 7, no. 3, Sept. 2022, https://doi.org/10.22148/001c.37588." ;
+    dc:subject <https://example.org/subject/Andrew_John_Henry_Way>,
+        <https://example.org/subject/Chance_the_Rapper> ;
+    schema:abstract "The way in which authors express themselves is unique but changes over their lifetime. However, quantitative studies of this idiolectal evolution are rare. Using the Corpus for Idiolectal Research (CIDRE) that contains the dated works of 11 prolific 19th century French fiction writers, we propose new methods to identify, quantify and describe the grammatical-stylistic changes that take place using lexico-morphosyntactic patterns, also called motifs. To examine the strength of the chronological signal of change, we developed a method to calculate if a distance matrix of literary works contains a stronger chronological signal than expected by chance. Ten out of 11 corpora showed a higher than chance chronological signal, leading us to conclude that the evolution of the idiolect is in a mathematical sense monotonic, supporting the rectilinearity hypothesis previously put forward in the stylometric literature. The rectilinear property of the evolution of the idiolect found for most authors in CIDRE subsequently enabled us to propose a machine learning task: predicting the year in which a work was written. For the majority of the authors in our corpus, the accuracy and the amount of variance that is explained by the model were high and we discuss why the technique might fail for others. After applying a feature selection algorithm, we examined the most important features, i.e. the motifs that have the greatest influence on idiolectal evolution. We find that some of those features are stylistic and have been previously identified in qualitative literature studies. We report some remarkable stylistic constructions revealed by our algorithm to illustrate which kind of stylistic patterns can be extracted using our method." ;
+    schema:author <https://example.org/author/Olga_Seminck> ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Journal of Cultural Analytics" ;
+    schema:issueNumber "3" ;
+    schema:keywords <https://example.org/keyword/authorship>,
+        <https://example.org/keyword/french_literature>,
+        <https://example.org/keyword/idiolect>,
+        <https://example.org/keyword/literature>,
+        <https://example.org/keyword/sylometry> ;
+    schema:sameAs <https://doi.org/10.22148/001c.37588> ;
+    schema:title "The Evolution of the Idiolect over the Lifetime: A Quantitative and Qualitative Study of French 19th Century Literature" ;
+    schema:url "https://doi.org/10.22148/001c.37588." ;
+    schema:volumeNumber "7" .
+
+<https://example.org/reference/Thiesse,_Anne-Marie._La_fabrique_de_l’écrivain_national:_Entre_littérature_et_politique._Gallimard,_2019.> a schema:Book,
+        schema:item ;
+    rdfs:label "Thiesse, Anne-Marie. La fabrique de l’écrivain national: Entre littérature et politique. Gallimard, 2019." ;
+    schema:author <https://example.org/author/Anne-Marie_Thiesse> ;
+    schema:datePublished "[2019]" ;
+    schema:inLanguage "fr" ;
+    schema:publisher "Gallimard" ;
+    schema:title "La fabrique de l’écrivain national: Entre littérature et politique" .
+
+<https://example.org/reference/Tolonen,_Mikko,_et_al._“Examining_the_Early_Modern_Canon:_The_English_Short_Title_Catalogue_and_Large-Scale_Patterns_of_Cultural_Production.”_Data_Visualization_in_Enlightenment_Literature_and_Culture,_2021,_pp._63–119,_https://doi.org/10.1007/978-3-030-54913-8_3.> a schema:Article,
+        schema:item ;
+    rdfs:label "Tolonen, Mikko, et al. “Examining the Early Modern Canon: The English Short Title Catalogue and Large-Scale Patterns of Cultural Production.” Data Visualization in Enlightenment Literature and Culture, 2021, pp. 63–119, https://doi.org/10.1007/978-3-030-54913-8_3." ;
+    schema:abstract "This chapter presents the findings of an ongoing digital project of the Helsinki Computational History Group at Helsinki Centre for Digital Humanities (HELDIG) focused on the history of eighteenth-century book publication. The authors have created a historical-biographical database based on The English Short-Title Catalogue (ESTC), a standard source for analytical bibliographic research, and extracted a data-driven canon which considers changes over time, subject-topics, top-works, authors, publishers, publication place, and materiality. This chapter provides both methodological and historical insights into the development of print and demonstrates the huge analytical potential of harmonized metadata catalogs. While quantitative analyses of the book trade were attempted before, they did not engage with the complex process of canon formation at such a large scale. The authors’ work highlights the formative role played by publishers in this process and the epistemological shift started at the end of the seventeenth century, when religious works were increasingly replaced by literary works. As the authors argue, this shift in the production and consumption of print allowed for a reinvention of the canon during the eighteenth century." ;
+    schema:author <https://example.org/author/Mikko_Tolonen> ;
+    schema:datePublished "[2021]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Data Visualization in Enlightenment Literature and Culture" ;
+    schema:keywords <https://example.org/keyword/canon>,
+        <https://example.org/keyword/digital_humanities>,
+        <https://example.org/keyword/eighteenth_century>,
+        <https://example.org/keyword/estc> ;
+    schema:pagination "63–119," ;
+    schema:sameAs <https://doi.org/10.1007/978-3-030-54913-8_3> ;
+    schema:title "Examining the Early Modern Canon: The English Short Title Catalogue and Large-Scale Patterns of Cultural Production" ;
+    schema:url "https://doi.org/10.1007/978-3-030-54913-8_3." .
+
+<https://example.org/reference/Underwood,_Ted,_and_Jordan_Sellers._“The_Longue_Durée_of_Literary_Prestige.”_Modern_Language_Quarterly,_vol._77,_no._3,_Aug._2016,_pp._321–44,_https://doi.org/10.1215/00267929-3570634.> a schema:Article,
+        schema:item ;
+    rdfs:label "Underwood, Ted, and Jordan Sellers. “The Longue Durée of Literary Prestige.” Modern Language Quarterly, vol. 77, no. 3, Aug. 2016, pp. 321–44, https://doi.org/10.1215/00267929-3570634." ;
+    schema:abstract "A history of literary prestige needs to study both works that achieved distinction and the mass of volumes from which they were distinguished. To understand how those patterns of preference changed across a century, we gathered two samples of English-language poetry from the period 1820–1919: one drawn from volumes reviewed in prominent periodicals and one selected at random from a large digital library (in which the majority of authors are relatively obscure). The stylistic differences associated with literary prominence turn out to be quite stable: a statistical model trained to distinguish reviewed from random volumes in any quarter of this century can make predictions almost as accurate about the rest of the period. The “poetic revolutions” described by many histories are not visible in this model, instead, there is a steady tendency for new volumes of poetry to change by slightly exaggerating certain features that defined prestige in the recent past." ;
+    schema:author <https://example.org/author/Jordan_Sellers>,
+        <https://example.org/author/Ted_Underwood> ;
+    schema:datePublished "[2016, 8]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Modern Language Quarterly" ;
+    schema:issueNumber "3" ;
+    schema:keywords <https://example.org/keyword/distant_reading>,
+        <https://example.org/keyword/literary_prestige>,
+        <https://example.org/keyword/literary_reviewing>,
+        <https://example.org/keyword/longue_durée>,
+        <https://example.org/keyword/poetic_diction> ;
+    schema:pagination "321–44," ;
+    schema:sameAs <https://doi.org/10.1215/00267929-3570634> ;
+    schema:title "The Longue Durée of Literary Prestige" ;
+    schema:url "https://doi.org/10.1215/00267929-3570634." ;
+    schema:volumeNumber "77" .
+
+<https://example.org/reference/Underwood,_Ted._Distant_Horizons:_Digital_Evidence_and_Literary_Change._The_University_of_Chicago_Press,_2019.> a schema:Book,
+        schema:item ;
+    rdfs:label "Underwood, Ted. Distant Horizons: Digital Evidence and Literary Change. The University of Chicago Press, 2019." ;
+    schema:abstract "Just as a traveler crossing a continent won’t sense the curvature of the earth, one lifetime of reading can’t grasp the largest patterns organizing literary history. This is the guiding premise behind Distant Horizons, which uses the scope of data newly available to us through digital libraries to tackle previously elusive questions about literature. Ted Underwood shows how digital archives and statistical tools, rather than reducing words to numbers (as is often feared), can deepen our understanding of issues that have always been central to humanistic inquiry.  Without denying the usefulness of time-honored approaches like close reading, narratology, or genre studies, Underwood argues that we also need to read the larger arcs of literary change that have remained hidden from us by their sheer scale. Using both close and distant reading to trace the differentiation of genres, transformation of gender roles, and surprising persistence of aesthetic judgment, Underwood shows how digital methods can bring into focus the larger landscape of literary history and add to the beauty and complexity we value in literature." ;
+    schema:author <https://example.org/author/Ted_Underwood> ;
+    schema:datePublished "[2019]" ;
+    schema:inLanguage "en" ;
+    schema:publisher "The University of Chicago Press" ;
+    schema:title "Distant Horizons: Digital Evidence and Literary Change" .
+
+<https://example.org/reference/Verboord,_Marc._“Classification_of_Authors_by_Literary_Prestige.”_Poetics,_vol._31,_no._3–4,_June_2003,_pp._259–81,_https://doi.org/10.1016/s0304-422x(03)00037-8.> a schema:Article,
+        schema:item ;
+    rdfs:label "Verboord, Marc. “Classification of Authors by Literary Prestige.” Poetics, vol. 31, no. 3–4, June 2003, pp. 259–81, https://doi.org/10.1016/s0304-422x(03)00037-8." ;
+    schema:abstract "In this study, I investigated a new system to classify authors by literary prestige. The notion of ‘canon’ was considered to lack clear theoretical and empirical grounding. Evaluation and classification practices were examined and operationalized from the perspective of literary field theory. The value that is attributed to authors by literary institutions and their agents was taken as the main indicator of literary prestige. Value attribution was measured by establishing the attention authors receive from such institutions as literary encyclopedias, literary prizes, academic studies, and publishing houses. Measurements were conducted for 502 authors varying in both critical acclaim and public appeal. The statistical technique Princals was used to analyze institutions’ measures. The results show that one dimension stood out, which was interpreted as authors’ literary prestige. Given its institutional base, this form of prestige is called Institutional Literary Prestige (ILP). The subsequent classification of authors met expectations. However, further validations of the instrument are recommended." ;
+    schema:author <https://example.org/author/Marc_Verboord> ;
+    schema:datePublished "[2003, 6]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Poetics" ;
+    schema:issueNumber "3–4" ;
+    schema:pagination "259–81," ;
+    schema:sameAs <https://doi.org/10.1016/s0304-422x(03)00037-8> ;
+    schema:title "Classification of Authors by Literary Prestige" ;
+    schema:url "https://doi.org/10.1016/s0304-422x(03)00037-8." ;
+    schema:volumeNumber "31" .
+
+<https://example.org/reference/Viala,_Alain._“Qu’est-ce_qu’un_classique ?”_Littératures_classiques,_vol._19,_no._1,_1993,_pp._11–31,_https://doi.org/10.3406/licla.1993.1737.> a schema:Article,
+        schema:item ;
+    rdfs:label "Viala, Alain. “Qu’est-ce qu’un classique ?” Littératures classiques, vol. 19, no. 1, 1993, pp. 11–31, https://doi.org/10.3406/licla.1993.1737." ;
+    schema:author <https://example.org/author/Alain_Viala> ;
+    schema:datePublished "[1993]" ;
+    schema:inLanguage "fr" ;
+    schema:isPartOf "Littératures classiques" ;
+    schema:issueNumber "1" ;
+    schema:pagination "11–31," ;
+    schema:sameAs <https://doi.org/10.3406/licla.1993.1737> ;
+    schema:title "Qu’est-ce qu’un classique   ?" ;
+    schema:url "https://doi.org/10.3406/licla.1993.1737." ;
+    schema:volumeNumber "19" .
+
+<https://example.org/reference/Yu,_B._“An_Evaluation_of_Text_Classification_Methods_for_Literary_Study.”_Literary_and_Linguistic_Computing,_vol._23,_no._3,_Sept._2008,_pp._327–43,_https://doi.org/10.1093/llc/fqn015.> a schema:Article,
+        schema:item ;
+    rdfs:label "Yu, B. “An Evaluation of Text Classification Methods for Literary Study.” Literary and Linguistic Computing, vol. 23, no. 3, Sept. 2008, pp. 327–43, https://doi.org/10.1093/llc/fqn015." ;
+    schema:abstract "This article presents an empirical evaluation of text classification methods in literary domain. This study compared the performance of two popular algorithms, naïve Bayes and support vector machines (SVMs) in two literary text classification tasks: the eroticism classification of Dickinson's poems and the sentimentalism classification of chapters in early American novels. The algorithms were also combined with three text pre-processing tools, namely stemming, stopword removal, and statistical feature selection, to study the impact of these tools on the classifiers’ performance in the literary setting. Existing studies outside the literary domain indicated that SVMs are generally better than naïve Bayes classifiers. However, in this study SVMs were not all winners. Both algorithms achieved high accuracy in sentimental chapter classification, but the naïve Bayes classifier outperformed the SVM classifier in erotic poem classification. Self-feature selection helped both algorithms improve their performance in both tasks. However, the two algorithms selected relevant features in different frequency ranges, and therefore captured different characteristics of the target classes. The evaluation results in this study also suggest that arbitrary feature-reduction steps such as stemming and stopword removal should be taken very carefully. Some stopwords were highly discriminative features for Dickinson's erotic poem classification. In sentimental chapter classification, stemming undermined subsequent feature selection by aggressively conflating and neutralizing discriminative features." ;
+    schema:author <https://example.org/author/B._Yu> ;
+    schema:datePublished "[2008, 9]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Literary and Linguistic Computing" ;
+    schema:issueNumber "3" ;
+    schema:keywords <https://example.org/keyword/text_classification> ;
+    schema:pagination "327–43," ;
+    schema:sameAs <https://doi.org/10.1093/llc/fqn015> ;
+    schema:title "An Evaluation of Text Classification Methods for Literary Study" ;
+    schema:url "https://doi.org/10.1093/llc/fqn015." ;
+    schema:volumeNumber "23" .
+
+<https://example.org/reference/van_Cranenburgh,_Andreas,_and_Corina_Koolen._“Identifying_Literary_Texts_with_Bigrams.”_Proceedings_of_the_Fourth_Workshop_on_Computational_Linguistics_for_Literature,_2015,_pp._58–67,_https://doi.org/10.3115/v1/w15-0707.> a schema:Article,
+        schema:item ;
+    rdfs:label "van Cranenburgh, Andreas, and Corina Koolen. “Identifying Literary Texts with Bigrams.” Proceedings of the Fourth Workshop on Computational Linguistics for Literature, 2015, pp. 58–67, https://doi.org/10.3115/v1/w15-0707." ;
+    schema:abstract "We study perceptions of literariness in a set of contemporary Dutch novels. Experiments with machine learning models show that it is possible to automatically distinguish novels that are seen as highly literary from those that are seen as less literary, using surprisingly simple textual features. The most discriminating features of our classification model indicate that genre might be a confounding factor, but a regression model shows that we can also explain variation between highly literary novels from less literary ones within genre." ;
+    schema:author <https://example.org/author/Andreas_van_Cranenburgh>,
+        <https://example.org/author/Corina_Koolen> ;
+    schema:datePublished "[2015]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Proceedings of the Fourth Workshop on Computational Linguistics for Literature" ;
+    schema:pagination "58–67," ;
+    schema:sameAs <https://doi.org/10.3115/v1/w15-0707> ;
+    schema:title "Identifying Literary Texts with Bigrams" ;
+    schema:url "https://doi.org/10.3115/v1/w15-0707." .
+
+<https://example.org/reference/van_Cranenburgh,_Andreas,_and_Rens_Bod._“A_Data-Oriented_Model_of_Literary_Language.”_Proceedings_of_the_15th_Conference_of_the_European_Chapter_of_the__Association_for_Computational_Linguistics:_Volume_1,_Long_Papers,_2017,_pp._1228–38,_https://doi.org/10.18653/v1/e17-1115.> a schema:Article,
+        schema:item ;
+    rdfs:label "van Cranenburgh, Andreas, and Rens Bod. “A Data-Oriented Model of Literary Language.” Proceedings of the 15th Conference of the European Chapter of the  Association for Computational Linguistics: Volume 1, Long Papers, 2017, pp. 1228–38, https://doi.org/10.18653/v1/e17-1115." ;
+    schema:abstract "We consider the task of predicting how literary a text is, with a gold standard from human ratings. Aside from a standard bigram baseline, we apply rich syntactic tree fragments, mined from the training set, and a series of hand-picked features. Our model is the first to distinguish degrees of highly and less literary novels using a variety of lexical and syntactic features, and explains 76.0 % of the variation in literary ratings." ;
+    schema:author <https://example.org/author/Andreas_van_Cranenburgh>,
+        <https://example.org/author/Rens_Bod> ;
+    schema:datePublished "[2017]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Proceedings of the 15th Conference of the European Chapter of the Association for Computational Linguistics" ;
+    schema:pagination "1228–38," ;
+    schema:sameAs <https://doi.org/10.18653/v1/e17-1115> ;
+    schema:title "A Data-Oriented Model of Literary Language" ;
+    schema:url "https://doi.org/10.18653/v1/e17-1115." ;
+    schema:volumeNumber "1" .
+
+<https://example.org/reference/van_Cranenburgh,_Andreas,_et_al._“Vector_Space_Explorations_of_Literary_Language.”_Language_Resources_and_Evaluation,_vol._53,_no._4,_Feb._2019,_pp._625–50,_https://doi.org/10.1007/s10579-018-09442-4.> a schema:Article,
+        schema:item ;
+    rdfs:label "van Cranenburgh, Andreas, et al. “Vector Space Explorations of Literary Language.” Language Resources and Evaluation, vol. 53, no. 4, Feb. 2019, pp. 625–50, https://doi.org/10.1007/s10579-018-09442-4." ;
+    schema:abstract "Literary novels are said to distinguish themselves from other novels through conventions associated with literariness. We investigate the task of predicting the literariness of novels as perceived by readers, based on a large reader survey of contemporary Dutch novels. Previous research showed that ratings of literariness are predictable from texts to a substantial extent using machine learning, suggesting that it may be possible to explain the consensus among readers on which novels are literary as a consensus on the kind of writing style that characterizes literature. Although we have not yet collected human judgments to establish the influence of writing style directly (we use a survey with judgments based on the titles of novels), we can try to analyze the behavior of machine learning models on particular text fragments as a proxy for human judgments. In order to explore aspects of the texts associated with literariness, we divide the texts of the novels in chunks of 2–3 pages and create vector space representations using topic models (Latent Dirichlet Allocation) and neural document embeddings (Distributed Bag-of-Words Paragraph Vectors). We analyze the semantic complexity of the novels using distance measures, supporting the notion that literariness can be partly explained as a deviation from the norm. Furthermore, we build predictive models and identify specific keywords and stylistic markers related to literariness. While genre plays a role, we find that the greater part of factors affecting judgments of literariness are explicable in bag-of-words terms, even in short text fragments and among novels with higher literary ratings. The code and notebook used to produce the results in this paper are available at https://github.com/andreasvc/litvecspace" ;
+    schema:author <https://example.org/author/Andreas_van_Cranenburgh> ;
+    schema:datePublished "[2019, 2]" ;
+    schema:inLanguage "en" ;
+    schema:isPartOf "Language Resources and Evaluation" ;
+    schema:issueNumber "4" ;
+    schema:keywords <https://example.org/keyword/document_embeddings>,
+        <https://example.org/keyword/literariness>,
+        <https://example.org/keyword/literature>,
+        <https://example.org/keyword/topic_models> ;
+    schema:pagination "625–50," ;
+    schema:sameAs <https://doi.org/10.1007/s10579-018-09442-4> ;
+    schema:title "Vector Space Explorations of Literary Language" ;
+    schema:url "https://doi.org/10.1007/s10579-018-09442-4." ;
+    schema:volumeNumber "53" .
+
+<https://example.org/subject/Alexandre_Dumas> a foaf:Person ;
+    rdfs:label "Alexandre Dumas" ;
+    skos:definition "French writer and dramatist" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q38337> .
+
+<https://example.org/subject/Alfred_Russel_Wallace> a foaf:Person ;
+    rdfs:label "Alfred Russel Wallace" ;
+    skos:definition "British naturalist, explorer, geographer, anthropologist and biologist" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q160627> .
+
+<https://example.org/subject/Bernard_of_Clairvaux> a foaf:Person ;
+    rdfs:label "Bernard of Clairvaux" ;
+    skos:definition "French abbot, theologian" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q188411> .
+
+<https://example.org/subject/Betty_Friedan> a foaf:Person ;
+    rdfs:label "Betty Friedan" ;
+    skos:definition "American activist" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q234604> .
+
+<https://example.org/subject/Charles_Altieri> a foaf:Person ;
+    rdfs:label "Charles Altieri" ;
+    skos:definition "English academic" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q5075097> .
+
+<https://example.org/subject/Corneille> a foaf:Person ;
+    rdfs:label "Corneille" ;
+    skos:definition "Canadian singer of Rwandan origin" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q324327> .
+
+<https://example.org/subject/Detail> a foaf:Person ;
+    rdfs:label "Detail" ;
+    skos:definition "American music producer and recording artist" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q15059449> .
+
+<https://example.org/subject/Eugène_Sue> a foaf:Person ;
+    rdfs:label "Eugène Sue" ;
+    skos:definition "French writer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q315220> .
+
+<https://example.org/subject/F._R._Leavis> a foaf:Person ;
+    rdfs:label "F. R. Leavis" ;
+    skos:definition "British literary critic" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q2428288> .
+
+<https://example.org/subject/Ferdinand_Bac> a foaf:Person ;
+    rdfs:label "Ferdinand Bac" ;
+    skos:definition "French writer and artist" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q3068507> .
+
+<https://example.org/subject/Fernand_Braudel> a foaf:Person ;
+    rdfs:label "Fernand Braudel" ;
+    skos:definition "French historian and a leader of the Annales School" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q185105> .
+
+<https://example.org/subject/Figure> a foaf:Person ;
+    rdfs:label "Figure" ;
+    skos:definition "electronic music producer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q20876117> .
+
+<https://example.org/subject/George_Sand> a foaf:Person ;
+    rdfs:label "George Sand" ;
+    skos:definition "French novelist and memoirist; pseudonym of Lucile Aurore Dupin" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q3816> .
+
+<https://example.org/subject/Giacomo_Casanova> a foaf:Person ;
+    rdfs:label "Giacomo Casanova" ;
+    skos:definition "Venecian adventurer and writer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q83321> .
+
+<https://example.org/subject/Griselda_Pollock> a foaf:Person ;
+    rdfs:label "Griselda Pollock" ;
+    skos:definition "British art historian" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q3108719> .
+
+<https://example.org/subject/Gustave_Flaubert> a foaf:Person ;
+    rdfs:label "Gustave Flaubert" ;
+    skos:definition "French writer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q43444> .
+
+<https://example.org/subject/Guy_de_Maupassant> a foaf:Person ;
+    rdfs:label "Guy de Maupassant" ;
+    skos:definition "French writer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q9327> .
+
+<https://example.org/subject/Henry_VIII_of_England> a foaf:Person ;
+    rdfs:label "Henry VIII of England" ;
+    skos:definition "King of England from 1509 until 1547" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q38370> .
+
+<https://example.org/subject/Hervé_Le_Tellier> a foaf:Person ;
+    rdfs:label "Hervé Le Tellier" ;
+    skos:definition "French writer and linguist" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q1393315> .
+
+<https://example.org/subject/Hildegarde> a foaf:Person ;
+    rdfs:label "Hildegarde" ;
+    skos:definition "American singer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q543524> .
+
+<https://example.org/subject/Jacques_Charles> a foaf:Person ;
+    rdfs:label "Jacques Charles" ;
+    skos:definition "French inventor, scientist, mathematician, and balloonist" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q332105> .
+
+<https://example.org/subject/James_Madison> a foaf:Person ;
+    rdfs:label "James Madison" ;
+    skos:definition "4th President of the United States (1809–1817)" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q11813> .
+
+<https://example.org/subject/James_Spedding> a foaf:Person ;
+    rdfs:label "James Spedding" ;
+    skos:definition "English author and editor" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q6143420> .
+
+<https://example.org/subject/Jean_Racine> a foaf:Person ;
+    rdfs:label "Jean Racine" ;
+    skos:definition "French dramatist" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q742> .
+
+<https://example.org/subject/John> a foaf:Person ;
+    rdfs:label "John" ;
+    skos:definition "King of England" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q129308> .
+
+<https://example.org/subject/John_Fletcher> a foaf:Person ;
+    rdfs:label "John Fletcher" ;
+    skos:definition "English Jacobean playwright" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q312444> .
+
+<https://example.org/subject/Julian_Edelman> a foaf:Person ;
+    rdfs:label "Julian Edelman" ;
+    skos:definition "American football player" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q448961> .
+
+<https://example.org/subject/Lewis_Hamilton> a foaf:Person ;
+    rdfs:label "Lewis Hamilton" ;
+    skos:definition "British racing driver" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q9673> .
+
+<https://example.org/subject/Lisa_Simone> a foaf:Person ;
+    rdfs:label "Lisa Simone" ;
+    skos:definition "American actress and singer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q7520242> .
+
+<https://example.org/subject/Léonard_Defrance> a foaf:Person ;
+    rdfs:label "Léonard Defrance" ;
+    skos:definition "Flemish painter" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q3271490> .
+
+<https://example.org/subject/Marguerite_Duras> a foaf:Person ;
+    rdfs:label "Marguerite Duras" ;
+    skos:definition "French writer and film director" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q153248> .
+
+<https://example.org/subject/Mark_Lee> a foaf:Person ;
+    rdfs:label "Mark Lee" ;
+    skos:definition "Korean Canadian singer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q26689986> .
+
+<https://example.org/subject/Mark_McGurl> a foaf:Person ;
+    rdfs:label "Mark McGurl" ;
+    skos:definition "American literary critic" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q6768815> .
+
+<https://example.org/subject/Phrase> a foaf:Person ;
+    rdfs:label "Phrase" ;
+    skos:definition "Australian singer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q7188069> .
+
+<https://example.org/subject/Pierre_Corneille> a foaf:Person ;
+    rdfs:label "Pierre Corneille" ;
+    skos:definition "French tragedian" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q747> .
+
+<https://example.org/subject/Pierre_Viala> a foaf:Person ;
+    rdfs:label "Pierre Viala" ;
+    skos:definition "French pathologist and politician" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q1448769> .
+
+<https://example.org/subject/Riki_LeCotey> a foaf:Person ;
+    rdfs:label "Riki LeCotey" ;
+    skos:definition "Canadian cosplayer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q19879791> .
+
+<https://example.org/subject/Sido> a foaf:Person ;
+    rdfs:label "Sido" ;
+    skos:definition "German rapper" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q213670> .
+
+<https://example.org/subject/Thomas_Aquinas> a foaf:Person ;
+    rdfs:label "Thomas Aquinas" ;
+    skos:definition "Dominican scholastic philosopher of the Catholic Church" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q9438> .
+
+<https://example.org/subject/Victor_Hugo> a foaf:Person ;
+    rdfs:label "Victor Hugo" ;
+    skos:definition "French poet, novelist, and dramatist" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q535> .
+
+<https://example.org/subject/Willem_Gillisz_Kool> a foaf:Person ;
+    rdfs:label "Willem Gillisz Kool" ;
+    skos:definition "painter from the Northern Netherlands" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q15962378> .
+
+<https://example.org/author/Alain_Viala> a foaf:Person ;
+    schema:name "Alain Viala" .
+
+<https://example.org/author/André_Lagarde> a foaf:Person ;
+    schema:name "André Lagarde" .
+
+<https://example.org/author/Annina_Stahl> a foaf:Person ;
+    schema:name "Annina Stahl" .
+
+<https://example.org/author/Arda_Arslan> a foaf:Person ;
+    schema:name "Arda Arslan" .
+
+<https://example.org/author/Corina_Koolen> a foaf:Person ;
+    schema:name "Corina Koolen" .
+
+<https://example.org/author/Franco_Moretti> a foaf:Person ;
+    schema:name "Franco Moretti" .
+
+<https://example.org/author/Jean-Baptiste_Camps> a foaf:Person ;
+    schema:affiliation <https://ror.org/013xvg556>,
+        "École Nationale des Chartes" ;
+    schema:name "Jean-Baptiste Camps" ;
+    schema:sameAs <https://orcid.org/0000-0003-0385-7037> .
+
+<https://example.org/author/Jean_Barré> a foaf:Person ;
+    schema:affiliation <https://ror.org/00hx6zz33>,
+        "École Normale Supérieure" ;
+    schema:name "Jean Barré" ;
+    schema:sameAs <https://orcid.org/0000-0002-1579-0610> .
+
+<https://example.org/author/John_Guillory> a foaf:Person ;
+    schema:name "John Guillory" .
+
+<https://example.org/author/Judith_Brottrager> a foaf:Person ;
+    schema:name "Judith Brottrager" .
+
+<https://example.org/author/Mark_Algee-Hewitt> a foaf:Person ;
+    schema:name "Mark Algee-Hewitt" .
+
+<https://example.org/author/Martine_Jey> a foaf:Person ;
+    schema:name "Martine Jey" .
+
+<https://example.org/author/Ted_Underwood> a foaf:Person ;
+    schema:name "Ted Underwood" .
+
+<https://example.org/editor/Maud_Ehrmann> a foaf:Person ;
+    schema:name "Maud Ehrmann" .
+
+<https://example.org/keyword/distant_reading> a skos:Concept ;
+    skos:prefLabel "distant reading" .
+
+<https://example.org/keyword/english_literature> a skos:Concept ;
+    skos:prefLabel "english literature" .
+
+<https://example.org/keyword/french_literature> a skos:Concept ;
+    skos:exactMatch <http://id.loc.gov/authorities/subjects/sh85051865>,
+        "French literature" ;
+    skos:prefLabel "French literature",
+        "french literature" .
+
+<https://example.org/keyword/literary_canon> a skos:Concept ;
+    skos:prefLabel "literary canon" .
+
+<https://example.org/keyword/literary_history> a skos:Concept ;
+    skos:closeMatch <http://id.loc.gov/authorities/subjects/sh2008107004>,
+        "Literary form--History--20th century" ;
+    skos:prefLabel "Literary history",
+        "literary history" .
+
+<https://example.org/keyword/literature> a skos:Concept ;
+    skos:prefLabel "literature" .
+
+<https://example.org/keyword/stylometry> a skos:Concept ;
+    skos:exactMatch <http://id.loc.gov/authorities/subjects/sh2023000647>,
+        "Stylometry" ;
+    skos:prefLabel "stylometry" .
+
+<https://example.org/subject/Colette> a foaf:Person ;
+    rdfs:label "Colette" ;
+    skos:definition "French novelist: writer of Gigi" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q218679> .
+
+<https://example.org/subject/Honoré_de_Balzac> a foaf:Person ;
+    rdfs:label "Honoré de Balzac" ;
+    skos:definition "French writer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q9711> .
+
+<https://example.org/subject/Molière> a foaf:Person ;
+    rdfs:label "Molière" ;
+    skos:definition "French playwright and actor" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q687> .
+
+<https://example.org/subject/Moretto_da_Brescia> a foaf:Person ;
+    rdfs:label "Moretto da Brescia" ;
+    skos:definition "Italian Renaissance painter" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q954504> .
+
+<https://example.org/subject/None> a foaf:Person ;
+    rdfs:label "None" ;
+    skos:definition "Russian revolutionary and writer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q362009> .
+
+<https://example.org/subject/Pierre_Bourdieu> a foaf:Person ;
+    rdfs:label "Pierre Bourdieu" ;
+    skos:definition "French sociologist, anthropologist, and philosopher" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q156268> .
+
+<https://example.org/subject/Prince> a foaf:Person ;
+    rdfs:label "Prince" ;
+    skos:definition "American singer, songwriter, musician and actor" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q7542> .
+
+<https://example.org/subject/Stendhal> a foaf:Person ;
+    rdfs:label "Stendhal" ;
+    skos:definition "French writer" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q502> .
+
+<https://example.org/author/Andreas_van_Cranenburgh> a foaf:Person ;
+    schema:name "Andreas van Cranenburgh" .
+
+<https://example.org/keyword/text_classification> a skos:Concept ;
+    skos:prefLabel "text classification" .
+
+<https://example.org/subject/Chance_the_Rapper> a foaf:Person ;
+    rdfs:label "Chance the Rapper" ;
+    skos:definition "American rapper and philanthropist from Illinois" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q12470060> .
+
+<https://example.org/subject/William_Shakespeare> a foaf:Person ;
+    rdfs:label "William Shakespeare" ;
+    skos:definition "English playwright and poet" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q692> .
+
+<https://example.org/keyword/digital_humanities> a skos:Concept ;
+    skos:prefLabel "digital humanities" .
+
+<https://example.org/subject/woman> a foaf:Person ;
+    rdfs:label "woman" ;
+    skos:definition "female adult human" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q467> .
+
+<https://example.org/subject/Andrew_John_Henry_Way> a foaf:Person ;
+    rdfs:label "Andrew John Henry Way" ;
+    skos:definition "American portrait and still life painter" ;
+    schema:sameAs <https://www.wikidata.org/wiki/Q17641254> .
+
