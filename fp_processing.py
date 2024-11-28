@@ -70,7 +70,7 @@ def biblio_pozycja(x):
 get_bool('Czy są zrobione pliki jpg dla artykułów? ')
 get_bool('Czy nazwiska autorów w nazwach plików są poprawne? ')
 get_bool('Czy dodano pliki pdf do biblioteki wordpress (plików jpg nie dodawać)? ')
-czy_tlumaczenia_po_angielsku = get_bool('Czy w numerze są przekłady w angielskiej wersji? ')
+czy_tlumaczenia_po_angielsku = get_bool('Czy w numerze w angielskiej wersji znajdują się przekłady na angielski? ')
 
 #%% connect google drive
 
@@ -925,7 +925,6 @@ for worksheet in worksheets:
 print('Metadane na dysku Google zaktualizowane!')
     
 
-
 #%% Po informacji od redakcji Pressto: Publikowanie na pressto + DOI
 from sickle import Sickle
 from tqdm import tqdm
@@ -974,9 +973,9 @@ for e in results:
 
 #uruchomienie przeglądarki i zalogowanie na fp.amu.edu.pl
 
-browser = webdriver.Firefox()  
+browser = webdriver.Firefox()
 
-browser.get("http://fp.amu.edu.pl/admin")    
+browser.get("http://fp.amu.edu.pl/admin")
 browser.implicitly_wait(5)
 username_input = browser.find_element('id', 'user_login')
 password_input = browser.find_element('id', 'user_pass')
@@ -1010,6 +1009,10 @@ print('Numery DOI dodane na wordpress!')
 
 browser.close()
 
+#uzupełnienie tabeli na dysku o numery DOI
+
+aktualny_numer['DOI'] = doi_dict.values()
+set_with_dataframe(aktualny_numer_sheet.worksheet('artykuły po pętli'), aktualny_numer)
 
 #%% stary kod
 # #Publikacja strony numeru na pressto
