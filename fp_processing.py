@@ -1014,6 +1014,8 @@ browser.close()
 aktualny_numer['DOI'] = doi_dict.values()
 set_with_dataframe(aktualny_numer_sheet.worksheet('artykuły po pętli'), aktualny_numer)
 
+print('Tabela z metadanymi na Google Drive uzupełniona o numery DOI!')
+
 #%% stary kod
 # #Publikacja strony numeru na pressto
 # time.sleep(1)
