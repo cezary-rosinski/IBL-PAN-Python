@@ -34,17 +34,22 @@ domain_dict = {
     'Business_Management': 'SoFAIR_AD_BMA_papers',
     'Physics': 'SoFAIR_AD_Physics_papers',
     'Materials_Sciences': 'SoFAIR_AD_Materials_Science_papers',
-    'Earth_Planet_Sciences': 'SoFAIR_AD_Earth_Planet_Sciences_papers'}
+    'Earth_Planet_Sciences': 'SoFAIR_AD_Earth_Planet_Sciences_papers',
+    'Environmental_Science': 'SoFAIR_AD_Environmental_Science_papers',
+    'Digital Humanities': 'SoFAIR_AD_Digital_Humanties_papers'
+    }
 
 sofair_articles_1 = pd.read_excel(r"C:\Users\Cezary\Downloads\SoFAIR_Annotation_Dataset_Paper_Data_first.xlsx")
 sofair_articles_2 = pd.read_excel(r"C:\Users\Cezary\Downloads\SoFAIR_Annotation_Dataset_Paper_Data_Extension.xlsx")
 sofair_articles_3 = pd.read_excel(r"C:\Users\Cezary\Downloads\SoFAIR_Humanities_paper_list.xlsx")
+sofair_articles_4 = pd.read_excel(r"C:\Users\Cezary\Downloads\SoFAIR_Digital_Humanities_paper_list.xlsx")
 
 sofair_articles_1['file_id'] = sofair_articles_1[['Domain', 'ID']].apply(lambda x: domain_dict.get(x['Domain'], x['Domain']) + '_' + str(x['ID']), axis=1)
 sofair_articles_2['file_id'] = sofair_articles_2[['Domain', 'ID']].apply(lambda x: domain_dict.get(x['Domain'], x['Domain']) + '_' + str(x['ID']), axis=1)
 sofair_articles_3['file_id'] = sofair_articles_3[['Domain', 'ID']].apply(lambda x: domain_dict.get(x['Domain'], x['Domain']) + '_' + str(x['ID']), axis=1)
+sofair_articles_4['file_id'] = sofair_articles_4[['Domain', 'ID']].apply(lambda x: domain_dict.get(x['Domain'], x['Domain']) + '_' + str(x['ID']), axis=1)
 
-sofair_ids = dict(zip(sofair_articles_1['file_id'].to_list() + sofair_articles_2['file_id'].to_list() + sofair_articles_3['file_id'].to_list(), sofair_articles_1['DOI'].to_list() + sofair_articles_2['DOI'].to_list() + sofair_articles_3['DOI'].to_list()))
+sofair_ids = dict(zip(sofair_articles_1['file_id'].to_list() + sofair_articles_2['file_id'].to_list() + sofair_articles_3['file_id'].to_list() + sofair_articles_4['file_id'].to_list(), sofair_articles_1['DOI'].to_list() + sofair_articles_2['DOI'].to_list() + sofair_articles_3['DOI'].to_list() + sofair_articles_4['DOI'].to_list()))
 
 sofair_dois = set(sofair_ids.values())
 
@@ -64,8 +69,23 @@ sofair_files_id = set(df_sofair_annotations_info['file_id'].to_list())
 # with open('data/sofair_metadata.p', 'wb') as fp:
 #     pickle.dump(sofair_metadata, fp, protocol=pickle.HIGHEST_PROTOCOL)
     
-with open('data/sofair_metadata.p', 'rb') as fp:
-    sofair_metadata = pickle.load(fp)
+# with open('data/sofair_metadata.p', 'rb') as fp:
+#     sofair_metadata = pickle.load(fp)
+    
+# #supplement
+# sofair_dois_supplement = [e for e in sofair_dois if e not in [list(e.keys())[0] for e in sofair_metadata]]
+
+# sofair_metadata2 = []
+# for doi in tqdm(sofair_dois_supplement):
+#     # doi = list(sofair_dois)[0]
+#     url = 'https://api.crossref.org/works/' + doi
+#     metadata = requests.get(url).json()
+#     sofair_metadata2.append({doi: metadata})
+    
+# sofair_metadata.extend(sofair_metadata2)
+
+# with open('data/sofair_metadata.p', 'wb') as fp:
+#     pickle.dump(sofair_metadata, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
 #%% metadata processing
 
@@ -129,7 +149,40 @@ df_annotated = pd.DataFrame(software_mentions)
 df_annotated.to_excel('data/sofair_annotation_statistics_detailed.xlsx', index=False)
 df_sofair_articles_info.to_excel('data/sofair_articles_info.xlsx', index=False)
         
+#%% annotation statistics
+
+path = r'C:\Users\Cezary\Documents\Dataset\documents\tei-pre-annotated/'
+folders = glob.glob(path + '*' + '/', recursive=True)
+
+namespaces = {'{http://www.w3.org/XML/1998/namespace}id': 'id',
+              '{http://www.tei-c.org/ns/1.0}rs': 'rs',
+              'type': 'type',
+              'corresp': 'corresp',
+              'subtype': 'subtype'}
+
+pre_software_mentions = []
+for folder in tqdm(folders):
+    # folder = folders[0]
+    files = [f for f in glob.glob(folder + '*.xml', recursive=True)]
+    for file in files:
+        # file = files[0]
+        file_id = file.split('\\')[-2] + '_' + file.split('\\')[-1].split('.')[0]
+        tree = ET.parse(file)
+        root = tree.getroot()
         
+        software_mentions_iter = [[{namespaces.get(k):v for k,v in elem.attrib.items()}, {'text': elem.text}] for elem in root.iter() if elem.tag == '{http://www.tei-c.org/ns/1.0}rs']
+        for i, e in enumerate(software_mentions_iter):
+            software_mentions_iter[i] = e[0] | e[-1]
+            software_mentions_iter[i].update({'file_id': file_id})
+        
+        pre_software_mentions.extend(software_mentions_iter)
+        
+        
+df_pre_annotated = pd.DataFrame(pre_software_mentions)
+df_pre_annotated = df_pre_annotated.loc[df_pre_annotated['file_id'].isin(set(df_pre_annotated['file_id'].to_list()))]
+
+df_pre_annotated.groupby('type').size()
+
 #%% analiza
 
 #które narzędzia są najpopularniejsze
