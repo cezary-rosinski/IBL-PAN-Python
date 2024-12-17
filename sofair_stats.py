@@ -200,11 +200,42 @@ df_pre_annotated.groupby('type').size()
 #Czy pewne narzędzia są związane z określonymi obszarami badań
 
 
-#%%     
+#%% supplement of articles metadata on google drive
+
+sofair_articles = pd.concat([sofair_articles_1, sofair_articles_2, sofair_articles_3, sofair_articles_4])
         
-        
-        
-        
+sofair_articles = sofair_articles[['file_id', 'Title']]
+
+articles_metadata = gsheet_to_df('1AuOxW23zYzk0LT8zF7H919RXi0ZULfJdUDE_TabiITg', 'Sheet1')
+articles_metadata = pd.merge(articles_metadata, sofair_articles, how='left', on='file_id')
+
+articles_metadata.to_excel('data/sofair_articles_info.xlsx', index=False)
+
+dois = articles_metadata['DOI'].to_list()
+
+sofair_metadata = []
+for doi in tqdm(dois):
+    # doi = list(sofair_dois)[0]
+    url = 'https://api.crossref.org/works/' + doi
+    metadata = requests.get(url).json()
+    sofair_metadata.append({doi: metadata})
+
+sofair_articles_metadata = []
+
+for e in tqdm(sofair_metadata):
+    for k,v in e.items():
+        # k = '10.3389/fnhum.2023.1133367'
+        # v = sofair_metadata[0].get(k)
+        iter_dict = {
+            'DOI': k,
+            'Title': v.get('message').get('title')[0]}
+        sofair_articles_metadata.append(iter_dict)
+    
+df_metadata = pd.DataFrame(sofair_articles_metadata)
+df_metadata.to_excel('data/sofair_articles_info.xlsx', index=False)
+
+
+
         
         
         
