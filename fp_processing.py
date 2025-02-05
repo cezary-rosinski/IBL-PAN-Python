@@ -1,8 +1,4 @@
 # przed kolejnym numerem:
-# problemy z bibliografią – zostają półpauzy, przetestować na tekście Sadowskiego
-# automatycznie aktualizować obraz dla strony głównej? https://pressto.amu.edu.pl/index.php/fp/management/settings/website
-
-# trzeba dodać kropkę na końcu bibliografii
 
     
 #%% import
