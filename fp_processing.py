@@ -663,7 +663,7 @@ print('Strona numeru na pressto zapisana, ale nie opublikowana')
 #pressto dodawanie artykułów
 
 for i, row in aktualny_numer.iterrows():
-    # i = 0
+    # i = 6
     # row = aktualny_numer.iloc[i,:]
     if row['język'] == 'pl':
         nowe_zgloszenie = browser.get('https://pressto.amu.edu.pl/index.php/fp/management/importexport/plugin/QuickSubmitPlugin')
@@ -692,14 +692,15 @@ for i, row in aktualny_numer.iterrows():
         for s in aktualny_numer.at[i+1, 'słowa kluczowe'].split(', '):
             s = re.sub(',+', ',', s)
             slowa_kluczowe_eng = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[3].send_keys(s, Keys.TAB)
-            
-        try:
-            finansowanie_pl = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[4]
-            finansowanie_pl.send_keys(row['finansowanie'])
-            finansowanie_en = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[5]
-            finansowanie_en.send_keys(aktualny_numer.at[i+1, 'finansowanie'])
-        except (KeyError, TypeError):
-            pass
+        
+        if pd.notnull(row['finansowanie']):
+            try:
+                finansowanie_pl = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[4]
+                finansowanie_pl.send_keys(row['finansowanie'])
+                finansowanie_en = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[5]
+                finansowanie_en.send_keys(aktualny_numer.at[i+1, 'finansowanie'])
+            except (KeyError, TypeError):
+                pass
             
         if len(row['bibliografia']) > 0:
 
@@ -735,6 +736,8 @@ for i, row in aktualny_numer.iterrows():
         
         for a_pl, a_en, o, af_pl, af_en, b_pl, b_en in zip(row['autor'].split('❦'), aktualny_numer.at[i+1, 'autor'].split('❦'), row['ORCID'].split('❦'), row['afiliacja'].split('❦'), aktualny_numer.at[i+1, 'afiliacja'].split('❦'), row['biogram'].split('❦'), aktualny_numer.at[i+1, 'biogram'].split('❦')):
             
+            #a_pl, a_en, o, af_pl, af_en, b_pl, b_en = row['autor'].split('❦')[0], aktualny_numer.at[i+1, 'autor'].split('❦')[0], row['ORCID'].split('❦')[0], row['afiliacja'].split('❦')[0], aktualny_numer.at[i+1, 'afiliacja'].split('❦')[0], row['biogram'].split('❦')[0], aktualny_numer.at[i+1, 'biogram'].split('❦')[0]
+            
             # wspolautor_dodaj = browser.find_element('xpath', "//a[@title = 'Dodaj autora']")
             wspolautor_dodaj = browser.find_element('xpath', "//a[contains(text(),'Dodaj autora')]")
             # wspolautor_dodaj = browser.find_element('xpath', "//a[contains(text(),'Dodaj współautora')]")
@@ -765,8 +768,10 @@ for i, row in aktualny_numer.iterrows():
             
             afiliacja_pl = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[-1]
             # afiliacja_pl = browser.find_element('xpath', "//input[@name='affiliation[pl_PL]']")
-            afiliacja_pl.send_keys(af_pl, Keys.TAB)
-            afiliacja_pl.send_keys(Keys.DOWN)
+            afiliacja_pl.send_keys(af_pl)
+            time.sleep(3)
+            afiliacja_pl_dropdown = browser.find_elements('xpath', "//li[@class='ui-menu-item']")
+            afiliacja_pl_dropdown[0].click()
 
             time.sleep(2)
             # afiliacja_en = browser.find_element('xpath', "//input[@name='affiliation[en_US]']")
