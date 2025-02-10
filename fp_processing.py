@@ -925,7 +925,7 @@ for worksheet in worksheets:
 
 print('Metadane na dysku Google zaktualizowane!')
     
-
+# tutaj się kończy pierwsza faza prac
 #%% Po informacji od redakcji Pressto: Publikowanie na pressto + DOI
 from sickle import Sickle
 from tqdm import tqdm
