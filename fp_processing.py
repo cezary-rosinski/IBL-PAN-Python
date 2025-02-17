@@ -931,11 +931,29 @@ print('Metadane na dysku Google zaktualizowane!')
 from sickle import Sickle
 from tqdm import tqdm
 
+#connect google drive
+#autoryzacja do tworzenia i edycji plików
+gc = gs.oauth()
+#autoryzacja do penetrowania dysku
+gauth = GoogleAuth()
+gauth.LocalWebserverAuth()
+drive = GoogleDrive(gauth)
+
+#sprawdzić ostatnią datę w OAI!!!
+
+sickle = Sickle('http://pressto.amu.edu.pl/index.php/fp/oai')
+records = sickle.ListRecords(metadataPrefix='oai_dc')
+
+dates = []
+for record in tqdm(records):
+    if record.deleted == False:
+        record = record.get_metadata()
+        record = {k:v for k,v in record.items() if k in ['title', 'creator', 'date', 'identifier', 'source']}
+        dates.append(record.get('date')[0])
+
 #pobranie danych z pressto
 
 data_publikacji_na_pressto = input('data publikacji numeru na pressto w formacie YYYY-MM-DD: ')
-
-sickle = Sickle('http://pressto.amu.edu.pl/index.php/fp/oai')
 records = sickle.ListRecords(metadataPrefix='oai_dc')
 
 results = []
@@ -961,6 +979,10 @@ aktualny_numer_sheet = gc.open_by_key(table_id)
 
 aktualny_numer = get_as_dataframe(aktualny_numer_sheet.worksheet('artykuły po pętli'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
 
+if len(results) == len(aktualny_numer)/2:
+    print('OK')
+else: print('Problem')
+
 #połączenie zasobów
 
 doi_dict = {}
@@ -972,7 +994,7 @@ for e in results:
             df = aktualny_numer[aktualny_numer['tytuł artykułu'].str.replace('<i>','').str.replace('</i>','') == el]['url_edycji'].to_list()[0]
             doi_dict.update({df:e.get('identifier')[-1]})
         except IndexError: print(el)
-
+#%% zaktualizowanie danych na stronie FP -- ale najpierw sprwdzić, że dobre metadane pobrało
 #uruchomienie przeglądarki i zalogowanie na fp.amu.edu.pl
 
 browser = webdriver.Firefox()
