@@ -1,5 +1,6 @@
 # przed kolejnym numerem:
-
+#Nadal masz jakiś błąd w kodzie, bo w dacie obowiązywania praw autorskich wyskoczyło 20252025 (a powinna być w tym wypadku 2024 i nie podwójna).
+#I jeszcze w bibliografii, tam gdzie są w pdfie kreski zamiast nazwiska, wstawiło przed nazwiskiem lub zamiast kropkę.
     
 #%% import
 import pandas as pd
