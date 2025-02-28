@@ -1,5 +1,4 @@
 # przed kolejnym numerem:
-#Nadal masz jakiś błąd w kodzie, bo w dacie obowiązywania praw autorskich wyskoczyło 20252025 (a powinna być w tym wypadku 2024 i nie podwójna).
 #I jeszcze w bibliografii, tam gdzie są w pdfie kreski zamiast nazwiska, wstawiło przed nazwiskiem lub zamiast kropkę.
     
 #%% import
@@ -67,7 +66,7 @@ def biblio_pozycja(x):
 get_bool('Czy są zrobione pliki jpg dla artykułów? ')
 get_bool('Czy nazwiska autorów w nazwach plików są poprawne? ')
 get_bool('Czy dodano pliki pdf do biblioteki wordpress (plików jpg nie dodawać)? ')
-czy_tlumaczenia_po_angielsku = get_bool('Czy w numerze w angielskiej wersji znajdują się przekłady na angielski? ')
+czy_tlumaczenia_po_angielsku = get_bool('Czy w numerze w angielskiej wersji znajdują się przekłady na angielski z innego języka niż polski? ')
 
 #%% connect google drive
 
@@ -87,7 +86,7 @@ day = '{:02d}'.format(now.day)
 
 #%% open browser
 
-browser = webdriver.Firefox()    
+browser = webdriver.Firefox()
 
 #%% read new issue
 
@@ -664,7 +663,9 @@ print('Strona numeru na pressto zapisana, ale nie opublikowana')
 #pressto dodawanie artykułów
 
 for i, row in aktualny_numer.iterrows():
-    # i = 6
+#for i, row in aktualny_numer[13:].iterrows(): #jeżeli pętla zostanie przerwana
+    print(i)
+    # i = 0
     # row = aktualny_numer.iloc[i,:]
     if row['język'] == 'pl':
         nowe_zgloszenie = browser.get('https://pressto.amu.edu.pl/index.php/fp/management/importexport/plugin/QuickSubmitPlugin')
@@ -873,7 +874,9 @@ for i, row in aktualny_numer.iterrows():
         time.sleep(2)
         prawa_autorskie_en = browser.find_element('name', 'copyrightHolder[en_US]')
         prawa_autorskie_en.send_keys(aktualny_numer.at[i+1, 'autor'].replace('❦', ', '))
-        rok_praw = browser.find_element('name', 'copyrightYear').send_keys(year)        
+        rok_praw = browser.find_element('name', 'copyrightYear')
+        rok_praw.clear()
+        rok_praw.send_keys(int(strona_numeru['rok'][0]))
         
         zapisz = browser.find_elements('xpath', "//button[@class='pkp_button submitFormButton']")
         zapisz[-1].click()
