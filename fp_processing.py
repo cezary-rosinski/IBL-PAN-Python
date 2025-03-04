@@ -931,6 +931,8 @@ print('Metadane na dysku Google zaktualizowane!')
     
 # tutaj się kończy pierwsza faza prac
 #%% Po informacji od redakcji Pressto: Publikowanie na pressto + DOI
+# załadować import z góry dokumentu!!!
+
 from sickle import Sickle
 from tqdm import tqdm
 
@@ -950,21 +952,22 @@ records = sickle.ListRecords(metadataPrefix='oai_dc')
 dates = []
 for record in tqdm(records):
     if record.deleted == False:
-        record = record.get_metadata()
-        record = {k:v for k,v in record.items() if k in ['title', 'creator', 'date', 'identifier', 'source']}
-        dates.append(record.get('date')[0])
+        record = record.header.datestamp[:10]
+        dates.append(record)
 
 #pobranie danych z pressto
 
-data_publikacji_na_pressto = input('data publikacji numeru na pressto w formacie YYYY-MM-DD: ')
+data_publikacji_na_pressto = sorted(dates)[-1]
 records = sickle.ListRecords(metadataPrefix='oai_dc')
 
 results = []
 for record in tqdm(records):
     if record.deleted == False:
+        datestamp = record.header.datestamp[:10]
         record = record.get_metadata()
-        record = {k:v for k,v in record.items() if k in ['title', 'creator', 'date', 'identifier', 'source']}
-        if record.get('date')[0] == data_publikacji_na_pressto:
+        # record = {k:v for k,v in record.items() if k in ['title', 'creator', 'date', 'identifier', 'source']}
+        record = {k:v for k,v in record.items()}
+        if datestamp == data_publikacji_na_pressto:
             results.append(record)
 
 #wczytanie tabeli z aktualnym numerem
