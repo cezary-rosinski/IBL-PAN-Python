@@ -7,50 +7,75 @@ import requests
 from concurrent.futures import ThreadPoolExecutor
 import pickle
 from opencitations_token import oc_token
+import csv
+from collections import Counter
 
 #%% OC metadata dump
 
 path = r'D:\IBL\OpenCitations\csv_final/'
 files = [file for file in glob.glob(path + '*.csv', recursive=True)]
 
-venue_publisher = []
 text_counter = 0
-for file in tqdm(files):
-    # file = files[0]
-    df = pd.read_csv(file)
-    v_p_iteration = list(zip(df['venue'].to_list(), df['publisher'].to_list(), df['type'].to_list()))
-    no_of_texts = len(v_p_iteration)
-    text_counter += no_of_texts
-    temp_list = []
-    for v, p, t in v_p_iteration:
-        # v, p = v_p_iteration[0]
-        v_name = v.split('[')[0].strip() if pd.notnull(v) else None
-        p_name = p.split('[')[0].strip() if pd.notnull(p) else None
-        v_ids = v.replace(v_name, '').strip() if pd.notnull(v) else None
-        if pd.notnull(v) and 'issn' in v:
-            v_issn = re.findall('(?>issn\:)(.{4}-.{4})', v_ids)
-            if v_issn:
-                v_issn = v_issn[0]
-            else: v_issn = None
-        else: v_issn = None
-        temp_dict = {'venue-name': v_name,
-                     'venue-ids': v_ids,
-                     'publisher-name': p_name,
-                     'publisher-ids': p.replace(p_name, '').strip() if pd.notnull(p) else None,
-                     'type': t,
-                     'issn': v_issn}
-        temp_list.append(temp_dict)
-    venue_publisher.extend(temp_list)
 
-# with open('person_bn_publishing_years.p', 'wb') as fp:
+headers = ['venue-name', 'venue-ids', 'type', 'issn', 'issn_count']
+
+with open("data/opencitations_metadata.csv", "w", newline="", encoding='utf-8') as f:
+    writer = csv.DictWriter(f, fieldnames=headers)
+    writer.writeheader()
+    
+    for file in tqdm(files):
+        # file = files[0]
+        df = pd.read_csv(file, low_memory=False)
+        
+        no_of_texts = df.shape[0]
+        text_counter += no_of_texts
+        
+        v_iteration = list(zip(df['venue'].to_list(), df['type'].to_list()))
+        #v_p_iteration = list(zip(df['venue'].to_list(), df['publisher'].to_list(), df['type'].to_list()))
+        
+        temp_list = []
+        for v, t in v_iteration:
+            # v, p = v_p_iteration[0]
+            v_name = v.split('[')[0].strip() if pd.notnull(v) else None
+            v_ids = v.replace(v_name, '').strip() if pd.notnull(v) else None
+            if pd.notnull(v) and 'issn' in v:
+                v_issn = re.findall('(?>issn\:)(.{4}-.{4})', v_ids)
+                if v_issn:
+                    v_issn = v_issn[0]
+                else: v_issn = None
+            else: v_issn = None
+            if v_issn:
+                temp_dict = {'venue-name': v_name,
+                             'venue-ids': v_ids,
+                             'type': t,
+                             'issn': v_issn}
+                
+                temp_list.append(temp_dict)
+        issn_counter = Counter(d.get('issn') for d in temp_list)
+        for d in temp_list:
+            d['issn_count'] = issn_counter.get(d.get('issn'))
+        dict_set = [dict(s) for s in set(frozenset(d.items()) for d in temp_list)]
+        for ds in dict_set:
+            writer.writerow(ds)
+
+# with open('data/opencitations.p', 'wb') as fp:
 #     pickle.dump(result, fp, protocol=pickle.HIGHEST_PROTOCOL)
     
-with open('person_bn_publishing_years.p', 'rb') as fp:
-    result_bn_years = pickle.load(fp)
+# with open('data/opencitations.p', 'rb') as fp:
+#     result_bn_years = pickle.load(fp)
 
 #%% issn api
 
-issns = set([e.get('issn') for e in venue_publisher if pd.notnull(e.get('issn'))])
+df = pd.read_csv("data/opencitations_metadata.csv")
+
+df_grouped = df.groupby("issn").agg({
+    "venue-name": "first",
+    "venue-ids": "first",
+    "type": "first",
+    "issn_count": "sum"
+}).reset_index()
+
+issns = df_grouped['issn'].to_list()
 
 issn_country = {}
 # for issn in tqdm(issns):
@@ -60,7 +85,7 @@ def get_country_for_issn(issn):
         r = requests.get(url).json()
         try:
             country = [e.get('label') for e in r.get('@graph') if 'id.loc.gov/vocabulary/countries' in e.get('@id')][0]
-        except IndexError:
+        except (TypeError, IndexError):
             country = None
         issn_country.update({issn: country})
     except ValueError:
@@ -68,7 +93,30 @@ def get_country_for_issn(issn):
 
 issn_country = {}
 with ThreadPoolExecutor() as excecutor:
-    list(tqdm(excecutor.map(get_country_for_issn, issns),total=len(issns)))   
+    list(tqdm(excecutor.map(get_country_for_issn, issns),total=len(issns)))
+    
+#issn country stats
+countries = set(list(issn_country.values())) #228 państw
+Counter(v for k,v in issn_country.items() if v == 'Poland') #2063 issny zarejestrowane w Polsce
+Counter(v for k,v in issn_country.items() if v == 'France') #2115
+Counter(v for k,v in issn_country.items() if v == 'England') #8565
+Counter(v for k,v in issn_country.items() if v == 'Germany') #4640
+Counter(v for k,v in issn_country.items() if v == 'Czech Republic') #401
+Counter(v for k,v in issn_country.items() if v == 'Italy') #883
+Counter(v for k,v in issn_country.items() if v == 'Spain') #1791
+
+countries_issn_counter = dict(Counter(v for k,v in issn_country.items()))
+df_grouped['country'] = df_grouped['issn'].apply(lambda x: issn_country.get(x))
+df_grouped['country-counter'] = df_grouped['country'].apply(lambda x: countries_issn_counter.get(x))
+
+df_grouped.to_excel('data/opencitations_journals.xlsx', index=False)
+
+
+
+#%% core api
+#szukać subjects
+
+#https://api.core.ac.uk/v3/journals/issn:1453-1305?apiKey=xxx
 
 #%% OC API
 doi = '10.14746/fp.2016.3.26703' #0
@@ -78,6 +126,8 @@ API_CALL = f"https://opencitations.net/index/api/v2/references/doi:{doi}"
 API_CALL = "https://opencitations.net/index/api/v2/citations/doi:{doi}"
 API_CALL = "https://opencitations.net/index/api/v2/reference-count/doi:{doi}"
 API_CALL = "https://w3id.org/oc/meta/api/v1/metadata/doi:{doi}"
+API_CALL = "https://w3id.org/oc/meta/api/v1/metadata/issn:2719-4167"
+API_CALL = "https://opencitations.net/index/api/v2/citations/doi:10.31261/PiL.2021.03.05"
 HTTP_HEADERS = {"authorization": oc_token}
 
 test = get(API_CALL, headers=HTTP_HEADERS).json()

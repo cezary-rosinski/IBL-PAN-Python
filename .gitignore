@@ -1,5 +1,6 @@
 ﻿/data
 /opencitations_token.py
+/core_api_key.py
 /inwestycje.py
 /Gortych_wiso_credentials.py
 /chatgpt_key.py
