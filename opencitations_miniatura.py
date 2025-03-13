@@ -5,6 +5,8 @@ import pandas as pd
 import regex as re
 import requests
 from concurrent.futures import ThreadPoolExecutor
+import pickle
+from opencitations_token import oc_token
 
 #%% OC metadata dump
 
@@ -39,7 +41,12 @@ for file in tqdm(files):
                      'issn': v_issn}
         temp_list.append(temp_dict)
     venue_publisher.extend(temp_list)
+
+# with open('person_bn_publishing_years.p', 'wb') as fp:
+#     pickle.dump(result, fp, protocol=pickle.HIGHEST_PROTOCOL)
     
+with open('person_bn_publishing_years.p', 'rb') as fp:
+    result_bn_years = pickle.load(fp)
 
 #%% issn api
 
