@@ -73,7 +73,6 @@ with ThreadPoolExecutor() as excecutor:
 #%% OC API
 doi = '10.14746/fp.2016.3.26703' #0
 doi = '10.14746/fp.2020.20.24906'
-oc_token = 'c18c68a7-9b88-47a6-b189-e8638002b0f2'
 
 API_CALL = f"https://opencitations.net/index/api/v2/references/doi:{doi}"
 API_CALL = "https://opencitations.net/index/api/v2/citations/doi:{doi}"
