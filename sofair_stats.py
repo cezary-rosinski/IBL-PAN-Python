@@ -18,6 +18,8 @@ from my_functions import gsheet_to_df
 
 #%% dependencies
 
+sofair_folder = r"D:\IBL\Documents\IBL-PAN-Python\data\SoFAIR/"
+
 domain_dict = {
     'Engineering': 'SoFAIR_AD_Engineering_papers',
     'Comp_science': 'SoFAIR_AD_Comp_Sci_papers',
@@ -39,10 +41,10 @@ domain_dict = {
     'Digital Humanities': 'SoFAIR_AD_Digital_Humanties_papers'
     }
 
-sofair_articles_1 = pd.read_excel(r"C:\Users\Cezary\Downloads\SoFAIR_Annotation_Dataset_Paper_Data_first.xlsx")
-sofair_articles_2 = pd.read_excel(r"C:\Users\Cezary\Downloads\SoFAIR_Annotation_Dataset_Paper_Data_Extension.xlsx")
-sofair_articles_3 = pd.read_excel(r"C:\Users\Cezary\Downloads\SoFAIR_Humanities_paper_list.xlsx")
-sofair_articles_4 = pd.read_excel(r"C:\Users\Cezary\Downloads\SoFAIR_Digital_Humanities_paper_list.xlsx")
+sofair_articles_1 = pd.read_excel(f"{sofair_folder}SoFAIR_Annotation_Dataset_Paper_Data_first.xlsx")
+sofair_articles_2 = pd.read_excel(f"{sofair_folder}SoFAIR_Annotation_Dataset_Paper_Data_Extension.xlsx")
+sofair_articles_3 = pd.read_excel(f"{sofair_folder}SoFAIR_Humanities_paper_list.xlsx")
+sofair_articles_4 = pd.read_excel(f"{sofair_folder}SoFAIR_Digital_Humanities_paper_list.xlsx")
 
 sofair_articles_1['file_id'] = sofair_articles_1[['Domain', 'ID']].apply(lambda x: domain_dict.get(x['Domain'], x['Domain']) + '_' + str(x['ID']), axis=1)
 sofair_articles_2['file_id'] = sofair_articles_2[['Domain', 'ID']].apply(lambda x: domain_dict.get(x['Domain'], x['Domain']) + '_' + str(x['ID']), axis=1)
@@ -89,7 +91,7 @@ sofair_files_id = set(df_sofair_annotations_info['file_id'].to_list())
 
 #%% metadata processing
 
-with open('data/sofair_metadata.p', 'rb') as fp:
+with open(f'{sofair_folder}sofair_metadata.p', 'rb') as fp:
     sofair_metadata = pickle.load(fp)
 
 sofair_articles_metadata = []
@@ -109,11 +111,16 @@ for e in tqdm(sofair_metadata):
 df_sofair_articles_metadata = pd.DataFrame(sofair_articles_metadata)
 
 df_sofair_articles_info = pd.merge(df_sofair_annotations_info, df_sofair_articles_metadata, how='left', on='DOI')
+
+###duplikaty!!!
+# df_sofair_articles_info['article_id'] = df_sofair_articles_info['file_id'].apply(lambda x: x.split('_')[-1])
+# duplicates = df_sofair_articles_info[df_sofair_articles_info.duplicated(['article_id'], keep=False)]
+
                          
 
 #%% annotation statistics
 
-path = r'C:\Users\Cezary\Documents\Dataset\documents\tei-annotated/'
+path = r'D:\IBL\Documents\Dataset\documents\tei-annotated/'
 folders = glob.glob(path + '*' + '/', recursive=True)
 
 namespaces = {'{http://www.w3.org/XML/1998/namespace}id': 'id',
@@ -140,18 +147,16 @@ for folder in tqdm(folders):
         software_mentions.extend(software_mentions_iter)
         
         
-df_annotated = pd.DataFrame(software_mentions)
-     
-        
+df_annotated = pd.DataFrame(software_mentions)        
         
 #%% save files
 
-df_annotated.to_excel('data/sofair_annotation_statistics_detailed.xlsx', index=False)
-df_sofair_articles_info.to_excel('data/sofair_articles_info.xlsx', index=False)
+df_annotated.to_excel(f'{sofair_folder}sofair_annotation_statistics_detailed.xlsx', index=False)
+df_sofair_articles_info.to_excel(f'{sofair_folder}sofair_articles_info.xlsx', index=False)
         
 #%% annotation statistics
 
-path = r'C:\Users\Cezary\Documents\Dataset\documents\tei-pre-annotated/'
+path = r'D:\IBL\Documents\Dataset\documents\tei-pre-annotated/'
 folders = glob.glob(path + '*' + '/', recursive=True)
 
 namespaces = {'{http://www.w3.org/XML/1998/namespace}id': 'id',
@@ -209,7 +214,7 @@ sofair_articles = sofair_articles[['file_id', 'Title']]
 articles_metadata = gsheet_to_df('1AuOxW23zYzk0LT8zF7H919RXi0ZULfJdUDE_TabiITg', 'Sheet1')
 articles_metadata = pd.merge(articles_metadata, sofair_articles, how='left', on='file_id')
 
-articles_metadata.to_excel('data/sofair_articles_info.xlsx', index=False)
+# articles_metadata.to_excel('data/sofair_articles_info.xlsx', index=False)
 
 dois = articles_metadata['DOI'].to_list()
 
@@ -232,14 +237,237 @@ for e in tqdm(sofair_metadata):
         sofair_articles_metadata.append(iter_dict)
     
 df_metadata = pd.DataFrame(sofair_articles_metadata)
-df_metadata.to_excel('data/sofair_articles_info.xlsx', index=False)
+df_metadata = df_metadata.merge(df_sofair_articles_info, on='DOI', how='left')
+df_metadata.to_excel(f'{sofair_folder}sofair_articles_info.xlsx', index=False)
+
+#%% połączenie zasobów
+
+# Filtrowanie tylko wzmianek dotyczących oprogramowania
+software_mentions_df = df_annotated[df_annotated["type"] == "software"]
+
+# Łączenie danych na podstawie file_id
+merged_df = df_metadata.merge(df_annotated, on="file_id", how="left")
+
+# Sprawdzenie struktury połączonych danych
+merged_df.head()
+
+merged_df.to_excel(f'{sofair_folder}sofair_full_data.xlsx', index=False)
+
+#%% visualization -- software mentions in discipline and time
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Grupowanie danych: liczba wzmianek o oprogramowaniu w podziale na rok i dyscyplinę
+software_trends = merged_df.groupby(["year_of_publication", "Subcorpus"]).size().reset_index(name="mention_count")
+
+# Wykres
+plt.figure(figsize=(12, 6))
+sns.lineplot(data=software_trends, x="year_of_publication", y="mention_count", hue="Subcorpus", marker="o")
+
+# Stylizacja wykresu
+plt.title("Software mentions in discipline and time", fontsize=14)
+plt.xlabel("Year", fontsize=12)
+plt.ylabel("Software mentions", fontsize=12)
+plt.xticks(rotation=45)
+plt.legend(title="Discipline")
+plt.grid(True, linestyle="--", alpha=0.6)
+
+# Wyświetlenie wykresu
+plt.show()
+
+#%%
+
+import pandas as pd
+import re
+import matplotlib.pyplot as plt
+
+# Load data
+df = merged_df.copy()
+
+# Clean discipline names
+def clean_subcorpus_name(name):
+    name = re.sub(r'^SoFAIR_', '', name)       # remove the "SoFAIR_" prefix
+    name = re.sub(r'_papers$', '', name)       # remove the "_papers" suffix
+    name = re.sub(r'^AD_', '', name)           # remove any leading "AD_"
+    return name
+
+df['discipline_clean'] = df['Subcorpus'].apply(clean_subcorpus_name)
+
+# Filter only software-type mentions
+df_software = df[df['type'] == 'software'].copy()
+
+# Group by discipline and year
+df_grouped = df_software.groupby(['discipline_clean', 'year_of_publication']).size()
+df_grouped = df_grouped.reset_index(name='software_mentions')
+
+# Pivot table: rows = year, columns = discipline, values = software mentions
+df_pivot = df_grouped.pivot(index='year_of_publication',
+                            columns='discipline_clean',
+                            values='software_mentions').fillna(0)
+
+# Plot: line chart
+plt.figure(figsize=(10, 6))
+for discipline in df_pivot.columns:
+    plt.plot(df_pivot.index, df_pivot[discipline], marker='o', label=discipline)
+
+plt.xlabel('Year of Publication')
+plt.ylabel('Number of Software Mentions')
+plt.title('Software Mentions by Discipline Over Time')
+plt.legend(title='Discipline', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.tight_layout()
+plt.show()
+
+#%% 
+
+import pandas as pd
+import re
+import matplotlib.pyplot as plt
+
+# --- 1. Load and preprocess data ---
+
+df = merged_df.copy()
+
+def clean_subcorpus_name(name):
+    name = re.sub(r'^SoFAIR_', '', name)
+    name = re.sub(r'_papers$', '', name)
+    name = re.sub(r'^AD_', '', name)
+    return name
+
+df['discipline_clean'] = df['Subcorpus'].apply(clean_subcorpus_name)
+
+# Filter to software-type mentions
+df_software = df[df['type'] == 'software'].copy()
+
+# Group by discipline and year
+grouped = df_software.groupby(
+    ['discipline_clean','year_of_publication']
+).size().reset_index(name='software_mentions')
+
+# Pivot: rows = year, columns = discipline
+df_pivot = grouped.pivot(
+    index='year_of_publication',
+    columns='discipline_clean',
+    values='software_mentions'
+).fillna(0)
+
+# --- 2. Pick top disciplines to plot (by total software mentions) ---
+
+# Calculate total mentions per discipline across all years
+totals = df_pivot.sum().sort_values(ascending=False)
+
+# Here we select the top N (e.g., top 6). Adjust as needed.
+top_disciplines = totals.head(6).index
+
+# Filter the pivot table to include only these top disciplines
+df_top = df_pivot[top_disciplines]
+
+# Optional: rename columns to shorter labels for clarity
+rename_dict = {
+    'Arts_and_Humanities': 'Arts/Hum',
+    'Sociology_and_Political_Science': 'Soc/Pol Sci',
+    'Digital_Humanties': 'Digital Hum',
+    'Environmental_Science': 'Env Sci',
+    'Language_and_Linguistics': 'Lang/Ling',
+    'Materials_Science': 'Mat Sci',
+    'Earth_Planet_Sciences': 'Earth/Planet',
+    'Energy_Sciences': 'Energy Sci',
+    'Comp_Sci': 'Comp Sci',
+    'BioChem': 'BioChem',
+    # etc. for any that appear in your top 6
+}
+
+df_top = df_top.rename(columns=rename_dict)
+
+# --- 3. Plot the data as a cleaner line chart ---
+
+plt.figure(figsize=(12, 6))
+for discipline in df_top.columns:
+    plt.plot(df_top.index, df_top[discipline], marker='o', label=discipline)
+
+plt.title("Top Software-Mentioning Disciplines Over Time")
+plt.xlabel("Year of Publication")
+plt.ylabel("Number of Software Mentions")
+plt.grid(True)
+plt.legend(title="Discipline", bbox_to_anchor=(1.05, 1), loc="upper left")
+plt.tight_layout()
+plt.show()
+
+        
+#%%  most popular software (per discipline)
 
 
 
-        
-        
-        
-      
+# 2. Clean discipline names (optional, helps readability)
+def clean_subcorpus_name(name):
+    name = re.sub(r'^SoFAIR_', '', name)
+    name = re.sub(r'_papers$', '', name)
+    name = re.sub(r'^AD_', '', name)
+    return name
+
+df['discipline_clean'] = df['Subcorpus'].apply(clean_subcorpus_name)
+
+# 3. Keep only "software" mentions
+df_software = df[df['type'] == 'software'].copy()
+
+# 4. Group by software name, then count how often each appears across the entire dataset
+software_count = (
+    df_software
+    .groupby('text')
+    .size()
+    .reset_index(name='mention_count')
+    .sort_values('mention_count', ascending=False)
+)
+
+# 5. Pick the top N most frequently mentioned software (e.g., top 10)
+top_n = 10
+top_software_names = software_count.head(top_n)['text'].tolist()
+
+# 6. Filter original data to keep only these top N software
+df_top_software = df_software[df_software['text'].isin(top_software_names)].copy()
+
+# 7. For each software and discipline, count mentions
+grouped_disciplines = (
+    df_top_software
+    .groupby(['text', 'discipline_clean'])
+    .size()
+    .reset_index(name='mention_count')
+)
+
+# 8. Pivot so that rows are software names, columns are disciplines, values are mention counts
+df_pivot = grouped_disciplines.pivot(
+    index='text', 
+    columns='discipline_clean',
+    values='mention_count'
+).fillna(0)
+
+# 9. Plot a stacked bar chart
+plt.figure(figsize=(10,6))
+df_pivot.plot(kind='bar', stacked=True, figsize=(10,6))
+
+plt.title(f"Top {top_n} Most Frequently Mentioned Software by Discipline")
+plt.xlabel("Software")
+plt.ylabel("Number of Mentions")
+plt.xticks(rotation=45, ha='right')
+plt.legend(title="Discipline", bbox_to_anchor=(1.05, 1), loc="upper left")
+plt.tight_layout()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
