@@ -44,10 +44,17 @@ with open(file_path, "a", encoding="utf-8") as f:
     f.write("\n]")
     
     
+#%% Magda
+
+'https://api.openalex.org/works?search=("Open Science" AND (Theory OR Data OR Access OR Method OR Discourse OR Research OR Humanities OR "Scholarly communication" OR Infrastructure))&sort=publication_year:desc'
+
+'https://api.openalex.org/works?search=("Open Science" AND (Theory OR "Scholarly communication"))&sort=publication_year:desc'
     
     
-    
-    
+x = "open scence jest super theory"
+
+if 'open science' in x and ('theory' in x or 'data' in x or 'access' in x or 'method' in x or 'discourse' in x or 'research' in x or 'humanities' in x or 'scholarly communication' in x or 'infrastructure' in x):
+    print(True)
     
     
     
