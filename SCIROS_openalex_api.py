@@ -2,47 +2,91 @@ import requests
 from concurrent.futures import ThreadPoolExecutor
 import json
 
+#%% def
+
+def create_temp_dict(record):
+    temp_dict = {
+        'title': record.get('title'),
+        'publication_year': record.get('publicationo_year'),
+        'publication_date': record.get('publication_date'),
+        'openalex_id': record.get('ids').get('openalex') if 'openalex' in record.get('ids') else None,
+        'doi_id': record.get('ids').get('doi') if 'doi' in record.get('ids') else None,
+        'mag_id': record.get('ids').get('mag') if 'mag' in record.get('ids') else None,
+        'pmid_id': record.get('ids').get('pmid') if 'pmid' in record.get('ids') else None,
+        'pmcid_id': record.get('ids').get('pmcid') if 'pmcid' in record.get('ids') else None,
+        'language': record.get('language'),
+        # 'license': record.get('locations').get('license'),
+        'type': record.get('type'),
+        'open_access': record.get('open_access').get('is_oa'),
+        'open_access_status': record.get('open_access').get('oa_status'),
+        'authorships': record.get('authorships'),
+        'cited_by_count': record.get('cited_by_count'),
+        'topic_name': record.get('primary_topic').get('display_name') if record.get('primary_topic') else None,
+        'topic_field': record.get('primary_topic').get('field').get('display_name') if record.get('primary_topic') else None,
+        'referenced_works': record.get('referenced_works')
+        }
+    return temp_dict
+    
 #%%
 
 file_path = "data/SCIROS_openalex_TOS.json"
 
-url_base = 'https://api.openalex.org/works?filter=abstract.search:open%20science&&per-page=100'
+# url_base = 'https://api.openalex.org/works?filter=abstract.search:open%20science&&per-page=100'
+url_base = 'https://api.openalex.org/works?filter=type:book|article|book-chapter|editorial|report,title_and_abstract.search:%28%28%22Open%20Access%22%20OR%20%22Citizen%20Science%22%20OR%20%22Open%20Science%22%20OR%20%22Open%20Methods%22%20OR%20%22Open%20Research%20Methods%22%20OR%20%22Open%20Humanities%22%20OR%20%22Open%20Infrastructure%22%20OR%20%22Open%20Research%20Infrastructure%22%20OR%20%22Open%20Scholarship%22%29%20AND%20%28Theories%20OR%20Understandings%20OR%20Concepts%20OR%20Philosophies%20OR%20Critiques%20OR%20Values%20OR%20Epistemologies%20OR%20Manifestos%20OR%20Meanings%20OR%20Ideas%20OR%20Premises%20OR%20Discourses%29%29&per-page=100'
 cursor = '*'
 url = f"{url_base}&cursor={cursor}"
 
 r = requests.get(url).json()
 results = r.get('results')
 
-with open(file_path, "w", encoding="utf-8") as f:
-    f.write("[\n")  # Początek listy JSON
+list_of_records = []
+for record in results:
+    # record = results[0]
+    if record.get('language') == 'en':
+        list_of_records.append(create_temp_dict(record))
 
-for i, entry in enumerate(results):
-    with open(file_path, "a", encoding="utf-8") as f:
-        json.dump(entry, f, ensure_ascii=False)
-        if i < len(results) - 1:
-            f.write(",\n") 
+# with open(file_path, "w", encoding="utf-8") as f:
+#     f.write("[\n")  # Początek listy JSON
+
+# for i, entry in enumerate(list_of_records):
+#     with open(file_path, "a", encoding="utf-8") as f:
+#         json.dump(entry, f, ensure_ascii=False)
+#         if i < len(list_of_records) - 1:
+#             f.write(",\n") 
 
 cursor = r.get('meta').get('next_cursor')
-iteration = 0
+total_no_of_records = r.get('meta').get('count')
+iteration = r.get('meta').get('per_page')
 while cursor:
     url = f"{url_base}&cursor={cursor}"
     r = requests.get(url).json()
-    results.extend(r.get('results'))
+    results = r.get('results')
     
-    for i, entry in enumerate(results):
-        with open(file_path, "a", encoding="utf-8") as f:
-            json.dump(entry, f, ensure_ascii=False)
-            if i < len(results) - 1:
-                f.write(",\n") 
+    # list_of_records = []
+    for record in results:
+        if record.get('language') == 'en':
+            list_of_records.append(create_temp_dict(record))
+            
+    # for i, entry in enumerate(list_of_records):
+    #     with open(file_path, "a", encoding="utf-8") as f:
+    #         json.dump(entry, f, ensure_ascii=False)
+    #         if i < len(list_of_records) - 1:
+    #             f.write(",\n") 
     
     cursor = r.get('meta').get('next_cursor')
-    iteration += 1
-    print(iteration)
+    iteration += r.get('meta').get('per_page')
+    print("{:.0%}".format(iteration/total_no_of_records))
     
 # Zamykamy listę JSON
-with open(file_path, "a", encoding="utf-8") as f:
-    f.write("\n]")
+# with open(file_path, "a", encoding="utf-8") as f:
+#     f.write("\n]")
+
+with open(file_path, 'w', encoding='utf-8') as f:
+    json.dump(list_of_records, f)
     
+list_of_records[0].get('authorships')
+max([len(e.get('authorships')) for e in list_of_records])
+test = [e for e in list_of_records if len(e.get('authorships')) == 100]
     
 #%% Magda
 
