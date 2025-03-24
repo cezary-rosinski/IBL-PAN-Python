@@ -99,7 +99,16 @@ test = [e for sub in test for e in sub]
 
 counter_authors = Counter(test)
 counter_authors.most_common(10)
-    
+
+x = 'https://openalex.org/A5018769425'
+y = []
+for e in d:
+    for el in e.get('authorships'):
+        if x == el.get('author').get('id'):
+            y.append(e)
+            
+[e.get('title') for e in y]
+y = [e for e in d if [x in el.get('author').get('id') for el in e.get('authorships')]]    
 #%% Magda
 
 'https://api.openalex.org/works?search=("Open Science" AND (Theory OR Data OR Access OR Method OR Discourse OR Research OR Humanities OR "Scholarly communication" OR Infrastructure))&sort=publication_year:desc'
