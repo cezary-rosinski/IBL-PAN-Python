@@ -1,6 +1,7 @@
 import requests
 from concurrent.futures import ThreadPoolExecutor
 import json
+from collections import Counter
 
 #%% def
 
@@ -87,6 +88,17 @@ with open(file_path, 'w', encoding='utf-8') as f:
 list_of_records[0].get('authorships')
 max([len(e.get('authorships')) for e in list_of_records])
 test = [e for e in list_of_records if len(e.get('authorships')) == 100]
+#%% calculating the authors
+path = r"C:\Users\Cezary\Downloads\SCIROS_openalex_TOS.json"
+
+with open(path) as f:
+    d = json.load(f)
+
+test = [[el.get('author').get('id') for el in e.get('authorships')] for e in d]
+test = [e for sub in test for e in sub]
+
+counter_authors = Counter(test)
+counter_authors.most_common(10)
     
 #%% Magda
 
