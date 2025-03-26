@@ -2,11 +2,14 @@ import requests
 from concurrent.futures import ThreadPoolExecutor
 import json
 from collections import Counter
+import pandas as pd
 
 #%% def
 
 def create_temp_dict(record):
     temp_dict = {
+        'id': record.get('id'),
+        'abstract': ' '.join([k for k,v in record.get('abstract_inverted_index').items()]) if pd.notnull(record.get('abstract_inverted_index')) else None,
         'title': record.get('title'),
         'publication_year': record.get('publicationo_year'),
         'publication_date': record.get('publication_date'),
@@ -85,11 +88,11 @@ while cursor:
 with open(file_path, 'w', encoding='utf-8') as f:
     json.dump(list_of_records, f)
     
-list_of_records[0].get('authorships')
-max([len(e.get('authorships')) for e in list_of_records])
-test = [e for e in list_of_records if len(e.get('authorships')) == 100]
+# list_of_records[0].get('authorships')
+# max([len(e.get('authorships')) for e in list_of_records])
+# test = [e for e in list_of_records if len(e.get('authorships')) == 100]
 #%% calculating the authors
-path = r"C:\Users\Cezary\Downloads\SCIROS_openalex_TOS.json"
+path = r"data/SCIROS_openalex_TOS.json"
 
 with open(path) as f:
     d = json.load(f)
@@ -107,8 +110,21 @@ for e in d:
         if x == el.get('author').get('id'):
             y.append(e)
             
-[e.get('title') for e in y]
-y = [e for e in d if [x in el.get('author').get('id') for el in e.get('authorships')]]    
+#[e.get('title') for e in y]
+
+for e in y:
+    # e = y[0]
+    authors_names = '|'.join([el.get('author').get('display_name') for el in e.get('authorships')])
+    authors_ids = '|'.join([el.get('author').get('id') for el in e.get('authorships')])
+    test_dict = {'no_of_authors': len(e.get('authorships')),
+                 'authors_names': authors_names,
+                 'authors_ids': authors_ids}
+    e.update(test_dict)
+    e.pop('authorships')
+    
+df_sample = pd.DataFrame(y)
+df_sample.to_excel('data/SCIROS_TOS_openalex_sample.xlsx', index=False)
+
 #%% Magda
 
 'https://api.openalex.org/works?search=("Open Science" AND (Theory OR Data OR Access OR Method OR Discourse OR Research OR Humanities OR "Scholarly communication" OR Infrastructure))&sort=publication_year:desc'
