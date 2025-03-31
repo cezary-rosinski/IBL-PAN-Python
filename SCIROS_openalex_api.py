@@ -3,6 +3,8 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 from collections import Counter
 import pandas as pd
+import regex as re
+from tqdm import tqdm
 
 #%% def
 
@@ -91,8 +93,98 @@ with open(file_path, 'w', encoding='utf-8') as f:
 # list_of_records[0].get('authorships')
 # max([len(e.get('authorships')) for e in list_of_records])
 # test = [e for e in list_of_records if len(e.get('authorships')) == 100]
+
+#%% proximity search
+
+# Zbiory słów z wildcardami
+set_A = [r"Open\w*", r"Citizen"]
+set_B = [r"Scien\w*", r"Data", r"Access", r"Method\w*", r"Research", r"Humanities", r"Scholar\w*", r"Infrastructure\w*"]
+set_C = [r"Theor\w*", r"Understanding\w*", r"Concept\w*", r"Philosoph\w*", r"Criti\w*", r"Value\w*", 
+         r"Ethic\w*", r"epistem\w*", r"Manifest\w*", r"Meaning\w*", r"Idea\w*", r"Premise\w*", r"Discourse\w*"]
+
+def matches_any(word, pattern_list):
+    return any(re.fullmatch(p, word, flags=re.IGNORECASE) for p in pattern_list)
+
+def proximity_query_bool(text, window_C=2):
+    tokens = re.findall(r'\w+', text)
+
+    for i in range(len(tokens) - 1):
+        # Szukaj par A-B lub B-A (W/0)
+        if matches_any(tokens[i], set_A) and matches_any(tokens[i+1], set_B):
+            ab_indices = [i, i+1]
+        elif matches_any(tokens[i], set_B) and matches_any(tokens[i+1], set_A):
+            ab_indices = [i, i+1]
+        else:
+            continue
+
+        # Szukaj C w promieniu ±2 wokół A i B
+        min_index = max(0, min(ab_indices) - window_C)
+        max_index = min(len(tokens), max(ab_indices) + window_C + 1 + 1)
+
+        for j in range(min_index, max_index):
+            if j in ab_indices:
+                continue  # pomijamy słowa A i B
+            if matches_any(tokens[j], set_C):
+                return True  # znalazło dopasowanie
+
+    return False
+
+# # 🔍 Przykład:
+# text = "The philosophical idea of open science and data access is growing."
+# text = "Open Science Politics and Ethics"
+# text = "Open Science Ethics and Politics"
+# text = "Ethics and Politics of Open Science"
+# print(proximity_query_bool(text))  # ➜ True albo False
+
+# def proximity_query(text, window_AB=0, window_C=2):
+#     tokens = re.findall(r'\w+', text)  # proste tokenizowanie, tylko słowa
+#     results = []
+
+#     for i in range(len(tokens)):
+#         # Sprawdź czy token i to A
+#         if matches_any(tokens[i], set_A):
+#             # Szukaj B w oknie W/0
+#             if i + 1 < len(tokens) and matches_any(tokens[i + 1], set_B):
+#                 ab_index = i
+#             elif i - 1 >= 0 and matches_any(tokens[i - 1], set_B):
+#                 ab_index = i - 1
+#             else:
+#                 continue
+
+#             # Teraz sprawdź C w odległości 2 słów od A-B
+#             start = max(0, ab_index - window_C)
+#             end = min(len(tokens), ab_index + window_C + 2)
+
+#             for j in range(start, end):
+#                 if matches_any(tokens[j], set_C):
+#                     results.append({
+#                         "C_word": tokens[j],
+#                         "A_word": tokens[i],
+#                         "B_word": tokens[i + 1] if ab_index == i else tokens[i - 1],
+#                         "position_C": j,
+#                         "position_A": i,
+#                         "position_B": ab_index if ab_index != i else (i + 1 if ab_index == i else i - 1)
+#                     })
+#     return results
+# sample_text = "The philosophical idea of open science and data access is growing. Understanding citizen research is crucial."
+# sample_text = "Open Science Politics and Ethics"
+# sample_text = "Open Science Ethics and Politics"
+# proximity_query(sample_text)
+
+correct_records = []
+
+for r in tqdm(list_of_records):
+    # r = list_of_records[0]
+    if any(pd.notnull(e) and proximity_query_bool(e) for e in [r.get('abstract'), r.get('title')]):
+        correct_records.append(r)
+
+file_path = "data/SCIROS_openalex_TOS_proximity.json"
+with open(file_path, 'w', encoding='utf-8') as f:
+    json.dump(correct_records, f)
+
 #%% calculating the authors
-path = r"data/SCIROS_openalex_TOS.json"
+# path = r"data/SCIROS_openalex_TOS.json"
+path = "data/SCIROS_openalex_TOS_proximity.json"
 
 with open(path) as f:
     d = json.load(f)
@@ -112,7 +204,7 @@ for e in d:
             
 #[e.get('title') for e in y]
 
-for e in y:
+for e in d:
     # e = y[0]
     authors_names = '|'.join([el.get('author').get('display_name') for el in e.get('authorships')])
     authors_ids = '|'.join([el.get('author').get('id') for el in e.get('authorships')])
@@ -122,8 +214,8 @@ for e in y:
     e.update(test_dict)
     e.pop('authorships')
     
-df_sample = pd.DataFrame(y)
-df_sample.to_excel('data/SCIROS_TOS_openalex_sample.xlsx', index=False)
+df_sample = pd.DataFrame(d)
+df_sample.to_excel('data/SCIROS_TOS_openalex_proximity.xlsx', index=False)
 
 #%% Magda
 
