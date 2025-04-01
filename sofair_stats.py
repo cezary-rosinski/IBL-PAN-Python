@@ -181,8 +181,9 @@ for folder in tqdm(folders):
             software_mentions_iter[i].update({'file_id': file_id})
         
         pre_software_mentions.extend(software_mentions_iter)
-        
-        
+
+pre_software_mentions = [e for e in pre_software_mentions if e.get('file_id') in sofair_files_id] #4391
+      
 df_pre_annotated = pd.DataFrame(pre_software_mentions)
 df_pre_annotated = df_pre_annotated.loc[df_pre_annotated['file_id'].isin(set(df_pre_annotated['file_id'].to_list()))]
 
