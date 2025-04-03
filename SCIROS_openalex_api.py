@@ -189,45 +189,44 @@ path = "data/SCIROS_openalex_TOS_proximity.json"
 with open(path) as f:
     d = json.load(f)
 
-test = [[el.get('author').get('id') for el in e.get('authorships')] for e in d]
-test = [e for sub in test for e in sub]
+# test = [[el.get('author').get('id') for el in e.get('authorships')] for e in d]
+# test = [e for sub in test for e in sub]
 
-counter_authors = Counter(test)
-counter_authors.most_common(10)
+# counter_authors = Counter(test)
+# counter_authors.most_common(10)
 
-x = 'https://openalex.org/A5018769425'
-y = []
-for e in d:
-    for el in e.get('authorships'):
-        if x == el.get('author').get('id'):
-            y.append(e)
+# x = 'https://openalex.org/A5018769425'
+# y = []
+# for e in d:
+#     for el in e.get('authorships'):
+#         if x == el.get('author').get('id'):
+#             y.append(e)
             
 #[e.get('title') for e in y]
 
 for e in d:
-    # e = y[0]
+    # e = d[0]
     authors_names = '|'.join([el.get('author').get('display_name') for el in e.get('authorships')])
     authors_ids = '|'.join([el.get('author').get('id') for el in e.get('authorships')])
+    # authors_affiliations = '|'.join([el.get('affiliations')[0].get('institution_ids')[0] if el.get('affiliations') else '' for el in e.get('authorships')])
+    authors_affiliations = '|'.join([el.get('affiliations')[0].get('raw_affiliation_string') if el.get('affiliations') else '' for el in e.get('authorships')])
     test_dict = {'no_of_authors': len(e.get('authorships')),
                  'authors_names': authors_names,
-                 'authors_ids': authors_ids}
+                 'authors_ids': authors_ids,
+                 'authors_affiliations': authors_affiliations}
     e.update(test_dict)
     e.pop('authorships')
     
 df_sample = pd.DataFrame(d)
 df_sample.to_excel('data/SCIROS_TOS_openalex_proximity.xlsx', index=False)
 
-#%% Magda
 
-'https://api.openalex.org/works?search=("Open Science" AND (Theory OR Data OR Access OR Method OR Discourse OR Research OR Humanities OR "Scholarly communication" OR Infrastructure))&sort=publication_year:desc'
 
-'https://api.openalex.org/works?search=("Open Science" AND (Theory OR "Scholarly communication"))&sort=publication_year:desc'
-    
-    
-x = "open scence jest super theory"
 
-if 'open science' in x and ('theory' in x or 'data' in x or 'access' in x or 'method' in x or 'discourse' in x or 'research' in x or 'humanities' in x or 'scholarly communication' in x or 'infrastructure' in x):
-    print(True)
+
+
+
+
     
     
     
