@@ -9,6 +9,8 @@ import pickle
 from opencitations_token import oc_token
 import csv
 from collections import Counter
+from core_api_key import core_api_key
+from functools import partial
 
 #%% OC metadata dump
 
@@ -111,10 +113,40 @@ df_grouped['country-counter'] = df_grouped['country'].apply(lambda x: countries_
 
 df_grouped.to_excel('data/opencitations_journals.xlsx', index=False)
 
+#%% df journals analysis
+
+df_journals = pd.read_excel('data/opencitations_journals.xlsx')
+
+df_journals.loc[df_journals['country'] == 'England'].shape[0]
+
 
 
 #%% core api
 #szukać subjects
+
+issn_list = set(df['issn'].to_list())
+
+# def harvest_core(issn, api_key):
+core_results = []
+for issn in tqdm(issn_list):
+    # issn = '1453-1305'
+    # api_key = core_api_key
+    
+    url = f'https://api.core.ac.uk/v3/journals/issn:{issn}?apiKey={core_api_key}'
+    r = requests.get(url)
+    result = r.json()
+    result = {k:v for k,v in result.items() if k in ['language', 'title', 'subjects', 'publisher']}
+    # return {issn: result}
+    core_results.append({issn: result})
+
+# harvest_with_key = partial(harvest_core, api_key=core_api_key)
+
+# with ThreadPoolExecutor() as executor:
+#     core_results = list(tqdm(
+#         executor.map(harvest_with_key, issn_list),
+#         total=len(issn_list),
+#         desc="Pobieranie z CORE"
+#     ))
 
 #https://api.core.ac.uk/v3/journals/issn:1453-1305?apiKey=xxx
 
