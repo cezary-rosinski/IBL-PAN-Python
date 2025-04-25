@@ -120,7 +120,9 @@ df_sofair_articles_info = pd.merge(df_sofair_annotations_info, df_sofair_article
 
 #%% annotation statistics
 
-path = r'D:\IBL\Documents\Dataset\documents\tei-annotated/'
+# path = r'D:\IBL\Documents\Dataset\documents\tei-annotated/'
+path = r'D:\IBL\Documents\Dataset\documents\tei-annotated-deduplicated/'
+
 folders = glob.glob(path + '*' + '/', recursive=True)
 
 namespaces = {'{http://www.w3.org/XML/1998/namespace}id': 'id',
@@ -146,8 +148,7 @@ for folder in tqdm(folders):
         
         software_mentions.extend(software_mentions_iter)
         
-        
-df_annotated = pd.DataFrame(software_mentions)        
+df_annotated = pd.DataFrame(software_mentions)
         
 #%% save files
 
@@ -251,6 +252,29 @@ merged_df = df_metadata.merge(df_annotated, on="file_id", how="left")
 
 # Sprawdzenie struktury połączonych danych
 merged_df.head()
+
+domain_dict_reverse = {
+    'SoFAIR_AD_Engineering_papers': 'Engineering',
+    'SoFAIR_AD_Comp_Sci_papers': 'Computer Sciences',
+    'SoFAIR_AD_Energy_Sciences_papers': 'Energy Sciences',
+    'SoFAIR_AD_Mathematics_papers': 'Mathematics',
+    'SoFAIR_AD_Chemistry_papers': 'Chemistry',
+    'SoFAIR_AD_Neuroscience_papers': 'Neuroscience',
+    'SoFAIR_AD_Medicine_papers': 'Medicine',
+    'SoFAIR_AD_BioChem_papers': 'Biochemistry',
+    'SoFAIR_Arts_and_Humanities_papers': 'Arts and Humanities',
+    'SoFAIR_Sociology_and_Political_Science_papers': 'Sociology and Political Science',
+    'SoFAIR_Language_and_Linguistics_papers': 'Language and Linguistics',
+    'SoFAIR_Cultural_Studies_papers': 'Cultural Studies',
+    'SoFAIR_AD_BMA_papers': 'Business Management',
+    'SoFAIR_AD_Physics_papers': 'Physics',
+    'SoFAIR_AD_Materials_Science_papers': 'Materials Sciences',
+    'SoFAIR_AD_Earth_Planet_Sciences_papers': 'Earth and Planetary Science',
+    'SoFAIR_AD_Environmental_Science_papers': 'Environmental Science',
+    'SoFAIR_AD_Digital_Humanties_papers': 'Digital Humanities'
+    }
+
+merged_df['Discipline'] = merged_df['Subcorpus'].apply(lambda x: domain_dict_reverse.get(x))
 
 merged_df.to_excel(f'{sofair_folder}sofair_full_data.xlsx', index=False)
 
