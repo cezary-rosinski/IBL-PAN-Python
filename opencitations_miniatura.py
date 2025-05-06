@@ -150,6 +150,32 @@ for issn in tqdm(issn_list):
 
 #https://api.core.ac.uk/v3/journals/issn:1453-1305?apiKey=xxx
 
+#%% API literaturoznawstwo
+
+df = pd.read_excel('data/czasopisma_literaturoznawcze_scopus.xlsx')
+issns_list = [e for e in df['ISSN'].to_list() + df['e-ISSN'].to_list() if pd.notnull(e)]
+
+# API_CALL = "https://w3id.org/oc/meta/api/v1/metadata/issn:"
+API_CALL_journal = "https://opencitations.net/meta/api/v1/metadata/issn:"
+API_CALL_citations = "https://opencitations.net/index/api/v2/venue-citation-count/issn:"
+HTTP_HEADERS = {"authorization": oc_token}
+
+responses = []
+for issn in tqdm(issns_list):
+    # issn = issns_list[0]
+    url = API_CALL_journal + issn
+    response_journal = get(url, headers=HTTP_HEADERS).json()
+    
+    url2 = API_CALL_citations + issn
+    response_citations = get(url2, headers=HTTP_HEADERS).json()
+    
+    temp_dict = {issn: [True if response_journal else False, response_citations[0].get('count')]}
+    responses.append(temp_dict)
+    
+test = "https://w3id.org/oc/meta/api/v1/metadata/issn:2083-2222?require=doi"
+testa = get(test, headers=HTTP_HEADERS)
+testa.text
+
 #%% OC API
 doi = '10.14746/fp.2016.3.26703' #0
 doi = '10.14746/fp.2020.20.24906'
@@ -178,3 +204,19 @@ HTTP_HEADERS = {"authorization": oc_token}
 get(API_CALL, headers=HTTP_HEADERS)
 
 test = get(API_CALL, headers=HTTP_HEADERS).json()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
