@@ -171,10 +171,18 @@ for issn in tqdm(issns_list):
     
     temp_dict = {issn: [True if response_journal else False, response_citations[0].get('count')]}
     responses.append(temp_dict)
+
+unique_issn = []
+for i, row in df.iterrows():
+    if not pd.isnull(row['ISSN']):
+        unique_issn.append(row['ISSN'])
+    else: unique_issn.append(row['e-ISSN'])
     
-test = "https://w3id.org/oc/meta/api/v1/metadata/issn:2083-2222?require=doi"
-testa = get(test, headers=HTTP_HEADERS)
-testa.text
+responses_unique = [e for e in responses if list(e.keys())[0] in unique_issn]
+len([e for e in responses_unique if e.get(list(e.keys())[0])[-1] == '0'])
+# test = "https://w3id.org/oc/meta/api/v1/metadata/issn:2083-2222?require=doi"
+# testa = get(test, headers=HTTP_HEADERS)
+# testa.text
 
 #%% OC API
 doi = '10.14746/fp.2016.3.26703' #0
