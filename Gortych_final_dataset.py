@@ -68,8 +68,9 @@ viaf_id = "59157273"  # zamień na swój identyfikator
 qid = get_wikidata_qid_from_viaf(viaf_id)
 print(f"QID: {qid}")
 
-#%%
+#%% persons
 
+#ver 1
 df_novels = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'novels')
 
 authors = set(df_novels['author'].to_list())
@@ -87,6 +88,156 @@ for author in tqdm(authors_unique):
     authors_ids.append(author_record)
 
 authors_df = pd.DataFrame(authors_ids)
+
+#ver 2
+
+df_novels = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'authors')
+
+def get_wikidata_label(wikidata_id):
+    languages = ['pl', 'en', 'fr', 'de', 'es', 'cs']
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    try:
+        result = requests.get(url).json()
+        for lang in languages:
+            label = result['entities'][wikidata_id]['labels'][lang]['value']
+            break
+    except ValueError:
+        label = None
+    return label 
+
+def harvest_wikidata(wikidata_id):
+    wikidata_id = 'Q1097549'
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    result = requests.get(url).json()
+    try:
+        birthdate_value = result.get('entities').get(wikidata_id).get('claims').get('P569')[0].get('mainsnak').get('datavalue').get('value').get('time')[1:11]
+    except TypeError:
+        birthdate_value = None
+    try:
+        deathdate_value = result.get('entities').get(wikidata_id).get('claims').get('P570')[0].get('mainsnak').get('datavalue').get('value').get('time')[1:11]
+    except TypeError:
+        deathdate_value = None
+    try:
+        birthplaceLabel_value = get_wikidata_label(result.get('entities').get(wikidata_id).get('claims').get('P19')[0].get('mainsnak').get('datavalue').get('value').get('id'))
+    except TypeError:
+        birthplaceLabel_value = None
+    try:
+        birthplace_value = result.get('entities').get(wikidata_id).get('claims').get('P19')[0].get('mainsnak').get('datavalue').get('value').get('id')
+    except TypeError:
+        birthplace_value = None    
+        
+        
+    try:
+        deathplaceLabel_value = get_wikidata_label(result.get('entities').get(wikidata_id).get('claims').get('P20')[0].get('mainsnak').get('datavalue').get('value').get('id'))
+    except TypeError:
+        deathplaceLabel_value = None
+    try:
+        sexLabel_value = get_wikidata_label(result.get('entities').get(wikidata_id).get('claims').get('P21')[0].get('mainsnak').get('datavalue').get('value').get('id'))
+    except TypeError:
+        sexLabel_value = None
+    try:
+        pseudonym_value = '❦'.join([e.get('mainsnak').get('datavalue').get('value') for e in result.get('entities').get(wikidata_id).get('claims').get('P742')])
+    except (TypeError, AttributeError):
+        pseudonym_value = None
+    try:
+        occupationLabel_value = '❦'.join([get_wikidata_label(e.get('mainsnak').get('datavalue').get('value').get('id')) for e in result.get('entities').get(wikidata_id).get('claims').get('P106')])
+    except AttributeError:
+        occupationLabel_value = None
+    temp_dict = {wikidata_id: {'autor.value': f'http://www.wikidata.org/entity/{wikidata_id}',
+                               'birthdate.value': birthdate_value,
+                               'deathdate.value': deathdate_value,
+                               'birthplaceLabel.value': birthplaceLabel_value,
+                               'deathplaceLabel.value': deathplaceLabel_value,
+                               'sexLabel.value': sexLabel_value,
+                               'pseudonym.value': pseudonym_value,
+                               'occupationLabel.value': occupationLabel_value}}
+    
+
+wikidata_supplement = {}
+
+for wikidata_id in tqdm(new_wikidata_ids):
+    # wikidata_id = new_wikidata_ids[0]
+    # wikidata_id = 'Q240174'
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    result = requests.get(url).json()
+    try:
+        birthdate_value = result.get('entities').get(wikidata_id).get('claims').get('P569')[0].get('mainsnak').get('datavalue').get('value').get('time')[1:11]
+    except TypeError:
+        birthdate_value = None
+    try:
+        deathdate_value = result.get('entities').get(wikidata_id).get('claims').get('P570')[0].get('mainsnak').get('datavalue').get('value').get('time')[1:11]
+    except TypeError:
+        deathdate_value = None
+    try:
+        birthplaceLabel_value = get_wikidata_label(result.get('entities').get(wikidata_id).get('claims').get('P19')[0].get('mainsnak').get('datavalue').get('value').get('id'))
+    except TypeError:
+        birthplaceLabel_value = None
+    try:
+        deathplaceLabel_value = get_wikidata_label(result.get('entities').get(wikidata_id).get('claims').get('P20')[0].get('mainsnak').get('datavalue').get('value').get('id'))
+    except TypeError:
+        deathplaceLabel_value = None
+    try:
+        sexLabel_value = get_wikidata_label(result.get('entities').get(wikidata_id).get('claims').get('P21')[0].get('mainsnak').get('datavalue').get('value').get('id'))
+    except TypeError:
+        sexLabel_value = None
+    try:
+        pseudonym_value = '❦'.join([e.get('mainsnak').get('datavalue').get('value') for e in result.get('entities').get(wikidata_id).get('claims').get('P742')])
+    except (TypeError, AttributeError):
+        pseudonym_value = None
+    try:
+        occupationLabel_value = '❦'.join([get_wikidata_label(e.get('mainsnak').get('datavalue').get('value').get('id')) for e in result.get('entities').get(wikidata_id).get('claims').get('P106')])
+    except AttributeError:
+        occupationLabel_value = None
+    temp_dict = {wikidata_id: {'autor.value': f'http://www.wikidata.org/entity/{wikidata_id}',
+                               'birthdate.value': birthdate_value,
+                               'deathdate.value': deathdate_value,
+                               'birthplaceLabel.value': birthplaceLabel_value,
+                               'deathplaceLabel.value': deathplaceLabel_value,
+                               'sexLabel.value': sexLabel_value,
+                               'pseudonym.value': pseudonym_value,
+                               'occupationLabel.value': occupationLabel_value}}
+    wikidata_supplement.update(temp_dict)
+
+
+Person
+[Atrybuty:]
+Name
+Wikidata ID – co, jeśli autora nie ma w wikidacie? czy inny identyfikator?
+Date of Birth
+Place of Birth → relacja z miejscem
+Living Place → relacja z miejscem
+Gender (m/w/d - uwzględnić divers)
+Date of Death
+Place of Death → relacja z miejscem
+ 
+Prize → relacja z nagrodą
+–    occupation
+writer
+journalist
+activist - politically/civically engaged person
+playwright
+academic
+politician
+musician/stage artist
+other
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
