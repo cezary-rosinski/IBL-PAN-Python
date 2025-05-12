@@ -22,6 +22,8 @@ urls = {'https://www.perlentaucher.de/buchKSL/deutsche-romane.html': ['Deutsche 
         'https://www.perlentaucher.de/buchKSL/deutsche-literatur-20-jahrhundert-reisereportagen.html': ['XX w. reportaże podróżnicze', 7],
         'https://www.perlentaucher.de/buchKSL/stichwort-mauerfall.html': ['Stichwort Mauerfall', 22]}
 
+urls = {'https://www.perlentaucher.de/buchKSL/deutsche-literatur-20-jahrhundert-romane.html': ['Deutshe Lit. XX w. powieści', 162]}
+
 books_links = []
 
 for url, l in tqdm(urls.items()):
