@@ -267,32 +267,33 @@ for wikidata_id in tqdm(wikidata_places):
         pass
             
 historical_background_df = pd.DataFrame(historical_background)
-            
-            
-  
 
-# Person
-# [Atrybuty:]
-# Name
-# Wikidata ID – co, jeśli autora nie ma w wikidacie? czy inny identyfikator?
-# Date of Birth
-# Place of Birth → relacja z miejscem
-# Living Place → relacja z miejscem
-# Gender (m/w/d - uwzględnić divers)
-# Date of Death
-# Place of Death → relacja z miejscem
- 
-# Prize → relacja z nagrodą
-# –    occupation
-# writer
-# journalist
-# activist - politically/civically engaged person
-# playwright
-# academic
-# politician
-# musician/stage artist
-# other
+#%% persons ver 4 -- occupation 
 
+df_authors = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'authors')
+
+occupation_dict = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'occupation')
+
+occupation_dict = dict(zip(occupation_dict['jest'].to_list(), occupation_dict['ma być'].to_list()))
+
+occupation_old = df_authors['occupation_old_wikidata'].to_list()
+
+occupation_result = []
+for o_field in occupation_old:
+    o_cell = []
+    for o in o_field.split('❦'):
+        o_cell.append(occupation_dict.get(o))
+    o_cell = '❦'.join(set([e for e in o_cell if isinstance(e, str)]))
+    occupation_result.append(o_cell)
+    
+df_occupation = pd.DataFrame(occupation_result)
+
+            
+#%% institutions 
+
+df_novels = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'novels')
+occupation = set([ele for sub in [[el.strip().lower() for el in e.split ('❦')] for e in df_novels['occupation'] if isinstance(e,str)] for ele in sub])
+df_occupation = pd.DataFrame(occupation)
 
 
 

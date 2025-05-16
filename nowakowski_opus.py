@@ -9,6 +9,7 @@ df_people = gsheet_to_df('1ubUo9sdYQgH3xBpmi4FRDMRdTeuoEBbtrvmgHyH0wYg', 'Arkusz
 people_dict = dict(zip(df_people['Person:'].to_list(), df_people['Person Wikidata:'].to_list()))
 people_dict = {k:v for k,v in people_dict.items() if isinstance(v, str) and 'wikidata' in v}
 
+#%%
 key_authors = [[el.strip() for el in e.split(';')] if isinstance(e, str) else None for e in df_texts['Key authors cited:'].to_list()]
 
 key_authors_wikidata = []
@@ -38,6 +39,18 @@ test['count_response'] = test['Response to author:'].apply(lambda x: x.count(';'
 test['count_wiki'] = test[0].apply(lambda x: x.count(';') if isinstance(x, str) else 0)
 
 
+dedicated_to = [[el.strip() for el in e.split(';')] if isinstance(e, str) else None for e in df_texts['Dedicated to'].to_list()]
+dedicated_to_wikidata = []
+for i, authors in enumerate(dedicated_to):
+    if authors:
+        dedicated_to_wikidata.append('; '.join([people_dict.get(e, 'no Wikidata ID') for e in authors]))
+    else: dedicated_to_wikidata.append(None)
+
+dedicated_to_df = pd.DataFrame(dedicated_to_wikidata)
+
+test = pd.concat([df_texts[['Dedicated to']], dedicated_to_df], axis=1)
+test['count_response'] = test['Dedicated to'].apply(lambda x: x.count(';') if isinstance(x, str) else 0)
+test['count_wiki'] = test[0].apply(lambda x: x.count(';') if isinstance(x, str) else 0)
 
 
 
