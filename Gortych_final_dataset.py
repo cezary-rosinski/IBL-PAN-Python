@@ -21,6 +21,9 @@ import geopandas as gpd
 import geoplot
 import geoplot.crs as gcrs
 from shapely.geometry import shape, Point
+import sys
+sys.path.insert(1, 'C:/Users/Cezary/Documents/IBL-PAN-Python')
+from geonames_accounts import geonames_users
 
 #%%
 def viaf_autosuggest(query):
@@ -311,8 +314,73 @@ for p in tqdm(publishers):
         
 publishers_df = pd.DataFrame(publishers_ids)
 
-occupation = set([ele for sub in [[el.strip().lower() for el in e.split ('❦')] for e in df_novels['occupation'] if isinstance(e,str)] for ele in sub])
-df_occupation = pd.DataFrame(occupation)
+#%% places
+
+df_novels = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'novels')
+
+df_authors = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'authors')
+
+places_novels = set([ele for sub in [[el.strip() for el in e.split(';')] for e in df_novels['place'].to_list()] for ele in sub])
+
+def query_geonames(m):
+    # m = 'Dublin'
+    url = 'http://api.geonames.org/searchJSON?'
+    params = {'username': random.choice(geonames_users), 'q': m, 'featureClass': 'P', 'style': 'FULL'}
+    result = requests.get(url, params=params).json()
+    if 'status' in result:
+        time.sleep(5)
+        query_geonames(m)
+    else:
+        try:
+            geonames_resp = {k:v for k,v in max(result['geonames'], key=lambda x:x['score']).items() if k in ['geonameId', 'name', 'lat', 'lng']}
+        except ValueError:
+            geonames_resp = None
+        places_with_geonames[m] = geonames_resp
+
+places_with_geonames = {}
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(query_geonames, places_novels),total=len(places_novels)))
+
+
+def get_wikidata_qid_from_geonames(geonames_id):
+    #geonames_id = 2950159
+    query = f"""
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+
+SELECT ?item WHERE {{
+  ?item wdt:P1566 "{geonames_id}" .
+}}
+"""
+    user_agent = "WDQS-example Python/%s.%s" % (sys.version_info[0], sys.version_info[1])
+    sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent=user_agent)
+    sparql.setQuery(query)
+    sparql.setReturnFormat(JSON)
+    while True:
+        try:
+            data = sparql.query().convert()
+            break
+        except HTTPError:
+            time.sleep(2)
+        except URLError:
+            time.sleep(5)
+    try:
+        qid_url = data["results"]["bindings"][0]["item"]["value"]
+        qid = qid_url.split("/")[-1]
+        return qid
+    except (IndexError, KeyError):
+        return None
+
+for k,v in tqdm(places_with_geonames.items()):
+    geonames_id = v.get('geonameId')
+    qid = get_wikidata_qid_from_geonames(geonames_id)
+    v.update({'wikidataID': qid})
+
+
+
+
+
+
+
 
 
 
