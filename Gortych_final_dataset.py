@@ -67,10 +67,10 @@ def get_wikidata_qid_from_viaf(viaf_id):
     except (IndexError, KeyError):
         return None
 
-# Przykład użycia
-viaf_id = "59157273"  # zamień na swój identyfikator
-qid = get_wikidata_qid_from_viaf(viaf_id)
-print(f"QID: {qid}")
+# # Przykład użycia
+# viaf_id = "59157273"  # zamień na swój identyfikator
+# qid = get_wikidata_qid_from_viaf(viaf_id)
+# print(f"QID: {qid}")
 
 #%% persons ver 1
 df_novels = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'novels')
@@ -292,6 +292,25 @@ df_occupation = pd.DataFrame(occupation_result)
 #%% institutions 
 
 df_novels = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'novels')
+
+publishers = set(df_novels['publisher'].to_list())
+
+publishers_ids = []
+for p in tqdm(publishers):
+    # p = list(publishers)[0]
+    # test = viaf_autosuggest(p)
+    try:
+        r = [e for e in viaf_autosuggest(p).get('result') if e.get('nametype') == 'corporate'][0]
+        publisher_record = {k:v for k,v in r.items() if k in ['displayForm', 'viafid']}
+        publisher_viaf = publisher_record.get('viafid')
+        publisher_wikidata = get_wikidata_qid_from_viaf(publisher_viaf)
+        publisher_record.update({'searchName': p, 'wikidataID': publisher_wikidata, 'wikidata_uri': f"https://www.wikidata.org/wiki/{publisher_wikidata}" if publisher_wikidata else None, 'viaf_uri': f"https://viaf.org/en/viaf/{publisher_viaf}"})
+        publishers_ids.append(publisher_record)
+    except TypeError:
+        publishers_ids.append({'searchName': p})
+        
+publishers_df = pd.DataFrame(publishers_ids)
+
 occupation = set([ele for sub in [[el.strip().lower() for el in e.split ('❦')] for e in df_novels['occupation'] if isinstance(e,str)] for ele in sub])
 df_occupation = pd.DataFrame(occupation)
 
