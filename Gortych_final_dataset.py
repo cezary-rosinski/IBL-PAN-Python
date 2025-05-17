@@ -17,6 +17,10 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 import sys
 import time
 from urllib.error import HTTPError, URLError
+import geopandas as gpd
+import geoplot
+import geoplot.crs as gcrs
+from shapely.geometry import shape, Point
 
 #%%
 def viaf_autosuggest(query):
@@ -68,9 +72,7 @@ viaf_id = "59157273"  # zamień na swój identyfikator
 qid = get_wikidata_qid_from_viaf(viaf_id)
 print(f"QID: {qid}")
 
-#%% persons
-
-#ver 1
+#%% persons ver 1
 df_novels = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'novels')
 
 authors = set(df_novels['author'].to_list())
@@ -89,7 +91,7 @@ for author in tqdm(authors_unique):
 
 authors_df = pd.DataFrame(authors_ids)
 
-#ver 2
+#%% persons ver 2
 
 df_novels = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'authors')
 
@@ -198,29 +200,100 @@ for wikidata_id in tqdm(new_wikidata_ids):
                                'occupationLabel.value': occupationLabel_value}}
     wikidata_supplement.update(temp_dict)
 
+#%% persons ver 3 -- occupation and historical background
 
-Person
-[Atrybuty:]
-Name
-Wikidata ID – co, jeśli autora nie ma w wikidacie? czy inny identyfikator?
-Date of Birth
-Place of Birth → relacja z miejscem
-Living Place → relacja z miejscem
-Gender (m/w/d - uwzględnić divers)
-Date of Death
-Place of Death → relacja z miejscem
- 
-Prize → relacja z nagrodą
-–    occupation
-writer
-journalist
-activist - politically/civically engaged person
-playwright
-academic
-politician
-musician/stage artist
-other
+df_novels = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'authors')
+occupation = set([ele for sub in [[el.strip().lower() for el in e.split ('❦')] for e in df_novels['occupation'] if isinstance(e,str)] for ele in sub])
+df_occupation = pd.DataFrame(occupation)
 
+
+# data = gpd.read_file("https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/1_deutschland/1_sehr_hoch.geo.json")
+# data.crs
+
+# geoplot.polyplot(data, projection=gcrs.AlbersEqualArea(), edgecolor='darkgrey', facecolor='lightgrey', linewidth=.3, figsize=(12, 8))
+
+
+with open(r"C:\Users\Cezary\Downloads\germany_1_sehr_hoch.geo.json", 'r', encoding='utf-8') as f:
+    germany_json = json.load(f)
+with open(r"C:\Users\Cezary\Downloads\bundeslands_1_sehr_hoch.geo.json", 'r', encoding='utf-8') as f:
+    germany_states_json = json.load(f)
+
+# berlin_point = Point(13.383333, 52.516667)
+# warsaw_point = Point(21.011111, 52.23)
+
+# polygon.contains(berlin_point)
+# polygon.contains(warsaw_point)
+
+
+lands_dict = {'Baden-Württemberg': 'West Germany',
+              'Bayern': 'West Germany',
+              'Berlin': 'Berlin',
+              'Brandenburg': 'East Germany',
+              'Bremen': 'West Germany',
+              'Hamburg': 'West Germany',
+              'Hessen': 'West Germany',
+              'Mecklenburg-Vorpommern': 'East Germany',
+              'Niedersachsen': 'West Germany',
+              'Nordrhein-Westfalen': 'West Germany',
+              'Rheinland-Pfalz': 'West Germany',
+              'Saarland': 'West Germany',
+              'Sachsen-Anhalt': 'East Germany',
+              'Sachsen': 'East Germany',
+              'Schleswig-Holstein': 'West Germany',
+              'Thüringen': 'East Germany'}
+
+polygon_germany = shape(germany_json.get('features')[0].get('geometry'))
+polygons_lands_dict = dict(zip([e.get('properties').get('name') for e in germany_states_json.get('features')], [e.get('geometry') for e in germany_states_json.get('features')]))
+polygons_lands_dict = {k:shape(v) for k,v in polygons_lands_dict.items()}
+
+wikidata_places = set([e for e in df_novels['birthplace_id'].to_list() if isinstance(e, str)])
+
+historical_background = []
+for wikidata_id in tqdm(wikidata_places):
+    # wikidata_id = list(wikidata_places)[0]
+    
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    try:
+        result = requests.get(url).json()
+
+        longitude = result.get('entities').get(wikidata_id).get('claims').get('P625')[0].get('mainsnak').get('datavalue').get('value').get('longitude')
+        latitude = result.get('entities').get(wikidata_id).get('claims').get('P625')[0].get('mainsnak').get('datavalue').get('value').get('latitude')
+        point = Point(longitude, latitude)
+    
+        for k,v in polygons_lands_dict.items():
+            if v.contains(point):
+                historical_background.append({'wikidata': wikidata_id, 'historical background': lands_dict.get(k)})
+    except TypeError:
+        pass
+            
+historical_background_df = pd.DataFrame(historical_background)
+
+#%% persons ver 4 -- occupation 
+
+df_authors = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'authors')
+
+occupation_dict = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'occupation')
+
+occupation_dict = dict(zip(occupation_dict['jest'].to_list(), occupation_dict['ma być'].to_list()))
+
+occupation_old = df_authors['occupation_old_wikidata'].to_list()
+
+occupation_result = []
+for o_field in occupation_old:
+    o_cell = []
+    for o in o_field.split('❦'):
+        o_cell.append(occupation_dict.get(o))
+    o_cell = '❦'.join(set([e for e in o_cell if isinstance(e, str)]))
+    occupation_result.append(o_cell)
+    
+df_occupation = pd.DataFrame(occupation_result)
+
+            
+#%% institutions 
+
+df_novels = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'novels')
+occupation = set([ele for sub in [[el.strip().lower() for el in e.split ('❦')] for e in df_novels['occupation'] if isinstance(e,str)] for ele in sub])
+df_occupation = pd.DataFrame(occupation)
 
 
 
