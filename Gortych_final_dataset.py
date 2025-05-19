@@ -341,7 +341,6 @@ places_with_geonames = {}
 with ThreadPoolExecutor() as excecutor:
     list(tqdm(excecutor.map(query_geonames, places_novels),total=len(places_novels)))
 
-
 def get_wikidata_qid_from_geonames(geonames_id):
     #geonames_id = 2950159
     query = f"""
@@ -375,18 +374,107 @@ for k,v in tqdm(places_with_geonames.items()):
     qid = get_wikidata_qid_from_geonames(geonames_id)
     v.update({'wikidataID': qid})
 
+for k,v in tqdm(places_with_geonames.items()):
+    v.update({'searchName': k})
 
+df_places = pd.DataFrame(places_with_geonames.values())
 
+#%% places ver. 2
 
+df_places_from_novels = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'places_from_novels')
 
+df_authors = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'authors')
 
+places_1_novels = set(df_places_from_novels['wikidataID'].to_list())
+places_2_birthplace = set(df_authors['birthplace_id'].to_list())
+places_3_deathplace = set(df_authors['deathplace_id'].to_list())
 
+places_ids = set.union(*[places_1_novels, places_2_birthplace, places_3_deathplace])
+places_ids = [e for e in places_ids if isinstance(e, str)]
 
+def harvest_wikidata_for_place(wikidata_id):
+    # wikidata_id = 'Q64'
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    result = requests.get(url).json()
+    try:
+        name = result.get('entities').get(wikidata_id).get('labels').get('de').get('value')
+    except AttributeError:
+        name = result.get('entities').get(wikidata_id).get('labels').get('en').get('value')
+    try:
+        latitude = result.get('entities').get(wikidata_id).get('claims').get('P625')[0].get('mainsnak').get('datavalue').get('value').get('latitude')
+        longitude = result.get('entities').get(wikidata_id).get('claims').get('P625')[0].get('mainsnak').get('datavalue').get('value').get('longitude')
+    except TypeError:
+        latitude = None
+        longitude = None
+        print(f'{wikidata_id}, {name}, no coordinates')
+    
+    temp_dict = {'wikidata_id': wikidata_id,
+                 'wikidata_url': f'https://www.wikidata.org/wiki/{wikidata_id}',
+                 'name': name,
+                 'latitude': latitude,
+                 'longitude': longitude}
+    return temp_dict
 
+places_result = []
 
+for p in tqdm(places_ids):
+    places_result.append(harvest_wikidata_for_place(p))
+    
+places_df = pd.DataFrame(places_result)
+places_df.loc[places_df['name'] == 'Laas', 'latitude'] = 46.94278
+places_df.loc[places_df['name'] == 'Laas', 'longitude'] = 13.07694
+#Laas: 46.94278, 13.07694
 
+#%% prizes from authors
 
+df_authors = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'authors')
 
+authors_ids = [e for e in df_authors['wikidataID'].to_list() if isinstance(e, str)]
+
+def get_wikidata_label_for_prize(wikidata_id, pref_langs = ['de', 'en']):
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    try:
+        result = requests.get(url).json()
+        langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        for lang in langs:
+            label = result['entities'][wikidata_id]['labels'][lang]['value']
+            break
+    except ValueError:
+        label = None
+    return label 
+
+def harvest_wikidata_author_for_prize(wikidata_id):
+    # wikidata_id = authors_ids[0]
+    wikidata_id = 'Q21950734'
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    result = requests.get(url).json()
+    
+    awards = result.get('entities').get(wikidata_id).get('claims').get('P166')
+    awards_result = []
+    for a in awards:
+        a = awards[0]
+        prize_id = a.get('mainsnak').get('datavalue').get('value').get('id')
+        prize_name = get_wikidata_label_for_prize(prize_id)
+        year = a.get('qualifiers')[0].get('datavalue').get('value').get('time')[1:6]
+    
+    try:
+        name = result.get('entities').get(wikidata_id).get('labels').get('de').get('value')
+    except AttributeError:
+        name = result.get('entities').get(wikidata_id).get('labels').get('en').get('value')
+    try:
+        latitude = result.get('entities').get(wikidata_id).get('claims').get('P625')[0].get('mainsnak').get('datavalue').get('value').get('latitude')
+        longitude = result.get('entities').get(wikidata_id).get('claims').get('P625')[0].get('mainsnak').get('datavalue').get('value').get('longitude')
+    except TypeError:
+        latitude = None
+        longitude = None
+        print(f'{wikidata_id}, {name}, no coordinates')
+    
+    temp_dict = {'wikidata_id': wikidata_id,
+                 'wikidata_url': f'https://www.wikidata.org/wiki/{wikidata_id}',
+                 'name': name,
+                 'latitude': latitude,
+                 'longitude': longitude}
+    return temp_dict
 
 
 
