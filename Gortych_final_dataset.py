@@ -445,17 +445,37 @@ def get_wikidata_label_for_prize(wikidata_id, pref_langs = ['de', 'en']):
 
 def harvest_wikidata_author_for_prize(wikidata_id):
     # wikidata_id = authors_ids[0]
-    wikidata_id = 'Q21950734'
+    # wikidata_id = 'Q254032'
+    # wikidata_id = 'Q95991'
     url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
     result = requests.get(url).json()
     
     awards = result.get('entities').get(wikidata_id).get('claims').get('P166')
-    awards_result = []
-    for a in awards:
-        a = awards[0]
-        prize_id = a.get('mainsnak').get('datavalue').get('value').get('id')
-        prize_name = get_wikidata_label_for_prize(prize_id)
-        year = a.get('qualifiers')[0].get('datavalue').get('value').get('time')[1:6]
+    if awards:
+        awards_result = []
+        for a in awards:
+            # a = awards[3]
+            prize_id = a.get('mainsnak').get('datavalue').get('value').get('id')
+            prize_name = get_wikidata_label_for_prize(prize_id)
+            try:
+                year = a.get('qualifiers').get('P585')[0].get('datavalue').get('value').get('time')[1:5]
+            except TypeError:
+                year = a.get('qualifiers').get('P582')[0].get('datavalue').get('value').get('time')[1:5]
+            except AttributeError:
+                year = None
+            temp_dict = {'person_id': wikidata_id,
+                         'prize_id': prize_id,
+                         'prize_name': prize_name,
+                         'prize_year': year}
+            awards_result.append(temp_dict)
+        return awards_result
+
+prizes_final_results = []
+for author in tqdm(authors_ids):
+    prize_for_person_result = harvest_wikidata_author_for_prize(author)
+    if prize_for_person_result:
+        prizes_final_results.extend(prize_for_person_result)
+    
     
     try:
         name = result.get('entities').get(wikidata_id).get('labels').get('de').get('value')
