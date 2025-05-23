@@ -5,6 +5,7 @@ from collections import Counter
 import pandas as pd
 import regex as re
 from tqdm import tqdm
+from datetime import date
 
 #%% def
 
@@ -29,12 +30,26 @@ def create_temp_dict(record):
         'cited_by_count': record.get('cited_by_count'),
         'topic_name': record.get('primary_topic').get('display_name') if record.get('primary_topic') else None,
         'topic_field': record.get('primary_topic').get('field').get('display_name') if record.get('primary_topic') else None,
-        'referenced_works': record.get('referenced_works')
+        'referenced_works': record.get('referenced_works'),
+        'biblio_first_page': record.get('biblio').get('first_page'),
+        'biblio_issue': record.get('biblio').get('issue'),
+        'biblio_last_page': record.get('biblio').get('last_page'),
+        'biblio_volume': record.get('biblio').get('volume'),
+        'primary_location_id': record.get('primary_location').get('source').get('id') if record.get('primary_location') and record.get('primary_location').get('source') else None,
+        'primary_location_name': record.get('primary_location').get('source').get('display_name') if record.get('primary_location') and record.get('primary_location').get('source') else None,
+        'primary_location_issn_l': record.get('primary_location').get('source').get('issn_l') if record.get('primary_location') and record.get('primary_location').get('source') and record.get('primary_location').get('source').get('issn_l') else None,
+        'primary_location_issn': ','.join(record.get('primary_location').get('source').get('issn')) if record.get('primary_location') and record.get('primary_location').get('source') and record.get('primary_location').get('source').get('issn') else None,
+        'keywords': record.get('keywords'),
+        'concepts_names': '|'.join([e.get('display_name') for e in record.get('concepts')]),
+        'concepts_wikidata': '|'.join([e.get('wikidata') for e in record.get('concepts')]),
+        'topics_names': '|'.join([e.get('display_name') for e in record.get('topics')]),
+        'topics_ids': '|'.join([e.get('id') for e in record.get('topics')])
         }
     return temp_dict
     
-#%%
+#%% harvesting openalex
 
+#record = results[0]
 file_path = "data/SCIROS_openalex_TOS.json"
 
 # url_base = 'https://api.openalex.org/works?filter=abstract.search:open%20science&&per-page=100'
@@ -182,7 +197,7 @@ file_path = "data/SCIROS_openalex_TOS_proximity.json"
 with open(file_path, 'w', encoding='utf-8') as f:
     json.dump(correct_records, f)
 
-#%% calculating the authors
+#%% handling the authors fields and keywords fields
 # path = r"data/SCIROS_openalex_TOS.json"
 path = "data/SCIROS_openalex_TOS_proximity.json"
 
@@ -203,22 +218,43 @@ with open(path) as f:
 #             y.append(e)
             
 #[e.get('title') for e in y]
-
+# d = list_of_records
 for e in d:
     # e = d[0]
-    authors_names = '|'.join([el.get('author').get('display_name') for el in e.get('authorships')])
-    authors_ids = '|'.join([el.get('author').get('id') for el in e.get('authorships')])
-    # authors_affiliations = '|'.join([el.get('affiliations')[0].get('institution_ids')[0] if el.get('affiliations') else '' for el in e.get('authorships')])
-    authors_affiliations = '|'.join([el.get('affiliations')[0].get('raw_affiliation_string') if el.get('affiliations') else '' for el in e.get('authorships')])
-    test_dict = {'no_of_authors': len(e.get('authorships')),
-                 'authors_names': authors_names,
-                 'authors_ids': authors_ids,
-                 'authors_affiliations': authors_affiliations}
-    e.update(test_dict)
+    authors_list = []
+    for a in e.get('authorships'):
+        # a = e.get('authorships')[0]
+        a_name = a.get('author').get('display_name')
+        a_orcid = a.get('author').get('orcid') if a.get('author').get('orcid') else 'no_orcid'
+        a_id = a.get('author').get('id') if a.get('author').get('id') else 'no_author_id'
+        a_string = f'{a_name}|{a_orcid}|{a_id}'
+        affiliations = a.get('affiliations')
+        affiliation_list = []
+        for i, af in enumerate(affiliations, 1):
+            af_name = af.get('raw_affiliation_string')
+            af_ids = ','.join(af.get('institution_ids'))
+            af_string = f'{i};{af_name};{af_ids}'
+            affiliation_list.append(af_string)
+        affiliation_string = '|'.join(affiliation_list)
+        a_string = f'{a_string}${affiliation_string}'
+        authors_list.append(a_string)
+    authors_list = '❦'.join(authors_list)
+    e.update({'authors': authors_list})
     e.pop('authorships')
     
+for e in d:
+    #e = d[0]
+    keywords_list = []
+    for i, k in enumerate(e.get('keywords'), 1):
+        k_id = k.get('id')
+        k_name = k.get('display_name')
+        k_string = f'{i};{k_id};{k_name}'
+        keywords_list.append(k_string)
+    keywords_string = '|'.join(keywords_list)
+    e.update({'keywords': keywords_string})
+    
 df_sample = pd.DataFrame(d)
-df_sample.to_excel('data/SCIROS_TOS_openalex_proximity.xlsx', index=False)
+df_sample.to_excel(f'data/SCIROS_TOS_openalex_proximity_{date.today()}.xlsx', index=False) #1348 rekordów
 
 
 

@@ -432,13 +432,16 @@ df_authors = gsheet_to_df('1iU-u4xjotqa3ZLijF5bMU7xWv-Hxgq1n8N3i-7UCdfU', 'autho
 authors_ids = [e for e in df_authors['wikidataID'].to_list() if isinstance(e, str)]
 
 def get_wikidata_label_for_prize(wikidata_id, pref_langs = ['de', 'en']):
+    # wikidata_id = 'Q130690218'
     url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
     try:
         result = requests.get(url).json()
         langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
-        for lang in langs:
-            label = result['entities'][wikidata_id]['labels'][lang]['value']
-            break
+        if langs:
+            for lang in langs:
+                label = result['entities'][wikidata_id]['labels'][lang]['value']
+                break
+        else: label = None
     except ValueError:
         label = None
     return label 
@@ -446,7 +449,7 @@ def get_wikidata_label_for_prize(wikidata_id, pref_langs = ['de', 'en']):
 def harvest_wikidata_author_for_prize(wikidata_id):
     # wikidata_id = authors_ids[0]
     # wikidata_id = 'Q254032'
-    # wikidata_id = 'Q95991'
+    # wikidata_id = 'Q1477082'
     url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
     result = requests.get(url).json()
     
@@ -476,25 +479,7 @@ for author in tqdm(authors_ids):
     if prize_for_person_result:
         prizes_final_results.extend(prize_for_person_result)
     
-    
-    try:
-        name = result.get('entities').get(wikidata_id).get('labels').get('de').get('value')
-    except AttributeError:
-        name = result.get('entities').get(wikidata_id).get('labels').get('en').get('value')
-    try:
-        latitude = result.get('entities').get(wikidata_id).get('claims').get('P625')[0].get('mainsnak').get('datavalue').get('value').get('latitude')
-        longitude = result.get('entities').get(wikidata_id).get('claims').get('P625')[0].get('mainsnak').get('datavalue').get('value').get('longitude')
-    except TypeError:
-        latitude = None
-        longitude = None
-        print(f'{wikidata_id}, {name}, no coordinates')
-    
-    temp_dict = {'wikidata_id': wikidata_id,
-                 'wikidata_url': f'https://www.wikidata.org/wiki/{wikidata_id}',
-                 'name': name,
-                 'latitude': latitude,
-                 'longitude': longitude}
-    return temp_dict
+prizes_df = pd.DataFrame(prizes_final_results) 
 
 
 
