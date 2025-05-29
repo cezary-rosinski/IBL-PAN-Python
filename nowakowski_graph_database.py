@@ -100,9 +100,13 @@ def add_text(row):
     # g.add((text, dcterms.publisher, RECH[f"Organization/{row['institution_id']}"]))
     g.add((text, dcterms.publisher, Literal(row['Publisher'])))
     g.add((text, schema.datePublished, Literal(row['Date'], datatype=XSD.gYear)))
-    g.add((text, schema.genre, Literal(row['genre'])))
-    g.add((text, schema.inLanguage, Literal(row['language'])))
-    g.add((text, RECH.whichNovel, Literal(row['debut novel/further novel'])))
+    g.add((text, JECAL.documentType, Literal(row['Document Type'])))
+    g.add((text, schema.inLanguage, Literal(row['Languages'])))
+    if pd.notnull(row['Genre']):
+        for genre in row['Genre'].split(';'):
+            g.add((text, schema.genre, Literal(genre.strip())))
+    
+    
     g.add((text, schema.about, Literal(row['subject'])))
     if pd.notnull(row['reason for violence']):
         for rfv in row['reason for violence'].split(','):
