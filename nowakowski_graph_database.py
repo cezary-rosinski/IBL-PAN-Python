@@ -41,7 +41,7 @@ geo = Namespace("http://www.w3.org/2003/01/geo/wgs84_pos#")
 bibo = Namespace("http://purl.org/ontology/bibo/")
 schema = Namespace("http://schema.org/")
 WDT = Namespace("http://www.wikidata.org/entity/")
-OUTPUT_TTL = "data/jecal.ttl"
+OUTPUT_TTL = "jecal.ttl"
 
 #%% --- LOAD ---
 df_texts = df_people = gsheet_to_df('1M2gc-8cGZ8gh8TTnm4jl430bL4tccdri9nw-frUWYLQ', 'texts')
