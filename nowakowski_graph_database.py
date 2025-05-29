@@ -105,30 +105,31 @@ def add_text(row):
     if pd.notnull(row['Genre']):
         for genre in row['Genre'].split(';'):
             g.add((text, schema.genre, Literal(genre.strip())))
+    if pd.notnull(row['Additional Authors ID']):
+        for a in row['Additional Authors ID'].split(';'):
+            if a.strip() != 'no id':
+                g.add((text, JECAL.additionalAuthor, JECAL[f"Person/{a.strip()}"]))
+    g.add((text, JECAL.documentType, Literal(row['Document Type'])))
+    g.add((text, JECAL.confessionalProfile, Literal(row['Confessional Profile'])))
+    for a in row['Targeted Confession'].split(';'):
+        g.add((text, JECAL.targetedConfession, Literal(a.strip())))
+    if pd.notnull(row['Dedicated to ID']):
+        for a in row['Dedicated to ID'].split(';'):
+            if a.strip() != 'no id':
+                g.add((text, JECAL.dedicatedTo, JECAL[f"Person/{a.strip()}"]))
+    if pd.notnull(row['Key Historical Figures Mentioned ID']):
+        for a in row['Key Historical Figures Mentioned ID'].split(';'):
+            if a.strip() != 'no id':
+                g.add((text, JECAL.keyHistoricalFigurtesMentioned, JECAL[f"Person/{a.strip()}"]))
+    if pd.notnull(row['Key Authors Cited ID']):
+        for a in row['Key Authors Cited ID'].split(';'):
+            if a.strip() != 'no id':
+                g.add((text, JECAL.keyAuthorsCited, JECAL[f"Person/{a.strip()}"]))
     
-    
-    g.add((text, schema.about, Literal(row['subject'])))
-    if pd.notnull(row['reason for violence']):
-        for rfv in row['reason for violence'].split(','):
-            g.add((text, RECH.reasonForViolence, Literal(rfv.strip())))
-    if pd.notnull(row['art of violence']):
-        for afv in row['art of violence'].split(','):
-            g.add((text, RECH.reasonForViolence, Literal(afv.strip())))
-    if pd.notnull(row['klappentext']):
-        g.add((text, schema.description, Literal(row['klappentext'])))
-    if pd.notnull(row['rezensionsnotiz']):
-        try:
-            rec = literal_eval(row['rezensionsnotiz'])
-            for r in rec:
-                g.add((text, schema.review, Literal(r)))
-        except SyntaxError:
-            g.add((text, schema.review, Literal(row['rezensionsnotiz'])))
-    if pd.notnull(row['keywords']):
-        for k in row['keywords'].split('|'):
-            g.add((text, schema.keywords, Literal(k)))
+    #trzeba dokończyć
         
-for _, r in df_novels.iterrows():
-    add_text(r)    
+for _, r in df_texts.iterrows():
+    add_text(r)
 
 # --- EXPORT ---
 g.serialize(destination=OUTPUT_TTL, format="turtle")

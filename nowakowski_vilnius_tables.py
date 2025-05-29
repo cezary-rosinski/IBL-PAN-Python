@@ -187,31 +187,35 @@ for p in wikidata_supplement:
     
 df_productivity = pd.DataFrame(productivity)
 
+#%% people ids in texts
+
+df_texts = df_people = gsheet_to_df('1M2gc-8cGZ8gh8TTnm4jl430bL4tccdri9nw-frUWYLQ', 'texts')
+df_people = df_people = gsheet_to_df('1M2gc-8cGZ8gh8TTnm4jl430bL4tccdri9nw-frUWYLQ', 'people')
+
+people_dict = dict(zip([e.strip() if isinstance(e, str) else None for e in df_people['person_name'].to_list()], df_people['person_id'].to_list()))
+
+#additional authors
+interested_columns = ['Additional Authors', 'Dedicated to', 'Key Historical Figures Mentioned', 'Key Authors Cited', 'Response to Author']
+test = [[el.strip() for el in e.split(';')] if isinstance (e, str) and 'No Data' not in e else None for e in df_texts[interested_columns[4]].to_list()]
+
+test_fix = []
+for i, authors in enumerate(test):
+    if authors:
+        test_fix.append('; '.join([people_dict.get(e, 'no id') for e in authors]))
+    else: test_fix.append(None)
+
+test_df = pd.DataFrame(test_fix)
 
 
 
+key_authors = [[el.strip() for el in e.split(';')] if isinstance(e, str) else None for e in df_texts['Key authors cited:'].to_list()]
 
+key_authors_wikidata = []
+for i, authors in enumerate(key_authors):
+    if authors:
+        key_authors_wikidata.append('; '.join([people_dict.get(e, 'no Wikidata ID') for e in authors]))
+    else: key_authors_wikidata.append(None)
 
-# — Przykłady —
-
-# 1) pełne dane:
-print(most_productive_century(-102, 102))  # → 16 (XVI w.)
-
-# 2) brak birth_year, jest death_year=1605:
-#    aktywność tylko w 1605 → XVII w. (1601–1700)
-print(most_productive_century(None, 1605)) # → 17
-
-# 3) brak death_year, birth_year=1500:
-#    aktywność w 1525 → XVI w. (1501–1600)
-print(most_productive_century(1500, None)) # → 16
-
-# 4) brak obu lat:
-print(most_productive_century(None, None)) # → None
-
-
-
-
-okres produktywności – wyliczany ze wzoru year of birth + 25 – year of death (jeśli okres produktywności przypada na dwa stulecia, wyliczamy udział i wybieramy wiek z większym % produktywności)
 #%% places
 
 # places from texts
