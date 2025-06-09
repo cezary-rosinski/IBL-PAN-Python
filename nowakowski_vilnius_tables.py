@@ -95,60 +95,7 @@ def harvest_wikidata_for_person(wikidata_id):
         wikidata_supplement.append(temp_dict)
     except ValueError:
         errors.append(wikidata_id)
-        
-def most_productive_century(
-    birth_year: Optional[int],
-    death_year: Optional[int]
-) -> Optional[int]:
-
-    if birth_year is None and death_year is None:
-        return None
-
-    if birth_year is not None and death_year is not None:
-        start = birth_year + 25
-        end = death_year
-    elif birth_year is None:
-        start = death_year
-        end = death_year + 1
-    else:
-        start = birth_year + 25
-        end = start + 1
-
-    if start >= end:
-        return None
-
-    def century_of(y: int) -> int:
-        if y > 0:
-            return (y - 1) // 100 + 1
-        else:
-            return -(((-y) - 1) // 100 + 1)
-
-    def century_bounds(c: int) -> (int, int):
-        if c > 0:
-            return ((c - 1) * 100 + 1, c * 100 + 1)
-        else:
-            absC = -c
-            start_bc = -(absC * 100 - 1)
-            end_bc   = -((absC - 1) * 100 - 1)
-            return (start_bc, end_bc)
-
-    c_start = century_of(start)
-    c_end = century_of(end - 1)
-    step = 1 if c_end >= c_start else -1
-
-    overlaps = {}
-    for c in range(c_start, c_end + step, step):
-        s_c, e_c = century_bounds(c)
-        ov_start = max(start, s_c)
-        ov_end   = min(end,   e_c)
-        overlaps[c] = max(0, ov_end - ov_start)
-
-    if not overlaps:
-        return None
-
-    max_years = max(overlaps.values())
-    candidates = [c for c, yrs in overlaps.items() if yrs == max_years]
-    return max(candidates)
+ 
 
 def most_productive_century(
     birth_year: Optional[int],
@@ -242,10 +189,18 @@ df_people_wikidata = pd.DataFrame(wikidata_supplement)
 #%% productivity period
 df_people = gsheet_to_df('1M2gc-8cGZ8gh8TTnm4jl430bL4tccdri9nw-frUWYLQ', 'people')
 
+# wikidata_supplement = []
+# for i, row in df_people.iterrows():
+#     if isinstance(row['person_wikidata_id'], str):
+#         temp_dict = {'wikidata_id': row['person_wikidata_id'],
+#                      'birthdate': row['birthdate'],
+#                      'deathdate': row['deathdate']}
+#         wikidata_supplement.append(temp_dict)
+        
 wikidata_supplement = []
 for i, row in df_people.iterrows():
-    if isinstance(row['person_wikidata_id'], str):
-        temp_dict = {'wikidata_id': row['person_wikidata_id'],
+    if isinstance(row['person_id'], str):
+        temp_dict = {'person_id': row['person_id'],
                      'birthdate': row['birthdate'],
                      'deathdate': row['deathdate']}
         wikidata_supplement.append(temp_dict)
@@ -265,7 +220,7 @@ for p in wikidata_supplement:
         else: d = -int(p.get('deathdate').split('-')[1])
     except TypeError:
         d = None
-    productivity.append({'wikidata_id': p.get('wikidata_id'),
+    productivity.append({'person_id': p.get('person_id'),
                          'century': most_productive_century(b, d)})
     
 df_productivity = pd.DataFrame(productivity)
