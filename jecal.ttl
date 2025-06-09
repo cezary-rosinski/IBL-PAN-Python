@@ -645,13 +645,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "E",
-        "a",
-        "d",
-        "e",
-        "n",
-        "p",
-        "x" ;
+    jesuit_calvinist:editionType "Expanded" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P105>,
@@ -744,13 +738,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "E",
-        "a",
-        "d",
-        "e",
-        "n",
-        "p",
-        "x" ;
+    jesuit_calvinist:editionType "Expanded" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P105>,
@@ -842,13 +830,7 @@
         "Sola Scriptura and Bible Authority",
         "Universal Church" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1000>,
         <https://example.org/jesuit_calvinist/Person/P1002>,
@@ -913,13 +895,7 @@
         "Papal Authority",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1226>,
         <https://example.org/jesuit_calvinist/Person/P1354>,
@@ -1051,13 +1027,7 @@
         "Councils",
         "Papal Authority" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:targetedConfession "Protestant (General)" .
 
@@ -1076,13 +1046,7 @@
     jesuit_calvinist:dedicatedTo <https://example.org/jesuit_calvinist/Person/P1163> ;
     jesuit_calvinist:digitizedCopy "No" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:responseToAuthor <https://example.org/jesuit_calvinist/Person/P61> ;
     jesuit_calvinist:responseToWork "Anonymous Protestant writing." ;
@@ -1134,13 +1098,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1020>,
         <https://example.org/jesuit_calvinist/Person/P1056>,
@@ -1350,19 +1308,8 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "",
-        ";",
-        "O",
-        "R",
-        "a",
-        "e",
-        "g",
-        "i",
-        "l",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Original",
+        "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1470>,
         <https://example.org/jesuit_calvinist/Person/P538>,
@@ -1461,13 +1408,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1035>,
@@ -1661,13 +1602,7 @@
         "Papal Authority",
         "Vestments" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1000>,
         <https://example.org/jesuit_calvinist/Person/P1009>,
@@ -1799,13 +1734,7 @@
         "Papal Authority",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P129>,
@@ -1920,13 +1849,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Partial" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1111>,
         <https://example.org/jesuit_calvinist/Person/P1295>,
@@ -2009,13 +1932,7 @@
         "Trinity and Deity of Jesus Christ",
         "Vernacular Bible" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1046>,
@@ -2190,13 +2107,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1286>,
         <https://example.org/jesuit_calvinist/Person/P1470> ;
@@ -2272,13 +2183,7 @@
         "Veneration of Saints",
         "Vernacular Bible" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1025>,
@@ -2584,13 +2489,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1131>,
         <https://example.org/jesuit_calvinist/Person/P1258>,
@@ -2705,13 +2604,7 @@
         "Infant Baptism",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P255> ;
     jesuit_calvinist:notes "in: OBRONA Taiemnice krztu prawosławnego Chrześćijaństwa" ;
@@ -2747,13 +2640,7 @@
         "Sola Fide",
         "Sola Gratia" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P105>,
         <https://example.org/jesuit_calvinist/Person/P665>,
@@ -2801,13 +2688,7 @@
         "Mary",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1020>,
@@ -2998,13 +2879,7 @@
         "Veneration of Saints",
         "Vernacular Bible" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1026>,
         <https://example.org/jesuit_calvinist/Person/P105>,
@@ -3222,13 +3097,7 @@
     jesuit_calvinist:dedicatedTo <https://example.org/jesuit_calvinist/Person/P2> ;
     jesuit_calvinist:digitizedCopy "No" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:preface "Yes" ;
     jesuit_calvinist:responseToAuthor <https://example.org/jesuit_calvinist/Person/P1446> ;
@@ -3281,13 +3150,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1020>,
@@ -3456,17 +3319,8 @@
         "Sola Scriptura and Bible Authority",
         "Transubstantiation and Sacrament of Eucharist" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "R",
-        "a",
-        "e",
-        "g",
-        "i",
-        "l",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Original",
+        "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1>,
         <https://example.org/jesuit_calvinist/Person/P1000>,
@@ -3650,13 +3504,7 @@
         "Sola Scriptura and Bible Authority",
         "Transubstantiation and Sacrament of Eucharist" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1000>,
         <https://example.org/jesuit_calvinist/Person/P1002>,
@@ -3786,13 +3634,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P105>,
@@ -3948,13 +3790,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1054>,
         <https://example.org/jesuit_calvinist/Person/P1083>,
@@ -4045,13 +3881,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1083>,
         <https://example.org/jesuit_calvinist/Person/P134>,
@@ -4181,13 +4011,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1001>,
         <https://example.org/jesuit_calvinist/Person/P1048>,
@@ -4441,13 +4265,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1020>,
         <https://example.org/jesuit_calvinist/Person/P1106>,
@@ -4613,13 +4431,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P105>,
         <https://example.org/jesuit_calvinist/Person/P1058>,
@@ -4799,22 +4611,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "",
-        ",",
-        "E",
-        "T",
-        "a",
-        "d",
-        "e",
-        "i",
-        "l",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t",
-        "x" ;
+    jesuit_calvinist:editionType "Translation, Expanded" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1033>,
         <https://example.org/jesuit_calvinist/Person/P1180>,
@@ -4984,13 +4781,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1033>,
         <https://example.org/jesuit_calvinist/Person/P1180>,
@@ -5155,13 +4946,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1001>,
         <https://example.org/jesuit_calvinist/Person/P103>,
@@ -5379,13 +5164,7 @@
     jesuit_calvinist:confessionalProfile "Reformed Evangelical" ;
     jesuit_calvinist:digitizedCopy "No" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:targetedConfession "Roman Catholic" .
 
@@ -5428,13 +5207,7 @@
         "Trinity and Deity of Jesus Christ",
         "Universal Church" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1264>,
         <https://example.org/jesuit_calvinist/Person/P134>,
@@ -5544,13 +5317,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Partial" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1003>,
         <https://example.org/jesuit_calvinist/Person/P1059>,
@@ -5659,13 +5426,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1054>,
@@ -5841,13 +5602,7 @@
         "Trinity and Deity of Jesus Christ",
         "Universal Church" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P102>,
         <https://example.org/jesuit_calvinist/Person/P105>,
@@ -6039,13 +5794,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P105>,
@@ -6221,13 +5970,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1005>,
@@ -6344,13 +6087,7 @@
         "Predestination",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1177>,
         <https://example.org/jesuit_calvinist/Person/P1226>,
@@ -6456,13 +6193,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P105>,
         <https://example.org/jesuit_calvinist/Person/P117>,
@@ -6607,13 +6338,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P105>,
@@ -6807,13 +6532,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1000>,
         <https://example.org/jesuit_calvinist/Person/P1002>,
@@ -7053,13 +6772,7 @@
         "Veneration of Saints",
         "Vestments" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1036>,
@@ -7206,13 +6919,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1008>,
         <https://example.org/jesuit_calvinist/Person/P1031>,
@@ -7424,13 +7131,7 @@
         "Martyrdom",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1348>,
         <https://example.org/jesuit_calvinist/Person/P1381>,
@@ -7536,13 +7237,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Partial",
         "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1000>,
@@ -7694,13 +7389,7 @@
         "Priest Ordination and Ministry",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1005>,
         <https://example.org/jesuit_calvinist/Person/P1019>,
@@ -7973,13 +7662,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1046>,
         <https://example.org/jesuit_calvinist/Person/P1100>,
@@ -8174,13 +7857,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1008>,
         <https://example.org/jesuit_calvinist/Person/P1031>,
@@ -8406,13 +8083,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P105>,
@@ -8564,13 +8235,7 @@
         "Sola Scriptura and Bible Authority",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P134>,
         <https://example.org/jesuit_calvinist/Person/P1374>,
@@ -8653,13 +8318,7 @@
         "Veneration of Saints",
         "Vernacular Bible" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1107>,
         <https://example.org/jesuit_calvinist/Person/P1111>,
@@ -8877,13 +8536,7 @@
         "Sola Scriptura and Bible Authority",
         "Transubstantiation and Sacrament of Eucharist" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P105>,
         <https://example.org/jesuit_calvinist/Person/P134>,
@@ -8987,13 +8640,7 @@
     jesuit_calvinist:digitizedCopy "Yes" ;
     jesuit_calvinist:discussedIssue "Religious Tolerance" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P258>,
         <https://example.org/jesuit_calvinist/Person/P274>,
@@ -9080,13 +8727,7 @@
         "Sola Scriptura and Bible Authority",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1307>,
         <https://example.org/jesuit_calvinist/Person/P541> ;
@@ -9180,13 +8821,7 @@
         "Veneration of Saints",
         "Vernacular Bible" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P105>,
         <https://example.org/jesuit_calvinist/Person/P1106>,
@@ -9429,13 +9064,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1054>,
         <https://example.org/jesuit_calvinist/Person/P1374>,
@@ -9533,13 +9162,7 @@
         "Sola Fide",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P546>,
         <https://example.org/jesuit_calvinist/Person/P610>,
@@ -9629,13 +9252,7 @@
         "Sola Scriptura and Bible Authority",
         "Transubstantiation and Sacrament of Eucharist" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P102>,
@@ -9848,13 +9465,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1>,
         <https://example.org/jesuit_calvinist/Person/P1008>,
@@ -10114,13 +9725,7 @@
         "Papal Authority",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P117>,
@@ -10253,19 +9858,8 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Universal Church" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "",
-        ";",
-        "E",
-        "R",
-        "a",
-        "d",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t",
-        "x" ;
+    jesuit_calvinist:editionType "Expanded",
+        "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P117>,
         <https://example.org/jesuit_calvinist/Person/P134>,
@@ -10339,13 +9933,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P117>,
         <https://example.org/jesuit_calvinist/Person/P129>,
@@ -10443,13 +10031,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1018>,
         <https://example.org/jesuit_calvinist/Person/P1025>,
@@ -10595,13 +10177,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1020>,
         <https://example.org/jesuit_calvinist/Person/P1126>,
@@ -10730,13 +10306,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1>,
         <https://example.org/jesuit_calvinist/Person/P1008>,
@@ -11022,15 +10592,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "T",
-        "a",
-        "i",
-        "l",
-        "n",
-        "o",
-        "r",
-        "s",
-        "t" ;
+    jesuit_calvinist:editionType "Translation" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1>,
         <https://example.org/jesuit_calvinist/Person/P1008>,
@@ -11322,13 +10884,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1>,
         <https://example.org/jesuit_calvinist/Person/P1008>,
@@ -11618,15 +11174,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "T",
-        "a",
-        "i",
-        "l",
-        "n",
-        "o",
-        "r",
-        "s",
-        "t" ;
+    jesuit_calvinist:editionType "Translation" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1>,
         <https://example.org/jesuit_calvinist/Person/P1008>,
@@ -11888,13 +11436,7 @@
         "Remission of Sins",
         "Universal Church" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1000>,
         <https://example.org/jesuit_calvinist/Person/P1024>,
@@ -12051,15 +11593,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "T",
-        "a",
-        "i",
-        "l",
-        "n",
-        "o",
-        "r",
-        "s",
-        "t" ;
+    jesuit_calvinist:editionType "Translation" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1020>,
         <https://example.org/jesuit_calvinist/Person/P1107>,
@@ -12201,13 +11735,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1020>,
         <https://example.org/jesuit_calvinist/Person/P1107>,
@@ -12344,19 +11872,8 @@
         "Veneration of Saints",
         "Vernacular Bible" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "",
-        ";",
-        "E",
-        "R",
-        "a",
-        "d",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t",
-        "x" ;
+    jesuit_calvinist:editionType "Expanded",
+        "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1106>,
         <https://example.org/jesuit_calvinist/Person/P1107>,
@@ -12550,13 +12067,7 @@
     jesuit_calvinist:digitizedCopy "No" ;
     jesuit_calvinist:discussedIssue "Transubstantiation and Sacrament of Eucharist" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Partial" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P647>,
         <https://example.org/jesuit_calvinist/Person/P665>,
@@ -12653,13 +12164,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1004>,
@@ -12934,19 +12439,8 @@
         "Veneration of Saints",
         "Vernacular Bible" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "",
-        ";",
-        "E",
-        "R",
-        "a",
-        "d",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t",
-        "x" ;
+    jesuit_calvinist:editionType "Expanded",
+        "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1031>,
         <https://example.org/jesuit_calvinist/Person/P1073>,
@@ -13194,13 +12688,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1023>,
         <https://example.org/jesuit_calvinist/Person/P1032>,
@@ -13472,13 +12960,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P105>,
         <https://example.org/jesuit_calvinist/Person/P1119>,
@@ -13724,20 +13206,8 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "",
-        ";",
-        "R",
-        "T",
-        "a",
-        "e",
-        "i",
-        "l",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint",
+        "Translation" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1>,
         <https://example.org/jesuit_calvinist/Person/P1008>,
@@ -14027,13 +13497,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1004>,
@@ -14319,13 +13783,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1035>,
@@ -14579,13 +14037,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1004>,
@@ -14816,13 +14268,7 @@
     jesuit_calvinist:dateAdditionalInfo "Approximately" ;
     jesuit_calvinist:digitizedCopy "No" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:targetedConfession "Roman Catholic" .
 
@@ -14894,15 +14340,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "T",
-        "a",
-        "i",
-        "l",
-        "n",
-        "o",
-        "r",
-        "s",
-        "t" ;
+    jesuit_calvinist:editionType "Translation" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1>,
         <https://example.org/jesuit_calvinist/Person/P1008>,
@@ -15178,13 +14616,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1073>,
         <https://example.org/jesuit_calvinist/Person/P129>,
@@ -15324,20 +14756,8 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "",
-        ";",
-        "R",
-        "T",
-        "a",
-        "e",
-        "i",
-        "l",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint",
+        "Translation" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1>,
         <https://example.org/jesuit_calvinist/Person/P1008>,
@@ -15614,13 +15034,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1020>,
         <https://example.org/jesuit_calvinist/Person/P1106>,
@@ -15758,13 +15172,7 @@
     jesuit_calvinist:discussedIssue "Mary",
         "Religious Tolerance" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P560> ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P109>,
@@ -15863,13 +15271,7 @@
         "Religious Tolerance",
         "Transubstantiation and Sacrament of Eucharist" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P10>,
         <https://example.org/jesuit_calvinist/Person/P1002>,
@@ -16003,15 +15405,7 @@
         "Sola Fide",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "T",
-        "a",
-        "i",
-        "l",
-        "n",
-        "o",
-        "r",
-        "s",
-        "t" ;
+    jesuit_calvinist:editionType "Translation" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P407>,
         <https://example.org/jesuit_calvinist/Person/P546>,
@@ -16125,15 +15519,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "T",
-        "a",
-        "i",
-        "l",
-        "n",
-        "o",
-        "r",
-        "s",
-        "t" ;
+    jesuit_calvinist:editionType "Translation" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1>,
         <https://example.org/jesuit_calvinist/Person/P1008>,
@@ -16427,20 +15813,8 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "",
-        ";",
-        "R",
-        "T",
-        "a",
-        "e",
-        "i",
-        "l",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint",
+        "Translation" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1>,
         <https://example.org/jesuit_calvinist/Person/P1008>,
@@ -16712,13 +16086,7 @@
         "Trinity and Deity of Jesus Christ",
         "Universal Church" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P105>,
         <https://example.org/jesuit_calvinist/Person/P1107>,
@@ -16840,13 +16208,7 @@
         "Priesthood of All Believers",
         "Role of Women" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P835> ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P723> ;
@@ -16930,13 +16292,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1004>,
@@ -17205,13 +16561,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1214>,
         <https://example.org/jesuit_calvinist/Person/P134>,
@@ -17354,13 +16704,7 @@
         "Sola Gratia",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P134>,
         <https://example.org/jesuit_calvinist/Person/P1555>,
@@ -17503,13 +16847,7 @@
         "Sola Gratia",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P134>,
         <https://example.org/jesuit_calvinist/Person/P1555>,
@@ -17652,13 +16990,7 @@
         "Sola Gratia",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P134>,
         <https://example.org/jesuit_calvinist/Person/P1555>,
@@ -17796,13 +17128,7 @@
         "Trinity and Deity of Jesus Christ",
         "Universal Church" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1381>,
         <https://example.org/jesuit_calvinist/Person/P202>,
@@ -17893,13 +17219,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1083>,
         <https://example.org/jesuit_calvinist/Person/P134>,
@@ -18024,13 +17344,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1054>,
         <https://example.org/jesuit_calvinist/Person/P1083>,
@@ -18087,13 +17401,7 @@
         "No Data",
         "Purgatory" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:responseToAuthor <https://example.org/jesuit_calvinist/Person/P46> ;
     jesuit_calvinist:responseToWork "Bellarminus enervatus" ;
@@ -18131,13 +17439,7 @@
         "Priesthood of All Believers",
         "Transubstantiation and Sacrament of Eucharist" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P105>,
@@ -18251,13 +17553,7 @@
         "Remission of Sins",
         "Universal Church" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1064>,
         <https://example.org/jesuit_calvinist/Person/P1107>,
@@ -18378,13 +17674,7 @@
         "Trinity and Deity of Jesus Christ",
         "Universal Church" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P103>,
@@ -18528,13 +17818,7 @@
         "Sola Scriptura and Bible Authority",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1177>,
         <https://example.org/jesuit_calvinist/Person/P1236>,
@@ -18642,13 +17926,7 @@
     jesuit_calvinist:discussedIssue "Church Government and Structure",
         "Transubstantiation and Sacrament of Eucharist" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P1179>,
         <https://example.org/jesuit_calvinist/Person/P1479>,
@@ -18726,13 +18004,7 @@
         "Sola Scriptura and Bible Authority",
         "Transubstantiation and Sacrament of Eucharist" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1245>,
         <https://example.org/jesuit_calvinist/Person/P202>,
@@ -18796,13 +18068,7 @@
     jesuit_calvinist:confessionalProfile "Roman Catholic" ;
     jesuit_calvinist:digitizedCopy "Yes" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P527>,
         <https://example.org/jesuit_calvinist/Person/P835>,
@@ -18876,13 +18142,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P202>,
         <https://example.org/jesuit_calvinist/Person/P835> ;
@@ -18980,13 +18240,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1005>,
         <https://example.org/jesuit_calvinist/Person/P1007>,
@@ -19513,13 +18767,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "R",
-        "e",
-        "i",
-        "n",
-        "p",
-        "r",
-        "t" ;
+    jesuit_calvinist:editionType "Reprint" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P202>,
         <https://example.org/jesuit_calvinist/Person/P835> ;
@@ -19581,20 +18829,7 @@
         "Priesthood of All Believers",
         "Role of Women" ;
     jesuit_calvinist:documentType "Manuscript" ;
-    jesuit_calvinist:editionType "",
-        "C",
-        "M",
-        "a",
-        "c",
-        "i",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t",
-        "u",
-        "y" ;
+    jesuit_calvinist:editionType "Manuscript Copy" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P835> ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P723> ;
@@ -19644,20 +18879,7 @@
     jesuit_calvinist:digitizedCopy "No",
         "Scholarly Edition" ;
     jesuit_calvinist:documentType "Manuscript" ;
-    jesuit_calvinist:editionType "",
-        "C",
-        "M",
-        "a",
-        "c",
-        "i",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t",
-        "u",
-        "y" ;
+    jesuit_calvinist:editionType "Manuscript Copy" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P1124>,
         <https://example.org/jesuit_calvinist/Person/P1161>,
@@ -19706,20 +18928,7 @@
     jesuit_calvinist:digitizedCopy "No",
         "Scholarly Edition" ;
     jesuit_calvinist:documentType "Manuscript" ;
-    jesuit_calvinist:editionType "",
-        "C",
-        "M",
-        "a",
-        "c",
-        "i",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t",
-        "u",
-        "y" ;
+    jesuit_calvinist:editionType "Manuscript Copy" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P1124>,
         <https://example.org/jesuit_calvinist/Person/P1161>,
@@ -19769,20 +18978,7 @@
     jesuit_calvinist:digitizedCopy "No",
         "Scholarly Edition" ;
     jesuit_calvinist:documentType "Manuscript" ;
-    jesuit_calvinist:editionType "",
-        "C",
-        "M",
-        "a",
-        "c",
-        "i",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t",
-        "u",
-        "y" ;
+    jesuit_calvinist:editionType "Manuscript Copy" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P1124>,
         <https://example.org/jesuit_calvinist/Person/P1161>,
@@ -19830,20 +19026,7 @@
     jesuit_calvinist:digitizedCopy "No",
         "Scholarly Edition" ;
     jesuit_calvinist:documentType "Manuscript" ;
-    jesuit_calvinist:editionType "",
-        "C",
-        "M",
-        "a",
-        "c",
-        "i",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t",
-        "u",
-        "y" ;
+    jesuit_calvinist:editionType "Manuscript Copy" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P1124>,
         <https://example.org/jesuit_calvinist/Person/P1161>,
@@ -19895,20 +19078,7 @@
     jesuit_calvinist:digitizedCopy "No",
         "Scholarly Edition" ;
     jesuit_calvinist:documentType "Manuscript" ;
-    jesuit_calvinist:editionType "",
-        "C",
-        "M",
-        "a",
-        "c",
-        "i",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t",
-        "u",
-        "y" ;
+    jesuit_calvinist:editionType "Manuscript Copy" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P1124>,
         <https://example.org/jesuit_calvinist/Person/P1161>,
@@ -19951,20 +19121,7 @@
     jesuit_calvinist:digitizedCopy "No",
         "Scholarly Edition" ;
     jesuit_calvinist:documentType "Manuscript" ;
-    jesuit_calvinist:editionType "",
-        "C",
-        "M",
-        "a",
-        "c",
-        "i",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t",
-        "u",
-        "y" ;
+    jesuit_calvinist:editionType "Manuscript Copy" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P1161> ;
     jesuit_calvinist:notes "Manuscript of National Ossolinski Institute in Wrocław, ms. 220, f. 222v" ;
@@ -19998,20 +19155,7 @@
     jesuit_calvinist:digitizedCopy "No",
         "Scholarly Edition" ;
     jesuit_calvinist:documentType "Manuscript" ;
-    jesuit_calvinist:editionType "",
-        "C",
-        "M",
-        "a",
-        "c",
-        "i",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t",
-        "u",
-        "y" ;
+    jesuit_calvinist:editionType "Manuscript Copy" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P1124>,
         <https://example.org/jesuit_calvinist/Person/P1161>,
@@ -20052,20 +19196,7 @@
     jesuit_calvinist:digitizedCopy "No",
         "Scholarly Edition" ;
     jesuit_calvinist:documentType "Manuscript" ;
-    jesuit_calvinist:editionType "",
-        "C",
-        "M",
-        "a",
-        "c",
-        "i",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t",
-        "u",
-        "y" ;
+    jesuit_calvinist:editionType "Manuscript Copy" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P1161> ;
     jesuit_calvinist:notes "Manuscript of University Library in Poznań, ms. 687, f. 143" ;
@@ -20098,20 +19229,7 @@
     jesuit_calvinist:digitizedCopy "No",
         "Scholarly Edition" ;
     jesuit_calvinist:documentType "Manuscript" ;
-    jesuit_calvinist:editionType "",
-        "C",
-        "M",
-        "a",
-        "c",
-        "i",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t",
-        "u",
-        "y" ;
+    jesuit_calvinist:editionType "Manuscript Copy" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P1124>,
         <https://example.org/jesuit_calvinist/Person/P1161>,
@@ -20158,20 +19276,7 @@
     jesuit_calvinist:digitizedCopy "No",
         "Scholarly Edition" ;
     jesuit_calvinist:documentType "Manuscript" ;
-    jesuit_calvinist:editionType "",
-        "C",
-        "M",
-        "a",
-        "c",
-        "i",
-        "n",
-        "o",
-        "p",
-        "r",
-        "s",
-        "t",
-        "u",
-        "y" ;
+    jesuit_calvinist:editionType "Manuscript Copy" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyHistoricalFigurtesMentioned <https://example.org/jesuit_calvinist/Person/P1124>,
         <https://example.org/jesuit_calvinist/Person/P1161>,
@@ -30083,13 +29188,7 @@
     jesuit_calvinist:discussedIssue "Councils",
         "Papal Authority" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1383>,
@@ -30200,13 +29299,7 @@
         "Martyrdom",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1348>,
         <https://example.org/jesuit_calvinist/Person/P1381>,
@@ -30300,13 +29393,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1054>,
         <https://example.org/jesuit_calvinist/Person/P1083>,
@@ -30410,13 +29497,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1068>,
@@ -30622,13 +29703,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1026>,
         <https://example.org/jesuit_calvinist/Person/P1027>,
@@ -30837,13 +29912,7 @@
         "Sola Scriptura and Bible Authority",
         "Transubstantiation and Sacrament of Eucharist" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1000>,
         <https://example.org/jesuit_calvinist/Person/P1002>,
@@ -31003,13 +30072,7 @@
         "Purgatory",
         "Sacrifice of Jesus" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1086>,
         <https://example.org/jesuit_calvinist/Person/P1127>,
@@ -31170,13 +30233,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P100>,
         <https://example.org/jesuit_calvinist/Person/P1001>,
@@ -31476,13 +30533,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1059>,
@@ -31569,13 +30620,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1554>,
         <https://example.org/jesuit_calvinist/Person/P202>,
@@ -31660,13 +30705,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1107>,
         <https://example.org/jesuit_calvinist/Person/P129>,
@@ -31751,13 +30790,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Brochure" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1010>,
         <https://example.org/jesuit_calvinist/Person/P1060>,
@@ -31887,13 +30920,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1227>,
         <https://example.org/jesuit_calvinist/Person/P129>,
@@ -31994,13 +31021,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1100>,
         <https://example.org/jesuit_calvinist/Person/P1286>,
@@ -32142,13 +31163,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1243>,
         <https://example.org/jesuit_calvinist/Person/P1501>,
@@ -32304,13 +31319,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1000>,
         <https://example.org/jesuit_calvinist/Person/P1002>,
@@ -32480,13 +31489,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1023>,
         <https://example.org/jesuit_calvinist/Person/P1032>,
@@ -35238,13 +34241,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P105>,
         <https://example.org/jesuit_calvinist/Person/P1084>,
@@ -35334,13 +34331,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P105>,
@@ -35448,13 +34439,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1054>,
         <https://example.org/jesuit_calvinist/Person/P1059>,
@@ -35598,13 +34583,7 @@
         "Sola Scriptura and Bible Authority",
         "Transubstantiation and Sacrament of Eucharist" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P105>,
@@ -35709,13 +34688,7 @@
         "Veneration of Saints",
         "Vernacular Bible" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P105>,
         <https://example.org/jesuit_calvinist/Person/P1106>,
@@ -35969,13 +34942,7 @@
         "Veneration of Saints",
         "Vernacular Bible" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1106>,
         <https://example.org/jesuit_calvinist/Person/P1107>,
@@ -36190,13 +35157,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1025>,
@@ -36318,13 +35279,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Universal Church" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P117>,
         <https://example.org/jesuit_calvinist/Person/P134>,
@@ -37530,13 +36485,7 @@
         "Trinity and Deity of Jesus Christ",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1002>,
         <https://example.org/jesuit_calvinist/Person/P1020>,
@@ -37702,13 +36651,7 @@
         "Sola Scriptura and Bible Authority",
         "Trinity and Deity of Jesus Christ" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P105>,
         <https://example.org/jesuit_calvinist/Person/P1054>,
@@ -37806,13 +36749,7 @@
         "Universal Church",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "Yes" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1028>,
         <https://example.org/jesuit_calvinist/Person/P1106>,
@@ -38721,13 +37658,7 @@
         "Transubstantiation and Sacrament of Eucharist",
         "Veneration of Saints" ;
     jesuit_calvinist:documentType "Book" ;
-    jesuit_calvinist:editionType "O",
-        "a",
-        "g",
-        "i",
-        "l",
-        "n",
-        "r" ;
+    jesuit_calvinist:editionType "Original" ;
     jesuit_calvinist:existingPhysicalCopy "No" ;
     jesuit_calvinist:keyAuthorsCited <https://example.org/jesuit_calvinist/Person/P1286>,
         <https://example.org/jesuit_calvinist/Person/P134>,

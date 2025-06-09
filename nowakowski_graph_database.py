@@ -1,6 +1,6 @@
 import sys
-# sys.path.insert(1, 'D:\IBL\Documents\IBL-PAN-Python')
-sys.path.insert(1, 'C:/Users/Cezary/Documents/IBL-PAN-Python')
+sys.path.insert(1, 'D:\IBL\Documents\IBL-PAN-Python')
+# sys.path.insert(1, 'C:/Users/Cezary/Documents/IBL-PAN-Python')
 import pandas as pd
 from rdflib import Graph, Namespace, URIRef, Literal, BNode
 from rdflib.namespace import RDF, RDFS, XSD, FOAF, OWL
@@ -41,7 +41,7 @@ geo = Namespace("http://www.w3.org/2003/01/geo/wgs84_pos#")
 bibo = Namespace("http://purl.org/ontology/bibo/")
 schema = Namespace("http://schema.org/")
 WDT = Namespace("http://www.wikidata.org/entity/")
-OUTPUT_TTL = "data/jecal.ttl"
+OUTPUT_TTL = "jecal.ttl"
 
 #%% --- LOAD ---
 df_texts = gsheet_to_df('1M2gc-8cGZ8gh8TTnm4jl430bL4tccdri9nw-frUWYLQ', 'texts')
@@ -91,6 +91,8 @@ def add_event(row):
         g.add((event, schema.location, JECAL[f"Place/{row['place_id']}"]))
     g.add((event, schema.startDate, Literal(row['year'], datatype=XSD.gYear)))
     g.add((event, schema.endDate, Literal(row['year'], datatype=XSD.gYear)))
+    
+    Literal('0410', datatype=XSD.gYear)
     g.add((event, schema.additionalType, Literal(row['type'])))
 
 for _, r in df_events.iterrows():
@@ -198,7 +200,7 @@ def add_text(row):
         g.add((text, FABIO.hasFormat, Literal(row['Format'])))
     if pd.notnull(row['Notes']):
         g.add((text, JECAL.notes, Literal(row['Notes'])))
-    for p in row['Edition Type']:
+    for p in row['Edition Type'].split(';'):
         g.add((text, JECAL.editionType, Literal(p.strip())))
            
 for _, r in df_texts.iterrows():
