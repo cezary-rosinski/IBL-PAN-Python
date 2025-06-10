@@ -190,6 +190,8 @@ df_pre_annotated = df_pre_annotated.loc[df_pre_annotated['file_id'].isin(set(df_
 
 df_pre_annotated.groupby('type').size()
 
+len(set(df_pre_annotated['file_id'].to_list()))
+
 #%% analiza
 
 #które narzędzia są najpopularniejsze
