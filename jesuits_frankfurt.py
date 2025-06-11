@@ -57,7 +57,7 @@ generals = [e for e in generals if e != {'http://www.wikidata.org/entity/Q647824
 
 def get_coordinates(qid):
     
-    qid = 
+    # qid = 
     query = f"""
     SELECT ?birthCoord ?deathCoord WHERE {{
       wd:{qid} wdt:P19 ?birthPlace;
@@ -116,6 +116,8 @@ query = """SELECT DISTINCT ?item ?itemLabel WHERE {
     SELECT DISTINCT ?item WHERE {
       ?item p:P611 ?statement0.
       ?statement0 (ps:P611/(wdt:P279*)) wd:Q36380.
+      ?item p:P31 ?statement1.
+      ?statement1 (ps:P31/(wdt:P279*)) wd:Q5.
     }
   }
 }
@@ -162,17 +164,17 @@ jesuit_claims_labels = []
 with ThreadPoolExecutor() as excecutor:
     list(tqdm(excecutor.map(get_claim_label, jesuit_claims),total=len(jesuit_claims)))
     
-jesuit_claims_no_ids = [e.get('property_label') for e in jesuit_claims_labels if e.get('property_label')[0].islower()]                   
-test_df = pd.DataFrame(jesuit_claims_no_ids)
+jesuit_claims_ids = [e.get('property_label') for e in jesuit_claims_labels if e.get('property_label')[0].islower()]                   
+test_df = pd.DataFrame(jesuit_claims_labels)
 
-#%%
+#%% plot statyczny
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 
 # 0. Twoja lista haseł
-words = jesuit_claims_no_ids
+words = jesuit_claims_ids
 
 # 1. TF–IDF
 vectorizer = TfidfVectorizer(ngram_range=(1,2), min_df=1)
@@ -206,7 +208,7 @@ plt.grid(True, linestyle='--', alpha=0.5)
 plt.tight_layout()
 plt.show()
 
-#%%
+#%% plot dynamiczny
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import PCA
@@ -214,7 +216,7 @@ from sklearn.manifold import TSNE
 import plotly.express as px
 
 # 0. Twoja lista haseł
-words = jesuit_claims_no_ids
+words = jesuit_claims_ids
 
 
 # 1. TF–IDF
@@ -251,16 +253,47 @@ fig.write_html(html_path, include_plotlyjs='cdn')
 
 html_path
 
+#%% signals of conflict or peace
+
+df = gsheet_to_df('1Ev3vLuMvnW_CD55xycpXFt1TMNw0vpi_aI3IB1BCp7A', 'Arkusz1')
+df = df.loc[df['interesting'] == 'x']
+
+interesting_properties = df['property_id'].to_list()
+
+def get_members_wikidata_claims(wikidata_id):
+    # wikidata_id = 'Q4403688'
+    # wikidata_id = list(members_ids)[5964]
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    result = requests.get(url).json()
+    claims = result.get('entities').get(wikidata_id).get('claims')
+    claims = {k:v for k,v in claims.items() if k in interesting_properties}
+    pce_iteration = []
+    for k,v in claims.items():
+        for e in v:
+            try:
+                pce_iteration.append((wikidata_id, k, e.get('mainsnak').get('datavalue').get('value').get('id')))
+            except AttributeError:
+                try:
+                    pce_iteration.append((wikidata_id, k, e.get('qualifiers').get('P1932')[0].get('datavalue').get('value')))
+                except TypeError:
+                    print(k)
+    person_claim_entity.extend(pce_iteration)
+ 
+person_claim_entity = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_members_wikidata_claims, members_ids),total=len(members_ids)))
+
+#jak na podstawie tego badań konfliktowość?
+entities_for_search = set([e[-1] for e in person_claim_entity if isinstance(e[-1], str) and e[-1].startswith('Q')])
+
+
+
+
 
 
 
 
 #%%
-
-
-
-
-
 
 
 
