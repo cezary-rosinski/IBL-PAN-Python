@@ -26,6 +26,7 @@ from shapely.geometry import shape, Point
 from geonames_accounts import geonames_users
 from ast import literal_eval
 import math
+import regex as re
 
 #%% genrals
 query = """SELECT DISTINCT ?item ?itemLabel WHERE {
@@ -132,12 +133,183 @@ while True:
     except URLError:
         time.sleep(5)
 
+members = [{e.get('item').get('value'): e.get('itemLabel').get('value')} for e in data.get('results').get('bindings')]
+members_ids = set([re.findall('Q\d+', list(e.keys())[0])[0] for e in members])
+
+def get_wikidata_claims(wikidata_id):
+    # wikidata_id = 'Q100614'
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    result = requests.get(url).json()
+    claims = list(result.get('entities').get(wikidata_id).get('claims').keys())
+    jesuit_claims.extend(claims)    
+
+jesuit_claims = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_wikidata_claims, members_ids),total=len(members_ids)))
+
+jesuit_claims = set(jesuit_claims)
+
+def get_claim_label(property_id):
+    # property_id = 'P31'
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{property_id}.json'
+    result = requests.get(url).json()
+    label = result.get('entities').get(property_id).get('labels').get('en').get('value')
+    test_dict = {'property_id': property_id,
+                 'property_label': label}
+    jesuit_claims_labels.append(test_dict)
+    
+jesuit_claims_labels = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_claim_label, jesuit_claims),total=len(jesuit_claims)))
+    
+jesuit_claims_no_ids = [e.get('property_label') for e in jesuit_claims_labels if e.get('property_label')[0].islower()]                   
+test_df = pd.DataFrame(jesuit_claims_no_ids)
+
+#%%
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
+
+# 0. Twoja lista haseł
+words = jesuit_claims_no_ids
+
+# 1. TF–IDF
+vectorizer = TfidfVectorizer(ngram_range=(1,2), min_df=1)
+X_tfidf = vectorizer.fit_transform(words)
+n_samples = X_tfidf.shape[0]
+
+# 2. PCA ↓k wymiarów, gdzie k = min(20, n_samples-1)
+k = min(20, n_samples - 1)
+pca = PCA(n_components=k, random_state=42)
+X_pca = pca.fit_transform(X_tfidf.toarray())
+
+# 3. t-SNE ↓2D, ustawiamy perplexity < n_samples/3
+perp = max(5, min(30, n_samples // 3))
+tsne = TSNE(n_components=2, perplexity=perp, random_state=42)
+coords = tsne.fit_transform(X_pca)
+
+# 4. Większa i czytelna wizualizacja
+plt.figure(figsize=(20, 12))
+plt.scatter(coords[:, 0], coords[:, 1], s=120, alpha=0.8)
+
+# offset etykiet: 3% zakresu
+dx = (coords[:,0].max() - coords[:,0].min()) * 0.03
+dy = (coords[:,1].max() - coords[:,1].min()) * 0.03
+for (x, y), label in zip(coords, words):
+    plt.text(x + dx, y + dy, label, fontsize=12)
+
+plt.title("„Semantyczna” chmura słów (TF–IDF + PCA + t-SNE)", fontsize=18)
+plt.xlabel("Wymiar 1", fontsize=16)
+plt.ylabel("Wymiar 2", fontsize=16)
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.show()
+
+#%%
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+import plotly.express as px
+
+# 0. Twoja lista haseł
+words = jesuit_claims_no_ids
+
+
+# 1. TF–IDF
+vectorizer = TfidfVectorizer(ngram_range=(1,2), min_df=1)
+X_tfidf = vectorizer.fit_transform(words)
+
+# 2. PCA ↓k wymiarów
+n_samples = X_tfidf.shape[0]
+k = min(20, n_samples - 1)
+pca = PCA(n_components=k, random_state=42)
+X_pca = pca.fit_transform(X_tfidf.toarray())
+
+# 3. t-SNE ↓2D
+perp = max(5, min(30, n_samples // 3))
+tsne = TSNE(n_components=2, perplexity=perp, random_state=42)
+coords = tsne.fit_transform(X_pca)
+
+# 4. Przygotowanie DataFrame
+df = pd.DataFrame({
+    'x': coords[:, 0],
+    'y': coords[:, 1],
+    'label': words
+})
+
+# 5. Interaktywny wykres Plotly
+fig = px.scatter(df, x='x', y='y', hover_name='label',
+                 title='Interaktywna semantyczna chmura słów (TF–IDF + PCA + t-SNE)')
+fig.update_traces(marker=dict(size=12, opacity=0.7))
+fig.update_layout(width=1000, height=700)
+
+# Zapis do pliku HTML
+html_path = 'semantic_cloud.html'
+fig.write_html(html_path, include_plotlyjs='cdn')
+
+html_path
+
+
+
+
+
+#%%
 
 
 
 
 
 
+
+
+
+
+
+def get_wikidata_claims(entity_id):
+    entity_id = 'Q100614'
+    """
+    Pobiera wszystkie "claims" (właściwości i ich wartości) dla podanego ID wikidata (np. Q100614).
+    Zwraca słownik, gdzie kluczem jest property (np. P31), a wartością lista wartości.
+    """
+    URL = "https://www.wikidata.org/w/api.php"
+    params = {
+        "action": "wbgetclaims",
+        "entity": entity_id,
+        "format": "json"
+    }
+    response = requests.get(URL, params=params)
+    response.raise_for_status()
+    data = response.json()
+
+    claims = data.get("claims", {})
+    props = {}
+
+    for prop, claim_list in claims.items():
+        values = []
+        for claim in claim_list:
+            mainsnak = claim.get("mainsnak", {})
+            datavalue = mainsnak.get("datavalue", {})
+            if "value" in datavalue:
+                values.append(datavalue["value"])
+        props[prop] = values
+
+    return props
+
+if __name__ == "__main__":
+    entity = "Q100614"
+    props = get_wikidata_claims(entity)
+
+    # Wyświetlenie wyników
+    for prop, vals in props.items():
+        print(f"{prop}:")
+        for v in vals:
+            print("   ", v)
+
+
+
+#%%
 
 
 
