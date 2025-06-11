@@ -27,6 +27,7 @@ from geonames_accounts import geonames_users
 from ast import literal_eval
 import math
 import regex as re
+from collections import ChainMap
 
 #%% genrals
 query = """SELECT DISTINCT ?item ?itemLabel WHERE {
@@ -108,7 +109,7 @@ for e in generals:
     print(f"Distance for {qid}, {list(e.values())[0]}: {dist:.2f} km")
 
 
-#%% participants
+#%% members
 
 query = """SELECT DISTINCT ?item ?itemLabel WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en". }
@@ -156,16 +157,18 @@ def get_claim_label(property_id):
     url = f'https://www.wikidata.org/wiki/Special:EntityData/{property_id}.json'
     result = requests.get(url).json()
     label = result.get('entities').get(property_id).get('labels').get('en').get('value')
-    test_dict = {'property_id': property_id,
-                 'property_label': label}
-    jesuit_claims_labels.append(test_dict)
+    # test_dict = {'property_id': property_id,
+    #              'property_label': label}
+    jesuit_claims_labels.append({property_id: label})
     
 jesuit_claims_labels = []
 with ThreadPoolExecutor() as excecutor:
     list(tqdm(excecutor.map(get_claim_label, jesuit_claims),total=len(jesuit_claims)))
     
-jesuit_claims_ids = [e.get('property_label') for e in jesuit_claims_labels if e.get('property_label')[0].islower()]                   
-test_df = pd.DataFrame(jesuit_claims_labels)
+# jesuit_claims_ids = [e.get('property_label') for e in jesuit_claims_labels if e.get('property_label')[0].islower()]                   
+# test_df = pd.DataFrame(jesuit_claims_labels)
+
+jesuit_claims_ids = set([list(e.keys())[0] for e in jesuit_claims_labels if list(e.values())[0].islower()])
 
 #%% plot statyczny
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -286,11 +289,44 @@ with ThreadPoolExecutor() as excecutor:
 #jak na podstawie tego badań konfliktowość?
 entities_for_search = set([e[-1] for e in person_claim_entity if isinstance(e[-1], str) and e[-1].startswith('Q')])
 
+wikidata_redirect = {'Q108140949': 'Q56312763'}
+
+def get_wikidata_label(wikidata_id, pref_langs = ['en', 'es', 'fr', 'de', 'pl']):
+    # wikidata_id = 'Q104785800'
+    # wikidata_id = list(entities_for_search)[0]
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    try:
+        result = requests.get(url).json()
+        try:
+            langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        except AttributeError:
+            wikidata_id = wikidata_redirect.get(wikidata_id)
+            langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        if langs:
+            order = {lang: idx for idx, lang in enumerate(pref_langs)}
+            sorted_langs = sorted(langs, key=lambda x: order.get(x, float('inf')))
+            for lang in sorted_langs:
+                label = result['entities'][wikidata_id]['labels'][lang]['value']
+                break
+        else: label = None
+    except ValueError:
+        label = None
+    # wiki_labels.append({'wikidata_id': wikidata_id,
+    #                     'wikidata_label': label})
+    wiki_labels.append({wikidata_id: label})
 
 
+wiki_labels = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_wikidata_label, entities_for_search),total=len(entities_for_search)))
 
+members_dict = {re.findall('Q\d+', k)[0]:v for k,v in dict(ChainMap(*members)).items()}
+claims_dict = {k:v for k,v in dict(ChainMap(*jesuit_claims_labels)).items() if k in interesting_properties}
+entity_dict = dict(ChainMap(*wiki_labels))
 
+final_data = [[members_dict.get(a), claims_dict.get(b), entity_dict.get(c,entity_dict.get(wikidata_redirect.get(c))) if isinstance(c, str) and c[0] == 'Q' else c] for a, b, c in person_claim_entity]
 
+final_df = pd.DataFrame(final_data, columns=['person', 'relation', 'entity'])
 
 
 #%%
