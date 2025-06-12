@@ -169,57 +169,57 @@ with ThreadPoolExecutor() as excecutor:
 # test_df = pd.DataFrame(jesuit_claims_labels)
 
 jesuit_claims_ids = set([list(e.keys())[0] for e in jesuit_claims_labels if list(e.values())[0].islower()])
+claims_labels = [e.get(list(e.keys())[0]) for e in jesuit_claims_labels if not 'ID' in e.get(list(e.keys())[0])]
 
-#%% plot statyczny
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
-import matplotlib.pyplot as plt
+# #%% plot statyczny
+# from sklearn.feature_extraction.text import TfidfVectorizer
+# from sklearn.decomposition import PCA
+# from sklearn.manifold import TSNE
+# import matplotlib.pyplot as plt
 
-# 0. Twoja lista haseł
-words = jesuit_claims_ids
+# # 0. Twoja lista haseł
+# words = claims_labels
 
-# 1. TF–IDF
-vectorizer = TfidfVectorizer(ngram_range=(1,2), min_df=1)
-X_tfidf = vectorizer.fit_transform(words)
-n_samples = X_tfidf.shape[0]
+# # 1. TF–IDF
+# vectorizer = TfidfVectorizer(ngram_range=(1,2), min_df=1)
+# X_tfidf = vectorizer.fit_transform(words)
+# n_samples = X_tfidf.shape[0]
 
-# 2. PCA ↓k wymiarów, gdzie k = min(20, n_samples-1)
-k = min(20, n_samples - 1)
-pca = PCA(n_components=k, random_state=42)
-X_pca = pca.fit_transform(X_tfidf.toarray())
+# # 2. PCA ↓k wymiarów, gdzie k = min(20, n_samples-1)
+# k = min(20, n_samples - 1)
+# pca = PCA(n_components=k, random_state=42)
+# X_pca = pca.fit_transform(X_tfidf.toarray())
 
-# 3. t-SNE ↓2D, ustawiamy perplexity < n_samples/3
-perp = max(5, min(30, n_samples // 3))
-tsne = TSNE(n_components=2, perplexity=perp, random_state=42)
-coords = tsne.fit_transform(X_pca)
+# # 3. t-SNE ↓2D, ustawiamy perplexity < n_samples/3
+# perp = max(5, min(30, n_samples // 3))
+# tsne = TSNE(n_components=2, perplexity=perp, random_state=42)
+# coords = tsne.fit_transform(X_pca)
 
-# 4. Większa i czytelna wizualizacja
-plt.figure(figsize=(20, 12))
-plt.scatter(coords[:, 0], coords[:, 1], s=120, alpha=0.8)
+# # 4. Większa i czytelna wizualizacja
+# plt.figure(figsize=(20, 12))
+# plt.scatter(coords[:, 0], coords[:, 1], s=120, alpha=0.8)
 
-# offset etykiet: 3% zakresu
-dx = (coords[:,0].max() - coords[:,0].min()) * 0.03
-dy = (coords[:,1].max() - coords[:,1].min()) * 0.03
-for (x, y), label in zip(coords, words):
-    plt.text(x + dx, y + dy, label, fontsize=12)
+# # offset etykiet: 3% zakresu
+# dx = (coords[:,0].max() - coords[:,0].min()) * 0.03
+# dy = (coords[:,1].max() - coords[:,1].min()) * 0.03
+# for (x, y), label in zip(coords, words):
+#     plt.text(x + dx, y + dy, label, fontsize=12)
 
-plt.title("„Semantyczna” chmura słów (TF–IDF + PCA + t-SNE)", fontsize=18)
-plt.xlabel("Wymiar 1", fontsize=16)
-plt.ylabel("Wymiar 2", fontsize=16)
-plt.grid(True, linestyle='--', alpha=0.5)
-plt.tight_layout()
-plt.show()
+# plt.title("„Semantyczna” chmura słów (TF–IDF + PCA + t-SNE)", fontsize=18)
+# plt.xlabel("Wymiar 1", fontsize=16)
+# plt.ylabel("Wymiar 2", fontsize=16)
+# plt.grid(True, linestyle='--', alpha=0.5)
+# plt.tight_layout()
+# plt.show()
 
 #%% plot dynamiczny
-import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 import plotly.express as px
 
 # 0. Twoja lista haseł
-words = jesuit_claims_ids
+words = claims_labels
 
 
 # 1. TF–IDF
@@ -329,87 +329,228 @@ final_data = [[members_dict.get(a), claims_dict.get(b), entity_dict.get(c,entity
 final_df = pd.DataFrame(final_data, columns=['person', 'relation', 'entity'])
 
 
-#%%
 
+#%% dominikanie
 
-
-
-
-
-def get_wikidata_claims(entity_id):
-    entity_id = 'Q100614'
-    """
-    Pobiera wszystkie "claims" (właściwości i ich wartości) dla podanego ID wikidata (np. Q100614).
-    Zwraca słownik, gdzie kluczem jest property (np. P31), a wartością lista wartości.
-    """
-    URL = "https://www.wikidata.org/w/api.php"
-    params = {
-        "action": "wbgetclaims",
-        "entity": entity_id,
-        "format": "json"
-    }
-    response = requests.get(URL, params=params)
-    response.raise_for_status()
-    data = response.json()
-
-    claims = data.get("claims", {})
-    props = {}
-
-    for prop, claim_list in claims.items():
-        values = []
-        for claim in claim_list:
-            mainsnak = claim.get("mainsnak", {})
-            datavalue = mainsnak.get("datavalue", {})
-            if "value" in datavalue:
-                values.append(datavalue["value"])
-        props[prop] = values
-
-    return props
-
-if __name__ == "__main__":
-    entity = "Q100614"
-    props = get_wikidata_claims(entity)
-
-    # Wyświetlenie wyników
-    for prop, vals in props.items():
-        print(f"{prop}:")
-        for v in vals:
-            print("   ", v)
-
-
-
-#%%
-
-
-
-def get_wikidata_qid_from_viaf(viaf_id):
-    #viaf_id = '9891285'
-    # endpoint_url = "https://query.wikidata.org/sparql"
-    query = """SELECT DISTINCT ?item ?itemLabel WHERE {
+query = """SELECT DISTINCT ?item ?itemLabel WHERE {
   SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en". }
   {
     SELECT DISTINCT ?item WHERE {
       ?item p:P611 ?statement0.
-      ?statement0 (ps:P611/(wdt:P279*)) wd:Q36380.
+      ?statement0 (ps:P611/(wdt:P279*)) wd:Q131479.
+      ?item p:P31 ?statement1.
+      ?statement1 (ps:P31/(wdt:P279*)) wd:Q5.
     }
   }
 }
     """
-    user_agent = "WDQS-example Python/%s.%s" % (sys.version_info[0], sys.version_info[1])
-    sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent=user_agent)
-    sparql.setQuery(query)
-    sparql.setReturnFormat(JSON)
-    while True:
-        try:
-            data = sparql.query().convert()
-            break
-        except HTTPError:
-            time.sleep(2)
-        except URLError:
-            time.sleep(5)
+user_agent = "WDQS-example Python/%s.%s" % (sys.version_info[0], sys.version_info[1])
+sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent=user_agent)
+sparql.setQuery(query)
+sparql.setReturnFormat(JSON)
+while True:
     try:
-        qid_url = data["results"]["bindings"][0]["item"]["value"]
-        qid = qid_url.split("/")[-1]
-        return qid
-    except (IndexError, KeyError):
-        return None
+        data = sparql.query().convert()
+        break
+    except HTTPError:
+        time.sleep(2)
+    except URLError:
+        time.sleep(5)
+
+dominican_members = [{e.get('item').get('value'): e.get('itemLabel').get('value')} for e in data.get('results').get('bindings')]
+dominican_members_ids = set([re.findall('Q\d+', list(e.keys())[0])[0] for e in dominican_members])
+
+df = gsheet_to_df('1Ev3vLuMvnW_CD55xycpXFt1TMNw0vpi_aI3IB1BCp7A', 'Arkusz1')
+df = df.loc[df['interesting'] == 'x']
+
+interesting_properties = df['property_id'].to_list()
+
+def get_members_wikidata_claims(wikidata_id):
+    # wikidata_id = 'Q4403688'
+    # wikidata_id = list(members_ids)[5964]
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    result = requests.get(url).json()
+    claims = result.get('entities').get(wikidata_id).get('claims')
+    claims = {k:v for k,v in claims.items() if k in interesting_properties}
+    pce_iteration = []
+    for k,v in claims.items():
+        for e in v:
+            try:
+                pce_iteration.append((wikidata_id, k, e.get('mainsnak').get('datavalue').get('value').get('id')))
+            except AttributeError:
+                try:
+                    pce_iteration.append((wikidata_id, k, e.get('qualifiers').get('P1932')[0].get('datavalue').get('value')))
+                except TypeError:
+                    print(k)
+    dominican_person_claim_entity.extend(pce_iteration)
+ 
+dominican_person_claim_entity = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_members_wikidata_claims, dominican_members_ids),total=len(dominican_members_ids)))
+
+#jak na podstawie tego badań konfliktowość?
+dominican_entities_for_search = set([e[-1] for e in dominican_person_claim_entity if isinstance(e[-1], str) and e[-1].startswith('Q')])
+
+wikidata_redirect = {'Q108140949': 'Q56312763',
+                     'Q131676059': 'Q3946901'}
+
+def get_wikidata_label(wikidata_id, pref_langs = ['en', 'es', 'fr', 'de', 'pl']):
+    # wikidata_id = 'Q104785800'
+    # wikidata_id = list(dominican_entities_for_search)[1621]
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    try:
+        result = requests.get(url).json()
+        try:
+            langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        except AttributeError:
+            wikidata_id = wikidata_redirect.get(wikidata_id)
+            langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        if langs:
+            order = {lang: idx for idx, lang in enumerate(pref_langs)}
+            sorted_langs = sorted(langs, key=lambda x: order.get(x, float('inf')))
+            for lang in sorted_langs:
+                label = result['entities'][wikidata_id]['labels'][lang]['value']
+                break
+        else: label = None
+    except ValueError:
+        label = None
+    # wiki_labels.append({'wikidata_id': wikidata_id,
+    #                     'wikidata_label': label})
+    dominican_wiki_labels.append({wikidata_id: label})
+
+dominican_wiki_labels = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_wikidata_label, dominican_entities_for_search),total=len(dominican_entities_for_search)))
+
+members_dict = {re.findall('Q\d+', k)[0]:v for k,v in dict(ChainMap(*dominican_members)).items()}
+claims_dict = {k:v for k,v in dict(ChainMap(*jesuit_claims_labels)).items() if k in interesting_properties}
+entity_dict = dict(ChainMap(*dominican_wiki_labels))
+
+dominican_final_data = [[members_dict.get(a), claims_dict.get(b), entity_dict.get(c,entity_dict.get(wikidata_redirect.get(c))) if isinstance(c, str) and c[0] == 'Q' else c] for a, b, c in dominican_person_claim_entity]
+
+dominican_final_df = pd.DataFrame(dominican_final_data, columns=['person', 'relation', 'entity'])
+
+dominican_final_df.to_csv('dominican_conflict.csv', index=False)
+
+
+
+#%% franciszkanie
+
+query = """SELECT DISTINCT ?item ?itemLabel WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en". }
+  {
+    SELECT DISTINCT ?item WHERE {
+      ?item p:P611 ?statement0.
+      ?statement0 (ps:P611/(wdt:P279*)) wd:Q913972.
+      ?item p:P31 ?statement1.
+      ?statement1 (ps:P31/(wdt:P279*)) wd:Q5.
+    }
+  }
+}
+    """
+user_agent = "WDQS-example Python/%s.%s" % (sys.version_info[0], sys.version_info[1])
+sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent=user_agent)
+sparql.setQuery(query)
+sparql.setReturnFormat(JSON)
+while True:
+    try:
+        data = sparql.query().convert()
+        break
+    except HTTPError:
+        time.sleep(2)
+    except URLError:
+        time.sleep(5)
+
+franciscan_members = [{e.get('item').get('value'): e.get('itemLabel').get('value')} for e in data.get('results').get('bindings')]
+franciscan_members_ids = set([re.findall('Q\d+', list(e.keys())[0])[0] for e in franciscan_members])
+
+df = gsheet_to_df('1Ev3vLuMvnW_CD55xycpXFt1TMNw0vpi_aI3IB1BCp7A', 'Arkusz1')
+df = df.loc[df['interesting'] == 'x']
+
+interesting_properties = df['property_id'].to_list()
+
+def get_members_wikidata_claims(wikidata_id):
+    # wikidata_id = 'Q4403688'
+    # wikidata_id = list(franciscan_members_ids)[1228]
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    result = requests.get(url).json()
+    claims = result.get('entities').get(wikidata_id).get('claims')
+    claims = {k:v for k,v in claims.items() if k in interesting_properties}
+    pce_iteration = []
+    for k,v in claims.items():
+        for e in v:
+            try:
+                pce_iteration.append((wikidata_id, k, e.get('mainsnak').get('datavalue').get('value').get('id')))
+            except AttributeError:
+                try:
+                    pce_iteration.append((wikidata_id, k, e.get('qualifiers').get('P1932')[0].get('datavalue').get('value')))
+                except (AttributeError, TypeError):
+                    print(k)
+    franciscan_person_claim_entity.extend(pce_iteration)
+ 
+franciscan_person_claim_entity = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_members_wikidata_claims, franciscan_members_ids),total=len(franciscan_members_ids)))
+
+#jak na podstawie tego badań konfliktowość?
+franciscan_entities_for_search = set([e[-1] for e in franciscan_person_claim_entity if isinstance(e[-1], str) and e[-1].startswith('Q')])
+
+wikidata_redirect = {'Q108140949': 'Q56312763',
+                     'Q131676059': 'Q3946901'}
+
+def get_wikidata_label(wikidata_id, pref_langs = ['en', 'es', 'fr', 'de', 'pl']):
+    # wikidata_id = 'Q104785800'
+    # wikidata_id = list(franciscan_entities_for_search)[1228]
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    try:
+        result = requests.get(url).json()
+        try:
+            langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        except AttributeError:
+            wikidata_id = wikidata_redirect.get(wikidata_id)
+            langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        if langs:
+            order = {lang: idx for idx, lang in enumerate(pref_langs)}
+            sorted_langs = sorted(langs, key=lambda x: order.get(x, float('inf')))
+            for lang in sorted_langs:
+                label = result['entities'][wikidata_id]['labels'][lang]['value']
+                break
+        else: label = None
+    except ValueError:
+        label = None
+    # wiki_labels.append({'wikidata_id': wikidata_id,
+    #                     'wikidata_label': label})
+    franciscan_wiki_labels.append({wikidata_id: label})
+
+franciscan_wiki_labels = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_wikidata_label, franciscan_entities_for_search),total=len(franciscan_entities_for_search)))
+
+members_dict = {re.findall('Q\d+', k)[0]:v for k,v in dict(ChainMap(*franciscan_members)).items()}
+claims_dict = {k:v for k,v in dict(ChainMap(*jesuit_claims_labels)).items() if k in interesting_properties}
+entity_dict = dict(ChainMap(*franciscan_wiki_labels))
+
+franciscan_final_data = [[members_dict.get(a), claims_dict.get(b), entity_dict.get(c,entity_dict.get(wikidata_redirect.get(c))) if isinstance(c, str) and c[0] == 'Q' else c] for a, b, c in franciscan_person_claim_entity]
+
+franciscan_final_df = pd.DataFrame(franciscan_final_data, columns=['person', 'relation', 'entity'])
+
+franciscan_final_df.to_csv('franciscan_conflict.csv', index=False)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -3,8 +3,11 @@ import matplotlib.pyplot as plt
 from sentence_transformers import SentenceTransformer, util
 import torch
 
+#%%
 # 1. Wczytanie danych
-df = pd.read_csv(r"C:\Users\Cezary\Downloads\Frankfurt wikidata properties - osoby-relacje-byty.csv")
+# df = pd.read_csv(r"C:\Users\Cezary\Downloads\Frankfurt wikidata properties - osoby-relacje-byty.csv")
+# df = pd.read_csv("dominican_conflict.csv")
+df = pd.read_csv("franciscan_conflict.csv")
 
 # 2. Załadowanie modelu osadzeń
 model = SentenceTransformer('distiluse-base-multilingual-cased-v2')
@@ -49,11 +52,13 @@ plt.axhline(0, color='gray', linestyle='--')
 plt.axvline(0, color='gray', linestyle='--')
 plt.xlabel('Konsyliacyjność – Konfliktowość (X)')
 plt.ylabel('Intensywność (Y)')
-plt.title('Mapa semantyczna jezuitów: nastawienie vs intensywność')
+# plt.title('Mapa semantyczna jezuitów: nastawienie vs intensywność')
+# plt.title('Mapa semantyczna dominikanów: nastawienie vs intensywność')
+plt.title('Mapa semantyczna franciszkanów: nastawienie vs intensywność')
 plt.grid(True)
 
-for _, row in scores.iterrows():
-    plt.text(row['X'], row['Y'], row['person'], fontsize=8, alpha=0.7)
+# for _, row in scores.iterrows():
+#     plt.text(row['X'], row['Y'], row['person'], fontsize=8, alpha=0.7)
 
-plt.tight_layout()
-plt.show()
+# plt.tight_layout()
+# plt.show()
