@@ -1,5 +1,5 @@
 import sys
-sys.path.insert(1, 'D:\IBL\Documents\IBL-PAN-Python')
+# sys.path.insert(1, 'D:\IBL\Documents\IBL-PAN-Python')
 import requests
 from tqdm import tqdm
 import numpy as np
@@ -28,86 +28,6 @@ from ast import literal_eval
 import math
 import regex as re
 from collections import ChainMap
-
-#%% genrals
-query = """SELECT DISTINCT ?item ?itemLabel WHERE {
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en". }
-  {
-    SELECT DISTINCT ?item WHERE {
-      ?item p:P39 ?statement0.
-      ?statement0 (ps:P39/(wdt:P279*)) wd:Q1515704.
-    }
-  }
-}
-    """
-user_agent = "WDQS-example Python/%s.%s" % (sys.version_info[0], sys.version_info[1])
-sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent=user_agent)
-sparql.setQuery(query)
-sparql.setReturnFormat(JSON)
-while True:
-    try:
-        data = sparql.query().convert()
-        break
-    except HTTPError:
-        time.sleep(2)
-    except URLError:
-        time.sleep(5)
-
-generals = [{e.get('item').get('value'): e.get('itemLabel').get('value')} for e in data.get('results').get('bindings')]
-generals = [e for e in generals if e != {'http://www.wikidata.org/entity/Q64782473': 'Ignatius of Loyola (fictional character)'}]
-
-def get_coordinates(qid):
-    
-    # qid = 
-    query = f"""
-    SELECT ?birthCoord ?deathCoord WHERE {{
-      wd:{qid} wdt:P19 ?birthPlace;
-                wdt:P20 ?deathPlace.
-      ?birthPlace wdt:P625 ?birthCoord.
-      ?deathPlace wdt:P625 ?deathCoord.
-    }}
-    """
-    user_agent = "WDQS-example Python/%s.%s" % (sys.version_info[0], sys.version_info[1])
-    sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent=user_agent)
-    sparql.setQuery(query)
-    sparql.setReturnFormat(JSON)
-    while True:
-        try:
-            data = sparql.query().convert()
-            break
-        except HTTPError:
-            time.sleep(2)
-        except URLError:
-            time.sleep(5)
-    binding = data["results"]["bindings"][0]
-
-    # Parse "Point(lon lat)" into (lat, lon)
-    def parse_point(p):
-        point = p["value"].replace("Point(", "").replace(")", "").split()
-        lon, lat = map(float, point)
-        return lat, lon
-
-    birth_coords = parse_point(binding["birthCoord"])
-    death_coords = parse_point(binding["deathCoord"])
-    return birth_coords, death_coords
-
-def haversine(coord1, coord2):
-    R = 6371.0  # Earth radius in kilometers
-    lat1, lon1 = map(math.radians, coord1)
-    lat2, lon2 = map(math.radians, coord2)
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    a = math.sin(dlat/2)**2 + math.cos(lat1)*math.cos(lat2)*math.sin(dlon/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
-
-for e in generals:
-    e = generals[0]
-    qid = list(e.keys())[0].split('/')[-1]
-    birth, death = get_coordinates(qid)
-    dist = haversine(birth, death)
-    print(f"Distance for {qid}, {list(e.values())[0]}: {dist:.2f} km")
-
 
 #%% members
 
@@ -246,22 +166,23 @@ df = pd.DataFrame({
 
 # 5. Interaktywny wykres Plotly
 fig = px.scatter(df, x='x', y='y', hover_name='label',
-                 title='Interaktywna semantyczna chmura słów (TF–IDF + PCA + t-SNE)')
+                 title='Interactive semantic word cloud for properties for Jesuits on Wikidata')
 fig.update_traces(marker=dict(size=12, opacity=0.7))
 fig.update_layout(width=1000, height=700)
 
 # Zapis do pliku HTML
-html_path = 'semantic_cloud.html'
+html_path = 'frankfurt_jesuits_semantic_cloud_properties.html'
 fig.write_html(html_path, include_plotlyjs='cdn')
 
 html_path
 
-#%% signals of conflict or peace
+#%% jesuit members -- signals of conflict or peace
 
 df = gsheet_to_df('1Ev3vLuMvnW_CD55xycpXFt1TMNw0vpi_aI3IB1BCp7A', 'Arkusz1')
 df = df.loc[df['interesting'] == 'x']
 
 interesting_properties = df['property_id'].to_list()
+claims_conflict_labels = dict(zip(df['property_id'].to_list(), df['property_label'].to_list()))
 
 def get_members_wikidata_claims(wikidata_id):
     # wikidata_id = 'Q4403688'
@@ -315,19 +236,225 @@ def get_wikidata_label(wikidata_id, pref_langs = ['en', 'es', 'fr', 'de', 'pl'])
     #                     'wikidata_label': label})
     wiki_labels.append({wikidata_id: label})
 
-
 wiki_labels = []
 with ThreadPoolExecutor() as excecutor:
     list(tqdm(excecutor.map(get_wikidata_label, entities_for_search),total=len(entities_for_search)))
 
 members_dict = {re.findall('Q\d+', k)[0]:v for k,v in dict(ChainMap(*members)).items()}
-claims_dict = {k:v for k,v in dict(ChainMap(*jesuit_claims_labels)).items() if k in interesting_properties}
+claims_dict = claims_conflict_labels
 entity_dict = dict(ChainMap(*wiki_labels))
 
 final_data = [[members_dict.get(a), claims_dict.get(b), entity_dict.get(c,entity_dict.get(wikidata_redirect.get(c))) if isinstance(c, str) and c[0] == 'Q' else c] for a, b, c in person_claim_entity]
 
 final_df = pd.DataFrame(final_data, columns=['person', 'relation', 'entity'])
 
+final_df.to_csv('data/Frankfurt/jesuits_conflict.csv', index=False)
+
+#%% jesuit generals
+query = """SELECT DISTINCT ?item ?itemLabel WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en". }
+  {
+    SELECT DISTINCT ?item WHERE {
+      ?item p:P39 ?statement0.
+      ?statement0 (ps:P39/(wdt:P279*)) wd:Q1515704.
+    }
+  }
+}
+    """
+user_agent = "WDQS-example Python/%s.%s" % (sys.version_info[0], sys.version_info[1])
+sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent=user_agent)
+sparql.setQuery(query)
+sparql.setReturnFormat(JSON)
+while True:
+    try:
+        data = sparql.query().convert()
+        break
+    except HTTPError:
+        time.sleep(2)
+    except URLError:
+        time.sleep(5)
+
+generals = [{e.get('item').get('value'): e.get('itemLabel').get('value')} for e in data.get('results').get('bindings')]
+generals = [e for e in generals if e != {'http://www.wikidata.org/entity/Q64782473': 'Ignatius of Loyola (fictional character)'}]
+generals_ids = set([re.findall('Q\d+', list(e.keys())[0])[0] for e in generals])
+
+df = gsheet_to_df('1Ev3vLuMvnW_CD55xycpXFt1TMNw0vpi_aI3IB1BCp7A', 'Arkusz1')
+df = df.loc[df['interesting'] == 'x']
+
+interesting_properties = df['property_id'].to_list()
+claims_conflict_labels = dict(zip(df['property_id'].to_list(), df['property_label'].to_list()))
+
+def get_members_wikidata_claims(wikidata_id):
+    # wikidata_id = 'Q4403688'
+    # wikidata_id = list(members_ids)[5964]
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    result = requests.get(url).json()
+    claims = result.get('entities').get(wikidata_id).get('claims')
+    claims = {k:v for k,v in claims.items() if k in interesting_properties}
+    pce_iteration = []
+    for k,v in claims.items():
+        for e in v:
+            try:
+                pce_iteration.append((wikidata_id, k, e.get('mainsnak').get('datavalue').get('value').get('id')))
+            except AttributeError:
+                try:
+                    pce_iteration.append((wikidata_id, k, e.get('qualifiers').get('P1932')[0].get('datavalue').get('value')))
+                except TypeError:
+                    print(k)
+    generals_claim_entity.extend(pce_iteration)
+ 
+generals_claim_entity = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_members_wikidata_claims, generals_ids),total=len(generals_ids)))
+
+#jak na podstawie tego badań konfliktowość?
+generals_entities_for_search = set([e[-1] for e in generals_claim_entity if isinstance(e[-1], str) and e[-1].startswith('Q')])
+
+wikidata_redirect = {'Q108140949': 'Q56312763',
+                     'Q131676059': 'Q3946901'}
+
+def get_wikidata_label(wikidata_id, pref_langs = ['en', 'es', 'fr', 'de', 'pl']):
+    # wikidata_id = 'Q104785800'
+    # wikidata_id = list(dominican_entities_for_search)[1621]
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    try:
+        result = requests.get(url).json()
+        try:
+            langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        except AttributeError:
+            wikidata_id = wikidata_redirect.get(wikidata_id)
+            langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        if langs:
+            order = {lang: idx for idx, lang in enumerate(pref_langs)}
+            sorted_langs = sorted(langs, key=lambda x: order.get(x, float('inf')))
+            for lang in sorted_langs:
+                label = result['entities'][wikidata_id]['labels'][lang]['value']
+                break
+        else: label = None
+    except ValueError:
+        label = None
+    # wiki_labels.append({'wikidata_id': wikidata_id,
+    #                     'wikidata_label': label})
+    generals_wiki_labels.append({wikidata_id: label})
+
+generals_wiki_labels = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_wikidata_label, generals_entities_for_search),total=len(generals_entities_for_search)))
+
+members_dict = {re.findall('Q\d+', k)[0]:v for k,v in dict(ChainMap(*generals)).items()}
+claims_dict = claims_conflict_labels
+entity_dict = dict(ChainMap(*generals_wiki_labels))
+
+generals_final_data = [[members_dict.get(a), claims_dict.get(b), entity_dict.get(c,entity_dict.get(wikidata_redirect.get(c))) if isinstance(c, str) and c[0] == 'Q' else c] for a, b, c in generals_claim_entity]
+
+generals_final_df = pd.DataFrame(generals_final_data, columns=['person', 'relation', 'entity'])
+
+generals_final_df.to_csv('data/Frankfurt/generals_jesuits_conflict.csv', index=False)
+
+
+#%% jesuit missionaries
+
+zrobić selekcję z members na podstawie description "mission" w description ma być
+
+query = """SELECT DISTINCT ?item ?itemLabel WHERE {
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en". }
+  {
+    SELECT DISTINCT ?item WHERE {
+      ?item p:P39 ?statement0.
+      ?statement0 (ps:P39/(wdt:P279*)) wd:Q1515704.
+    }
+  }
+}
+    """
+user_agent = "WDQS-example Python/%s.%s" % (sys.version_info[0], sys.version_info[1])
+sparql = SPARQLWrapper("https://query.wikidata.org/sparql", agent=user_agent)
+sparql.setQuery(query)
+sparql.setReturnFormat(JSON)
+while True:
+    try:
+        data = sparql.query().convert()
+        break
+    except HTTPError:
+        time.sleep(2)
+    except URLError:
+        time.sleep(5)
+
+generals = [{e.get('item').get('value'): e.get('itemLabel').get('value')} for e in data.get('results').get('bindings')]
+generals = [e for e in generals if e != {'http://www.wikidata.org/entity/Q64782473': 'Ignatius of Loyola (fictional character)'}]
+generals_ids = set([re.findall('Q\d+', list(e.keys())[0])[0] for e in generals])
+
+df = gsheet_to_df('1Ev3vLuMvnW_CD55xycpXFt1TMNw0vpi_aI3IB1BCp7A', 'Arkusz1')
+df = df.loc[df['interesting'] == 'x']
+
+interesting_properties = df['property_id'].to_list()
+claims_conflict_labels = dict(zip(df['property_id'].to_list(), df['property_label'].to_list()))
+
+def get_members_wikidata_claims(wikidata_id):
+    # wikidata_id = 'Q4403688'
+    # wikidata_id = list(members_ids)[5964]
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    result = requests.get(url).json()
+    claims = result.get('entities').get(wikidata_id).get('claims')
+    claims = {k:v for k,v in claims.items() if k in interesting_properties}
+    pce_iteration = []
+    for k,v in claims.items():
+        for e in v:
+            try:
+                pce_iteration.append((wikidata_id, k, e.get('mainsnak').get('datavalue').get('value').get('id')))
+            except AttributeError:
+                try:
+                    pce_iteration.append((wikidata_id, k, e.get('qualifiers').get('P1932')[0].get('datavalue').get('value')))
+                except TypeError:
+                    print(k)
+    generals_claim_entity.extend(pce_iteration)
+ 
+generals_claim_entity = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_members_wikidata_claims, generals_ids),total=len(generals_ids)))
+
+#jak na podstawie tego badań konfliktowość?
+generals_entities_for_search = set([e[-1] for e in generals_claim_entity if isinstance(e[-1], str) and e[-1].startswith('Q')])
+
+wikidata_redirect = {'Q108140949': 'Q56312763',
+                     'Q131676059': 'Q3946901'}
+
+def get_wikidata_label(wikidata_id, pref_langs = ['en', 'es', 'fr', 'de', 'pl']):
+    # wikidata_id = 'Q104785800'
+    # wikidata_id = list(dominican_entities_for_search)[1621]
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    try:
+        result = requests.get(url).json()
+        try:
+            langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        except AttributeError:
+            wikidata_id = wikidata_redirect.get(wikidata_id)
+            langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        if langs:
+            order = {lang: idx for idx, lang in enumerate(pref_langs)}
+            sorted_langs = sorted(langs, key=lambda x: order.get(x, float('inf')))
+            for lang in sorted_langs:
+                label = result['entities'][wikidata_id]['labels'][lang]['value']
+                break
+        else: label = None
+    except ValueError:
+        label = None
+    # wiki_labels.append({'wikidata_id': wikidata_id,
+    #                     'wikidata_label': label})
+    generals_wiki_labels.append({wikidata_id: label})
+
+generals_wiki_labels = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_wikidata_label, generals_entities_for_search),total=len(generals_entities_for_search)))
+
+members_dict = {re.findall('Q\d+', k)[0]:v for k,v in dict(ChainMap(*generals)).items()}
+claims_dict = claims_conflict_labels
+entity_dict = dict(ChainMap(*generals_wiki_labels))
+
+generals_final_data = [[members_dict.get(a), claims_dict.get(b), entity_dict.get(c,entity_dict.get(wikidata_redirect.get(c))) if isinstance(c, str) and c[0] == 'Q' else c] for a, b, c in generals_claim_entity]
+
+generals_final_df = pd.DataFrame(generals_final_data, columns=['person', 'relation', 'entity'])
+
+generals_final_df.to_csv('data/Frankfurt/jesuits_missionaries.csv', index=False)
 
 
 #%% dominikanie
@@ -364,6 +491,7 @@ df = gsheet_to_df('1Ev3vLuMvnW_CD55xycpXFt1TMNw0vpi_aI3IB1BCp7A', 'Arkusz1')
 df = df.loc[df['interesting'] == 'x']
 
 interesting_properties = df['property_id'].to_list()
+claims_conflict_labels = dict(zip(df['property_id'].to_list(), df['property_label'].to_list()))
 
 def get_members_wikidata_claims(wikidata_id):
     # wikidata_id = 'Q4403688'
@@ -423,7 +551,7 @@ with ThreadPoolExecutor() as excecutor:
     list(tqdm(excecutor.map(get_wikidata_label, dominican_entities_for_search),total=len(dominican_entities_for_search)))
 
 members_dict = {re.findall('Q\d+', k)[0]:v for k,v in dict(ChainMap(*dominican_members)).items()}
-claims_dict = {k:v for k,v in dict(ChainMap(*jesuit_claims_labels)).items() if k in interesting_properties}
+claims_dict = claims_conflict_labels
 entity_dict = dict(ChainMap(*dominican_wiki_labels))
 
 dominican_final_data = [[members_dict.get(a), claims_dict.get(b), entity_dict.get(c,entity_dict.get(wikidata_redirect.get(c))) if isinstance(c, str) and c[0] == 'Q' else c] for a, b, c in dominican_person_claim_entity]
@@ -468,6 +596,7 @@ df = gsheet_to_df('1Ev3vLuMvnW_CD55xycpXFt1TMNw0vpi_aI3IB1BCp7A', 'Arkusz1')
 df = df.loc[df['interesting'] == 'x']
 
 interesting_properties = df['property_id'].to_list()
+claims_conflict_labels = dict(zip(df['property_id'].to_list(), df['property_label'].to_list()))
 
 def get_members_wikidata_claims(wikidata_id):
     # wikidata_id = 'Q4403688'
@@ -527,7 +656,7 @@ with ThreadPoolExecutor() as excecutor:
     list(tqdm(excecutor.map(get_wikidata_label, franciscan_entities_for_search),total=len(franciscan_entities_for_search)))
 
 members_dict = {re.findall('Q\d+', k)[0]:v for k,v in dict(ChainMap(*franciscan_members)).items()}
-claims_dict = {k:v for k,v in dict(ChainMap(*jesuit_claims_labels)).items() if k in interesting_properties}
+claims_dict = claims_conflict_labels
 entity_dict = dict(ChainMap(*franciscan_wiki_labels))
 
 franciscan_final_data = [[members_dict.get(a), claims_dict.get(b), entity_dict.get(c,entity_dict.get(wikidata_redirect.get(c))) if isinstance(c, str) and c[0] == 'Q' else c] for a, b, c in franciscan_person_claim_entity]
@@ -535,6 +664,7 @@ franciscan_final_data = [[members_dict.get(a), claims_dict.get(b), entity_dict.g
 franciscan_final_df = pd.DataFrame(franciscan_final_data, columns=['person', 'relation', 'entity'])
 
 franciscan_final_df.to_csv('franciscan_conflict.csv', index=False)
+
 
 
 
