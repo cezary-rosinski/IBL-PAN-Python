@@ -169,7 +169,7 @@ def add_text(row):
     if pd.notnull(row['Key Historical Figures Mentioned ID']):
         for a in row['Key Historical Figures Mentioned ID'].split(';'):
             if a.strip() != 'no id':
-                g.add((text, JECAL.keyHistoricalFigurtesMentioned, JECAL[f"Person/{a.strip()}"]))
+                g.add((text, JECAL.keyHistoricalFiguresMentioned, JECAL[f"Person/{a.strip()}"]))
     if pd.notnull(row['Key Authors Cited ID']):
         for a in row['Key Authors Cited ID'].split(';'):
             if a.strip() != 'no id':

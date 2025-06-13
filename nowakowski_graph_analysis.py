@@ -15,6 +15,7 @@ from rdflib.namespace import DCTERMS
 import matplotlib.pyplot as plt
 from collections import Counter
 from matplotlib import cycler
+from matplotlib.ticker import MaxNLocator
 
 #%%
 tableau_colors = cycler('color', plt.cm.tab10.colors)
@@ -412,6 +413,272 @@ if G.number_of_nodes() <= 50:
 plt.title('Community Structure (Label Propagation)')
 plt.axis('off')
 plt.show()
+
+#%% 23
+
+
+tableau_colors = cycler('color', plt.cm.tab10.colors)
+# 2. Zdefiniuj przestrzenie nazw
+SCHEMA = Namespace("http://schema.org/")
+JC     = Namespace("https://example.org/jesuit_calvinist/")
+
+# 3. Pomocnicza funkcja do normalizacji stringów
+def clean(s):
+    return str(s).strip().lower()
+
+# 4. Zbierz wszystkie mentionowane historyczne postacie
+mentioned = set()
+for text in g.subjects(rdflib.RDF.type, SCHEMA.Text):
+    # editionType zawiera "original"
+    if not any("original" in clean(o) for o in g.objects(text, JC.editionType)):
+        continue
+    # confessionalProfile dokładnie "Roman Catholic"
+    if not any(clean(o) == "roman catholic" for o in g.objects(text, JC.confessionalProfile)):
+        continue
+
+    # zbieramy wszystkie keyHistoricalFiguresMentioned
+    for fig in g.objects(text, JC.keyHistoricalFigurtesMentioned):
+        mentioned.add(fig)
+
+# 5. Policz produktywne stulecia wspomnianych postaci
+century_counts = Counter()
+for person in mentioned:
+    # upewnij się, że to instancja schema:Person
+    if (person, rdflib.RDF.type, SCHEMA.Person) not in g:
+        continue
+    # pobierz wszystkie century
+    for cent in g.objects(person, JC.productivityCentury):
+        century_counts[str(cent).strip()] += 1
+
+# 6. Przygotuj DataFrame
+df = (
+    pd.DataFrame.from_records(
+        list(century_counts.items()),
+        columns=["century", "count"]
+    )
+    .sort_values("count", ascending=False)
+    .reset_index(drop=True)
+)
+
+# opcjonalnie: oblicz udział procentowy
+df["share (%)"] = (df["count"] / df["count"].sum()) * 100
+
+print(df)
+
+# 7. Wykres słupkowy
+plt.figure(figsize=(10, 6))
+plt.bar(df["century"], df["share (%)"])
+plt.xticks(rotation=45, ha='right')
+plt.ylabel("Udział postaci wspomnianych (%)")
+plt.title("Rozkład productivityCentury wśród wspomnianych postaci\n(Original → Roman Catholic)")
+plt.tight_layout()
+plt.show()
+
+#%% 24
+
+tableau_colors = cycler('color', plt.cm.tab10.colors)
+# 2. Zdefiniuj przestrzenie nazw
+SCHEMA = Namespace("http://schema.org/")
+JC     = Namespace("https://example.org/jesuit_calvinist/")
+
+# 3. Pomocnicza funkcja do normalizacji stringów
+def clean(s):
+    return str(s).strip().lower()
+
+# 4. Zbierz wszystkie mentionowane historyczne postacie
+mentioned = set()
+for text in g.subjects(rdflib.RDF.type, SCHEMA.Text):
+    # editionType zawiera "original"
+    if not any("original" in clean(o) for o in g.objects(text, JC.editionType)):
+        continue
+    # confessionalProfile dokładnie "Roman Catholic"
+    if not any(clean(o) == "reformed evangelical" for o in g.objects(text, JC.confessionalProfile)):
+        continue
+
+    # zbieramy wszystkie keyHistoricalFiguresMentioned
+    for fig in g.objects(text, JC.keyHistoricalFigurtesMentioned):
+        mentioned.add(fig)
+
+# 5. Policz produktywne stulecia wspomnianych postaci
+century_counts = Counter()
+for person in mentioned:
+    # upewnij się, że to instancja schema:Person
+    if (person, rdflib.RDF.type, SCHEMA.Person) not in g:
+        continue
+    # pobierz wszystkie century
+    for cent in g.objects(person, JC.productivityCentury):
+        century_counts[str(cent).strip()] += 1
+
+# 6. Przygotuj DataFrame
+df = (
+    pd.DataFrame.from_records(
+        list(century_counts.items()),
+        columns=["century", "count"]
+    )
+    .sort_values("count", ascending=False)
+    .reset_index(drop=True)
+)
+
+# opcjonalnie: oblicz udział procentowy
+df["share (%)"] = (df["count"] / df["count"].sum()) * 100
+
+print(df)
+
+# 7. Wykres słupkowy
+plt.figure(figsize=(10, 6))
+plt.bar(df["century"], df["share (%)"])
+plt.xticks(rotation=45, ha='right')
+plt.ylabel("Udział postaci wspomnianych (%)")
+plt.title("Rozkład productivityCentury wśród wspomnianych postaci\n(Original → Reformed Evangelical)")
+plt.tight_layout()
+plt.show()
+
+#%% 25
+
+# 3. Helper to normalize literals
+def clean_literal(lit):
+    return str(lit).strip()
+
+# 4. Aggregate genres by decade
+decade_genre_counts = {}  # { "1501-1510": Counter(), ... }
+
+for text in g.subjects(rdflib.RDF.type, SCHEMA.Text):
+    # Filter editionType contains "Original"
+    if not any("original" in clean_literal(o).lower() for o in g.objects(text, JC.editionType)):
+        continue
+    # Filter confessionalProfile exactly "Roman Catholic"
+    if not any(clean_literal(o) == "Roman Catholic" for o in g.objects(text, JC.confessionalProfile)):
+        continue
+
+    # Get publication year
+    year_literal = next(g.objects(text, SCHEMA.datePublished), None)
+    if year_literal is None:
+        continue
+    try:
+        year = int(str(year_literal)[:4])
+    except ValueError:
+        continue
+
+    # Determine decade range label (1501-1510, 1511-1520, etc.)
+    if year < 1501:
+        continue
+    decade_index = (year - 1501) // 10
+    start = 1501 + decade_index * 10
+    end = start + 9
+    decade_label = f"{start}-{end}"
+
+    # Initialize counter if needed
+    if decade_label not in decade_genre_counts:
+        decade_genre_counts[decade_label] = Counter()
+
+    # Count genres for this text
+    for genre in g.objects(text, SCHEMA.genre):
+        decade_genre_counts[decade_label][clean_literal(genre)] += 1
+
+# 5. Sort decades chronologically and limit to first 8 if more
+sorted_decades = sorted(decade_genre_counts.keys(), key=lambda d: int(d.split('-')[0]))
+decades_to_plot = sorted_decades[:8]  # ensure 2x4 grid
+
+# 6. Create dashboard with 2 rows x 4 columns
+fig, axes = plt.subplots(2, 4, figsize=(20, 10), constrained_layout=True)
+axes = axes.flatten()
+
+for ax, decade in zip(axes, decades_to_plot):
+    counter = decade_genre_counts[decade]
+    if not counter:
+        ax.set_visible(False)
+        continue
+    top5 = counter.most_common(5)
+    genres, counts = zip(*top5)
+    
+    ax.bar(genres, counts)
+    ax.set_title(f"Dekada {decade}")
+    ax.set_ylabel("Liczba tekstów")
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.set_xticklabels(genres, rotation=45, ha='right')
+
+# Hide any unused subplots
+for ax in axes[len(decades_to_plot):]:
+    ax.set_visible(False)
+
+plt.suptitle("Top 5 gatunków w dekadach (Original → Roman Catholic)", fontsize=16)
+plt.show()
+
+
+#%% 26
+
+# 3. Helper to normalize literals
+def clean_literal(lit):
+    return str(lit).strip()
+
+# 4. Aggregate genres by decade
+decade_genre_counts = {}  # { "1501-1510": Counter(), ... }
+
+for text in g.subjects(rdflib.RDF.type, SCHEMA.Text):
+    # Filter editionType contains "Original"
+    if not any("original" in clean_literal(o).lower() for o in g.objects(text, JC.editionType)):
+        continue
+    # Filter confessionalProfile exactly "Roman Catholic"
+    if not any(clean_literal(o) == "Reformed Evangelical" for o in g.objects(text, JC.confessionalProfile)):
+        continue
+
+    # Get publication year
+    year_literal = next(g.objects(text, SCHEMA.datePublished), None)
+    if year_literal is None:
+        continue
+    try:
+        year = int(str(year_literal)[:4])
+    except ValueError:
+        continue
+
+    # Determine decade range label (1501-1510, 1511-1520, etc.)
+    if year < 1501:
+        continue
+    decade_index = (year - 1501) // 10
+    start = 1501 + decade_index * 10
+    end = start + 9
+    decade_label = f"{start}-{end}"
+
+    # Initialize counter if needed
+    if decade_label not in decade_genre_counts:
+        decade_genre_counts[decade_label] = Counter()
+
+    # Count genres for this text
+    for genre in g.objects(text, SCHEMA.genre):
+        decade_genre_counts[decade_label][clean_literal(genre)] += 1
+
+# 5. Sort decades chronologically and limit to first 8 if more
+sorted_decades = sorted(decade_genre_counts.keys(), key=lambda d: int(d.split('-')[0]))
+decades_to_plot = sorted_decades[:8]  # ensure 2x4 grid
+
+# 6. Create dashboard with 2 rows x 4 columns
+fig, axes = plt.subplots(2, 4, figsize=(20, 10), constrained_layout=True)
+axes = axes.flatten()
+
+for ax, decade in zip(axes, decades_to_plot):
+    counter = decade_genre_counts[decade]
+    if not counter:
+        ax.set_visible(False)
+        continue
+    top5 = counter.most_common(5)
+    genres, counts = zip(*top5)
+    
+    ax.bar(genres, counts)
+    ax.set_title(f"Dekada {decade}")
+    ax.set_ylabel("Liczba tekstów")
+    ax.yaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.set_xticklabels(genres, rotation=45, ha='right')
+
+# Hide any unused subplots
+for ax in axes[len(decades_to_plot):]:
+    ax.set_visible(False)
+
+plt.suptitle("Top 5 gatunków w dekadach (Original → Reformed Evangelical)", fontsize=16)
+plt.show()
+
+
+
+
 
 
 
