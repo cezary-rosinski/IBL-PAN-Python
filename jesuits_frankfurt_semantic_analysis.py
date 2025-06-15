@@ -1,7 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 from sentence_transformers import SentenceTransformer, util
-import torch
+from tqdm import tqdm
 
 #%%
 # 1. Wczytanie danych
@@ -33,43 +33,50 @@ def semantic_scores(text):
     sim_peace    = util.cos_sim(emb, peace_proto).item()
     return sim_conflict, sim_peace
 
-dfs = {'A semantic map of the conflictuality of the Society of Jesus': pd.read_csv("data/Frankfurt/jesuits_conflict"),
-       'Dominican Members': pd.read_csv("data/Frankfurt/dominican_conflict.csv"),
-       'Franciscan Members': pd.read_csv("data/Frankfurt/franciscan_conflict.csv"),
-       'A semantic map of the conflictuality of the generals of the Society of Jesus': pd.read_csv("data/Frankfurt/generals_jesuits_conflict.csv"),
-       'Jesuit Missionaries': pd.read_csv("data/Frankfurt/missionaries_jesuits_conflict.csv")}
+dfs = {'A semantic conflict map of the Society of Jesus': pd.read_csv("data/Frankfurt/jesuits_conflict.csv"),
+        'A semantic conflict map of the Dominican Order': pd.read_csv("data/Frankfurt/dominican_conflict.csv"),
+        'A semantic conflict map of the Franciscan Order': pd.read_csv("data/Frankfurt/franciscan_conflict.csv"),
+        'A semantic conflict map of the generals of the Society of Jesus': pd.read_csv("data/Frankfurt/generals_jesuits_conflict.csv"),
+        'A semantic conflict map of the Jesuit Missionaries': pd.read_csv("data/Frankfurt/jesuits_missionaries.csv")}
 
-# for title, df in dfs.items():
+for title, df in tqdm(dfs.items()):
 
-df = pd.read_csv("data/Frankfurt/jesuits_conflict.csv")
-title = 'A semantic map of the conflictuality of the Society of Jesus'
+# df = pd.read_csv("data/Frankfurt/generals_jesuits_conflict.csv")
+# title = 'A semantic map of the conflictuality of the Society of Jesus'
 # 7. Agregacja na poziomie osoby
-
-# 6. Obliczenie podobieństw dla każdej trójki
-df[['sim_conflict', 'sim_peace']] = df['entity'].apply(
-    lambda x: pd.Series(semantic_scores(x))
-)
-
-scores = df.groupby('person').agg({
-    'sim_conflict': 'sum',
-    'sim_peace': 'sum'
-}).reset_index()
-
-# 8. Przekształcenie na osie: X i Y
-scores['X'] = scores['sim_peace'] - scores['sim_conflict']
-scores['Y'] = scores['sim_peace'] + scores['sim_conflict']
-
-# 9. Wizualizacja
-plt.figure(figsize=(8,6))
-plt.scatter(scores['X'], scores['Y'], marker='x')
-plt.axhline(0, color='gray', linestyle='--')
-plt.axvline(0, color='gray', linestyle='--')
-plt.xlabel('Consilience – Conflictuality (X)')
-plt.ylabel('Intensity (Y)')
-# plt.title('Mapa semantyczna jezuitów: nastawienie vs intensywność')
-# plt.title('Mapa semantyczna dominikanów: nastawienie vs intensywność')
-plt.title(title)
-plt.grid(True)
+    
+    # 6. Obliczenie podobieństw dla każdej trójki
+    df[['sim_conflict', 'sim_peace']] = df['entity'].apply(
+        lambda x: pd.Series(semantic_scores(x))
+    )
+    
+    scores = df.groupby('person').agg({
+        'sim_conflict': 'sum',
+        'sim_peace': 'sum'
+    }).reset_index()
+    
+    # 8. Przekształcenie na osie: X i Y
+    scores['X'] = scores['sim_peace'] - scores['sim_conflict']
+    scores['Y'] = scores['sim_peace'] + scores['sim_conflict']
+    
+    # 9. Wizualizacja
+    plt.figure(figsize=(8,6))
+    plt.scatter(scores['X'], scores['Y'], marker='x')
+    plt.axhline(0, color='gray', linestyle='--')
+    plt.axvline(0, color='gray', linestyle='--')
+    plt.xlabel('Peace – Conflict (X)')
+    plt.ylabel('Low Intensity – High Intensity (Y)')
+    # plt.title('Mapa semantyczna jezuitów: nastawienie vs intensywność')
+    # plt.title('Mapa semantyczna dominikanów: nastawienie vs intensywność')
+    plt.title(title)
+    plt.grid(True)
+    
+    plt.savefig(
+    f"data/Frankfurt/{title}.png",    # nazwa pliku, format określa się przez rozszerzenie
+    dpi=300,                # rozdzielczość w dpi (domyślnie 100)
+    bbox_inches="tight",    # przytnie marginesy wokół wykresu
+    transparent=True       # True, jeśli chcesz przezroczyste tło
+    )
 
 # for _, row in scores.iterrows():
 #     plt.text(row['X'], row['Y'], row['person'], fontsize=8, alpha=0.7)
