@@ -40,9 +40,9 @@ dfs = {'A semantic conflict map of the Society of Jesus': pd.read_csv("data/Fran
         'A semantic conflict map of the Jesuit Missionaries': pd.read_csv("data/Frankfurt/jesuits_missionaries.csv")}
 
 for title, df in tqdm(dfs.items()):
-
-# df = pd.read_csv("data/Frankfurt/generals_jesuits_conflict.csv")
-# title = 'A semantic map of the conflictuality of the Society of Jesus'
+    
+    # df = pd.read_csv("data/Frankfurt/franciscan_conflict.csv")
+    # title = 'A semantic map of the conflictuality of the Society of Jesus'
 # 7. Agregacja na poziomie osoby
     
     # 6. Obliczenie podobieństw dla każdej trójki
@@ -70,6 +70,9 @@ for title, df in tqdm(dfs.items()):
     # plt.title('Mapa semantyczna dominikanów: nastawienie vs intensywność')
     plt.title(title)
     plt.grid(True)
+    
+    plt.xlim(-1.2, 1.0)
+    plt.ylim(-2, 40)
     
     plt.savefig(
     f"data/Frankfurt/{title}.png",    # nazwa pliku, format określa się przez rozszerzenie
