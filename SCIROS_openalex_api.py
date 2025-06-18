@@ -14,7 +14,7 @@ def create_temp_dict(record):
         'id': record.get('id'),
         'abstract': ' '.join([k for k,v in record.get('abstract_inverted_index').items()]) if pd.notnull(record.get('abstract_inverted_index')) else None,
         'title': record.get('title'),
-        'publication_year': record.get('publicationo_year'),
+        'publication_year': record.get('publication_year'),
         'publication_date': record.get('publication_date'),
         'openalex_id': record.get('ids').get('openalex') if 'openalex' in record.get('ids') else None,
         'doi_id': record.get('ids').get('doi') if 'doi' in record.get('ids') else None,
@@ -103,7 +103,7 @@ while cursor:
 #     f.write("\n]")
 
 with open(file_path, 'w', encoding='utf-8') as f:
-    json.dump(list_of_records, f)
+    json.dump(list_of_records, f) #32,311 recors as of 18.06.2025
     
 # list_of_records[0].get('authorships')
 # max([len(e.get('authorships')) for e in list_of_records])
@@ -254,7 +254,7 @@ for e in d:
     e.update({'keywords': keywords_string})
     
 df_sample = pd.DataFrame(d)
-df_sample.to_excel(f'data/SCIROS_TOS_openalex_proximity_{date.today()}.xlsx', index=False) #1348 rekordów
+df_sample.to_excel(f'data/SCIROS_TOS_openalex_proximity_{date.today()}.xlsx', index=False) #1361 records as of 18.06.2025
 
 
 
