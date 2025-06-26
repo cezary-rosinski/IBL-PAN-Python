@@ -7,12 +7,16 @@ import pandas as pd
 from bs4 import BeautifulSoup
 import os
 from sickle import Sickle
+from sickle.oaiexceptions import IdDoesNotExist
 import regex as re
 from tqdm import tqdm
 import time
 import json
 from namedentities import unicode_entities
 from html import unescape
+from requests.exceptions import HTTPError
+import time
+import pickle
 
 #%% import sources list
 df = gsheet_to_df('13jRM5eHBgsAt0BNPDNne-155VFOVFRI2EExvW4S8Tms', 'oai-pmh harvesting')
@@ -20,68 +24,89 @@ df = gsheet_to_df('13jRM5eHBgsAt0BNPDNne-155VFOVFRI2EExvW4S8Tms', 'oai-pmh harve
 sources_dict = {}
 
 for index, row in df.iterrows():
-    sources_dict[row['source']] = {'url': row['url'], 'oai': row['oai'], 'download_url': row['download_url'], 'uwagi': row['uwagi']}
+    sources_dict[row['source']] = {'url': row['url'], 'oai': row['oai'], 'download_url': row['download_url'], 'type': row['typ']}
 
 
 #%% oai download
-# source = 'Multicultural Shakespeare' # put source here
 
-def get_oai_records(url, oai_set = '', resumption_token = None):
-    if resumption_token:
-        request_url = url + '?verb=ListRecords&resumptionToken=' + resumption_token.text
-    else:
-        request_url = url + f'?verb=ListRecords&metadataPrefix=oai_dc&set={oai_set}'
-    response = requests.get(request_url, verify=False)
-    soup = BeautifulSoup(response.text, 'xml')
-    list_records = soup.find_all('record')
-    resumption_token = soup.find('resumptionToken')
-    for record in list_records:
-        if record.header.attrs:
-            continue
-        record_dict = {}
-        for elem in record.header.findChildren():
-            if elem.name == 'identifier':
-                record_dict['header_id'] = [elem.text]
-            else:
-                record_dict[elem.name] = [elem.text]
-        for tag in record.find('oai_dc:dc').findChildren():
-            if tag.attrs:
-                key = tag.name + ':' + list(tag.attrs.values())[0]
-            else: key = tag.name
-            value = [tag.text]
-            if key in record_dict:
-                record_dict[key] += value
-            else: record_dict[key] = value
-        articles_list.append(record_dict)
-    if resumption_token:
-        get_oai_records(url, resumption_token = resumption_token)
-    else: 
-        return
+articles_counter_ojs = 0
+articles_with_metadata_counter_ojs = 0
+results_ojs = []
+for source, value in tqdm(sources_dict.items()):
+    # source = 'Acta Universitatis Lodziensis. Folia Linguistica Polonica'
+    # url = sources_dict.get(source).get('oai')
+    if value.get('type') == 'ojs':
+        url = value.get('oai')
+        sick = Sickle(url)
+        records = sick.ListRecords(metadataPrefix='oai_dc')
+        for record in tqdm(records):
+            if record.deleted == False:
+                articles_counter_ojs += 1
+                record = record.get_metadata()
+                record = {k:v for k,v in record.items() if k in ['identifier', 'subject', 'description', 'date']}
+                record.update({'source': source})
+                if len(record) > 1:
+                    articles_with_metadata_counter_ojs += 1
+                    results_ojs.append(record)
+            
+#rcin  
+articles_counter_rcin = 0
+articles_with_metadata_counter_rcin = 0
+results_rcin = []
+for source, value in tqdm(sources_dict.items()):
+    if value.get('type') == 'rcin':
+        # source = 'Teksty Drugie'
+        # url = sources_dict.get(source).get('url')
+        url = value.get('url')
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        issues = soup.find('ul', {'class': 'tab-content__tree-sublist'}).find_all("li", {"class": "tab-content__tree-list-item"})
+        for issue in tqdm(issues):
+            # issue = issues[1]
+            issue_structure_url = issue.find('a')['href']
+            response_issue_structure = requests.get(issue_structure_url)
+            soup_issue_structure = BeautifulSoup(response_issue_structure.text, 'html.parser')
+            active_issue = soup_issue_structure.find('div', {'class': 'tab-content__tree-fake-list-item active'})
+            try:
+                articles_li = active_issue.find_parent('li')
+                articles = articles_li.find_all("li", {"tab-content__tree-list-item"})
+                for article in articles:
+                    #article = articles[0]
+                    article_url = article.find('a', {'class': 'tab-content__tree-link'})['href']
+                    article_id = article_url.split('/')[-1]
+                    oai_id = 'oai:rcin.org.pl:' + article_id
+                    sickle = Sickle('https://rcin.org.pl/ibl/dlibra/oai-pmh-repository.xml')
+                    try:
+                        try:
+                            record = sickle.GetRecord(metadataPrefix='oai_dc', identifier=oai_id)
+                        except HTTPError:
+                            time.sleep(10)
+                            record = sickle.GetRecord(metadataPrefix='oai_dc', identifier=oai_id)
+                        record = record.get_metadata()
+                        articles_counter_rcin += 1
+                        if any([e in record.get('language') for e in ['pol', 'pl', 'Pl', 'Pol']]):
+                            record = {k:v for k,v in record.items() if k in ['identifier', 'subject', 'description', 'date']}
+                            if len(record) > 1:
+                                record.update({'source': source})
+                                articles_with_metadata_counter_rcin += 1
+                                results_rcin.append(record)
+                    except IdDoesNotExist:
+                        pass
+            except AttributeError:
+                pass
+# articles_counter_rcin = 8236
+# articles_with_metadata_counter_rcin = 6661
+with open('data/nprh2025/results_rcin.pkl', 'wb') as f:
+    pickle.dump(results_rcin, f)
+#ejournals
 
-articles_counter = 0
-articles_with_metadata_counter = 0
-results = []
-#OJS
-for source in tqdm(sources_dict):
-    source = 'Acta Universitatis Lodziensis. Folia Linguistica Polonica'
-    url = sources_dict.get(source).get('oai')
-    sick = Sickle(url)
-    records = sick.ListRecords(metadataPrefix='oai_dc')
-
-    for record in tqdm(records):
-        if record.deleted == False:
-            articles_counter += 1
-            record = record.get_metadata()
-            record = {k:v for k,v in record.items() if k in ['identifier', 'subject', 'description']}
-            if len(record) > 1:
-                articles_with_metadata_counter += 1
-                results.append(record)
-#rcin   
 
 
 
 
-
+#%% przetwarzanie wszystkich zwrotek
+with open('data/nprh2025/results_rcin.pkl', 'rb') as f:
+    results_rcin = pickle.load(f)
 
 #%%
 
