@@ -7,7 +7,6 @@ from bs4 import BeautifulSoup
 import os
 from sickle import Sickle
 from sickle.oaiexceptions import IdDoesNotExist, BadVerb
-from sickle.transport import RequestsTransport
 import regex as re
 from tqdm import tqdm
 import time
@@ -190,12 +189,17 @@ for e in tqdm(results):
 
 results_2000 = [e for e in results if e.get('earliest_date') and e.get('earliest_date') >= 2000]
 
+results_1989 = [e for e in results if e.get('earliest_date') and e.get('earliest_date') >= 1989]
+
 # check
 # languages = set([tuple(e.get('language')) for e in results_2000 if e.get('language')])
 # dates = set([e.get('earliest_date') for e in results_2000 if e.get('earliest_date')])
 
 with open(f'data/nprh2025/results_2000_{date.today()}.pkl', 'wb') as f:
     pickle.dump(results_2000, f)
+
+with open(f'data/nprh2025/results_1989_{date.today()}.pkl', 'wb') as f:
+    pickle.dump(results_1989, f)
 
 #analiza poezji
 
@@ -212,7 +216,8 @@ def contains_poetry_keywords(text):
 # keys_to_check = ['title', 'abstract', 'description', 'subject', 'article-title', 'kwd']  
 keys_to_check = ['abstract', 'description', 'subject', 'article-title', 'kwd']  
 
-for e in tqdm(results_2000):
+for e in tqdm(results_1989):
+# for e in tqdm(results_2000):
     # e=results_2000[0]
     checking_list = []
     for ktc in keys_to_check:
@@ -224,7 +229,7 @@ for e in tqdm(results_2000):
         e.update({'poetry': True})
     else: e.update({'poetry': False})
 
-results_poetry = [e for e in results_2000 if e.get('poetry') == True]
+results_poetry = [e for e in results_1989 if e.get('poetry') == True]
 
 df = pd.DataFrame(results_poetry)
 df = df.drop('raw', axis=1)
