@@ -199,6 +199,7 @@ password_input.send_keys(password)
 login_button = browser.find_element('id', 'wp-submit').click()
 
 for index, row in aktualny_numer.iterrows():
+# for index, row in aktualny_numer[15:].iterrows():
     if row['język'] == 'pl':
       
         browser.get('http://fp.amu.edu.pl/wp-admin/post-new.php')
@@ -318,6 +319,7 @@ for index, row in aktualny_numer.iterrows():
         time.sleep(10)
         
         caly_link = browser.find_element('id', 'edit-slug-buttons')
+        time.sleep(1)
         caly_link.click()
         odnosnik = browser.find_element('id', 'new-post-slug')
         odnosnik = odnosnik.get_attribute('value')
@@ -629,7 +631,8 @@ except ValueError:
     wprowadz_numer.send_keys(strona_numeru.at[0, 'numer'])
 rok = browser.find_element('xpath', "//input[@name='year']")
 rok.send_keys('{:.0f}'.format(strona_numeru.at[0, 'rok']))
-tytul_pl = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[0, 'tytuł numeru']).strip()
+# tytul_pl = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[0, 'tytuł numeru']).strip()
+tytul_pl = strona_numeru.at[0, 'tytuł numeru'].strip()
 
 try:
     nazwa_numeru = f"Nr {'{:.0f}'.format(strona_numeru.at[0, 'numer'])} ({'{:.0f}'.format(strona_numeru.at[0, 'rok'])}): {tytul_pl}"
@@ -637,7 +640,8 @@ except ValueError:
     nazwa_numeru = f"Nr {strona_numeru.at[0, 'numer']} ({'{:.0f}'.format(strona_numeru.at[0, 'rok'])}): {tytul_pl}"
 
 tytul_pl = browser.find_element('xpath', "//input[@name='title[pl_PL]']").send_keys(tytul_pl)
-tytul_eng = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[1, 'tytuł numeru']).strip()
+# tytul_eng = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[1, 'tytuł numeru']).strip()
+tytul_eng = strona_numeru.at[1, 'tytuł numeru'].strip()
 tytul_eng = browser.find_element('xpath', "//input[@name='title[en_US]']").send_keys(tytul_eng)
 
 wstep_pl_source = browser.find_elements('xpath', "//i[@class='mce-ico mce-i-code']")[0].click()
@@ -663,8 +667,8 @@ print('Strona numeru na pressto zapisana, ale nie opublikowana')
 #pressto dodawanie artykułów
 
 for i, row in aktualny_numer.iterrows():
-#for i, row in aktualny_numer[13:].iterrows(): #jeżeli pętla zostanie przerwana
-    print(i)
+# for i, row in aktualny_numer[11:].iterrows(): #jeżeli pętla zostanie przerwana
+    # print(i)
     # i = 0
     # row = aktualny_numer.iloc[i,:]
     if row['język'] == 'pl':
@@ -738,7 +742,7 @@ for i, row in aktualny_numer.iterrows():
         
         for a_pl, a_en, o, af_pl, af_en, b_pl, b_en in zip(row['autor'].split('❦'), aktualny_numer.at[i+1, 'autor'].split('❦'), row['ORCID'].split('❦'), row['afiliacja'].split('❦'), aktualny_numer.at[i+1, 'afiliacja'].split('❦'), row['biogram'].split('❦'), aktualny_numer.at[i+1, 'biogram'].split('❦')):
             
-            #a_pl, a_en, o, af_pl, af_en, b_pl, b_en = row['autor'].split('❦')[0], aktualny_numer.at[i+1, 'autor'].split('❦')[0], row['ORCID'].split('❦')[0], row['afiliacja'].split('❦')[0], aktualny_numer.at[i+1, 'afiliacja'].split('❦')[0], row['biogram'].split('❦')[0], aktualny_numer.at[i+1, 'biogram'].split('❦')[0]
+            #a_pl, a_en, o, af_pl, af_en, b_pl, b_en = row['autor'].split('❦')[1], aktualny_numer.at[i+1, 'autor'].split('❦')[1], row['ORCID'].split('❦')[1], row['afiliacja'].split('❦')[1], aktualny_numer.at[i+1, 'afiliacja'].split('❦')[1], row['biogram'].split('❦')[1], aktualny_numer.at[i+1, 'biogram'].split('❦')[1]
             
             # wspolautor_dodaj = browser.find_element('xpath', "//a[@title = 'Dodaj autora']")
             wspolautor_dodaj = browser.find_element('xpath', "//a[contains(text(),'Dodaj autora')]")
