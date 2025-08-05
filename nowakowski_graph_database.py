@@ -1,6 +1,6 @@
 import sys
-sys.path.insert(1, 'D:\IBL\Documents\IBL-PAN-Python')
-# sys.path.insert(1, 'C:/Users/Cezary/Documents/IBL-PAN-Python')
+# sys.path.insert(1, 'D:\IBL\Documents\IBL-PAN-Python')
+sys.path.insert(1, 'C:/Users/Cezary/Documents/IBL-PAN-Python')
 import pandas as pd
 from rdflib import Graph, Namespace, URIRef, Literal, BNode
 from rdflib.namespace import RDF, RDFS, XSD, FOAF, OWL
