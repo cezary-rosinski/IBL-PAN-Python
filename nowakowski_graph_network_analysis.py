@@ -3,7 +3,6 @@ import networkx as nx
 from ipysigma import Sigma
 from rdflib import Graph, Namespace, Literal
 import pandas as pd
-from ipysigma.data import from_edgelist
 from tqdm import tqdm
 
 #%%
@@ -12,7 +11,7 @@ g = rdflib.Graph()
 ttl_file = 'jecal.ttl'
 g.parse(ttl_file, format='ttl')
 
-#%%
+#%% przygotowanie
 
 uris = set()
 
@@ -29,8 +28,8 @@ for s, p, o in g:
         uris.add(str(o))
 
 # 3. Posortowana lista i wypisanie
-for uri in sorted(uris):
-    print(uri)
+# for uri in sorted(uris):
+#     print(uri)
 
 SCHEMA = Namespace("http://schema.org/")
 
@@ -120,7 +119,7 @@ Sigma(
 # ✅ Eksport do HTML
 Sigma.write_html(
     G,
-    '27a.html',
+    '27a1.html',
     fullscreen=True,
     node_metrics=['louvain'],
     node_color='louvain',
@@ -141,7 +140,7 @@ nx.set_node_attributes(G, pagerank, name='pagerank')
 # ✅ Eksport do HTML z własnymi metrykami
 Sigma.write_html(
     G,
-    'pagerank_graph.html',
+    '27a2.html',
     fullscreen=True,
     node_color='pagerank',         # ręcznie przypisany
     node_size='degree',
@@ -154,33 +153,33 @@ Sigma.write_html(
 
 #%%
 
-#(1) Text, Cited Author oraz Theme; 
-# cited authors + Polemical Themes (Random Order)
+#(2) Text, Cited Author oraz Discussed Issue;  
+# cited authors + Discussed Issues (Random Order)
 # https://example.org/jesuit_calvinist/keyAuthorsCited
-# https://example.org/jesuit_calvinist/polemicalTheme
+# https://example.org/jesuit_calvinist/discussedIssue
 
 text_author = dict()
-text_theme = dict()
+text_issue = dict()
 for s, p, o in g:
     if s in original_texts:
         if str(p) == 'https://example.org/jesuit_calvinist/keyAuthorsCited':
             if str(s) not in text_author:
                 text_author[str(s)] = [people_names.get(o)]
             else: text_author[str(s)].append(people_names.get(o))
-        elif str(p) == 'https://example.org/jesuit_calvinist/polemicalTheme':
-            if str(s) not in text_theme:
-                text_theme[str(s)] = [str(o)]
-            else: text_theme[str(s)].append(str(o))
+        elif str(p) == 'https://example.org/jesuit_calvinist/discussedIssue':
+            if str(s) not in text_issue:
+                text_issue[str(s)] = [str(o)]
+            else: text_issue[str(s)].append(str(o))
 
-result_27a = []
+result_27b = []
 for k, v in text_author.items():
-    for ka, va in text_theme.items():
+    for ka, va in text_issue.items():
         if k == ka:
             for a in v:
                 for t in va:
-                    result_27a.append([a, t])
+                    result_27b.append([a, t])
                     
-df = pd.DataFrame(result_27a, columns= ['person', 'topic'])
+df = pd.DataFrame(result_27b, columns= ['person', 'topic'])
 
 co_occurrence = df.groupby(['person', 'topic']).size().reset_index(name='weight')
 
@@ -216,7 +215,7 @@ Sigma(
 # ✅ Eksport do HTML
 Sigma.write_html(
     G,
-    '27a.html',
+    '27b1.html',
     fullscreen=True,
     node_metrics=['louvain'],
     node_color='louvain',
@@ -237,7 +236,7 @@ nx.set_node_attributes(G, pagerank, name='pagerank')
 # ✅ Eksport do HTML z własnymi metrykami
 Sigma.write_html(
     G,
-    'pagerank_graph.html',
+    '27b2.html',
     fullscreen=True,
     node_color='pagerank',         # ręcznie przypisany
     node_size='degree',
@@ -278,12 +277,12 @@ s.save("graf.html")
         uris.add(str(o))
 
 
-#(2) Text, Cited Author oraz Discussed Issue; (3) Text, Historical Figure Mentioned oraz Theme; (4) Text, Historical Figure Mentioned oraz Discussed Issue
+#(3) Text, Historical Figure Mentioned oraz Theme; (4) Text, Historical Figure Mentioned oraz Discussed Issue
 #cited authors + Discussed Issue
 Historical Figure Mentioned + Polemical Themes (Random Order)
 Historical Figure Mentioned + Discussed Issue
 
-#%%
+#%% rdf to lpg
 
 uris = set()
 for s, p, o in g:
