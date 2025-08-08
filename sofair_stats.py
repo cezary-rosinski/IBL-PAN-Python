@@ -482,6 +482,99 @@ plt.show()
 
 
 
+#%%
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# --- Load inputs (same filtering logic as before) ---
+exclude = pd.read_csv('data/SoFAIR/noSoftware.csv', sep=';').iloc[:, 0].astype(str).str.strip().tolist()
+df = pd.read_excel('data/SoFAIR/sofair_full_data.xlsx')
+
+# Keep only software mentions and exclude names from NoSoftware
+sw = df[(df['type'] == 'software') & (~df['text'].isin(exclude))]
+
+# Top-20 software by mentions (after exclusion)
+top20 = sw['text'].value_counts().head(20).index.tolist()
+
+# Software × Discipline count matrix
+counts = (sw[sw['text'].isin(top20)]
+          .groupby(['text', 'Discipline'])
+          .size()
+          .unstack(fill_value=0))
+
+# Consistent naming
+if 'Materials_Sciences' in counts.columns:
+    counts = counts.rename(columns={'Materials_Sciences': 'Materials Sciences'})
+
+# Keep software in descending total order
+totals = counts.sum(axis=1).sort_values(ascending=False)
+counts = counts.loc[totals.index]
+
+# --- Sort X axis (disciplines) by total mentions descending ---
+col_totals = counts.sum(axis=0)
+disc_order = col_totals.sort_values(ascending=False).index
+counts = counts[disc_order]
+col_totals = col_totals.loc[disc_order]
+
+# Shares within each discipline
+shares = counts.div(col_totals, axis=1).fillna(0.0)  # fraction (0..1)
+
+# Prepare coordinates for bubble chart
+softwares = counts.index.tolist()
+disciplines = counts.columns.tolist()
+y_positions = np.arange(len(softwares))
+x_positions = np.arange(len(disciplines))
+X, Y = np.meshgrid(x_positions, y_positions)
+
+# Flatten
+x_plot = X.flatten()
+y_plot = Y.flatten()
+share_plot = shares.values.flatten()
+
+# Keep only nonzero entries
+mask = share_plot > 0
+x_plot = x_plot[mask]
+y_plot = y_plot[mask]
+share_plot = share_plot[mask]
+
+# --- Fixed legend & scaling relative to 100% ---
+legend_pcts = [5, 10, 20, 50, 100]  # fixed percent levels
+min_size, max_size = 30, 330  # marker areas
+def scale_from_percent(pct):
+    return min_size + (max_size - min_size) * (pct / 100.0)
+
+sizes = np.array([scale_from_percent(p * 100.0) for p in share_plot])
+
+# Bubble color (use Matplotlib default cycle's first color for both plot and legend)
+bubble_color = plt.rcParams['axes.prop_cycle'].by_key()['color'][0]
+
+plt.figure(figsize=(16, 10))
+plt.scatter(x_plot, y_plot, s=sizes, alpha=0.75, marker='o', color=bubble_color)
+
+# Axes formatting
+x_labels = [f"{d} (N={int(col_totals[d])})" for d in disciplines]
+plt.yticks(ticks=np.arange(len(softwares)), labels=[f"{s} (n={totals[s]})" for s in softwares])
+plt.xticks(ticks=np.arange(len(disciplines)), labels=x_labels, rotation=45, ha='right', fontsize=11)
+plt.title('Top 20 Software Mentions by Discipline', fontsize=14)
+plt.xlabel('Discipline (N = total Top 20 mentions in discipline)')
+plt.ylabel('Software (total mentions across disciplines)')
+plt.grid(axis='both', alpha=0.2)
+
+# Legend outside on the right
+handles = [plt.scatter([], [], s=scale_from_percent(p), marker='o', alpha=0.75,
+                       color=bubble_color, label=f'{p}% of discipline')
+           for p in legend_pcts]
+plt.legend(handles=handles, title='Bubble size (share within discipline)',
+           loc='upper left', bbox_to_anchor=(1.02, 1), frameon=False)
+
+plt.tight_layout()
+out_path = 'data/SoFAIR/top20_bubble_software_by_discipline_sharelegend_fixed_sorted.png'
+plt.savefig(out_path, dpi=500, bbox_inches='tight')
+plt.show()
+
+print(f"Saved figure to: {out_path}")
 
 
 
