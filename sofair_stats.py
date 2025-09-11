@@ -18,7 +18,8 @@ from my_functions import gsheet_to_df
 
 #%% dependencies
 
-sofair_folder = r"D:\IBL\Documents\IBL-PAN-Python\data\SoFAIR/"
+# sofair_folder = r"D:\IBL\Documents\IBL-PAN-Python\data\SoFAIR/"
+sofair_folder = r"C:\Users\Cezary\Documents\IBL-PAN-Python\data\SoFAIR/"
 
 domain_dict = {
     'Engineering': 'SoFAIR_AD_Engineering_papers',
@@ -121,7 +122,8 @@ df_sofair_articles_info = pd.merge(df_sofair_annotations_info, df_sofair_article
 #%% annotation statistics
 
 # path = r'D:\IBL\Documents\Dataset\documents\tei-annotated/'
-path = r'D:\IBL\Documents\Dataset\documents\tei-annotated-deduplicated/'
+# path = r'D:\IBL\Documents\Dataset\documents\tei-annotated-deduplicated/'
+path = r'C:\Users\Cezary\Documents\Dataset\documents\tei-annotated-deduplicated/'
 
 folders = glob.glob(path + '*' + '/', recursive=True)
 
@@ -157,7 +159,8 @@ df_sofair_articles_info.to_excel(f'{sofair_folder}sofair_articles_info.xlsx', in
         
 #%% annotation statistics
 
-path = r'D:\IBL\Documents\Dataset\documents\tei-pre-annotated/'
+# path = r'D:\IBL\Documents\Dataset\documents\tei-pre-annotated/'
+path = r'C:\Users\Cezary\Documents\Dataset\documents\tei-pre-annotated/'
 folders = glob.glob(path + '*' + '/', recursive=True)
 
 namespaces = {'{http://www.w3.org/XML/1998/namespace}id': 'id',
@@ -270,15 +273,18 @@ domain_dict_reverse = {
     'SoFAIR_Cultural_Studies_papers': 'Cultural Studies',
     'SoFAIR_AD_BMA_papers': 'Business Management',
     'SoFAIR_AD_Physics_papers': 'Physics',
-    'SoFAIR_AD_Materials_Science_papers': 'Materials Sciences',
+    'SoFAIR_AD_Materials_Science_papers': 'Materials Science',
     'SoFAIR_AD_Earth_Planet_Sciences_papers': 'Earth and Planetary Science',
     'SoFAIR_AD_Environmental_Science_papers': 'Environmental Science',
     'SoFAIR_AD_Digital_Humanties_papers': 'Digital Humanities'
     }
 
 merged_df['Discipline'] = merged_df['Subcorpus'].apply(lambda x: domain_dict_reverse.get(x))
+exclude = pd.read_csv('data/SoFAIR/noSoftware.csv', sep=';').iloc[:, 0].astype(str).str.strip().tolist()
 
-merged_df.to_excel(f'{sofair_folder}sofair_full_data.xlsx', index=False)
+df_final = merged_df.loc[~merged_df['text'].isin(exclude)]
+
+merged_df.to_excel(f'{sofair_folder}sofair_final_data.xlsx', index=False)
 
 #%% visualization -- software mentions in discipline and time
 
@@ -576,7 +582,159 @@ plt.show()
 
 print(f"Saved figure to: {out_path}")
 
+#%% testy przed wizualizacją
+test = df.groupby('Discipline')['DOI'].nunique().to_dict()
+df_count = pd.DataFrame(test.items(), columns=['Discipline', 'Counter'])
+df_count.to_excel(f'{sofair_folder}sofair_articles_counter.xlsx', index=False)
 
+df_soft = df_final.loc[df_final['type'] == 'software']
+test2 = df_soft.groupby('Discipline')['id'].nunique().to_dict()
+
+for k,v in test2.items():
+    for ka, va in test.items():
+        if k == ka:
+            print(k, v/va)
+
+#%% wizualizacja 11.09.2025
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.patches import Rectangle
+import seaborn as sns
+
+# Wczytanie danych
+# Zakładam, że plik Excel jest dostępny lokalnie
+df = pd.read_excel('data/SoFAIR/sofair_final_data.xlsx')
+
+print(f"Załadowano {len(df)} rekordów")
+print(f"Kolumny: {list(df.columns)}")
+
+# Filtrowanie tylko oprogramowania
+software_df = df[df['type'] == 'software'].copy()
+print(f"Przefiltrowane dane: {len(software_df)} wzmianek oprogramowania")
+
+# Analiza per dyscyplina
+# 1. Liczba wzmianek per dyscyplina
+mentions_per_discipline = software_df['Discipline'].value_counts().sort_values(ascending=True)
+
+# 2. Liczba unikalnych artykułów (DOI) per dyscyplina
+unique_articles_per_discipline = software_df.groupby('Discipline')['DOI'].nunique().sort_index()
+
+# 3. Średnia liczba wzmianek na artykuł per dyscyplina
+avg_mentions_per_article = (mentions_per_discipline / unique_articles_per_discipline[mentions_per_discipline.index]).sort_values(ascending=True)
+
+# Upewnienie się, że mamy te same dyscypliny w obu analizach
+common_disciplines = mentions_per_discipline.index.intersection(avg_mentions_per_article.index)
+mentions_per_discipline = mentions_per_discipline[common_disciplines]
+avg_mentions_per_article = avg_mentions_per_article[common_disciplines]
+
+print(f"\nAnalizowane dyscypliny: {len(common_disciplines)}")
+print("\nTop 5 dyscyplin pod względem całkowitej liczby wzmianek:")
+for i, (discipline, count) in enumerate(mentions_per_discipline.tail().items()):
+    articles = unique_articles_per_discipline[discipline]
+    avg = count / articles
+    print(f"{i+1}. {discipline}: {count} wzmianek w {articles} artykułach (śr. {avg:.2f})")
+
+# Konfiguracja stylu
+plt.style.use('default')
+sns.set_palette("husl")
+
+# Tworzenie podwójnej wizualizacji
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 12))
+fig.suptitle('Software Mentions Analysis by Scientific Discipline', fontsize=20, fontweight='bold', y=0.95)
+
+# Wykres 1: Całkowita liczba wzmianek
+bars1 = ax1.barh(range(len(mentions_per_discipline)), mentions_per_discipline.values, 
+                 color='steelblue', alpha=0.8, edgecolor='navy', linewidth=0.5)
+ax1.set_yticks(range(len(mentions_per_discipline)))
+ax1.set_yticklabels(mentions_per_discipline.index, rotation=0, ha='right', fontsize=10)
+ax1.set_xlabel('Number of Software Mentions', fontsize=12, fontweight='bold')
+ax1.set_title('Total Software Mentions per Discipline', fontsize=14, fontweight='bold', pad=20)
+ax1.grid(axis='x', alpha=0.3, linestyle='--')
+ax1.spines['top'].set_visible(False)
+ax1.spines['right'].set_visible(False)
+
+# Dodanie wartości na końcu słupków
+for i, bar in enumerate(bars1):
+    width = bar.get_width()
+    ax1.text(width + max(mentions_per_discipline.values) * 0.01, bar.get_y() + bar.get_height()/2, 
+             f'{int(width)}', ha='left', va='center', fontsize=9, fontweight='bold')
+
+# Wykres 2: Średnia liczba wzmianek na artykuł
+bars2 = ax2.barh(range(len(avg_mentions_per_article)), avg_mentions_per_article.values,
+                 color='darkorange', alpha=0.8, edgecolor='darkred', linewidth=0.5)
+ax2.set_yticks(range(len(avg_mentions_per_article)))
+ax2.set_yticklabels(avg_mentions_per_article.index, rotation=0, ha='right', fontsize=10)
+ax2.set_xlabel('Average Software Mentions per Article', fontsize=12, fontweight='bold')
+ax2.set_title('Average Software Mentions per Article by Discipline', fontsize=14, fontweight='bold', pad=20)
+ax2.grid(axis='x', alpha=0.3, linestyle='--')
+ax2.spines['top'].set_visible(False)
+ax2.spines['right'].set_visible(False)
+
+# Dodanie wartości na końcu słupków
+for i, bar in enumerate(bars2):
+    width = bar.get_width()
+    ax2.text(width + max(avg_mentions_per_article.values) * 0.01, bar.get_y() + bar.get_height()/2, 
+             f'{width:.1f}', ha='left', va='center', fontsize=9, fontweight='bold')
+
+# Dodanie statystyk w dolnej części
+total_software_mentions = len(software_df)
+total_unique_articles = software_df['DOI'].nunique()
+overall_avg = total_software_mentions / total_unique_articles
+
+fig.text(0.5, 0.02, 
+         f'Total: {total_software_mentions} software mentions in {total_unique_articles} unique articles '
+         f'(Overall average: {overall_avg:.2f} mentions per article)',
+         ha='center', fontsize=12, style='italic', 
+         bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray", alpha=0.7))
+
+# Dostosowanie layoutu
+plt.tight_layout()
+plt.subplots_adjust(top=0.9, bottom=0.1)
+
+# Zapisanie w wysokiej rozdzielczości
+plt.savefig('software_mentions_by_discipline.png', dpi=300, bbox_inches='tight', 
+            facecolor='white', edgecolor='none')
+plt.savefig('software_mentions_by_discipline.pdf', bbox_inches='tight', 
+            facecolor='white', edgecolor='none')
+
+print(f"\nWizualizacja zapisana jako:")
+print("- software_mentions_by_discipline.png (300 DPI)")
+print("- software_mentions_by_discipline.pdf (wektorowy)")
+
+plt.show()
+
+# Dodatkowe statystyki
+print(f"\n=== DODATKOWE STATYSTYKI ===")
+print(f"Całkowita liczba wzmianek oprogramowania: {total_software_mentions}")
+print(f"Liczba unikalnych artykułów: {total_unique_articles}")
+print(f"Średnia globalna: {overall_avg:.2f} wzmianek na artykuł")
+
+print(f"\nTop 5 dyscyplin - całkowite wzmianki:")
+for discipline, count in mentions_per_discipline.tail().items():
+    print(f"  {discipline}: {count}")
+
+print(f"\nTop 5 dyscyplin - średnia na artykuł:")
+for discipline, avg in avg_mentions_per_article.tail().items():
+    articles = unique_articles_per_discipline[discipline]
+    total = mentions_per_discipline[discipline]
+    print(f"  {discipline}: {avg:.2f} (wzmianek: {total}, artykułów: {articles})")
+
+# Utworzenie tabeli podsumowującej
+summary_df = pd.DataFrame({
+    'Discipline': mentions_per_discipline.index,
+    'Total_Mentions': mentions_per_discipline.values,
+    'Unique_Articles': [unique_articles_per_discipline[d] for d in mentions_per_discipline.index],
+    'Avg_Mentions_per_Article': [avg_mentions_per_article[d] for d in mentions_per_discipline.index]
+}).sort_values('Total_Mentions', ascending=False)
+
+print(f"\n=== TABELA PODSUMOWUJĄCA ===")
+print(summary_df.to_string(index=False))
+
+# Zapisanie tabeli do CSV
+summary_df.to_csv('software_mentions_summary.csv', index=False)
+print(f"\nTabela zapisana jako: software_mentions_summary.csv")
 
 
 
