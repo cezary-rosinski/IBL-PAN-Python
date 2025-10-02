@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 import regex as re
+from rdflib import Graph, Namespace, URIRef, Literal, BNode
+from rdflib.namespace import RDF, RDFS, XSD, FOAF, OWL
 
 #%% reading data
 
@@ -179,23 +181,188 @@ painters_urls = [e for e in painters_urls if e not in errors]
 wikiart_response = [e for e in wikiart_response if e.get('wikiart_url') in painters_urls]
 
 #%% wikidata labels
-def get_wikidata_label(wikidata_id, pref_langs = ['en', 'pl', 'fr', 'de']):
-    # wikidata_id = 'Q130690218'
+wikidata_ids_for_labeling = set([el for sub in [{k for k,v in e.items()} for e in  wikidata_response.values()] for el in sub])
+wikidata_ids_for_labeling2 = set([ele for suba in [[el for sub in [v for k,v in e.items()] for el in sub] for e in  wikidata_response.values()] for ele in suba])
+wikidata_ids_for_labeling = wikidata_ids_for_labeling | wikidata_ids_for_labeling2
+
+def get_wikidata_label(wikidata_id, pref_langs = ['en', 'es', 'fr', 'de', 'pl', 'ro', 'mul']):
+    # wikidata_id = 'Q20666586'
     url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    headers = {'User-Agent': 'CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org)'}
     try:
-        result = requests.get(url).json()
-        langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        result = requests.get(url, headers=headers).json()
+        try:
+            langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        except AttributeError:
+            langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
         if langs:
-            for lang in langs:
+            order = {lang: idx for idx, lang in enumerate(pref_langs)}
+            sorted_langs = sorted(langs, key=lambda x: order.get(x, float('inf')))
+            for lang in sorted_langs:
                 label = result['entities'][wikidata_id]['labels'][lang]['value']
                 break
         else: label = None
     except ValueError:
         label = None
-    return label 
+    wikidata_labels.update({wikidata_id: label})
+
+wikidata_labels = {}
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(get_wikidata_label, wikidata_ids_for_labeling),total=len(wikidata_ids_for_labeling)))
+    
+wikidata_response = {k:{wikidata_labels.get(ka):[wikidata_labels.get(e) for e in va] for ka,va in v.items()} for k,v in wikidata_response.items()}
+
+#%% df preparations for RDF
+
+df_paintings = df_artemis.copy()
+df_paintings['painter_url'] = df_paintings['painting'].apply(lambda x: f"https://www.wikiart.org/en/{x.split('_')[0].replace('.','-').replace('--','-')}")
+df_paintings = df_paintings.loc[df_paintings['painter_url'].isin(painters_urls)]
+df_paintings = df_paintings.groupby('painting').agg({
+    'art_style': 'first',  # lub 'last', wszystkie wartości są takie same
+    'emotion': list,  # łączenie wszystkich emocji
+    'utterance': list,  # łączenie wszystkich wypowiedzi
+    'painter_url': 'first'
+}).reset_index()
+
+for e in wikiart_response:
+    # e = wikiart_response[0]
+    wikidata_r = wikidata_response.get(e.get('wikidata_id'))
+    e.update(wikidata_r)
+    
+df_people = pd.DataFrame(wikiart_response)
 
 #%% RDF generation
 
+ViWo = Namespace('https://example.org/vienna_workshop/')
+dcterms = Namespace("http://purl.org/dc/terms/")
+rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
+FABIO = Namespace("http://purl.org/spar/fabio/")
+BIRO = Namespace("http://purl.org/spar/biro/")
+VIAF = Namespace("http://viaf.org/viaf/")
+geo = Namespace("http://www.w3.org/2003/01/geo/wgs84_pos#")
+bibo = Namespace("http://purl.org/ontology/bibo/")
+schema = Namespace("http://schema.org/")
+WDT = Namespace("http://www.wikidata.org/entity/")
+OUTPUT_TTL = "data/Vienna_workshop_2025/vienna_workshop.ttl"
+
+g = Graph()
+
+g.bind("vienna_workshop", ViWo)
+g.bind("dcterms", dcterms)
+g.bind("fabio", FABIO)
+g.bind("geo", geo)
+g.bind("bibo", bibo)
+g.bind("sch", schema)
+g.bind("biro", BIRO)
+g.bind("foaf", FOAF)
+g.bind("wdt", WDT)
+g.bind("owl", OWL)
+
+# 1) Person
+def add_person(row):
+    pid = str(row["wikiart_url"])
+    person = ViWo[f"Person/{pid}"]
+    g.add((person, RDF.type, schema.Person))
+    g.add((person, schema.name, Literal(row["label"])))
+    if isinstance(row["wikidata_id"], str):
+        g.add((person, OWL.sameAs, WDT[row["wikidata_id"]]))
+    if isinstance(row["wikipedia_url"], str):
+        g.add((person, OWL.sameAs, URIRef(row["wikipedia_url"])))
+    if isinstance(row["wikiart_url"], str):
+        g.add((person, OWL.sameAs, URIRef(row["wikiart_url"])))
+    if isinstance(row['Nationality'], list):
+        for e in row['Nationality']:
+            g.add((person, ViWo.nationality, Literal(e)))
+    if isinstance(row['Art Movement'], list):
+        for e in row['Art Movement']:
+            g.add((person, ViWo.movement, Literal(e)))
+    if isinstance(row['Painting School'], list):
+        for e in row['Painting School']:
+            g.add((person, ViWo.paintingSchool, Literal(e)))
+    if isinstance(row['Genre'], list):
+        for e in row['Genre']:
+            g.add((person, ViWo.genre, Literal(e)))
+    if isinstance(row['Field'], list):
+        for e in row['Field']:
+            g.add((person, ViWo.field, Literal(e)))
+    if isinstance(row['sex or gender'], list):
+        for e in row['sex or gender']:
+            g.add((person, schema.gender, Literal(e)))
+    if isinstance(row['sex or gender'], list):
+        for e in row['sex or gender']:
+            g.add((person, schema.gender, Literal(e)))
+    if isinstance(row['country of citizenship'], list):
+        for e in row['country of citizenship']:
+            g.add((person, schema.nationality, Literal(e)))
+    if isinstance(row['occupation'], list):
+        for e in row['occupation']:
+            g.add((person, schema.hasOccupation, Literal(e)))
+    if isinstance(row['movement'], list):
+        for e in row['movement']:
+            g.add((person, ViWo.movement, Literal(e)))
+    if isinstance(row['genre'], list):
+        for e in row['genre']:
+            g.add((person, ViWo.genre, Literal(e)))
+    if isinstance(row['Art institution'], list):
+        for e in row['Art institution']:
+            g.add((person, ViWo.artInstitution, Literal(e)))
+    if isinstance(row['child'], list):
+        g.add((person, ViWo.hasChildren, Literal(True)))
+    else: g.add((person, ViWo.hasChildren, Literal(False)))
+    if isinstance(row['Influenced on'], list):
+        for e in row['Influenced on']:
+            g.add((person, ViWo.influencedOn, Literal(e)))
+    if isinstance(row['influenced by'], list):
+        for e in row['influenced by']:
+            g.add((person, ViWo.influencedBy, Literal(e)))
+    if isinstance(row['Influenced by'], list):
+        for e in row['Influenced by']:
+            g.add((person, ViWo.influencedBy, Literal(e)))
+    if isinstance(row['Teachers'], list):
+        for e in row['Teachers']:
+            g.add((person, ViWo.teachers, Literal(e)))
+    if isinstance(row['Friends and Co-workers'], list):
+        for e in row['Friends and Co-workers']:
+            g.add((person, FOAF.knows, Literal(e)))
+    if isinstance(row['relative'], list):
+        for e in row['relative']:
+            g.add((person, ViWo.hasRelative, Literal(e)))
+    if isinstance(row['Family and Relatives'], list):
+        for e in row['Family and Relatives']:
+            g.add((person, ViWo.hasRelative, Literal(e)))
+    if isinstance(row['Pupils'], list):
+        for e in row['Pupils']:
+            g.add((person, ViWo.pupils, Literal(e)))
+    if isinstance(row['member of'], list):
+        for e in row['member of']:
+            g.add((person, schema.memberOf, Literal(e)))
+
+for _, r in df_people.iterrows():
+    add_person(r)
+    
+# 2) Painting 
+def add_painting(row):
+# for _, row in df_novels.iterrows():
+    tid = str(row["painting"])
+    painting = ViWo[f"Painting/{tid}"]
+    g.add((painting, RDF.type, schema.Painting))
+    g.add((painting, schema.author, ViWo[f"Person/{row['painter_url']}"]))
+    g.add((painting, schema.title, Literal(row['painting'].split('_')[-1])))
+    g.add((painting, ViWo.artStyle, Literal(row['art_style'])))
+    for e, u in zip(row['emotion'], row['utterance']):
+        g.add((painting, ViWo.emotion, Literal(e)))
+        g.add((painting, ViWo.utterance, Literal(u)))
+    if isinstance(row["painting"], str):
+        g.add((painting, OWL.sameAs, URIRef(f"https://www.wikiart.org/en/{row['painting'].replace('.','-').replace('--','-').replace('_','/')}")))
+           
+for _, r in tqdm(df_paintings.iterrows(), total=len(df_paintings)):
+    add_painting(r)
+    
+# --- EXPORT ---
+g.serialize(destination=OUTPUT_TTL, format="turtle")
+print(f"RDF triples written to {OUTPUT_TTL}")  
+    
+#%% Network generation
 
 
 
