@@ -142,11 +142,76 @@ errors = []
 with ThreadPoolExecutor() as excecutor:
     list(tqdm(excecutor.map(get_wikidata_id, wikipedia_urls),total=len(wikipedia_urls)))
 
+errors2 = {k for k,v in wikipedia_wikidata.items() if v is None}
+errors2 = {k for k,v in wikiart_wikipedia.items() if v in errors2}
+errors = {k for k,v in wikiart_wikipedia.items() if v in errors}
+errors = errors | errors2
+painters_urls = [e for e in painters_urls if e not in errors]
+wikiart_response = [e for e in wikiart_response if e.get('wikiart_url') in painters_urls]
+
+for e in wikiart_response:
+    e.update({'wikidata_id': wikipedia_wikidata.get(e.get('wikipedia_url'))})
+
 #%% wikidata enrichment
+wikidata_ids = set(wikipedia_wikidata.values())
+def harvest_wikidata(wikidata_id):
+    try:
+        # wikidata_id = wikiart_response[0].get('wikidata_id')
+        url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+        headers = {'User-Agent': 'CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org)'}
+        result = requests.get(url, headers=headers).json()
+        claims = ['P21', 'P27', 'P106', 'P40', 'P1038', 'P135', 'P463', 'P136', 'P737']
+        temp_dict = result.get('entities').get(wikidata_id).get('claims')
+        temp_dict = {k:[e.get('mainsnak').get('datavalue').get('value').get('id') for e in v] for k,v in temp_dict.items() if k in claims}
+        wikidata_response.update({wikidata_id:temp_dict})
+    except:
+        errors.append(wikidata_id)
+    
+wikidata_response = {}
+errors = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(harvest_wikidata, wikidata_ids),total=len(wikidata_ids)))
 
-url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
-headers = {'User-Agent': 'CoolBot/0.0 (https://example.org/coolbot/; coolbot@example.org)'}
+errors = [e for e in errors if e]
+errors = {k for k,v in wikipedia_wikidata.items() if v in errors}
+errors = {k for k,v in wikiart_wikipedia.items() if v in errors}
+painters_urls = [e for e in painters_urls if e not in errors]
+wikiart_response = [e for e in wikiart_response if e.get('wikiart_url') in painters_urls]
 
-response = requests.get(url, headers=headers)
+#%% wikidata labels
+def get_wikidata_label(wikidata_id, pref_langs = ['en', 'pl', 'fr', 'de']):
+    # wikidata_id = 'Q130690218'
+    url = f'https://www.wikidata.org/wiki/Special:EntityData/{wikidata_id}.json'
+    try:
+        result = requests.get(url).json()
+        langs = [e for e in list(result.get('entities').get(wikidata_id).get('labels').keys()) if e in pref_langs]
+        if langs:
+            for lang in langs:
+                label = result['entities'][wikidata_id]['labels'][lang]['value']
+                break
+        else: label = None
+    except ValueError:
+        label = None
+    return label 
 
 #%% RDF generation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
