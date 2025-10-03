@@ -431,8 +431,8 @@ def create_relation_table(data_list):
         d1 = data_list[idx1]
         d2 = data_list[idx2]
 
-        wiki1 = d1.get('wikipedia_url')
-        wiki2 = d2.get('wikipedia_url')
+        wiki1 = d1.get('label')
+        wiki2 = d2.get('label')
         if not wiki1 or not wiki2:
             continue
 
@@ -480,19 +480,21 @@ def create_relation_table(data_list):
                 shared_originals = norm_map1[nv]
                 for shared in shared_originals:
                     relations.append({
-                        'wikipedia1': wiki1,
-                        'wikipedia2': wiki2,
+                        'label1': wiki1,
+                        'label2': wiki2,
                         'attribute': cattr,       # nazwa kanoniczna
                         'shared_value': shared    # oryginalna wartość z d1
                     })
 
-    df = pd.DataFrame(relations, columns=['wikipedia1', 'wikipedia2', 'attribute', 'shared_value'])
+    df = pd.DataFrame(relations, columns=['label1', 'label2', 'attribute', 'shared_value'])
     return df
 
 # Użycie funkcji
 relations_df = create_relation_table(wikiart_response)
+co_occurrence = relations_df.groupby(['label1','label2']).size().reset_index(name='weight')
+co_occurrence.to_excel('data/Vienna_workshop_2025/art_network.xlsx', index=False)
 
-
+relations_df.to_csv('data/Vienna_workshop_2025/art_network.csv', index=False)
 
 
 
