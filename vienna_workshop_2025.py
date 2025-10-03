@@ -6,6 +6,7 @@ from tqdm import tqdm
 import regex as re
 from rdflib import Graph, Namespace, URIRef, Literal, BNode
 from rdflib.namespace import RDF, RDFS, XSD, FOAF, OWL
+from itertools import combinations
 
 #%% reading data
 
@@ -231,6 +232,11 @@ for e in wikiart_response:
     
 df_people = pd.DataFrame(wikiart_response)
 
+#%% RDF sampling
+
+df_people_sample = df_people[:200]
+df_paintings_sample = df_paintings.loc[df_paintings['painter_url'].isin(df_people_sample['wikiart_url'].to_list())]
+
 #%% RDF generation
 
 ViWo = Namespace('https://example.org/vienna_workshop/')
@@ -337,7 +343,8 @@ def add_person(row):
         for e in row['member of']:
             g.add((person, schema.memberOf, Literal(e)))
 
-for _, r in df_people.iterrows():
+# for _, r in df_people.iterrows():
+for _, r in df_people_sample.iterrows():
     add_person(r)
     
 # 2) Painting 
@@ -355,14 +362,135 @@ def add_painting(row):
     if isinstance(row["painting"], str):
         g.add((painting, OWL.sameAs, URIRef(f"https://www.wikiart.org/en/{row['painting'].replace('.','-').replace('--','-').replace('_','/')}")))
            
-for _, r in tqdm(df_paintings.iterrows(), total=len(df_paintings)):
+# for _, r in tqdm(df_paintings.iterrows(), total=len(df_paintings)):
+for _, r in tqdm(df_paintings_sample.iterrows(), total=len(df_paintings_sample)):
     add_painting(r)
     
 # --- EXPORT ---
 g.serialize(destination=OUTPUT_TTL, format="turtle")
-print(f"RDF triples written to {OUTPUT_TTL}")  
+print(f"RDF triples written to {OUTPUT_TTL}") 
+
+#zmienić url autora, bo ma podwójne https 
     
 #%% Network generation
+def create_relation_table(data_list):
+    """
+    Tworzy tabelę relacji między artystami na podstawie wspólnych wartości.
+
+    Args:
+        data_list: Lista słowników z danymi artystów (jak w przykładzie w pytaniu)
+
+    Returns:
+        DataFrame z relacjami (wikipedia1, wikipedia2, attribute, shared_value)
+    """
+
+    # Pola, których nie porównujemy
+    IGNORE_KEYS = {'wikiart_url', 'wikidata_id', 'label', 'wikipedia_url'}
+
+    # Mapowanie różnych wariantów kluczy na nazwę kanoniczną
+    CANON = {
+        'Nationality': 'nationality',
+        'Art Movement': 'art movement',
+        'Painting School': 'painting school',
+        'Genre': 'genre',
+        'genre': 'genre',
+        'Field': 'field',
+        'sex or gender': 'sex or gender',
+        'country of citizenship': 'country of citizenship',
+        'occupation': 'occupation',
+        'movement': 'movement',
+        'Art institution': 'art institution',
+        'child': 'child',
+        'Influenced on': 'influenced on',
+        'influenced by': 'influenced by',
+        'Influenced by': 'influenced by',
+        'Teachers': 'teachers',
+        'Friends and Co-workers': 'friends and co-workers',
+        'relative': 'relative',
+        'Pupils': 'pupils',
+        'member of': 'member of',
+        'Family and Relatives': 'family and relatives',
+    }
+
+    def canon_key(k):
+        # zostawiamy oryginał jeśli nie mamy mapowania i nie jest do ignorowania
+        return CANON.get(k, k)
+
+    def to_list(v):
+        return v if isinstance(v, list) else [v]
+
+    def norm(x):
+        # normalizacja tylko dla stringów
+        if isinstance(x, str):
+            return x.strip().casefold()
+        return x
+
+    relations = []
+
+    for idx1, idx2 in combinations(range(len(data_list)), 2):
+        d1 = data_list[idx1]
+        d2 = data_list[idx2]
+
+        wiki1 = d1.get('wikipedia_url')
+        wiki2 = d2.get('wikipedia_url')
+        if not wiki1 or not wiki2:
+            continue
+
+        # Porównujemy po wspólnych kluczach (po kanonizacji) z pominięciem ignorowanych
+        # Zbudujmy mapy: klucz_kanoniczny -> (oryginalny_klucz, wartość)
+        def build_keymap(d):
+            km = {}
+            for k, v in d.items():
+                if k in IGNORE_KEYS:
+                    continue
+                ck = canon_key(k)
+                # jeśli ten klucz już był pod innym wariantem, preferuj pierwszy napotkany
+                if ck not in km:
+                    km[ck] = (k, v)
+            return km
+
+        km1 = build_keymap(d1)
+        km2 = build_keymap(d2)
+
+        # wspólne atrybuty (po kanonizacji)
+        common_attrs = set(km1.keys()) & set(km2.keys())
+        for cattr in common_attrs:
+            orig_k1, v1 = km1[cattr]
+            orig_k2, v2 = km2[cattr]
+
+            if v1 is None or v2 is None:
+                continue
+
+            # zamień na listy i znormalizuj do porównania
+            l1 = to_list(v1)
+            l2 = to_list(v2)
+
+            # mapy: znormalizowana_wartość -> oryginalne_wartości (lista, bo mogą być duplikaty)
+            norm_map1 = {}
+            for x in l1:
+                norm_map1.setdefault(norm(x), []).append(x)
+            norm_map2 = {}
+            for x in l2:
+                norm_map2.setdefault(norm(x), []).append(x)
+
+            # część wspólna po normalizacji
+            common_norm_vals = set(norm_map1.keys()) & set(norm_map2.keys())
+            for nv in common_norm_vals:
+                # wybierz jedną reprezentację oryginalną (preferuj z pierwszego słownika)
+                shared_originals = norm_map1[nv]
+                for shared in shared_originals:
+                    relations.append({
+                        'wikipedia1': wiki1,
+                        'wikipedia2': wiki2,
+                        'attribute': cattr,       # nazwa kanoniczna
+                        'shared_value': shared    # oryginalna wartość z d1
+                    })
+
+    df = pd.DataFrame(relations, columns=['wikipedia1', 'wikipedia2', 'attribute', 'shared_value'])
+    return df
+
+# Użycie funkcji
+relations_df = create_relation_table(wikiart_response)
 
 
 
