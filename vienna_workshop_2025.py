@@ -493,17 +493,17 @@ def create_relation_table(data_list):
 wikiart_relations = [{k:v for k,v in e.items() if k not in ['sex or gender', 'child', 'relative', 'Family and Relatives']} for e in wikiart_response]
 relations_df = create_relation_table(wikiart_relations)
 
+relations_df.to_csv('data/Vienna_workshop_2025/art_network_full.csv', index=False)
+
 relations_df["Name_1"], relations_df["Name_2"] = zip(*relations_df.apply(lambda row: sorted([row["label1"], row["label2"]]), axis=1))
 
 relations_df_to_co_occurence = relations_df[['Name_1', 'Name_2']]
 
 co_occurrence = relations_df_to_co_occurence.groupby(['Name_1','Name_2']).size().reset_index(name='weight')
-co_occurrence.to_excel('data/Vienna_workshop_2025/art_network.xlsx', index=False)
+co_occurrence.to_excel('data/Vienna_workshop_2025/art_network_nodes_and_weights.xlsx', index=False)
 
-relations_df.to_csv('data/Vienna_workshop_2025/art_network.csv', index=False)
-
-test = [e for e in wikiart_relations if e.get('label') in ['A.Y. Jackson', 'Alexander Calder']]
-test = [e for e in wikiart_response if 'Nationality' in e and e.get('Nationality')[0] == 'Austrian']
+# test = [e for e in wikiart_relations if e.get('label') in ['A.Y. Jackson', 'Alexander Calder']]
+# test = [e for e in wikiart_response if 'Nationality' in e and e.get('Nationality')[0] == 'Austrian']
 
 
 
