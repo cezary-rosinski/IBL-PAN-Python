@@ -343,8 +343,8 @@ def add_person(row):
         for e in row['member of']:
             g.add((person, schema.memberOf, Literal(e)))
 
-# for _, r in df_people.iterrows():
-for _, r in df_people_sample.iterrows():
+for _, r in df_people.iterrows():
+# for _, r in df_people_sample.iterrows():
     add_person(r)
     
 # 2) Painting 
@@ -362,8 +362,8 @@ def add_painting(row):
     if isinstance(row["painting"], str):
         g.add((painting, OWL.sameAs, URIRef(f"https://www.wikiart.org/en/{row['painting'].replace('.','-').replace('--','-').replace('_','/')}")))
            
-# for _, r in tqdm(df_paintings.iterrows(), total=len(df_paintings)):
-for _, r in tqdm(df_paintings_sample.iterrows(), total=len(df_paintings_sample)):
+for _, r in tqdm(df_paintings.iterrows(), total=len(df_paintings)):
+# for _, r in tqdm(df_paintings_sample.iterrows(), total=len(df_paintings_sample)):
     add_painting(r)
     
 # --- EXPORT ---
@@ -495,14 +495,15 @@ relations_df = create_relation_table(wikiart_relations)
 
 relations_df["Name_1"], relations_df["Name_2"] = zip(*relations_df.apply(lambda row: sorted([row["label1"], row["label2"]]), axis=1))
 
-relations_df = relations_df[['Name_1', 'Name_2']]
+relations_df_to_co_occurence = relations_df[['Name_1', 'Name_2']]
 
-co_occurrence = relations_df.groupby(['Name_1','Name_2']).size().reset_index(name='weight')
+co_occurrence = relations_df_to_co_occurence.groupby(['Name_1','Name_2']).size().reset_index(name='weight')
 co_occurrence.to_excel('data/Vienna_workshop_2025/art_network.xlsx', index=False)
 
 relations_df.to_csv('data/Vienna_workshop_2025/art_network.csv', index=False)
 
-
+test = [e for e in wikiart_relations if e.get('label') in ['A.Y. Jackson', 'Alexander Calder']]
+test = [e for e in wikiart_response if 'Nationality' in e and e.get('Nationality')[0] == 'Austrian']
 
 
 
