@@ -395,21 +395,21 @@ def create_relation_table(data_list):
         'Genre': 'genre',
         'genre': 'genre',
         'Field': 'field',
-        'sex or gender': 'sex or gender',
+        # 'sex or gender': 'sex or gender',
         'country of citizenship': 'country of citizenship',
         'occupation': 'occupation',
         'movement': 'movement',
         'Art institution': 'art institution',
-        'child': 'child',
+        # 'child': 'child',
         'Influenced on': 'influenced on',
         'influenced by': 'influenced by',
         'Influenced by': 'influenced by',
         'Teachers': 'teachers',
         'Friends and Co-workers': 'friends and co-workers',
-        'relative': 'relative',
+        # 'relative': 'relative',
         'Pupils': 'pupils',
         'member of': 'member of',
-        'Family and Relatives': 'family and relatives',
+        # 'Family and Relatives': 'family and relatives',
     }
 
     def canon_key(k):
@@ -490,8 +490,14 @@ def create_relation_table(data_list):
     return df
 
 # Użycie funkcji
-relations_df = create_relation_table(wikiart_response)
-co_occurrence = relations_df.groupby(['label1','label2']).size().reset_index(name='weight')
+wikiart_relations = [{k:v for k,v in e.items() if k not in ['sex or gender', 'child', 'relative', 'Family and Relatives']} for e in wikiart_response]
+relations_df = create_relation_table(wikiart_relations)
+
+relations_df["Name_1"], relations_df["Name_2"] = zip(*relations_df.apply(lambda row: sorted([row["label1"], row["label2"]]), axis=1))
+
+relations_df = relations_df[['Name_1', 'Name_2']]
+
+co_occurrence = relations_df.groupby(['Name_1','Name_2']).size().reset_index(name='weight')
 co_occurrence.to_excel('data/Vienna_workshop_2025/art_network.xlsx', index=False)
 
 relations_df.to_csv('data/Vienna_workshop_2025/art_network.csv', index=False)
