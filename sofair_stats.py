@@ -583,7 +583,7 @@ plt.show()
 print(f"Saved figure to: {out_path}")
 
 #%% testy przed wizualizacją
-test = df.groupby('Discipline')['DOI'].nunique().to_dict()
+test = merged_df.groupby('Discipline')['DOI'].nunique().to_dict()
 df_count = pd.DataFrame(test.items(), columns=['Discipline', 'Counter'])
 df_count.to_excel(f'{sofair_folder}sofair_articles_counter.xlsx', index=False)
 
