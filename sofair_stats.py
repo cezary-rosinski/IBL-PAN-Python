@@ -284,7 +284,8 @@ exclude = pd.read_csv('data/SoFAIR/noSoftware.csv', sep=';').iloc[:, 0].astype(s
 
 df_final = merged_df.loc[~merged_df['text'].isin(exclude)]
 
-merged_df.to_excel(f'{sofair_folder}sofair_final_data.xlsx', index=False)
+merged_df.to_excel(f'{sofair_folder}sofair_full_data.xlsx', index=False)
+df_final.to_excel(f'{sofair_folder}sofair_final_data_no_software_excluded.xlsx', index=False)
 
 #%% visualization -- software mentions in discipline and time
 
