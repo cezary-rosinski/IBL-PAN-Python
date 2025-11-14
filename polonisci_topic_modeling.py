@@ -441,7 +441,7 @@ FOLDER_PATH = r"data\poloniści\pełne teksty"
 OUTPUT_XLSX = r"data\poloniści\topiki_bertopic.xlsx"
 
 # Maksymalna liczba plików do przetworzenia (None = wszystkie)
-MAX_FILES = 100  # <- jak chcesz, możesz zmienić na None
+MAX_FILES = 100  # możesz zmienić na None, jeśli chcesz wszystkie
 
 
 # =========================
@@ -459,7 +459,7 @@ def load_stopwords(file_path: str, encoding: str = "utf-8") -> List[str]:
 # Stopwordy
 POLISH_STOPWORDS = load_stopwords(STOPWORDS_PATH)
 
-# Model embeddingów po polsku
+# Model embeddingów po polsku (ten sam co u Ciebie)
 polish_st = "sdadas/st-polish-paraphrase-from-distilroberta"
 embedding_model = SentenceTransformer(polish_st)
 
@@ -480,7 +480,7 @@ hdbscan_model = HDBSCAN(
     prediction_data=True,
 )
 
-# Vectorizer – PRZYWRACAMY min_df=2 jak w Twoim oryginalnym kodzie
+# Vectorizer – tak jak w Twoim pierwotnym kodzie
 vectorizer_model = CountVectorizer(
     stop_words=POLISH_STOPWORDS,
     min_df=2,
@@ -521,12 +521,10 @@ def main():
             cleaned = [line.strip() for line in lines if line.strip()]
             text_id = os.path.basename(file_path).replace(".txt", "")
 
-            # KLUCZOWA ZMIANA:
-            # zamiast łączyć w jeden full_text, każda linia jest osobnym dokumentem
+            # KLUCZ: każda linia to osobny dokument (jak w Twoim pierwotnym kodzie)
             for line in cleaned:
                 processed_texts.append(line)
-                # jako identyfikator dokumentu zostawiamy ID pliku
-                # (więc wiele wierszy w theta/topikiteksty będzie miało ten sam ID)
+                # jako ID dokumentu zapisujemy ID pliku (może się powtarzać)
                 processed_texts_ids.append(text_id)
 
     print(f"Wczytano {len(processed_texts)} dokumentów (linii) z {len(txt_files)} plików.")
@@ -541,12 +539,12 @@ def main():
         hdbscan_model=hdbscan_model,
         vectorizer_model=vectorizer_model,
         representation_model=representation_model,
-        top_n_words=10,           # TAK JAK W CSV (Representation = 10 słów)
+        top_n_words=10,           # tak jak w Twoim CSV
         calculate_probabilities=True,
         verbose=True,
     )
 
-    # Uczymy model – tu od razu dostajemy topics i probs
+    # Uczymy model – dostajemy topics i probs
     topics, probs = topic_model.fit_transform(processed_texts)
 
     end = time.time()
@@ -568,16 +566,16 @@ def main():
             "Spróbuj zmienić parametry HDBSCAN albo sprawdzić teksty."
         )
 
-    # Wszystkie topic_id, jakie zna model (włącznie z -1)
+    # Wszystkie topic_id (mogą zawierać -1)
     all_topic_ids = sorted(topics_dict.keys())
 
-    # Tematy "normalne" (bez -1) i niepuste
+    # Tematy "normalne" (bez -1) i z niepustą reprezentacją
     valid_topic_ids = sorted(
         t for t in all_topic_ids
-        if t != -1 and topics_dict[t]  # topics_dict[t] nie jest pustą listą
+        if t != -1 and topics_dict[t]
     )
 
-    # Jeśli nie ma żadnych tematów poza -1, to traktujemy -1 jako Topic 1
+    # Jeśli nie ma żadnych tematów poza -1, traktujemy -1 jako Topic 1
     if not valid_topic_ids:
         valid_topic_ids = sorted(
             t for t in all_topic_ids
@@ -611,17 +609,20 @@ def main():
     if probs is not None:
         probs_array = np.asarray(probs, dtype=object)
 
-        # przypadek: 2D (pełna macierz)
+        # przypadek: 2D (pełna macierz prawdopodobieństw)
         if probs_array.ndim == 2:
             probs_mode = "2d"
             if probs_array.dtype == object:
                 probs_array = np.vstack(probs_array)
-            # liczba kolumn = liczbie tematów (włącznie z -1)
-            # musimy zmapować po topic_id
-            # zakładamy, że kolumny są w kolejności all_topic_ids
-            topic_id_to_colidx = {tid: i for i, tid in enumerate(all_topic_ids)}
-            valid_col_indices = [topic_id_to_colidx[t] for t in valid_topic_ids]
-            theta = probs_array[:, valid_col_indices]
+
+            # zakładamy, że kolumny odpowiadają tematowi w kolejności rosnących topic_id bez -1
+            # i że liczba kolumn = liczbie valid_topic_ids
+            if probs_array.shape[1] >= n_valid_topics:
+                theta = probs_array[:, :n_valid_topics]
+            else:
+                # na wszelki wypadek: bierzemy tyle, ile jest
+                m = probs_array.shape[1]
+                theta[:, :m] = probs_array
 
         # przypadek: 1D – np. tylko P(przypisany_topik)
         elif probs_array.ndim == 1:
@@ -644,8 +645,7 @@ def main():
     # =========================
 
     # ---------- Arkusz 1: "top 15 słówtopik" ----------
-    # UWAGA: w modelu mamy top_n_words=10, więc będzie max 10 słów,
-    # resztę do 15 wypełniamy None
+    # model ma top_n_words=10, więc do 15 dobijamy None
     N_TOP_WORDS_WIDE = 15
 
     top_words_wide = {}
@@ -731,6 +731,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 
 
