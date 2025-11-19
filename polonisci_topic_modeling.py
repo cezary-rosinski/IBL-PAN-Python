@@ -1,415 +1,4 @@
-#code by Patryk Hubar-Kołodziejczyk
-import pandas as pd
-
-import nltk
-nltk.download('punkt')
-nltk.download('punkt_tab')
-
-import os
-import glob
-
-from sentence_transformers import SentenceTransformer
-
-from umap import UMAP
-from hdbscan import HDBSCAN
-from sklearn.feature_extraction.text import CountVectorizer
-
-from bertopic import BERTopic
-from bertopic.representation import KeyBERTInspired, MaximalMarginalRelevance, OpenAI, PartOfSpeech
-from tqdm import tqdm
-
-import spacy
-nlp = spacy.load("pl_core_news_lg")
-import time
-
-
-#%%
-def load_stopwords(file_path: str, encoding: str = "utf-8") -> list[str]:
-    with open(file_path, "r", encoding=encoding) as file:
-        return [line.strip() for line in file if line.strip()]
-
-
-POLISH_STOPWORDS = load_stopwords(r"data\poloniści\stopwords-pl.txt")
-#%%
-polish_st = "sdadas/st-polish-paraphrase-from-distilroberta"
-embedding_model = SentenceTransformer(polish_st)
-# embeddings = embedding_model.encode(processed_texts, show_progress_bar=True)
-#%%
-umap_model = UMAP(
-    n_neighbors=15,
-    n_components=5,
-    min_dist=0.0,
-    metric='cosine',
-    random_state=42
-)
-
-
-hdbscan_model = HDBSCAN(
-    min_cluster_size=25,
-    metric='euclidean',
-    cluster_selection_method='eom',
-    prediction_data=True
-)
-
-
-vectorizer_model = CountVectorizer(
-    stop_words=POLISH_STOPWORDS,
-    min_df=2,
-    ngram_range=(1, 3)
-)
-
-
-# KeyBERT
-keybert_model = KeyBERTInspired()
-
-#polski dziad
-pos_model = PartOfSpeech("pl_core_news_lg")
-
-# MMR
-mmr_model = MaximalMarginalRelevance(diversity=0.3)
-
-representation_model = {
-    "KeyBERT": keybert_model,
-    "MMR": mmr_model,
-    "POS": pos_model
-}
-#%%
-start = time.time()
-
-folder_path = r"data\poloniści\pełne teksty/"
-txt_files = glob.glob(os.path.join(folder_path, "*.txt"))
-processed_texts = []
-processed_texts_ids = []
-
-for file_path in tqdm(txt_files[:100]):
-    with open(file_path, "r", encoding="utf-8") as file:
-        lines = file.readlines()
-        cleaned = [line.strip() for line in lines if line.strip()]
-        processed_texts.extend(cleaned)
-        text_id = file_path.split('\\')[-1].replace('.txt', '')
-        processed_texts_ids.append(text_id)
-
-print(f"Wczytano {len(processed_texts)} linii z {len(txt_files)} plików.")
-
-embeddings = embedding_model.encode(processed_texts, show_progress_bar=True)
-
-topic_model = BERTopic(
-
-  embedding_model=embedding_model,
-  umap_model=umap_model,
-  hdbscan_model=hdbscan_model,
-  vectorizer_model=vectorizer_model,
-  representation_model=representation_model,
-
-  # parametry
-  top_n_words=10,
-  verbose=True
-)
-
-topics, probs = topic_model.fit_transform(processed_texts, embeddings)
-
-topic_model.get_topic_info().to_csv("data/poloniści/topiki_100.csv", encoding='utf-8')
-end = time.time()
-
-print(f"Czas wykonania dla {len(processed_texts_ids)} tekstów: {end - start:.4f} sekundy.\nPrzetworzone teksty: {processed_texts_ids}")
-
-
-#%% testy patryka
-
-# -*- coding: utf-8 -*-
-"""Topic modelling dla Czarka – wersja z datasetem i nazwami plików w wynikach."""
-
-# Commented out IPython magic to ensure Python compatibility.
-# Jeśli uruchamiasz w czystym Colabie, odkomentuj poniższe:
-# capture
-# !pip install bertopic
-# !pip install datasets
-# !pip install openai
-# !pip -q install -U transformers sentence-transformers torch
-# !python -m spacy download pl_core_news_lg
-
-import os
-import glob
-
-import nltk
-import pandas as pd
-
-from datasets import Dataset
-from sentence_transformers import SentenceTransformer
-from umap import UMAP
-from hdbscan import HDBSCAN
-from sklearn.feature_extraction.text import CountVectorizer
-
-from bertopic import BERTopic
-from bertopic.representation import KeyBERTInspired, MaximalMarginalRelevance, OpenAI, PartOfSpeech
-
-from tqdm import tqdm
-
-
-# ===== 1. NLTK – zasoby =====
-nltk.download("punkt")
-nltk.download("punkt_tab")
-
-
-# ===== 2. Funkcja do wczytywania stopwords =====
-def load_stopwords(file_path: str, encoding: str = "utf-8") -> list[str]:
-    """Wczytaj listę polskich stopwords z pliku tekstowego (jedno słowo na linię)."""
-    with open(file_path, "r", encoding=encoding) as f:
-        return [line.strip() for line in f if line.strip()]
-
-
-# Ścieżka do stopwords (jak w Twoim notebooku)
-POLISH_STOPWORDS = load_stopwords(r"data\poloniści\stopwords-pl.txt")
-
-
-# ===== 3. Wczytywanie plików .txt jako dataset (jeden plik = jeden dokument) =====
-# UZUPEŁNIJ ŚCIEŻKĘ:
-folder_path = r"data\poloniści\pełne teksty/"
-
-txt_files = glob.glob(os.path.join(folder_path, "*.txt"))
-
-texts = []
-filenames = []
-
-for file_path in tqdm(txt_files[:100]):
-    with open(file_path, "r", encoding="utf-8") as f:
-        lines = f.readlines()
-        cleaned = [line.strip() for line in lines if line.strip()]
-        # Wersja: JEDEN PLIK = JEDEN DOKUMENT
-        full_doc = " ".join(cleaned)
-        texts.append(full_doc)
-        filenames.append(os.path.basename(file_path))
-
-print(f"Wczytano {len(texts)} dokumentów z {len(txt_files)} plików.")
-
-# Jeśli wolisz: JEDNA LINIA = JEDEN DOKUMENT, użyj zamiast powyższej pętli:
-# texts = []
-# filenames = []
-# for file_path in txt_files:
-#     with open(file_path, "r", encoding="utf-8") as f:
-#         lines = f.readlines()
-#         cleaned = [line.strip() for line in lines if line.strip()]
-#         for line in cleaned:
-#             texts.append(line)
-#             filenames.append(os.path.basename(file_path))
-
-# Tworzymy dataset (tekst + nazwa pliku)
-dataset = Dataset.from_dict({
-    "text": texts[:100],
-    "filename": filenames
-})
-
-
-# ===== 4. Model embeddingowy =====
-polish_st = "sdadas/st-polish-paraphrase-from-distilroberta"
-embedding_model = SentenceTransformer(polish_st)
-
-embeddings = embedding_model.encode(dataset["text"], show_progress_bar=True)
-
-
-# ===== 5. Modele UMAP, HDBSCAN, wektoryzacja =====
-umap_model = UMAP(
-    n_neighbors=15,
-    n_components=5,
-    min_dist=0.0,
-    metric="cosine",
-    random_state=42
-)
-
-hdbscan_model = HDBSCAN(
-    min_cluster_size=25,
-    metric="euclidean",
-    cluster_selection_method="eom",
-    prediction_data=True
-)
-
-# hdbscan_model = HDBSCAN(
-#     min_cluster_size=5,
-#     min_samples=4,
-#     metric="euclidean",
-#     cluster_selection_method="eom",
-#     prediction_data=True
-# )
-
-vectorizer_model = CountVectorizer(
-    stop_words=POLISH_STOPWORDS,
-    min_df=1,
-    ngram_range=(1, 3)
-)
-
-
-# ===== 6. Modele reprezentacji (KeyBERT, POS, MMR) =====
-keybert_model = KeyBERTInspired()
-pos_model = PartOfSpeech("pl_core_news_lg")
-mmr_model = MaximalMarginalRelevance(diversity=0.3)
-
-representation_model = {
-    "KeyBERT": keybert_model,
-    "MMR": mmr_model,
-    "POS": pos_model,
-    # "OpenAI": OpenAI("gpt-4o")  # opcjonalnie, jeśli chcesz używać OpenAI do reprezentacji
-}
-
-
-# ===== 7. Inicjalizacja BERTopic =====
-topic_model = BERTopic(
-    embedding_model=embedding_model,
-    umap_model=umap_model,
-    hdbscan_model=hdbscan_model,
-    vectorizer_model=vectorizer_model,
-    representation_model=representation_model,
-    top_n_words=10,
-    verbose=True
-)
-
-# ===== 8. Trenowanie BERTopic =====
-topics, probs = topic_model.fit_transform(dataset["text"], embeddings)
-
-
-# ===== 9. Informacje o topikach i dokumentach =====
-# Informacje o samych topikach (globalnie)
-topic_info = topic_model.get_topic_info()
-topic_info.to_csv("data/poloniści/bert_topic_info.csv", index=False)
-
-# Informacje na poziomie dokumentów
-doc_info = topic_model.get_document_info(dataset["text"])
-doc_info = doc_info.drop(columns=['Document', 'Representative_Docs'])
-
-# Dodajemy nazwy plików do doc_info (kolejność jest ta sama co w dataset)
-doc_info["filename"] = dataset["filename"]
-
-# Zapis: każdy dokument + jego topik + prawdopodobieństwo + nazwa pliku
-doc_info.to_csv("data/poloniści/bert_topic_documents_with_filenames.csv", index=False)
-
-# ===== 10. Mapowanie: TOPIK -> LISTA PLIKÓW, W KTÓRYCH WYSTĘPUJE =====
-topic_to_files = (
-    doc_info
-    .groupby("Topic")["filename"]
-    .unique()
-    .reset_index()
-    .rename(columns={"filename": "files"})
-)
-
-topic_to_files.to_csv("data/poloniści/topics_to_files.csv", index=False)
-
-
-# ===== 11. Przykładowe filtrowanie (opcjonalne) =====
-# Przykład: wyświetl dokumenty z topiku 3
-example_topic_id = 3
-docs_in_topic_3 = doc_info[doc_info["Topic"] == example_topic_id][
-    ["filename", "Document", "Probability"]
-]
-print(f"\nPrzykładowe dokumenty w topiku {example_topic_id}:")
-print(docs_in_topic_3.head())
-
-
-#%% testy CR
-
-import os
-import glob
-import time
-
-import pandas as pd
-from tqdm import tqdm
-
-from sentence_transformers import SentenceTransformer
-from umap import UMAP
-from hdbscan import HDBSCAN
-from sklearn.feature_extraction.text import CountVectorizer
-
-from bertopic import BERTopic
-from bertopic.representation import KeyBERTInspired, MaximalMarginalRelevance, PartOfSpeech
-
-
-def load_stopwords(file_path: str, encoding: str = "utf-8") -> list[str]:
-    with open(file_path, "r", encoding=encoding) as file:
-        return [line.strip() for line in file if line.strip()]
-
-
-# stopwordy
-POLISH_STOPWORDS = load_stopwords(r"data\poloniści\stopwords-pl.txt")
-
-# model embeddingów PL
-polish_st = "sdadas/st-polish-paraphrase-from-distilroberta"
-embedding_model = SentenceTransformer(polish_st)
-
-# UMAP
-umap_model = UMAP(
-    n_neighbors=15,
-    n_components=5,
-    min_dist=0.0,
-    metric='cosine',
-    random_state=42
-)
-
-# HDBSCAN
-hdbscan_model = HDBSCAN(
-    min_cluster_size=25,
-    metric='euclidean',
-    cluster_selection_method='eom',
-    prediction_data=True
-)
-
-# Vectorizer
-vectorizer_model = CountVectorizer(
-    stop_words=POLISH_STOPWORDS,
-    min_df=1,
-    ngram_range=(1, 3)
-)
-
-# Reprezentacje tematów
-keybert_model = KeyBERTInspired()
-pos_model = PartOfSpeech("pl_core_news_lg")
-mmr_model = MaximalMarginalRelevance(diversity=0.3)
-
-representation_model = {
-    "KeyBERT": keybert_model,
-    "MMR": mmr_model,
-    "POS": pos_model
-}
-
-# --- Wczytywanie tekstów ---
-start = time.time()
-
-folder_path = r"data\poloniści\pełne teksty"
-txt_files = glob.glob(os.path.join(folder_path, "*.txt"))
-
-processed_texts = []
-processed_texts_ids = []
-
-for file_path in tqdm(txt_files[:100]):
-    with open(file_path, "r", encoding="utf-8") as file:
-        lines = file.readlines()
-        cleaned = [line.strip() for line in lines if line.strip()]
-        full_text = " ".join(cleaned)   # cały artykuł jako jeden dokument
-        processed_texts.append(full_text)
-        text_id = os.path.basename(file_path).replace('.txt', '')
-        processed_texts_ids.append(text_id)
-
-print(f"Wczytano {len(processed_texts)} tekstów z {len(txt_files)} plików.")
-
-# --- Topic modeling ---
-topic_model = BERTopic(
-    embedding_model=embedding_model,
-    umap_model=umap_model,
-    hdbscan_model=hdbscan_model,
-    vectorizer_model=vectorizer_model,
-    representation_model=representation_model,
-    top_n_words=10,
-    verbose=True
-)
-
-topics, probs = topic_model.fit_transform(processed_texts)
-
-# zapis info o tematach
-topic_info = topic_model.get_topic_info()
-topic_info.to_csv("data/poloniści/topiki_100_po-zmianach.csv", encoding='utf-8', index=False)
-
-end = time.time()
-print(f"Czas wykonania dla {len(processed_texts)} tekstów: {end - start:.2f} sekundy.")
-print(f"ID tekstów: {processed_texts_ids}")
-
-#%% CR testy 2
+#%% CR -- kod własciwy
 
 import os
 import glob
@@ -432,16 +21,17 @@ from bertopic.representation import (
     PartOfSpeech,
 )
 
-
+#%%
 # =========================
 # KONFIGURACJA ŚCIEŻEK
 # =========================
 STOPWORDS_PATH = r"data\poloniści\stopwords-pl.txt"
 FOLDER_PATH = r"data\poloniści\pełne teksty"
-OUTPUT_XLSX = r"data\poloniści\topiki_bertopic.xlsx"
+OUTPUT_XLSX = r"data\poloniści\topiki_bertopic_v_2.xlsx"
 
 # Maksymalna liczba plików do przetworzenia (None = wszystkie)
 MAX_FILES = 100  # możesz zmienić na None, jeśli chcesz wszystkie
+start_file, end_file = 201, 300
 
 
 # =========================
@@ -498,6 +88,7 @@ representation_model = {
     "POS": pos_model,
 }
 
+#%%
 
 # =========================
 # WŁAŚCIWY PIPELINE
@@ -510,7 +101,7 @@ def main():
     txt_files = sorted(txt_files)
 
     if MAX_FILES is not None:
-        txt_files = txt_files[:MAX_FILES]
+        txt_files = txt_files[start_file:end_file]
 
     processed_texts: List[str] = []
     processed_texts_ids: List[str] = []
@@ -728,9 +319,428 @@ def main():
 
     print(f"Zapisano rezultaty do: {OUTPUT_XLSX}")
 
+#%%
+start = time.time()
 
 if __name__ == "__main__":
     main()
+
+end = time.time()
+
+print(f"Czas wykonania dla {MAX_FILES} tekstów: {end - start:.4f} sekundy.")
+#%%
+
+# #%%
+# #code by Patryk Hubar-Kołodziejczyk
+# import pandas as pd
+
+# import nltk
+# nltk.download('punkt')
+# nltk.download('punkt_tab')
+
+# import os
+# import glob
+
+# from sentence_transformers import SentenceTransformer
+
+# from umap import UMAP
+# from hdbscan import HDBSCAN
+# from sklearn.feature_extraction.text import CountVectorizer
+
+# from bertopic import BERTopic
+# from bertopic.representation import KeyBERTInspired, MaximalMarginalRelevance, OpenAI, PartOfSpeech
+# from tqdm import tqdm
+
+# import spacy
+# nlp = spacy.load("pl_core_news_lg")
+# import time
+
+
+# #%%
+# def load_stopwords(file_path: str, encoding: str = "utf-8") -> list[str]:
+#     with open(file_path, "r", encoding=encoding) as file:
+#         return [line.strip() for line in file if line.strip()]
+
+
+# POLISH_STOPWORDS = load_stopwords(r"data\poloniści\stopwords-pl.txt")
+# #%%
+# polish_st = "sdadas/st-polish-paraphrase-from-distilroberta"
+# embedding_model = SentenceTransformer(polish_st)
+# # embeddings = embedding_model.encode(processed_texts, show_progress_bar=True)
+# #%%
+# umap_model = UMAP(
+#     n_neighbors=15,
+#     n_components=5,
+#     min_dist=0.0,
+#     metric='cosine',
+#     random_state=42
+# )
+
+
+# hdbscan_model = HDBSCAN(
+#     min_cluster_size=25,
+#     metric='euclidean',
+#     cluster_selection_method='eom',
+#     prediction_data=True
+# )
+
+
+# vectorizer_model = CountVectorizer(
+#     stop_words=POLISH_STOPWORDS,
+#     min_df=2,
+#     ngram_range=(1, 3)
+# )
+
+
+# # KeyBERT
+# keybert_model = KeyBERTInspired()
+
+# #polski dziad
+# pos_model = PartOfSpeech("pl_core_news_lg")
+
+# # MMR
+# mmr_model = MaximalMarginalRelevance(diversity=0.3)
+
+# representation_model = {
+#     "KeyBERT": keybert_model,
+#     "MMR": mmr_model,
+#     "POS": pos_model
+# }
+# #%%
+# start = time.time()
+
+# folder_path = r"data\poloniści\pełne teksty/"
+# txt_files = glob.glob(os.path.join(folder_path, "*.txt"))
+# processed_texts = []
+# processed_texts_ids = []
+
+# for file_path in tqdm(txt_files[:100]):
+#     with open(file_path, "r", encoding="utf-8") as file:
+#         lines = file.readlines()
+#         cleaned = [line.strip() for line in lines if line.strip()]
+#         processed_texts.extend(cleaned)
+#         text_id = file_path.split('\\')[-1].replace('.txt', '')
+#         processed_texts_ids.append(text_id)
+
+# print(f"Wczytano {len(processed_texts)} linii z {len(txt_files)} plików.")
+
+# embeddings = embedding_model.encode(processed_texts, show_progress_bar=True)
+
+# topic_model = BERTopic(
+
+#   embedding_model=embedding_model,
+#   umap_model=umap_model,
+#   hdbscan_model=hdbscan_model,
+#   vectorizer_model=vectorizer_model,
+#   representation_model=representation_model,
+
+#   # parametry
+#   top_n_words=10,
+#   verbose=True
+# )
+
+# topics, probs = topic_model.fit_transform(processed_texts, embeddings)
+
+# topic_model.get_topic_info().to_csv("data/poloniści/topiki_100.csv", encoding='utf-8')
+# end = time.time()
+
+# print(f"Czas wykonania dla {len(processed_texts_ids)} tekstów: {end - start:.4f} sekundy.\nPrzetworzone teksty: {processed_texts_ids}")
+#%%
+
+# #%% testy patryka
+
+# # -*- coding: utf-8 -*-
+# """Topic modelling dla Czarka – wersja z datasetem i nazwami plików w wynikach."""
+
+# # Commented out IPython magic to ensure Python compatibility.
+# # Jeśli uruchamiasz w czystym Colabie, odkomentuj poniższe:
+# # capture
+# # !pip install bertopic
+# # !pip install datasets
+# # !pip install openai
+# # !pip -q install -U transformers sentence-transformers torch
+# # !python -m spacy download pl_core_news_lg
+
+# import os
+# import glob
+
+# import nltk
+# import pandas as pd
+
+# from datasets import Dataset
+# from sentence_transformers import SentenceTransformer
+# from umap import UMAP
+# from hdbscan import HDBSCAN
+# from sklearn.feature_extraction.text import CountVectorizer
+
+# from bertopic import BERTopic
+# from bertopic.representation import KeyBERTInspired, MaximalMarginalRelevance, OpenAI, PartOfSpeech
+
+# from tqdm import tqdm
+
+
+# # ===== 1. NLTK – zasoby =====
+# nltk.download("punkt")
+# nltk.download("punkt_tab")
+
+
+# # ===== 2. Funkcja do wczytywania stopwords =====
+# def load_stopwords(file_path: str, encoding: str = "utf-8") -> list[str]:
+#     """Wczytaj listę polskich stopwords z pliku tekstowego (jedno słowo na linię)."""
+#     with open(file_path, "r", encoding=encoding) as f:
+#         return [line.strip() for line in f if line.strip()]
+
+
+# # Ścieżka do stopwords (jak w Twoim notebooku)
+# POLISH_STOPWORDS = load_stopwords(r"data\poloniści\stopwords-pl.txt")
+
+
+# # ===== 3. Wczytywanie plików .txt jako dataset (jeden plik = jeden dokument) =====
+# # UZUPEŁNIJ ŚCIEŻKĘ:
+# folder_path = r"data\poloniści\pełne teksty/"
+
+# txt_files = glob.glob(os.path.join(folder_path, "*.txt"))
+
+# texts = []
+# filenames = []
+
+# for file_path in tqdm(txt_files[:100]):
+#     with open(file_path, "r", encoding="utf-8") as f:
+#         lines = f.readlines()
+#         cleaned = [line.strip() for line in lines if line.strip()]
+#         # Wersja: JEDEN PLIK = JEDEN DOKUMENT
+#         full_doc = " ".join(cleaned)
+#         texts.append(full_doc)
+#         filenames.append(os.path.basename(file_path))
+
+# print(f"Wczytano {len(texts)} dokumentów z {len(txt_files)} plików.")
+
+# # Jeśli wolisz: JEDNA LINIA = JEDEN DOKUMENT, użyj zamiast powyższej pętli:
+# # texts = []
+# # filenames = []
+# # for file_path in txt_files:
+# #     with open(file_path, "r", encoding="utf-8") as f:
+# #         lines = f.readlines()
+# #         cleaned = [line.strip() for line in lines if line.strip()]
+# #         for line in cleaned:
+# #             texts.append(line)
+# #             filenames.append(os.path.basename(file_path))
+
+# # Tworzymy dataset (tekst + nazwa pliku)
+# dataset = Dataset.from_dict({
+#     "text": texts[:100],
+#     "filename": filenames
+# })
+
+
+# # ===== 4. Model embeddingowy =====
+# polish_st = "sdadas/st-polish-paraphrase-from-distilroberta"
+# embedding_model = SentenceTransformer(polish_st)
+
+# embeddings = embedding_model.encode(dataset["text"], show_progress_bar=True)
+
+
+# # ===== 5. Modele UMAP, HDBSCAN, wektoryzacja =====
+# umap_model = UMAP(
+#     n_neighbors=15,
+#     n_components=5,
+#     min_dist=0.0,
+#     metric="cosine",
+#     random_state=42
+# )
+
+# hdbscan_model = HDBSCAN(
+#     min_cluster_size=25,
+#     metric="euclidean",
+#     cluster_selection_method="eom",
+#     prediction_data=True
+# )
+
+# # hdbscan_model = HDBSCAN(
+# #     min_cluster_size=5,
+# #     min_samples=4,
+# #     metric="euclidean",
+# #     cluster_selection_method="eom",
+# #     prediction_data=True
+# # )
+
+# vectorizer_model = CountVectorizer(
+#     stop_words=POLISH_STOPWORDS,
+#     min_df=1,
+#     ngram_range=(1, 3)
+# )
+
+
+# # ===== 6. Modele reprezentacji (KeyBERT, POS, MMR) =====
+# keybert_model = KeyBERTInspired()
+# pos_model = PartOfSpeech("pl_core_news_lg")
+# mmr_model = MaximalMarginalRelevance(diversity=0.3)
+
+# representation_model = {
+#     "KeyBERT": keybert_model,
+#     "MMR": mmr_model,
+#     "POS": pos_model,
+#     # "OpenAI": OpenAI("gpt-4o")  # opcjonalnie, jeśli chcesz używać OpenAI do reprezentacji
+# }
+
+
+# # ===== 7. Inicjalizacja BERTopic =====
+# topic_model = BERTopic(
+#     embedding_model=embedding_model,
+#     umap_model=umap_model,
+#     hdbscan_model=hdbscan_model,
+#     vectorizer_model=vectorizer_model,
+#     representation_model=representation_model,
+#     top_n_words=10,
+#     verbose=True
+# )
+
+# # ===== 8. Trenowanie BERTopic =====
+# topics, probs = topic_model.fit_transform(dataset["text"], embeddings)
+
+
+# # ===== 9. Informacje o topikach i dokumentach =====
+# # Informacje o samych topikach (globalnie)
+# topic_info = topic_model.get_topic_info()
+# topic_info.to_csv("data/poloniści/bert_topic_info.csv", index=False)
+
+# # Informacje na poziomie dokumentów
+# doc_info = topic_model.get_document_info(dataset["text"])
+# doc_info = doc_info.drop(columns=['Document', 'Representative_Docs'])
+
+# # Dodajemy nazwy plików do doc_info (kolejność jest ta sama co w dataset)
+# doc_info["filename"] = dataset["filename"]
+
+# # Zapis: każdy dokument + jego topik + prawdopodobieństwo + nazwa pliku
+# doc_info.to_csv("data/poloniści/bert_topic_documents_with_filenames.csv", index=False)
+
+# # ===== 10. Mapowanie: TOPIK -> LISTA PLIKÓW, W KTÓRYCH WYSTĘPUJE =====
+# topic_to_files = (
+#     doc_info
+#     .groupby("Topic")["filename"]
+#     .unique()
+#     .reset_index()
+#     .rename(columns={"filename": "files"})
+# )
+
+# topic_to_files.to_csv("data/poloniści/topics_to_files.csv", index=False)
+
+
+# # ===== 11. Przykładowe filtrowanie (opcjonalne) =====
+# # Przykład: wyświetl dokumenty z topiku 3
+# example_topic_id = 3
+# docs_in_topic_3 = doc_info[doc_info["Topic"] == example_topic_id][
+#     ["filename", "Document", "Probability"]
+# ]
+# print(f"\nPrzykładowe dokumenty w topiku {example_topic_id}:")
+# print(docs_in_topic_3.head())
+
+
+# #%% testy CR
+
+# import os
+# import glob
+# import time
+
+# import pandas as pd
+# from tqdm import tqdm
+
+# from sentence_transformers import SentenceTransformer
+# from umap import UMAP
+# from hdbscan import HDBSCAN
+# from sklearn.feature_extraction.text import CountVectorizer
+
+# from bertopic import BERTopic
+# from bertopic.representation import KeyBERTInspired, MaximalMarginalRelevance, PartOfSpeech
+
+
+# def load_stopwords(file_path: str, encoding: str = "utf-8") -> list[str]:
+#     with open(file_path, "r", encoding=encoding) as file:
+#         return [line.strip() for line in file if line.strip()]
+
+
+# # stopwordy
+# POLISH_STOPWORDS = load_stopwords(r"data\poloniści\stopwords-pl.txt")
+
+# # model embeddingów PL
+# polish_st = "sdadas/st-polish-paraphrase-from-distilroberta"
+# embedding_model = SentenceTransformer(polish_st)
+
+# # UMAP
+# umap_model = UMAP(
+#     n_neighbors=15,
+#     n_components=5,
+#     min_dist=0.0,
+#     metric='cosine',
+#     random_state=42
+# )
+
+# # HDBSCAN
+# hdbscan_model = HDBSCAN(
+#     min_cluster_size=25,
+#     metric='euclidean',
+#     cluster_selection_method='eom',
+#     prediction_data=True
+# )
+
+# # Vectorizer
+# vectorizer_model = CountVectorizer(
+#     stop_words=POLISH_STOPWORDS,
+#     min_df=1,
+#     ngram_range=(1, 3)
+# )
+
+# # Reprezentacje tematów
+# keybert_model = KeyBERTInspired()
+# pos_model = PartOfSpeech("pl_core_news_lg")
+# mmr_model = MaximalMarginalRelevance(diversity=0.3)
+
+# representation_model = {
+#     "KeyBERT": keybert_model,
+#     "MMR": mmr_model,
+#     "POS": pos_model
+# }
+
+# # --- Wczytywanie tekstów ---
+# start = time.time()
+
+# folder_path = r"data\poloniści\pełne teksty"
+# txt_files = glob.glob(os.path.join(folder_path, "*.txt"))
+
+# processed_texts = []
+# processed_texts_ids = []
+
+# for file_path in tqdm(txt_files[:100]):
+#     with open(file_path, "r", encoding="utf-8") as file:
+#         lines = file.readlines()
+#         cleaned = [line.strip() for line in lines if line.strip()]
+#         full_text = " ".join(cleaned)   # cały artykuł jako jeden dokument
+#         processed_texts.append(full_text)
+#         text_id = os.path.basename(file_path).replace('.txt', '')
+#         processed_texts_ids.append(text_id)
+
+# print(f"Wczytano {len(processed_texts)} tekstów z {len(txt_files)} plików.")
+
+# # --- Topic modeling ---
+# topic_model = BERTopic(
+#     embedding_model=embedding_model,
+#     umap_model=umap_model,
+#     hdbscan_model=hdbscan_model,
+#     vectorizer_model=vectorizer_model,
+#     representation_model=representation_model,
+#     top_n_words=10,
+#     verbose=True
+# )
+
+# topics, probs = topic_model.fit_transform(processed_texts)
+
+# # zapis info o tematach
+# topic_info = topic_model.get_topic_info()
+# topic_info.to_csv("data/poloniści/topiki_100_po-zmianach.csv", encoding='utf-8', index=False)
+
+# end = time.time()
+# print(f"Czas wykonania dla {len(processed_texts)} tekstów: {end - start:.2f} sekundy.")
+# print(f"ID tekstów: {processed_texts_ids}")
 
 
 
