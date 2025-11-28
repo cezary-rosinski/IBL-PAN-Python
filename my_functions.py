@@ -571,6 +571,61 @@ def create_google_worksheet(sheet_id, worksheet_name, df, delete_default_workshe
                 sheet.del_worksheet(sheet.worksheet('Sheet1'))
             except: None
 
+import os
+import json
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+# jeśli chcesz odświeżanie tokena:
+from google.auth.transport.requests import Request
+
+SCOPES = ['https://www.googleapis.com/auth/documents.readonly']
+
+CLIENT_SECRET_FILE = r"C:\Users\Cezary\Documents\IBL-PAN-Python\client_secret_2.json"
+TOKEN_FILE = r"C:\Users\Cezary\Documents\IBL-PAN-Python\token.json"
+
+
+def gdoc_to_str(document_id: str) -> str:
+    creds = None
+
+    # 1️⃣ próbujemy wczytać token zalogowanego użytkownika
+    if os.path.exists(TOKEN_FILE):
+        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+
+    # 2️⃣ jeśli brak ważnych credów – logujemy się z client_secrets.json
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            # odświeżenie tokena (działa tylko jeśli w token.json jest refresh_token)
+            creds.refresh(Request())
+        else:
+            # pierwsze logowanie z client_secrets.json
+            flow = InstalledAppFlow.from_client_secrets_file(
+                CLIENT_SECRET_FILE, SCOPES
+            )
+            creds = flow.run_local_server(port=0)
+
+        # zapisujemy dane zalogowanego użytkownika do token.json
+        with open(TOKEN_FILE, 'w', encoding='utf-8') as token:
+            token.write(creds.to_json())
+
+    # 3️⃣ tworzymy klienta Google Docs
+    service = build('docs', 'v1', credentials=creds)
+
+    # 4️⃣ pobieramy dokument
+    doc = service.documents().get(documentId=document_id).execute()
+
+    body = doc.get('body', {})
+    content = body.get('content', [])
+
+    text_output = []
+    for element in content:
+        if "paragraph" in element:
+            for p in element["paragraph"].get("elements", []):
+                if "textRun" in p:
+                    text_output.append(p["textRun"].get("content", ""))
+
+    return "".join(text_output)
+
 
 
  

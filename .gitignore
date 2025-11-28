@@ -1,5 +1,7 @@
 ﻿/Peru
 /data
+/client_secret_2.json
+/token.json
 /opencitations_token.py
 /core_api_key.py
 /inwestycje.py
