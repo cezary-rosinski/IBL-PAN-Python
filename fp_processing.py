@@ -607,22 +607,26 @@ print('Strona numeru na wordpressie opublikowana')
 
 browser.get("https://pressto.amu.edu.pl/index.php/index/login")
 browser.implicitly_wait(5)
-username_input = browser.find_element('id', 'login-username')
-password_input = browser.find_element('id', 'login-password')
+username_input = browser.find_element('id', 'username')
+password_input = browser.find_element('id', 'password')
 
 username = fp_credentials.pressto_username
 password = fp_credentials.pressto_password
 
 username_input.send_keys(username)
+time.sleep(1)
 password_input.send_keys(password)
 
-login_button = browser.find_element('css selector', '.btn-primary').click()
+login_button = browser.find_element('css selector', '.submit').click()
 
 browser.get("https://pressto.amu.edu.pl/index.php/fp/manageIssues#futureIssues")
 
 utworz_numer = browser.find_element('css selector', '.pkp_linkaction_icon_add_category').click()
 time.sleep(1)
-odznacz_tom = browser.find_element('id', 'showVolume').click()
+odznacz_tom = browser.find_element('id', 'showVolume')
+odznacz_tom.click()
+odznacz_tytul = browser.find_element('id', 'showTitle')
+odznacz_tytul.click()
     
 wprowadz_numer = browser.find_element('xpath', "//input[@name='number']")
 try:
@@ -632,17 +636,19 @@ except ValueError:
 rok = browser.find_element('xpath', "//input[@name='year']")
 rok.send_keys('{:.0f}'.format(strona_numeru.at[0, 'rok']))
 # tytul_pl = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[0, 'tytuł numeru']).strip()
-tytul_pl = strona_numeru.at[0, 'tytuł numeru'].strip()
+# tytul_pl = strona_numeru.at[0, 'tytuł numeru'].strip()
 
 try:
-    nazwa_numeru = f"Nr {'{:.0f}'.format(strona_numeru.at[0, 'numer'])} ({'{:.0f}'.format(strona_numeru.at[0, 'rok'])}): {tytul_pl}"
+    nazwa_numeru = f"Nr {'{:.0f}'.format(strona_numeru.at[0, 'numer'])} ({'{:.0f}'.format(strona_numeru.at[0, 'rok'])})"
+    #nazwa_numeru = f"Nr {'{:.0f}'.format(strona_numeru.at[0, 'numer'])} ({'{:.0f}'.format(strona_numeru.at[0, 'rok'])}): {tytul_pl}"
 except ValueError:
-    nazwa_numeru = f"Nr {strona_numeru.at[0, 'numer']} ({'{:.0f}'.format(strona_numeru.at[0, 'rok'])}): {tytul_pl}"
+    nazwa_numeru = f"Nr {strona_numeru.at[0, 'numer']} ({'{:.0f}'.format(strona_numeru.at[0, 'rok'])})"
+    #nazwa_numeru = f"Nr {strona_numeru.at[0, 'numer']} ({'{:.0f}'.format(strona_numeru.at[0, 'rok'])}): {tytul_pl}"
 
-tytul_pl = browser.find_element('xpath', "//input[@name='title[pl_PL]']").send_keys(tytul_pl)
+# tytul_pl = browser.find_element('xpath', "//input[@name='title[pl_PL]']").send_keys(tytul_pl)
 # tytul_eng = re.sub('(.+)( \| )(.+)', r'\3', strona_numeru.at[1, 'tytuł numeru']).strip()
-tytul_eng = strona_numeru.at[1, 'tytuł numeru'].strip()
-tytul_eng = browser.find_element('xpath', "//input[@name='title[en_US]']").send_keys(tytul_eng)
+# tytul_eng = strona_numeru.at[1, 'tytuł numeru'].strip()
+# tytul_eng = browser.find_element('xpath', "//input[@name='title[en_US]']").send_keys(tytul_eng)
 
 wstep_pl_source = browser.find_elements('xpath', "//i[@class='mce-ico mce-i-code']")[0].click()
 wstep_pl_source = browser.find_element('xpath', "//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(strona_numeru.at[0, 'wstęp'])
@@ -699,14 +705,17 @@ for i, row in aktualny_numer.iterrows():
             s = re.sub(',+', ',', s)
             slowa_kluczowe_eng = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[3].send_keys(s, Keys.TAB)
         
-        if pd.notnull(row['finansowanie']):
-            try:
-                finansowanie_pl = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[4]
-                finansowanie_pl.send_keys(row['finansowanie'])
-                finansowanie_en = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[5]
-                finansowanie_en.send_keys(aktualny_numer.at[i+1, 'finansowanie'])
-            except (KeyError, TypeError):
-                pass
+        try:
+            if pd.notnull(row['finansowanie']):
+                try:
+                    finansowanie_pl = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[4]
+                    finansowanie_pl.send_keys(row['finansowanie'])
+                    finansowanie_en = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[5]
+                    finansowanie_en.send_keys(aktualny_numer.at[i+1, 'finansowanie'])
+                except (KeyError, TypeError):
+                    pass
+        except KeyError:
+            pass
             
         if len(row['bibliografia']) > 0:
 
@@ -811,7 +820,7 @@ for i, row in aktualny_numer.iterrows():
         # zapisz[-1].click()
         zapisz = browser.find_elements('xpath', "//button[@name='submitFormButton']")
         zapisz[-1].click()
-        time.sleep(2)
+        time.sleep(3)
         
         element_artykulu = browser.find_element('xpath', "//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
         przeslij_pdf = browser.find_element('xpath', "//input[@type='file']")
