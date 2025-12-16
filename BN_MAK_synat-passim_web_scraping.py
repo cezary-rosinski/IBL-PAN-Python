@@ -23,7 +23,7 @@ def get_year(x):
         val = np.nan
     return val
 
-browser = webdriver.Firefox(executable_path='geckodriver.exe')
+browser = webdriver.Firefox()
 browser.get("http://mak.bn.org.pl/cgi-bin/makwww.exe?BM=53&IZ=Klasyfikacja")
 
 list_of_items = []
