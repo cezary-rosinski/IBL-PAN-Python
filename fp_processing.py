@@ -110,10 +110,11 @@ kategorie_wpisow = get_as_dataframe(gc.open_by_key('1hPVa854YZ4DIajzVoWshXFotd3A
 foldery_lokalne = aktualny_numer['folder lokalny'].drop_duplicates().to_list()
 
 for folder in foldery_lokalne:
-    if 'pl' in folder.lower():
-        folder_pl = folder + '/'
-    else:
-        folder_eng = folder + '/'
+    if pd.notna(folder):
+        if 'pl' in folder.lower():
+            folder_pl = folder + '/'
+        else:
+            folder_eng = folder + '/'
         
 pdf_pl= [f for f in glob.glob(folder_pl + '*.pdf', recursive=True)]
 jpg_pl= [f for f in glob.glob(folder_pl + '*.jpg', recursive=True)]
@@ -507,6 +508,8 @@ for i, row in aktualny_numer.iterrows():
 strona_numeru = get_as_dataframe(aktualny_numer_sheet.worksheet('strona'), evaluate_formulas=True).dropna(how='all').dropna(how='all', axis=1)
 strona_numeru['spis treści'] = strona_numeru.apply(lambda x: spis_tresci_pl if x['język'] == 'pl' else spis_tresci_eng, axis=1)
 
+# strona_numeru = strona_numeru.loc[strona_numeru['język'] == 'pl'] #-- na wypadek publikowania tylko polskiej wersji
+
 for i, row in strona_numeru.iterrows():
     if row['język'] == 'pl':
         sciezka_pdf = min(pdf_pl, key=len)
@@ -671,6 +674,7 @@ print('Strona numeru na pressto zapisana, ale nie opublikowana')
 #%% pressto – upload new articles
 
 #pressto dodawanie artykułów
+# w przypadku dodawania tylko polskiej wersji zakomentować dodawanie plików angielskich
 
 for i, row in aktualny_numer.iterrows():
 # for i, row in aktualny_numer[11:].iterrows(): #jeżeli pętla zostanie przerwana
@@ -834,39 +838,42 @@ for i, row in aktualny_numer.iterrows():
         time.sleep(2)
         
         # if row['kategoria'] != 'Przekłady' and czy_tlumaczenia_po_angielsku:
-        if row['kategoria'] != 'Przekłady':
         
-            while True:
-                try:
-                    # dodaj_plik_eng = browser.find_element('xpath', "//a[@title='Dodaj plik do publikacji']").click()
-                    dodaj_plik_pl = browser.find_element('xpath', "//a[contains(text(),'Dodaj plik do publikacji')]")
-                    dodaj_plik_pl.click()
-                    time.sleep(2)
-                except ElementClickInterceptedException:
-                    potwierdz_button = browser.find_element('id', 'continueButton').click()
-                    time.sleep(2)
-                    continue
-                break
+        #kod poniżej do zakomentowania, jesli dodawane sa tylko pliki z polskiej wersji
+            
+        # if row['kategoria'] != 'Przekłady':
+        
+        #     while True:
+        #         try:
+        #             # dodaj_plik_eng = browser.find_element('xpath', "//a[@title='Dodaj plik do publikacji']").click()
+        #             dodaj_plik_pl = browser.find_element('xpath', "//a[contains(text(),'Dodaj plik do publikacji')]")
+        #             dodaj_plik_pl.click()
+        #             time.sleep(2)
+        #         except ElementClickInterceptedException:
+        #             potwierdz_button = browser.find_element('id', 'continueButton').click()
+        #             time.sleep(2)
+        #             continue
+        #         break
                 
-            etykieta = browser.find_element('xpath', "//input[@class='field text required' and @name = 'label']").send_keys('PDF')
-            jezyk_publikacji = browser.find_element('xpath', "//select[@id = 'galleyLocale']/option[text()='English']").click()
+        #     etykieta = browser.find_element('xpath', "//input[@class='field text required' and @name = 'label']").send_keys('PDF')
+        #     jezyk_publikacji = browser.find_element('xpath', "//select[@id = 'galleyLocale']/option[text()='English']").click()
             
-            # zapisz = browser.find_elements('xpath', "//button[@class='pkp_button submitFormButton']")
-            # zapisz[-1].click()
-            zapisz = browser.find_elements('xpath', "//button[@name='submitFormButton']")
-            zapisz[-1].click()
-            time.sleep(2)
+        #     # zapisz = browser.find_elements('xpath', "//button[@class='pkp_button submitFormButton']")
+        #     # zapisz[-1].click()
+        #     zapisz = browser.find_elements('xpath', "//button[@name='submitFormButton']")
+        #     zapisz[-1].click()
+        #     time.sleep(2)
             
-            element_artykulu = browser.find_element('xpath', "//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
-            przeslij_pdf = browser.find_element('xpath', "//input[@type='file']")
-            przeslij_pdf.send_keys(f"{aktualny_numer.at[i+1, 'folder lokalny']}\\{aktualny_numer.at[i+1, 'pdf']}")
-            time.sleep(2)
-            kontunuuj_button = browser.find_element('id', 'continueButton').click()
-            time.sleep(2)
-            kontunuuj_button = browser.find_element('id', 'continueButton').click()
-            time.sleep(2)
-            potwierdz_button = browser.find_element('id', 'continueButton').click()
-            time.sleep(2)
+        #     element_artykulu = browser.find_element('xpath', "//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
+        #     przeslij_pdf = browser.find_element('xpath', "//input[@type='file']")
+        #     przeslij_pdf.send_keys(f"{aktualny_numer.at[i+1, 'folder lokalny']}\\{aktualny_numer.at[i+1, 'pdf']}")
+        #     time.sleep(2)
+        #     kontunuuj_button = browser.find_element('id', 'continueButton').click()
+        #     time.sleep(2)
+        #     kontunuuj_button = browser.find_element('id', 'continueButton').click()
+        #     time.sleep(2)
+        #     potwierdz_button = browser.find_element('id', 'continueButton').click()
+        #     time.sleep(2)
         
         while True:
                 try:
