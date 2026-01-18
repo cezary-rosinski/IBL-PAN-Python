@@ -21,7 +21,7 @@ lastweek = today - datetime.timedelta(days=7)
 #%%running stats
 logging.basicConfig(level=logging.DEBUG)
 
-first_day = date(2025, 12, 29)
+first_day = date(2025, 1, 1)
 today = date.today()
 
 try:
@@ -87,6 +87,11 @@ fig.savefig('running.jpg')
 
 # fig = px.line(df.groupby('date').sum()['rosinski-hubar index'], x='date', y='r-h index', title='My Running Stats')
 # fig.show()
+
+#%%
+import json
+with open("data/garmin.json", "w", encoding="utf-8") as f:
+    json.dump(activities, f, ensure_ascii=False, indent=4)
 
 #%% lactate treshold bpm
 from types import NoneType
