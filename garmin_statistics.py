@@ -21,7 +21,7 @@ lastweek = today - datetime.timedelta(days=7)
 #%%running stats
 logging.basicConfig(level=logging.DEBUG)
 
-first_day = date(2025, 1, 1)
+first_day = date(2025, 12, 1)
 today = date.today()
 
 try:
