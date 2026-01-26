@@ -1,6 +1,11 @@
 from itertools import product
 import requests
 from urllib.parse import urlencode
+from tqdm import tqdm
+import pandas as pd
+import ast
+
+BASE_API_URL = 'https://api.gotriple.eu/api/'
 
 #%%
 
@@ -16,11 +21,11 @@ issues = [' AND '.join(e) for e in issues]
 #%% params
 
 params = {
-    'q': 'Art',
+    'q': issues[0],
     'fq': {
         'type': 'typ_article',
-        'has_pdf': 'true',
-        'in_language': 'en'
+        #'has_pdf': 'true',
+        #'in_language': 'en'
     },
     'include_duplicates': 'false',
     'aggs': {
@@ -44,36 +49,106 @@ def build_api_url(params):
     return urlencode(cleaned_params)
 
 #%%
-BASE_API_URL = 'https://api.gotriple.eu/api/'
-
 objects_list = []
 endpoint = 'documents'
-headers = {
-    "Accept": "application/json"
-}
-url = f'{BASE_API_URL}{endpoint}?{build_api_url(params)}'
-while True:
-    response = requests.get(url, headers=headers)
-    if response.ok:
-        objects_list.extend(response.json()['hydra:member'])
-        print(url)
-    if not response.json()['hydra:view'].get('hydra:next'):
-        break
-    else:
-        url = BASE_API_URL + response.json()['hydra:view']['hydra:next'][1:]
-print(len(objects_list))
+
+for i in tqdm(issues):
+
+    params = {
+        'q': i,
+        'fq': {
+            'type': 'typ_article',
+            #'has_pdf': 'true',
+            #'in_language': 'en'
+        },
+        'include_duplicates': 'false',
+        'aggs': {
+    
+        },
+        'sort': 'name:desc', # name, publication_date, most_recent --> name:desc
+        'page': 1,
+        'size': 100, # max 100
+    }
+    
+    url = f'{BASE_API_URL}{endpoint}?{build_api_url(params)}'
+    while True:
+        response = requests.get(url)
+        if not response.ok:
+          print('Response error:', response.status_code)
+          print(response.text)
+          break
+        if not response.json()['data']:
+          print('Empty "data" field')
+          break
+        else:
+            iteration = response.json()['data']
+            [e.update({'query': i}) for e in iteration]
+            objects_list.extend(iteration)
+            # print(url)
+            params['page'] += 1
+            url = f'{BASE_API_URL}{endpoint}?{build_api_url(params)}'
+        
+        
+#%%
+
+keys = ['id', 'abstract', 'additional_type', 'contributor', 'datePublished', 'doi', 'identifier', 'keywords', 'producer', 'provider', 'author', 'lang', 'query', 'headline']
+
+data = {k:v for k,v in objects_list[0].items() if k in keys}
+
+final_result = [{k:v for k,v in e.items() if k in keys} for e in objects_list]
 
 
-test = response.json()
+def normalize_records(records: list[dict]) -> pd.DataFrame:
+    rows = []
 
-url
+    for rec in records:
+        row = {
+            "id": rec.get("id"),
+            "doi": "; ".join(d for d in rec.get("doi", []) if d),
+            "provider": "; ".join(rec.get("provider", [])),
+            "query": rec.get("query"),
 
-https://api.gotriple.eu/api/documents?q=machine%20learning&include_duplicates=false&page=1&size=25&fq=topic%3Asocio%3Byear%3A2020%2C2021&aggs=topic%2Cinclude%3Dsocio%2Cexclude%3Dpsy%2Csize%3D10%2Csort%3Dcount%2Corder%3Ddesc&sort=most_recent%3Adesc
-https://api.gotriple.eu/documents?q=Art&fq=type%3Dtyp_article%3Bhas_pdf%3Dtrue%3Bin_language%3Den&include_duplicates=false&sort=name%3Adesc&page=1&size=100
+            "abstract_text": " ".join(
+                a.get("text", "") for a in rec.get("abstract", [])
+            ),
+
+            "keywords": "; ".join(
+                k.get("text", "") for k in rec.get("keywords", [])
+            ),
+
+            "authors": "; ".join(
+                a.get("fullname", "") for a in rec.get("author", [])
+            ),
+            "title": " ".join(
+                a.get("text", "") for a in rec.get("headline", [])
+            ),
+        }
+
+        rows.append(row)
+
+    return pd.DataFrame(rows)
+
+df = normalize_records(final_result)
+
+def aggregate_by_id(df: pd.DataFrame) -> pd.DataFrame:
+    return (
+        df
+        .groupby("id", as_index=False)
+        .agg({
+            "doi": "first",
+            "provider": "first",
+            "abstract_text": "first",
+            "keywords": "first",
+            "authors": "first",
+            "query": lambda x: "; ".join(sorted(set(q for q in x if q)))
+        })
+    )
 
 
+# ===== PRZYKŁADOWE UŻYCIE =====
+df_aggregated = aggregate_by_id(df)
 
-
+df_aggregated.to_excel('data/cc_fasca_gotriple_query.xlsx', index=False)
 
 
 
