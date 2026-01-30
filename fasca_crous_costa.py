@@ -140,6 +140,7 @@ def aggregate_by_id(df: pd.DataFrame) -> pd.DataFrame:
             "abstract_text": "first",
             "keywords": "first",
             "authors": "first",
+            "title": "first",
             "query": lambda x: "; ".join(sorted(set(q for q in x if q)))
         })
     )
@@ -148,7 +149,7 @@ def aggregate_by_id(df: pd.DataFrame) -> pd.DataFrame:
 # ===== PRZYKŁADOWE UŻYCIE =====
 df_aggregated = aggregate_by_id(df)
 
-df_aggregated.to_excel('data/cc_fasca_gotriple_query.xlsx', index=False)
+df_aggregated.to_excel('data/cc_fasca_gotriple_query2.xlsx', index=False)
 
 
 
