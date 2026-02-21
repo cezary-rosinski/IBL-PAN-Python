@@ -8,13 +8,13 @@ import pickle
 from my_functions import gsheet_to_df
 
 #%% def
-# sofair_metadata = []
-# # def harvest_metadata(doi):
-# for doi in tqdm(sofair_dois):
-#     # doi = list(sofair_dois)[0]
-#     url = 'https://api.crossref.org/works/' + doi
-#     metadata = requests.get(url).json()
-#     sofair_metadata.append({doi: metadata})
+sofair_metadata = []
+# def harvest_metadata(doi):
+for doi in tqdm(sofair_dois_488):
+    # doi = list(sofair_dois_488)[0]
+    url = 'https://api.crossref.org/works/' + doi
+    metadata = requests.get(url).json()
+    sofair_metadata.append({doi: metadata})
 
 #%% dependencies
 
@@ -65,29 +65,32 @@ sofair_files_id = set(df_sofair_annotations_info['file_id'].to_list())
     
 #%% metadata harvesting
 
-# sofair_metadata = []
-# with ThreadPoolExecutor() as excecutor:
-#     list(tqdm(excecutor.map(harvest_metadata, sofair_dois),total=len(sofair_dois)))   
-    
-# with open('data/sofair_metadata.p', 'wb') as fp:
-#     pickle.dump(sofair_metadata, fp, protocol=pickle.HIGHEST_PROTOCOL)
-    
-# with open('data/sofair_metadata.p', 'rb') as fp:
-#     sofair_metadata = pickle.load(fp)
-    
-# #supplement
-# sofair_dois_supplement = [e for e in sofair_dois if e not in [list(e.keys())[0] for e in sofair_metadata]]
+sofair_dois_488 = df_sofair_annotations_info['DOI'].to_list()
+sofair_dois_488 = set(sofair_dois_488)
 
-# sofair_metadata2 = []
-# for doi in tqdm(sofair_dois_supplement):
-#     # doi = list(sofair_dois)[0]
-#     url = 'https://api.crossref.org/works/' + doi
-#     metadata = requests.get(url).json()
-#     sofair_metadata2.append({doi: metadata})
+sofair_metadata = []
+with ThreadPoolExecutor() as excecutor:
+    list(tqdm(excecutor.map(harvest_metadata, sofair_dois),total=len(sofair_dois_488)))   
     
-# sofair_metadata.extend(sofair_metadata2)
+with open('data/sofair_metadata.p', 'wb') as fp:
+    pickle.dump(sofair_metadata, fp, protocol=pickle.HIGHEST_PROTOCOL)
+    
+with open('data/sofair_metadata.p', 'rb') as fp:
+    sofair_metadata = pickle.load(fp)
+    
+#supplement
+sofair_dois_supplement = [e for e in sofair_dois if e not in [list(e.keys())[0] for e in sofair_metadata]]
 
-# with open('data/sofair_metadata.p', 'wb') as fp:
+sofair_metadata2 = []
+for doi in tqdm(sofair_dois_supplement):
+    # doi = list(sofair_dois)[0]
+    url = 'https://api.crossref.org/works/' + doi
+    metadata = requests.get(url).json()
+    sofair_metadata2.append({doi: metadata})
+    
+sofair_metadata.extend(sofair_metadata2)
+
+with open('data/sofair_metadata.p', 'wb') as fp:
 #     pickle.dump(sofair_metadata, fp, protocol=pickle.HIGHEST_PROTOCOL)
 
 #%% metadata processing
