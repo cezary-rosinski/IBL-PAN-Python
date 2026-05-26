@@ -579,15 +579,20 @@ from googleapiclient.discovery import build
 # jeśli chcesz odświeżanie tokena:
 from google.auth.transport.requests import Request
 
-SCOPES = ['https://www.googleapis.com/auth/documents.readonly']
 
-CLIENT_SECRET_FILE = r"C:\Users\Cezary\Documents\IBL-PAN-Python\client_secret_2.json"
-TOKEN_FILE = r"C:\Users\Cezary\Documents\IBL-PAN-Python\token.json"
 
 
 def gdoc_to_str(document_id: str) -> str:
+    SCOPES = ['https://www.googleapis.com/auth/documents.readonly']
+    CLIENT_SECRET_FILE = r"C:\Users\Cezary\Documents\IBL-PAN-Python\client_secret_2.json"
+    CLIENT_SECRET_FILE2 = r"C:\Users\pracownik\Documents\IBL-PAN-Python\client_secret_2.json"
+    TOKEN_FILE = r"C:\Users\Cezary\Documents\IBL-PAN-Python\token.json"
+    TOKEN_FILE2 = r"C:\Users\pracownik\Documents\IBL-PAN-Python\token.json"
     creds = None
-
+    if not os.path.exists(CLIENT_SECRET_FILE):
+        CLIENT_SECRET_FILE = CLIENT_SECRET_FILE2
+    if not os.path.exists(TOKEN_FILE):
+        TOKEN_FILE = TOKEN_FILE2
     # 1️⃣ próbujemy wczytać token zalogowanego użytkownika
     if os.path.exists(TOKEN_FILE):
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
