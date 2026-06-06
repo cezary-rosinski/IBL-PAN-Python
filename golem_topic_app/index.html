@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GoLEM topic modelling — rekonstrukcja</title>
+<script src="data.js"></script>
+<style>
+:root{
+  --blue:#1b75bb; --navy:#1a3e5f; --light:#f5f8fb; --line:#d8e2ea; --text:#24384a; --muted:#6c7f8f;
+}
+*{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--text);background:#eef3f7;}
+.topbar{height:64px;background:linear-gradient(90deg,#0e466e,#1b75bb);color:white;display:flex;align-items:center;padding:0 34px;box-shadow:0 2px 7px #0002;}
+.logo{font-weight:700;font-size:28px;letter-spacing:.5px;margin-right:18px}.subtitle{font-size:14px;opacity:.92;line-height:1.25}.ribbon{background:#fff;border-bottom:1px solid var(--line);padding:12px 34px;font-size:14px;color:#4e6578}.ribbon strong{color:#17466b}.wrap{max-width:1260px;margin:22px auto;padding:0 20px;}
+.panel{background:#fff;border:1px solid var(--line);border-radius:5px;box-shadow:0 1px 4px #1d3b5314}.panel h2{margin:0;padding:15px 18px;border-bottom:1px solid var(--line);font-size:18px;font-weight:600;color:#173d5d}.panel h3{margin:0 0 10px 0;font-size:16px;color:#173d5d}.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;align-items:start}.top-grid{display:grid;grid-template-columns:minmax(430px,.9fr) minmax(560px,1.35fr);gap:18px;align-items:start}.right-stack{display:flex;flex-direction:column;gap:18px}.right-stack .table-panel{margin-top:0}.viz{padding:18px}.topic-map{position:relative;height:610px;background:linear-gradient(#fbfdff,#f2f6fa);border:1px solid var(--line);border-radius:4px;overflow:hidden}.axis{position:absolute;background:#c5d4df}.axis.x{left:40px;right:24px;bottom:50%;height:1px}.axis.y{top:24px;bottom:40px;left:50%;width:1px}.axislabel{position:absolute;font-size:12px;color:#7d8f9b}.axislabel.left{left:16px;top:49%}.axislabel.right{right:16px;top:49%}.axislabel.top{left:51%;top:9px}.axislabel.bottom{left:51%;bottom:14px}.bubble{position:absolute;transform:translate(-50%,-50%);border-radius:50%;border:2px solid #fff;background:#78acd0cc;box-shadow:0 2px 6px #1234;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;cursor:pointer;transition:transform .12s, box-shadow .12s, background .12s}.bubble:hover,.bubble.active{transform:translate(-50%,-50%) scale(1.15);background:#1b75bb;box-shadow:0 5px 14px #1236;z-index:5}.bubble span{pointer-events:none}.legend{font-size:13px;color:var(--muted);padding-top:10px;display:flex;gap:16px;flex-wrap:wrap}.side{padding:18px}.topic-card{display:grid;grid-template-columns:252px 1fr;gap:16px;align-items:start}.wordcloud{width:252px;height:252px;border:1px solid var(--line);border-radius:3px;object-fit:cover;background:white}.meta{min-width:0}.meta .id{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#7290a8;margin-bottom:4px}.meta .title{font-size:23px;line-height:1.18;color:#112f4a;margin-bottom:5px}.meta .agg-title{font-size:15px;line-height:1.35;color:#315b78;margin-bottom:10px;font-weight:600}.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 14px}.chip{font-size:12px;padding:5px 8px;border:1px solid #cfe0ec;border-radius:12px;background:#f4f8fb;color:#30556f}.barrow{display:grid;grid-template-columns:130px 1fr 52px;gap:8px;align-items:center;margin:7px 0;font-size:13px}.bar{height:10px;background:#dce8f1;border-radius:999px;overflow:hidden}.bar i{display:block;height:100%;background:#1b75bb;border-radius:999px}.docs{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}.docs ol{margin:7px 0 0 20px;padding:0}.docs li{font-size:13px;margin:5px 0;color:#4c6274}.map-panel{margin-top:18px}.top-grid .time-panel{margin-top:0}.topic-table{width:100%;border-collapse:collapse;font-size:13px}.topic-table .agg{font-weight:600;color:#173d5d}.topic-table .kw{color:#4d6273}.topic-table th,.topic-table td{padding:10px;border-bottom:1px solid var(--line);vertical-align:top}.topic-table th{background:#f5f9fc;text-align:left;color:#244c69}.topic-table tr{cursor:pointer}.topic-table tr:hover,.topic-table tr.sel{background:#f7fbff}.note{font-size:13px;color:#62798b;line-height:1.5;margin:12px 0 0}.controls{display:flex;gap:10px;padding:0 0 12px}.controls button{border:1px solid #bdd0de;background:#fff;color:#1b4b70;padding:8px 11px;border-radius:3px;cursor:pointer}.controls button:hover{background:#eef6fb}.search{flex:1;border:1px solid #bdd0de;border-radius:3px;padding:8px 10px;font-size:14px}
+.timeline-wrap{padding:18px;position:relative}.timeline-svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:4px;background:#fff}.timeline-area{cursor:pointer;opacity:.82;stroke:rgba(255,255,255,.55);stroke-width:.7;transition:opacity .12s, filter .12s}.timeline-area:hover,.timeline-area.active{opacity:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.22))}.timeline-axis{stroke:#b9c8d4;stroke-width:1}.timeline-grid{stroke:#e4edf3;stroke-width:1}.timeline-label{font-size:12px;fill:#60778a}.timeline-title{font-family:monospace;font-size:18px;fill:#5e6872;text-anchor:middle}.timeline-legend text{font-size:11px;fill:#3e5263}.timeline-legend rect{cursor:pointer}.timeline-tip{position:absolute;display:none;padding:7px 9px;border:1px solid #cbd8e2;background:#fff;border-radius:3px;box-shadow:0 2px 8px #173d5d22;font-size:12px;pointer-events:none;color:#24384a;z-index:10}.timeline-caption{font-size:13px;color:#62798b;line-height:1.5;margin:10px 0 0}
+@media(max-width:1100px){.top-grid{grid-template-columns:1fr}}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.topic-card{grid-template-columns:1fr}.wordcloud{width:100%;height:auto}.topic-map{height:500px}.topbar{height:auto;padding:16px 20px;align-items:flex-start}.ribbon{padding:12px 20px}.timeline-svg{min-height:300px}}
+</style>
+</head>
+<body>
+<header class="topbar"><div class="logo">GoLEM</div><div class="subtitle">Graph Literary Exploration Machine<br>Topic modelling component</div></header>
+<div class="ribbon"><strong>Topic model visualization</strong> / rekonstrukcja statycznej aplikacji z archiwalnego snapshotu</div>
+<main class="wrap">
+  <section class="top-grid">
+    <div class="panel detail-panel"><h2>Topic detail</h2><div class="side"><div class="topic-card"><img id="topicImg" class="wordcloud" alt="Word cloud"><div class="meta"><div class="id" id="topicId"></div><div class="title" id="topicTitle"></div><div class="agg-title" id="topicAggTitle"></div><div class="chips" id="chips"></div><h3>Najważniejsze słowa</h3><div id="bars"></div></div></div><div class="docs"><h3>Najsilniejsze dokumenty w topiku</h3><ol id="docs"></ol></div><p class="note">Wizualizacja używa wszystkich 10 plików PNG z paczki. Pozycje topików zostały odtworzone z arkusza <code>topics.xlsx</code> przez rzutowanie rozkładów dokument–topik do 2D, więc nie są dosłownym zrzutem oryginalnego układu.</p></div></div>
+    <div class="right-stack">
+      <div class="panel time-panel"><h2>Topics share in time</h2><div class="timeline-wrap"><svg id="timeline" class="timeline-svg" viewBox="0 0 1160 330" role="img" aria-label="Stacked area chart showing topic shares over time"></svg><div id="timelineTip" class="timeline-tip"></div><p class="timeline-caption">Oś czasu została odtworzona z dat zakodowanych w nazwach dokumentów w arkuszu <code>topics.xlsx</code>. Wartości pokazują uśredniony udział topików w dokumentach z danego roku, z lekkim wygładzeniem sąsiednimi latami.</p></div></div>
+      <section class="panel table-panel"><h2>Topic list</h2><div class="side"><table class="topic-table"><thead><tr><th>Topik</th><th>Zagregowana nazwa</th><th>Słowa kluczowe</th><th>Średni udział</th></tr></thead><tbody id="topicRows"></tbody></table></div></section>
+    </div>
+  </section>
+  <section class="panel map-panel"><h2>Intertopic distance map</h2><div class="viz"><div class="controls"><input id="search" class="search" placeholder="Filtruj po słowie, np. powieść, poezja, dramat"><button id="reset">Reset</button></div><div class="topic-map" id="map"><div class="axis x"></div><div class="axis y"></div><div class="axislabel left">PC1 −</div><div class="axislabel right">PC1 +</div><div class="axislabel top">PC2 +</div><div class="axislabel bottom">PC2 −</div></div><div class="legend"><span>Rozmiar koła = średni udział topiku w dokumentach</span><span>Najedź kursorem albo kliknij topik, aby zmienić panel po prawej.</span></div></div></section>
+</main>
+<script>
+const topics = GOLEM_DATA.topics.sort((a,b)=>a.id-b.id);
+const topicNames = {
+  0: 'Dramat, teatr i formy sceniczne',
+  1: 'Teoria tekstu, przekład i interpretacja',
+  2: 'Poezja liryczna, pieśń i wersyfikacja',
+  3: 'Estetyka twórczości i idea piękna',
+  4: 'Komunikacja literacka, prasa i obieg książki',
+  5: 'Stylistyka i język artystyczny',
+  6: 'Historia literatury i literaturoznawstwo',
+  7: 'Poetyka, metafora i prądy literackie',
+  8: 'Powieść realistyczna i świat przedstawiony',
+  9: 'Narracja prozatorska i czas opowieści'
+};
+const map = document.getElementById('map');
+const topicColors = ['#63b5df','#f28e2b','#59a14f','#e15759','#8cd17d','#b07aa1','#af7aa1','#ff9da7','#d4d16a','#4dd0d9'];
+let active = 0;
+function fmtPct(x){ return (x*100).toFixed(1).replace('.',',') + '%'; }
+function renderMap(filter=''){
+  [...map.querySelectorAll('.bubble')].forEach(x=>x.remove());
+  const f = filter.trim().toLowerCase();
+  topics.forEach(t=>{
+    const text = t.words.map(w=>w.word).join(' ').toLowerCase();
+    if(f && !text.includes(f)) return;
+    const b=document.createElement('div');
+    b.className='bubble'+(t.id===active?' active':'');
+    const size=32 + Math.sqrt(t.prevalence*1000)*17;
+    b.style.width=size+'px'; b.style.height=size+'px'; b.style.left=t.x+'%'; b.style.top=t.y+'%';
+    b.style.background=topicColors[t.id]+'dd';
+    b.dataset.id=t.id; b.title='Topik '+t.id+': '+t.top10.join(', ');
+    b.innerHTML='<span>'+t.id+'</span>';
+    b.addEventListener('mouseenter',()=>setTopic(t.id,false));
+    b.addEventListener('click',()=>setTopic(t.id,true));
+    map.appendChild(b);
+  });
+}
+function setTopic(id, sticky=false){
+  active = Number(id);
+  const t=topics.find(x=>x.id===active);
+  document.getElementById('topicImg').src=t.image;
+  document.getElementById('topicImg').alt='Topik '+t.id+' — '+t.label;
+  document.getElementById('topicId').textContent='Topic '+t.id+' · prevalence '+fmtPct(t.prevalence);
+  document.getElementById('topicTitle').textContent=t.label;
+  document.getElementById('topicAggTitle').textContent=topicNames[t.id];
+  document.getElementById('chips').innerHTML=t.top10.map(w=>'<span class="chip">'+w+'</span>').join('');
+  const max=t.words[0].weight;
+  document.getElementById('bars').innerHTML=t.words.slice(0,12).map(w=>'<div class="barrow"><span>'+w.word+'</span><div class="bar"><i style="background:'+topicColors[t.id]+';width:'+Math.max(3,w.weight/max*100)+'%"></i></div><span>'+w.weight.toFixed(3)+'</span></div>').join('');
+  document.getElementById('docs').innerHTML=GOLEM_DATA.topdocs[String(t.id)].map(d=>'<li>'+d.doc+' <span style="color:#789">('+d.score.toFixed(3)+')</span></li>').join('');
+  document.querySelectorAll('.bubble').forEach(b=>b.classList.toggle('active', Number(b.dataset.id)===active));
+  document.querySelectorAll('#topicRows tr').forEach(r=>r.classList.toggle('sel', Number(r.dataset.id)===active));
+  document.querySelectorAll('.timeline-area').forEach(p=>p.classList.toggle('active', Number(p.dataset.id)===active));
+}
+function renderTable(){
+  document.getElementById('topicRows').innerHTML=topics.map(t=>'<tr data-id="'+t.id+'"><td><strong>Topic '+t.id+'</strong></td><td class="agg">'+topicNames[t.id]+'</td><td class="kw">'+t.top10.join(', ')+'</td><td>'+fmtPct(t.prevalence)+'</td></tr>').join('');
+  document.querySelectorAll('#topicRows tr').forEach(r=>r.addEventListener('mouseenter',()=>setTopic(r.dataset.id,false)));
+}
+function svgEl(name, attrs={}){ const el=document.createElementNS('http://www.w3.org/2000/svg', name); Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v)); return el; }
+function renderTimeline(){
+  const svg=document.getElementById('timeline');
+  const tip=document.getElementById('timelineTip');
+  svg.innerHTML='';
+  const W=1160,H=330, L=58, R=104, T=42, B=44, innerW=W-L-R, innerH=H-T-B;
+  const data=GOLEM_DATA.timeline;
+  const minY=data[0].year, maxY=data[data.length-1].year;
+  const x=y=>L+(y-minY)/(maxY-minY)*innerW;
+  const y=v=>T+(1-v)*innerH;
+  svg.appendChild(svgEl('text',{x:W/2,y:27,class:'timeline-title'})).textContent='Topics share in time';
+  [0,0.2,0.4,0.6,0.8,1].forEach(v=>{
+    svg.appendChild(svgEl('line',{x1:L,y1:y(v),x2:L+innerW,y2:y(v),class:'timeline-grid'}));
+    const tx=svgEl('text',{x:L-8,y:y(v)+4,class:'timeline-label','text-anchor':'end'}); tx.textContent=v.toFixed(1); svg.appendChild(tx);
+  });
+  const tickStart=Math.ceil(minY/20)*20;
+  for(let yr=tickStart; yr<=maxY; yr+=20){
+    svg.appendChild(svgEl('line',{x1:x(yr),y1:T,x2:x(yr),y2:T+innerH,class:'timeline-grid'}));
+    const tx=svgEl('text',{x:x(yr),y:H-16,class:'timeline-label','text-anchor':'middle'}); tx.textContent=yr; svg.appendChild(tx);
+  }
+  svg.appendChild(svgEl('line',{x1:L,y1:T+innerH,x2:L+innerW,y2:T+innerH,class:'timeline-axis'}));
+  svg.appendChild(svgEl('line',{x1:L,y1:T,x2:L,y2:T+innerH,class:'timeline-axis'}));
+  const cumul=data.map(d=>{let s=0; return d.shares.map(v=>{const lo=s; s+=v; return [lo,s];});});
+  for(let ti=0; ti<10; ti++){
+    let upper=[], lower=[];
+    data.forEach((d,idx)=>{ upper.push([x(d.year), y(cumul[idx][ti][1])]); lower.push([x(d.year), y(cumul[idx][ti][0])]); });
+    const pts=upper.concat(lower.reverse());
+    const dstr='M'+pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join('L')+'Z';
+    const p=svgEl('path',{d:dstr, fill:topicColors[ti], class:'timeline-area', 'data-id':ti});
+    p.addEventListener('mouseenter',()=>setTopic(ti,false));
+    p.addEventListener('mousemove',ev=>{
+      const rect=svg.getBoundingClientRect(); const localX=(ev.clientX-rect.left)/rect.width*W;
+      const ratio=Math.min(1,Math.max(0,(localX-L)/innerW));
+      const yr=Math.round(minY+ratio*(maxY-minY));
+      let nearest=data.reduce((a,b)=>Math.abs(b.year-yr)<Math.abs(a.year-yr)?b:a,data[0]);
+      tip.style.display='block'; tip.style.left=(ev.offsetX+16)+'px'; tip.style.top=(ev.offsetY+8)+'px';
+      tip.innerHTML='<strong>'+nearest.year+'</strong><br>Topic '+ti+': '+fmtPct(nearest.shares[ti])+'<br>Dokumenty: '+nearest.n;
+    });
+    p.addEventListener('mouseleave',()=>{tip.style.display='none';});
+    p.addEventListener('click',()=>setTopic(ti,true));
+    svg.appendChild(p);
+  }
+  const leg=svgEl('g',{class:'timeline-legend'}); svg.appendChild(leg);
+  for(let i=9;i>=0;i--){
+    const yy=T+(9-i)*20+6;
+    const r=svgEl('rect',{x:W-R+10,y:yy-10,width:14,height:6,fill:topicColors[i],'data-id':i});
+    const tx=svgEl('text',{x:W-R+30,y:yy-5}); tx.textContent='Topic '+i;
+    r.addEventListener('mouseenter',()=>setTopic(i,false)); tx.addEventListener('mouseenter',()=>setTopic(i,false));
+    leg.appendChild(r); leg.appendChild(tx);
+  }
+}
+document.getElementById('search').addEventListener('input', e=>renderMap(e.target.value));
+document.getElementById('reset').addEventListener('click',()=>{document.getElementById('search').value='';renderMap();setTopic(0,true);});
+renderMap(); renderTable(); renderTimeline(); setTopic(0,true);
+</script>
+</body>
+</html>
