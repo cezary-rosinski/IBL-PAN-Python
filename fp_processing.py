@@ -111,7 +111,7 @@ foldery_lokalne = aktualny_numer['folder lokalny'].drop_duplicates().to_list()
 
 for folder in foldery_lokalne:
     if pd.notna(folder):
-        if 'pl' in folder.lower():
+        if 'pl' in folder.lower() or 'poetyki' in folder.lower():
             folder_pl = folder + '/'
         else:
             folder_eng = folder + '/'
@@ -592,7 +592,8 @@ for index, row in strona_numeru.iterrows():
         content = browser.find_element('id', 'content').clear()
         content = browser.find_element('id', 'content').send_keys(body)      
 
-        opublikuj = browser.find_element('id', 'publish').click()
+        opublikuj = browser.find_element('id', 'publish')
+        opublikuj.click()
         
         caly_link = browser.find_element('id', 'edit-slug-buttons').click()
         odnosnik = browser.find_element('id', 'new-post-slug')
@@ -677,7 +678,7 @@ print('Strona numeru na pressto zapisana, ale nie opublikowana')
 # w przypadku dodawania tylko polskiej wersji zakomentować dodawanie plików angielskich
 
 for i, row in aktualny_numer.iterrows():
-# for i, row in aktualny_numer[11:].iterrows(): #jeżeli pętla zostanie przerwana
+# for i, row in aktualny_numer[1:].iterrows(): #jeżeli pętla zostanie przerwana, wtedy zawsze i + 1
     # print(i)
     # i = 0
     # row = aktualny_numer.iloc[i,:]
@@ -698,7 +699,11 @@ for i, row in aktualny_numer.iterrows():
         abstrakt_eng_source = browser.find_elements('xpath', "//i[@class='mce-ico mce-i-code']")[1].click()
         abstrakt_eng_source = browser.find_element('xpath', "//textarea[@class='mce-textbox mce-multiline mce-abs-layout-item mce-first mce-last']").send_keys(aktualny_numer.at[i+1, 'abstrakt'])
         abstrakt_eng_ok = browser.find_elements('xpath', "//span[contains(text(),'Ok')]")[-1].click()
-        kliknij_poza_abstrakt = browser.find_element('xpath', "//input[@name='title[pl_PL]']").click()
+        
+        time.sleep(1)
+        
+        # kliknij_poza_abstrakt = browser.find_element('xpath', "//input[@name='title[pl_PL]']")
+        # kliknij_poza_abstrakt.click()
         
         metadane_jezyk_pl = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[0].send_keys('pl')
         metadane_jezyk_eng = browser.find_elements('xpath', "//input[@class='ui-widget-content ui-autocomplete-input']")[1].send_keys('en') 
@@ -758,7 +763,7 @@ for i, row in aktualny_numer.iterrows():
             #a_pl, a_en, o, af_pl, af_en, b_pl, b_en = row['autor'].split('❦')[1], aktualny_numer.at[i+1, 'autor'].split('❦')[1], row['ORCID'].split('❦')[1], row['afiliacja'].split('❦')[1], aktualny_numer.at[i+1, 'afiliacja'].split('❦')[1], row['biogram'].split('❦')[1], aktualny_numer.at[i+1, 'biogram'].split('❦')[1]
             
             # wspolautor_dodaj = browser.find_element('xpath', "//a[@title = 'Dodaj autora']")
-            wspolautor_dodaj = browser.find_element('xpath', "//a[contains(text(),'Dodaj autora')]")
+            wspolautor_dodaj = browser.find_element('xpath', "//a[contains(text(),'Dodaj współautora')]")
             # wspolautor_dodaj = browser.find_element('xpath', "//a[contains(text(),'Dodaj współautora')]")
             wspolautor_dodaj.click()
             autor_imie_pl = re.findall('.+(?= (?!.* ))', a_pl)[0]
@@ -841,39 +846,39 @@ for i, row in aktualny_numer.iterrows():
         
         #kod poniżej do zakomentowania, jesli dodawane sa tylko pliki z polskiej wersji
             
-        # if row['kategoria'] != 'Przekłady':
+        if row['kategoria'] != 'Przekłady':
         
-        #     while True:
-        #         try:
-        #             # dodaj_plik_eng = browser.find_element('xpath', "//a[@title='Dodaj plik do publikacji']").click()
-        #             dodaj_plik_pl = browser.find_element('xpath', "//a[contains(text(),'Dodaj plik do publikacji')]")
-        #             dodaj_plik_pl.click()
-        #             time.sleep(2)
-        #         except ElementClickInterceptedException:
-        #             potwierdz_button = browser.find_element('id', 'continueButton').click()
-        #             time.sleep(2)
-        #             continue
-        #         break
+            while True:
+                try:
+                    # dodaj_plik_eng = browser.find_element('xpath', "//a[@title='Dodaj plik do publikacji']").click()
+                    dodaj_plik_pl = browser.find_element('xpath', "//a[contains(text(),'Dodaj plik do publikacji')]")
+                    dodaj_plik_pl.click()
+                    time.sleep(2)
+                except ElementClickInterceptedException:
+                    potwierdz_button = browser.find_element('id', 'continueButton').click()
+                    time.sleep(2)
+                    continue
+                break
                 
-        #     etykieta = browser.find_element('xpath', "//input[@class='field text required' and @name = 'label']").send_keys('PDF')
-        #     jezyk_publikacji = browser.find_element('xpath', "//select[@id = 'galleyLocale']/option[text()='English']").click()
+            etykieta = browser.find_element('xpath', "//input[@class='field text required' and @name = 'label']").send_keys('PDF')
+            jezyk_publikacji = browser.find_element('xpath', "//select[@id = 'galleyLocale']/option[text()='English']").click()
             
-        #     # zapisz = browser.find_elements('xpath', "//button[@class='pkp_button submitFormButton']")
-        #     # zapisz[-1].click()
-        #     zapisz = browser.find_elements('xpath', "//button[@name='submitFormButton']")
-        #     zapisz[-1].click()
-        #     time.sleep(2)
+            # zapisz = browser.find_elements('xpath', "//button[@class='pkp_button submitFormButton']")
+            # zapisz[-1].click()
+            zapisz = browser.find_elements('xpath', "//button[@name='submitFormButton']")
+            zapisz[-1].click()
+            time.sleep(2)
             
-        #     element_artykulu = browser.find_element('xpath', "//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
-        #     przeslij_pdf = browser.find_element('xpath', "//input[@type='file']")
-        #     przeslij_pdf.send_keys(f"{aktualny_numer.at[i+1, 'folder lokalny']}\\{aktualny_numer.at[i+1, 'pdf']}")
-        #     time.sleep(2)
-        #     kontunuuj_button = browser.find_element('id', 'continueButton').click()
-        #     time.sleep(2)
-        #     kontunuuj_button = browser.find_element('id', 'continueButton').click()
-        #     time.sleep(2)
-        #     potwierdz_button = browser.find_element('id', 'continueButton').click()
-        #     time.sleep(2)
+            element_artykulu = browser.find_element('xpath', "//select[@id = 'genreId']/option[text()='Tekst artykułu']").click()
+            przeslij_pdf = browser.find_element('xpath', "//input[@type='file']")
+            przeslij_pdf.send_keys(f"{aktualny_numer.at[i+1, 'folder lokalny']}\\{aktualny_numer.at[i+1, 'pdf']}")
+            time.sleep(2)
+            kontunuuj_button = browser.find_element('id', 'continueButton').click()
+            time.sleep(2)
+            kontunuuj_button = browser.find_element('id', 'continueButton').click()
+            time.sleep(2)
+            potwierdz_button = browser.find_element('id', 'continueButton').click()
+            time.sleep(2)
         
         while True:
                 try:
@@ -978,6 +983,7 @@ for record in tqdm(records):
 #pobranie danych z pressto
 
 data_publikacji_na_pressto = sorted(dates)[-1]
+#data_publikacji_na_pressto = '2025-12-30'
 records = sickle.ListRecords(metadataPrefix='oai_dc')
 
 results = []
